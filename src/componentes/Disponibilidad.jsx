@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   XCircle,
   X,
+  FileText,
 } from "lucide-react";
 
 import { fechasReservadas } from "../datos/disponibilidad";
@@ -350,60 +351,81 @@ const Disponibilidad = () => {
             {/* Encabezado */}
 
             <div className="pr-10">
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-                <Info size={21} />
-              </div>
+              
 
               <h3 className="text-xl font-semibold text-slate-900">
                 Acuerdos y cancelaciones
               </h3>
 
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Seleccionar fechas en el calendario inicia una consulta pero no
-                confirma automáticamente una estancia.
-              </p>
+              
             </div>
 
-            {/* Contenido */}
+            
 
-            <div className="mt-6 space-y-4 text-sm leading-6 text-slate-600">
-              <div className="flex gap-3">
-                
+    {/* Contenido */}
 
-                
-              </div>
+<div className="mt-6 space-y-4 text-sm leading-6 text-slate-600">
+  <div className="flex gap-3">
+    <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
 
-              <div className="flex gap-3">
-                
+    <p>
+      Las fechas seleccionadas representan una consulta de disponibilidad.
+      No generan una reserva automática.
+    </p>
+  </div>
 
-                
-              </div>
+  
+  <div className="flex gap-3">
+    <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
 
-              <div className="flex gap-3">
-                
+    <p>
+      Si ambas partes deciden avanzar, acordamos las condiciones y
+      completamos la documentación correspondiente. Recién entonces la
+      estancia se considera confirmada y las fechas pasan a figurar como
+      reservadas.
+    </p>
+  </div>
 
-                
-              </div>
+  <div className="flex gap-3">
+    <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
 
-              <div className="flex gap-3">
-                <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
+    <p>
+      Si alguna de las partes necesita cancelar una estancia confirmada,
+      deberá comunicarlo con la mayor anticipación posible.
+    </p>
+  </div>
 
-                <p>
-                  Si alguna de las partes necesita cancelar una estancia
-                  confirmada, deberá comunicarlo con la mayor anticipación
-                  posible.
-                </p>
-              </div>
+  <div className="flex gap-3">
+    <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
 
-              <div className="flex gap-3">
-                <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
+    <p>
+      Cualquier gasto, servicio adicional o condición especial se acuerda
+      previamente entre ambas partes.
+    </p>
+  </div>
 
-                <p>
-                  Cualquier gasto, servicio adicional o condición especial se
-                  acuerda previamente entre ambas partes.
-                </p>
-              </div>
-            </div>
+  <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+    <div className="flex items-start gap-3">
+      <FileText
+        size={18}
+        className="mt-0.5 min-w-5 text-sky-600"
+      />
+
+      <div>
+        <p className="font-semibold text-slate-900">
+          Acuerdo e información de la estancia
+        </p>
+
+        <p className="mt-1.5 text-sm leading-6 text-slate-600">
+          Antes de comenzar utilizamos un acuerdo de estancia y una ficha
+          del hogar y las mascotas. Allí dejamos por escrito las fechas,
+          responsabilidades, instrucciones y demás información necesaria
+          para realizar la estancia con claridad.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
 
             {/* Cerrar */}
 

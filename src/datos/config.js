@@ -1,6 +1,6 @@
 export const CONFIG = {
   marca: {
-    nombre: "Andrés Trotamundos",
+    nombre: "Andrés Trotamundos 🐾",
     lema: "Casas · Mascotas · Viajes",
     dominio: "andrestrotamundos.com",
   },
@@ -19,7 +19,7 @@ export const CONFIG = {
   },
 
   imagenes: {
-    logo: "",
+    logo: "https://i.postimg.cc/K8k90Q8X/IMG-20260901-WA8952.jpg",
     perfil: "https://i.postimg.cc/8zvv2Gb5/IMG-20260901-WA0320.jpg",
   },
 

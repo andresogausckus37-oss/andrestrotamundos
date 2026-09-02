@@ -1,5 +1,5 @@
 import { CONFIG } from "../datos/config";
-import { Menu, X, Dog } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 const Navbar = ({
   isMenuOpen,
@@ -36,11 +36,13 @@ const Navbar = ({
           onClick={() => scrollTo("inicio")}
           className="flex items-center gap-3"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-600 text-white">
-            <Dog size={21} />
-          </div>
+          <img
+  src={CONFIG.imagenes.logo}
+  alt={`Logo de ${CONFIG.marca.nombre}`}
+  className="h-12 w-12 rounded-full object-cover"
+/>
 
-          <div className="text-left">
+          <div className="ml-14 text-left">
             <p className="text-sm font-semibold tracking-tight text-slate-900 sm:text-base">
               {CONFIG.marca.nombre}
             </p>

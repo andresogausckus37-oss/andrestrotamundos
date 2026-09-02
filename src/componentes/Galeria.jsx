@@ -48,50 +48,7 @@ const Galeria = () => {
         </div>
 
         <div className="mt-14 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl bg-sky-50 p-5">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
-              <MapPin size={19} />
-            </div>
-
-            <p className="text-sm font-semibold text-slate-900">
-              Nuevos lugares
-            </p>
-
-            <p className="mt-2 text-xs leading-5 text-slate-600">
-              Cada experiencia permite conocer nuevos hogares, ciudades y
-              formas de vivir.
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-orange-50 p-5">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-              <Heart size={19} />
-            </div>
-
-            <p className="text-sm font-semibold text-slate-900">
-              Cuidado personal
-            </p>
-
-            <p className="mt-2 text-xs leading-5 text-slate-600">
-              Cada mascota tiene su personalidad, sus hábitos y su propia
-              rutina.
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-emerald-50 p-5">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-              <Camera size={19} />
-            </div>
-
-            <p className="text-sm font-semibold text-slate-900">
-              Recuerdos compartidos
-            </p>
-
-            <p className="mt-2 text-xs leading-5 text-slate-600">
-              Durante las estancias podemos mantener contacto mediante fotos y
-              novedades.
-            </p>
-          </div>
+            
         </div>
       </div>
     </section>
