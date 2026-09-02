@@ -1,6 +1,5 @@
 import { CONFIG } from "../datos/config";
 import {
-  Dog,
   MessageCircle,
   MapPin,
 } from "lucide-react";
@@ -12,9 +11,11 @@ const Footer = () => {
         <div className="grid gap-10 md:grid-cols-3">
           <div>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-600 text-white">
-                <Dog size={20} />
-              </div>
+              <img
+  src={CONFIG.imagenes.logo}
+  alt={`Logo de ${CONFIG.marca.nombre}`}
+  className="h-10 w-10 rounded-full object-cover"
+/>
 
               <div>
                 <p className="font-semibold">

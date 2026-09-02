@@ -1,9 +1,9 @@
 export const CONFIG = {
   marca: {
-    nombre: "Andrés Trotamundos 🐾",
-    lema: "Casas · Mascotas · Viajes",
-    dominio: "andrestrotamundos.com",
-  },
+  nombre: "Andres House Sitter",
+  lema: "Casas · Mascotas · Viajes",
+  dominio: "andreshousesitter.com",
+},
 
   contacto: {
     whatsapp: "5493548619293",
@@ -19,8 +19,8 @@ export const CONFIG = {
   },
 
   imagenes: {
-    logo: "https://i.postimg.cc/K8k90Q8X/IMG-20260901-WA8952.jpg",
-    perfil: "https://i.postimg.cc/8zvv2Gb5/IMG-20260901-WA0320.jpg",
+    logo: "https://i.postimg.cc/Twpmm3RF/IMG-20260902-WA9504.jpg",
+    perfil: "https://i.postimg.cc/x8zD7MRH/FB-IMG-1781830431372-2.jpg",
   },
 
   ubicacion: {

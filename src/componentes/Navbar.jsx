@@ -28,7 +28,7 @@ const Navbar = ({
     >
       {/* Barra principal */}
 
-      <div className="contenedor flex items-center justify-between px-5 py-4">
+      <div className="contenedor flex items-center justify-between px-5 py-3">
         {/* Marca */}
 
         <button
@@ -37,17 +37,17 @@ const Navbar = ({
           className="flex items-center gap-3"
         >
           <img
-  src={CONFIG.imagenes.logo}
-  alt={`Logo de ${CONFIG.marca.nombre}`}
-  className="h-12 w-12 rounded-full object-cover"
-/>
+            src={CONFIG.imagenes.logo}
+            alt={`Logo de ${CONFIG.marca.nombre}`}
+            className="h-14 w-14 shrink-0 rounded-full object-cover"
+          />
 
-          <div className="ml-14 text-left">
-            <p className="text-sm font-semibold tracking-tight text-slate-900 sm:text-base">
+          <div className="flex flex-col items-start ml-10 text-left">
+            <p className="whitespace-nowrap text-sm font-medium leading-tight tracking-tight text-slate-900 sm:text-base">
               {CONFIG.marca.nombre}
             </p>
 
-            <p className="hidden text-[10px] uppercase tracking-[0.18em] text-slate-500 sm:block">
+            <p className="mt-1 whitespace-nowrap text-[9px] font-medium uppercase leading-none tracking-[0.12em] text-slate-500 sm:text-[10px] sm:tracking-[0.16em]">
               {CONFIG.marca.lema}
             </p>
           </div>
@@ -68,12 +68,12 @@ const Navbar = ({
           ))}
         </nav>
 
-        {/* Hamburguesa */}
+        {/* Menú hamburguesa */}
 
         <button
           type="button"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 md:hidden"
+          className="shrink-0 rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 md:hidden"
           aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
         >
           {isMenuOpen ? <X size={23} /> : <Menu size={23} />}

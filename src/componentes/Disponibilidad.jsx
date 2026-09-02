@@ -386,24 +386,6 @@ const Disponibilidad = () => {
     </p>
   </div>
 
-  <div className="flex gap-3">
-    <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
-
-    <p>
-      Si alguna de las partes necesita cancelar una estancia confirmada,
-      deberá comunicarlo con la mayor anticipación posible.
-    </p>
-  </div>
-
-  <div className="flex gap-3">
-    <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
-
-    <p>
-      Cualquier gasto, servicio adicional o condición especial se acuerda
-      previamente entre ambas partes.
-    </p>
-  </div>
-
   <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
     <div className="flex items-start gap-3">
       <FileText
@@ -416,12 +398,18 @@ const Disponibilidad = () => {
           Acuerdo e información de la estancia
         </p>
 
-        <p className="mt-1.5 text-sm leading-6 text-slate-600">
-          Antes de comenzar utilizamos un acuerdo de estancia y una ficha
-          del hogar y las mascotas. Allí dejamos por escrito las fechas,
-          responsabilidades, instrucciones y demás información necesaria
-          para realizar la estancia con claridad.
-        </p>
+         <p className="mt-1.5 text-sm leading-6 text-slate-600">
+        Antes de comenzar una estancia completamos un acuerdo y una ficha
+        del hogar y las mascotas. Allí dejamos por escrito las fechas,
+        responsabilidades, instrucciones, contactos y condiciones acordadas
+        entre ambas partes.
+      </p>
+
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        De esta manera, tanto el propietario como yo conservamos una copia
+        de la información y de los acuerdos establecidos antes de la
+        estancia.
+      </p>
       </div>
     </div>
   </div>

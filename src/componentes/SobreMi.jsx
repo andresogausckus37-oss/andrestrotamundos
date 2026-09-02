@@ -35,12 +35,12 @@ const SobreMi = () => {
             <div className="grid md:grid-cols-[0.8fr_1.2fr]">
               {/* Foto */}
 
-              <div className="flex min-h-[320px] items-center justify-center bg-gradient-to-br from-sky-100 via-white to-orange-100 p-8">
-                {CONFIG.imagenes.perfil ? (
-                  <img
-                    src={CONFIG.imagenes.perfil}
-                    alt="Andrés"
-                    className="h-56 w-56 rounded-full border-8 border-white object-cover shadow-xl"
+              <div className="flex items-center justify-center from-sky-100 via-white to-orange-100 p-8">
+  {CONFIG.imagenes.perfil ? (
+    <img
+      src={CONFIG.imagenes.perfil}
+      alt="Andrés"
+      className="h-48 w-48 rounded-full border-4 border-white object-cover shadow-xl sm:h-56 sm:w-56"
                   />
                 ) : (
                   <div className="flex h-44 w-44 items-center justify-center rounded-full border-8 border-white bg-sky-100 text-sky-700 shadow-xl">
@@ -136,9 +136,7 @@ const SobreMi = () => {
             {/* Encabezado */}
 
             <div className="pr-10">
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                <Shield size={21} />
-              </div>
+              
 
               <h3 className="text-xl font-semibold text-slate-900">
                 Verificación privada

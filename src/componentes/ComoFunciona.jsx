@@ -71,11 +71,11 @@ const ComoFunciona = () => {
             return (
               <article
                 key={paso.numero}
-                className={`card relative overflow-hidden p-4 transition hover:-translate-y-0.5 hover:shadow-suave ${estilo.borde}`}
+                className={`card relative overflow-hidden p-5 transition hover:-translate-y-0.5 hover:shadow-suave ${estilo.borde}`}
               >
                 <div className="mb-3 flex items-center justify-between">
                   <span
-                    className={`text-xs font-semibold tracking-[0.18em] ${estilo.numero}`}
+                    className={`text-md font-semibold tracking-[0.18em] ${estilo.numero}`}
                   >
                     {paso.numero}
                   </span>
@@ -87,7 +87,7 @@ const ComoFunciona = () => {
                   </div>
                 </div>
 
-                <h3 className="text-sm font-semibold text-slate-900 sm:text-base">
+                <h3 className="text-md font-semibold text-slate-900 sm:text-base">
                   {paso.titulo}
                 </h3>
 

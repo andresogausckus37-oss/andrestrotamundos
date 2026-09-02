@@ -79,9 +79,9 @@ const Resenas = () => {
                     {/* Comillas decorativas */}
 
                     <Quote
-                      size={90}
+                      size={70}
                       strokeWidth={1}
-                      className="absolute -right-2 top-2 text-orange-100"
+                      className="absolute right-4 top-2 text-orange-100"
                     />
 
                     <div className="relative">
