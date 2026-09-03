@@ -27,14 +27,18 @@ productos.forEach((producto) => {
       "Producto digital de Andres House Sitter."
   );
 
-  const imagen = producto.imagenes?.portada;
+  const imagen =
+    producto.imagenes?.social ||
+    producto.imagenes?.portada;
 
   const urlProducto = `${dominio}/tienda/${producto.id}`;
-  const urlCompartir = `${dominio}/compartir/${producto.id}.html`;
+
+  const urlCompartir =
+    `${dominio}/compartir/${producto.id}.html`;
 
   if (!imagen) {
     console.warn(
-      `El producto "${producto.nombre}" no tiene imagen de portada.`
+      `El producto "${producto.nombre}" no tiene imagen social ni portada.`
     );
 
     return;
@@ -79,6 +83,21 @@ productos.forEach((producto) => {
     />
 
     <meta
+      property="og:image:type"
+      content="image/png"
+    />
+
+    <meta
+      property="og:image:width"
+      content="1200"
+    />
+
+    <meta
+      property="og:image:height"
+      content="630"
+    />
+
+    <meta
       property="og:image:alt"
       content="${titulo}"
     />
@@ -119,15 +138,21 @@ productos.forEach((producto) => {
       content="${imagen}"
     />
 
+    <meta
+      name="twitter:image:alt"
+      content="${titulo}"
+    />
+
+    <!-- URL REAL DEL PRODUCTO -->
+    <link
+      rel="canonical"
+      href="${urlProducto}"
+    />
+
     <!-- REDIRECCIÓN -->
     <meta
       http-equiv="refresh"
       content="0;url=${urlProducto}"
-    />
-
-    <link
-      rel="canonical"
-      href="${urlProducto}"
     />
   </head>
 
@@ -150,11 +175,17 @@ productos.forEach((producto) => {
     `${producto.id}.html`
   );
 
-  fs.writeFileSync(archivo, html, "utf8");
+  fs.writeFileSync(
+    archivo,
+    html,
+    "utf8"
+  );
 
   console.log(
     `Página social creada: ${producto.id}.html`
   );
 });
 
-console.log("Páginas sociales generadas correctamente.");
+console.log(
+  "Páginas sociales generadas correctamente."
+);
