@@ -4,11 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "generar-compartir": "node scripts/generarCompartir.mjs",
-    "build": "npm run generar-compartir && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+  "dev": "vite",
+  "build": "vite build",
+  "lint": "oxlint",
+  "preview": "vite preview"
   },
   "dependencies": {
     "lucide-react": "^1.38.0",

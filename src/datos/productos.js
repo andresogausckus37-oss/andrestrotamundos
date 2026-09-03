@@ -20,8 +20,7 @@ export const productos = [
         "https://i.postimg.cc/nhrwnzLx/file-000000009654820ea5285c9b458659b1.png",
       preview:
         "https://i.postimg.cc/htv3KjGW/file-000000008948820e8c82231c5d50d8d4.png",
-      social:
-        "https://i.postimg.cc/VLJn8YHP/file-00000000e738820e80b9e12573cae6ba.png",
+      
     },
 
     formato: "PDF",

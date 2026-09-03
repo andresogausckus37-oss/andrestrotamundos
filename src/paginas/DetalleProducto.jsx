@@ -1,5 +1,4 @@
 import CalificacionProducto from "../componentes/CalificacionProducto";
-import CompartirProducto from "../componentes/CompartirProducto";
 import { resenasProductos } from "../datos/resenasProductos";
 import {
   ArrowLeft,
@@ -218,9 +217,6 @@ Quedo atento a las instrucciones de pago.`;
                   </span>
                 </div>
               </div>
-
-              {/* COMPARTIR */}
-<CompartirProducto producto={producto} />
 
               {/* QUÉ INCLUYE */}
               {producto.incluye?.length > 0 && (
