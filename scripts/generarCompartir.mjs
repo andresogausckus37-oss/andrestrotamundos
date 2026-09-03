@@ -150,10 +150,7 @@ productos.forEach((producto) => {
     />
 
     <!-- REDIRECCIÓN -->
-    <meta
-      http-equiv="refresh"
-      content="0;url=${urlProducto}"
-    />
+    
   </head>
 
   <body>
