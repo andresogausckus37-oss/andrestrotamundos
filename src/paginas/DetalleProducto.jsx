@@ -1,5 +1,6 @@
 import CalificacionProducto from "../componentes/CalificacionProducto";
 import { resenasProductos } from "../datos/resenasProductos";
+
 import {
   ArrowLeft,
   Check,
@@ -11,6 +12,7 @@ import {
   Mail,
   User,
 } from "lucide-react";
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { productos } from "../datos/productos";
@@ -43,7 +45,7 @@ const DetalleProducto = () => {
 
   if (!producto) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-white px-5">
+      <main className="flex min-h-screen items-center justify-center bg-white px-5">
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-semibold text-slate-900">
             Producto no encontrado
@@ -65,14 +67,45 @@ const DetalleProducto = () => {
     );
   }
 
+  // =========================================================
+  // PRECIO Y OFERTA
+  // =========================================================
+
+  const tieneOferta = producto.oferta?.activa === true;
+
+  const precioFinal = tieneOferta
+    ? producto.oferta.precioARS
+    : producto.precioARS;
+
+  const ahorro = tieneOferta
+    ? producto.precioARS - producto.oferta.precioARS
+    : 0;
+
+  const descuento = tieneOferta
+    ? Math.round((ahorro / producto.precioARS) * 100)
+    : 0;
+
+  // =========================================================
+  // RESEÑAS
+  // =========================================================
+
   const resenasDelProducto = resenasProductos.filter(
-  (resena) => resena.productoId === producto.id
-);
+    (resena) => resena.productoId === producto.id
+  );
+
+  // =========================================================
+  // IMÁGENES
+  // =========================================================
 
   const imagenes = [
     producto.imagenes?.portada,
     producto.imagenes?.preview,
+    producto.imagenes?.previewIndividual,
   ].filter(Boolean);
+
+  // =========================================================
+  // CHECKOUT
+  // =========================================================
 
   const abrirCheckout = () => {
     setError("");
@@ -97,11 +130,19 @@ const DetalleProducto = () => {
 
     setError("");
 
+    const detalleOferta = tieneOferta
+      ? `
+*Oferta:* ${producto.oferta.etiqueta}
+*Precio original:* ${formatearPrecio(producto.precioARS)}
+*Descuento:* -${descuento}%
+*Ahorrás:* ${formatearPrecio(ahorro)}`
+      : "";
+
     const mensaje = `Hola Andrés, quiero realizar esta compra:
 
 *Producto:* ${producto.nombre}
-*Formato:* ${producto.formato || "PDF"}
-*Total:* ${formatearPrecio(producto.precioARS)}
+*Formato:* ${producto.formato || "PDF"}${detalleOferta}
+*Total:* ${formatearPrecio(precioFinal)}
 
 *Nombre:* ${nombreLimpio}
 *Email:* ${emailLimpio}
@@ -117,36 +158,37 @@ Quedo atento a las instrucciones de pago.`;
 
   return (
     <>
-      <main className="min-h-screen bg-white px-4 pb-10 pt-10 sm:px-5">
+      <main className="min-h-screen bg-white px-4 pb-10 sm:px-5">
         <div className="mx-auto max-w-7xl">
-          {/* VOLVER */}
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-sky-600"
-          >
-            <ArrowLeft size={17} />
-            Volver
-          </button>
-
           <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
-            {/* IMÁGENES */}
+            {/* =====================================================
+                IMÁGENES
+            ====================================================== */}
+
             <div>
-              {/* Imagen principal */}
-              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-                <div className="aspect-[4/5] w-full overflow-hidden rounded-xl bg-white">
+              {/* IMAGEN PRINCIPAL */}
+              <div className="relative overflow-hidden rounded-2xl bg-white p-2 shadow-sm">
+                <div className="aspect-[4/6] w-full overflow-hidden rounded-xl bg-white">
                   <img
                     src={imagenes[imagenActiva]}
-                    alt={`${producto.nombre} — Imagen ${
-                      imagenActiva + 1
-                    }`}
+                    alt={`${producto.nombre} — Imagen ${imagenActiva + 1}`}
                     className="h-full w-full object-contain"
                   />
                 </div>
               </div>
 
-              {/* Miniaturas */}
-              {producto.imagenes?.preview && (
+              {/* VOLVER */}
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="mb-3 mt-2 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-sky-600"
+              >
+                <ArrowLeft size={17} />
+                Volver
+              </button>
+
+              {/* MINIATURAS */}
+              {imagenes.length > 1 && (
                 <div className="mt-3">
                   <p className="mb-2 flex items-center gap-1.5 text-xs text-slate-500">
                     <Eye size={13} />
@@ -156,7 +198,7 @@ Quedo atento a las instrucciones de pago.`;
                   <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth">
                     {imagenes.map((img, idx) => (
                       <button
-                        key={idx}
+                        key={img}
                         type="button"
                         onClick={() => setImagenActiva(idx)}
                         className={`h-20 w-20 flex-shrink-0 rounded-xl border-2 bg-white p-1.5 shadow-sm transition-all ${
@@ -164,10 +206,11 @@ Quedo atento a las instrucciones de pago.`;
                             ? "border-sky-400 ring-2 ring-sky-100"
                             : "border-slate-200 hover:border-slate-300"
                         }`}
+                        aria-label={`Ver imagen ${idx + 1}`}
                       >
                         <img
                           src={img}
-                          alt={`Vista ${idx + 1}`}
+                          alt={`Vista ${idx + 1} de ${producto.nombre}`}
                           className="h-full w-full object-contain"
                         />
                       </button>
@@ -175,50 +218,88 @@ Quedo atento a las instrucciones de pago.`;
                   </div>
 
                   <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                    <strong>Nota:</strong> La compra incluye el
-                    archivo en alta calidad, sin marcas de agua.
+                    <strong>Nota:</strong> La compra incluye el archivo en alta
+                    calidad, sin marcas de agua.
                   </p>
                 </div>
               )}
             </div>
 
-            {/* INFORMACIÓN */}
+            {/* =====================================================
+                INFORMACIÓN
+            ====================================================== */}
+
             <div className="lg:pt-1">
               {/* TÍTULO */}
-<h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
-  {producto.nombre}
-</h1>
+              <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
+                {producto.nombre}
+              </h1>
 
-{/* CALIFICACIÓN */}
-<div className="mt-2 mb-3">
-  <CalificacionProducto productoId={producto.id} />
-</div>
+              {/* CALIFICACIÓN */}
+              <div className="mb-3 mt-2">
+                <CalificacionProducto productoId={producto.id} />
+              </div>
 
+              {/* DESCRIPCIÓN */}
               <p className="text-sm leading-6 text-slate-600 sm:text-[15px]">
                 {producto.descripcionLarga || producto.descripcion}
               </p>
 
-              {/* PRECIO + DESCARGABLE */}
-              <div className="mt-4 border-y border-slate-200 py-3">
-                <div className="flex items-end justify-between gap-4">
+              {/* =================================================
+                  PRECIO + DESCARGABLE
+              ================================================== */}
+
+              <div className="mt-4 border-y border-slate-200 py-4">
+                <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                       Precio
                     </p>
 
-                    <p className="mt-0.5 text-2xl font-semibold text-slate-900">
-                      {formatearPrecio(producto.precioARS)}
-                    </p>
+                    {tieneOferta ? (
+                      <>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <p className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                            {formatearPrecio(precioFinal)}
+                          </p>
+
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-700 sm:text-xs">
+                            -{descuento}%
+                          </span>
+                        </div>
+
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-slate-400 line-through sm:text-sm">
+                            {formatearPrecio(producto.precioARS)}
+                          </span>
+
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-orange-600 sm:text-xs">
+                            {producto.oferta.etiqueta}
+                          </span>
+                        </div>
+
+                        <p className="mt-1.5 text-xs font-semibold text-emerald-700 sm:text-sm">
+                          Ahorrás {formatearPrecio(ahorro)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+                        {formatearPrecio(producto.precioARS)}
+                      </p>
+                    )}
                   </div>
 
-                  <span className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase text-sky-700">
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-[10px] font-semibold uppercase text-sky-700 sm:text-xs">
                     <Download size={13} />
                     Descargable
                   </span>
                 </div>
               </div>
 
-              {/* QUÉ INCLUYE */}
+              {/* =================================================
+                  QUÉ INCLUYE
+              ================================================== */}
+
               {producto.incluye?.length > 0 && (
                 <div className="mt-4">
                   <h2 className="mb-2 text-base font-semibold text-slate-900">
@@ -244,59 +325,62 @@ Quedo atento a las instrucciones de pago.`;
                 </div>
               )}
 
-              {/* RESEÑAS */}
-{resenasDelProducto.length > 0 && (
-  <div className="mt-5">
-    <div className="mb-3">
-      <h2 className="text-base font-semibold text-slate-900">
-        Reseñas
-      </h2>
+              {/* =================================================
+                  RESEÑAS
+              ================================================== */}
 
-      <p className="mt-1 text-xs leading-5 text-slate-500">
-        Opiniones de personas que ya compraron este producto.
-      </p>
-    </div>
+              {resenasDelProducto.length > 0 && (
+                <div className="mt-5">
+                  <div className="mb-3">
+                    <h2 className="text-base font-semibold text-slate-900">
+                      Reseñas
+                    </h2>
 
-    <div className="space-y-3">
-      {resenasDelProducto.map((resena) => (
-        <div
-          key={resena.id}
-          className="rounded-xl border border-slate-200 bg-white p-4"
-        >
-          {/* ESTRELLAS */}
-          <div className="flex items-center gap-1 text-amber-500">
-            {[1, 2, 3, 4, 5].map((estrella) => (
-              <span key={estrella}>
-                {estrella <= resena.estrellas ? "★" : "☆"}
-              </span>
-            ))}
-          </div>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Opiniones de personas que ya compraron este producto.
+                    </p>
+                  </div>
 
-          {/* TEXTO */}
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            “{resena.texto}”
-          </p>
+                  <div className="space-y-3">
+                    {resenasDelProducto.map((resena) => (
+                      <div
+                        key={resena.id}
+                        className="rounded-xl border border-slate-200 bg-white p-4"
+                      >
+                        <div className="flex items-center gap-1 text-amber-500">
+                          {[1, 2, 3, 4, 5].map((estrella) => (
+                            <span key={estrella}>
+                              {estrella <= resena.estrellas ? "★" : "☆"}
+                            </span>
+                          ))}
+                        </div>
 
-          {/* PERSONA */}
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <p className="text-xs font-medium text-slate-700">
-              {resena.nombre}
-              {resena.lugar && ` · ${resena.lugar}`}
-            </p>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          “{resena.texto}”
+                        </p>
 
-            {resena.compraVerificada && (
-              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
-                Compra verificada
-              </span>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <p className="text-xs font-medium text-slate-700">
+                            {resena.nombre}
+                            {resena.lugar && ` · ${resena.lugar}`}
+                          </p>
 
-              {/* COMPRA */}
+                          {resena.compraVerificada && (
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                              Compra verificada
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* =================================================
+                  COMPRA
+              ================================================== */}
+
               <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4">
                 <p className="text-sm font-semibold text-slate-900">
                   Descarga tras confirmar el pago
@@ -306,6 +390,20 @@ Quedo atento a las instrucciones de pago.`;
                   Una vez abonado, recibirás el enlace de descarga por correo
                   electrónico.
                 </p>
+
+                {tieneOferta && (
+                  <div className="mt-3 rounded-lg bg-white/80 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-medium text-slate-600">
+                        Total con oferta
+                      </span>
+
+                      <span className="text-sm font-bold text-slate-900">
+                        {formatearPrecio(precioFinal)}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -321,7 +419,10 @@ Quedo atento a las instrucciones de pago.`;
         </div>
       </main>
 
-      {/* MODAL CHECKOUT */}
+            {/* =========================================================
+          MODAL CHECKOUT
+      ========================================================== */}
+
       {checkoutAbierto && (
         <div
           className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4"
@@ -346,7 +447,7 @@ Quedo atento a las instrucciones de pago.`;
               <button
                 type="button"
                 onClick={() => setCheckoutAbierto(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
                 aria-label="Cerrar"
               >
                 <X size={19} />
@@ -354,7 +455,10 @@ Quedo atento a las instrucciones de pago.`;
             </div>
 
             <div className="max-h-[82vh] overflow-y-auto p-5">
-              {/* PRODUCTO */}
+              {/* =================================================
+                  PRODUCTO
+              ================================================== */}
+
               <div className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <div className="h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-white">
                   <img
@@ -373,19 +477,35 @@ Quedo atento a las instrucciones de pago.`;
                     {producto.formato || "PDF"} · Producto digital
                   </p>
 
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {formatearPrecio(producto.precioARS)}
-                  </p>
+                  {tieneOferta ? (
+                    <div className="mt-2">
+                      <div className="flex flex-wrap items-center gap-2">                    
+                        
+                      </div>
+
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                        
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                      {formatearPrecio(producto.precioARS)}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* DATOS */}
+              {/* =================================================
+                  DATOS
+              ================================================== */}
+
               <div className="mt-5">
                 <h3 className="text-sm font-semibold text-slate-900">
                   Tus datos
                 </h3>
 
                 <div className="mt-3 space-y-3">
+                  {/* NOMBRE */}
                   <div>
                     <label
                       htmlFor="nombre"
@@ -404,13 +524,20 @@ Quedo atento a las instrucciones de pago.`;
                         id="nombre"
                         type="text"
                         value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
+                        onChange={(e) => {
+                          setNombre(e.target.value);
+
+                          if (error) {
+                            setError("");
+                          }
+                        }}
                         placeholder="Tu nombre"
                         className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400"
                       />
                     </div>
                   </div>
 
+                  {/* EMAIL */}
                   <div>
                     <label
                       htmlFor="email"
@@ -429,7 +556,13 @@ Quedo atento a las instrucciones de pago.`;
                         id="email"
                         type="email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+
+                          if (error) {
+                            setError("");
+                          }
+                        }}
                         placeholder="tu@email.com"
                         className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400"
                       />
@@ -438,30 +571,80 @@ Quedo atento a las instrucciones de pago.`;
                 </div>
               </div>
 
-              {/* RESUMEN */}
+              {/* =================================================
+                  RESUMEN
+              ================================================== */}
+
               <div className="mt-5 border-y border-slate-200 py-4">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-slate-600">
-                    Producto
-                  </span>
+                {tieneOferta ? (
+                  <>
+                    {/* PRECIO ORIGINAL */}
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-slate-600">
+                        Precio original
+                      </span>
 
-                  <span className="text-sm font-medium text-slate-900">
-                    {formatearPrecio(producto.precioARS)}
-                  </span>
-                </div>
+                      <span className="text-sm text-slate-400 line-through">
+                        {formatearPrecio(producto.precioARS)}
+                      </span>
+                    </div>
 
-                <div className="mt-3 flex items-center justify-between gap-4">
+                    {/* OFERTA */}
+                    <div className="mt-2 flex items-center justify-between gap-4">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+                        {producto.oferta.etiqueta}
+                      </span>
+
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                        -{descuento}%
+                      </span>
+                    </div>
+
+                    {/* AHORRO */}
+                    <div className="mt-2 flex items-center justify-between gap-4">
+                      <span className="text-sm font-medium text-emerald-700">
+                        Ahorrás
+                      </span>
+
+                      <span className="text-sm font-semibold text-emerald-700">
+                        {formatearPrecio(ahorro)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-slate-600">
+                      Producto
+                    </span>
+
+                    <span className="text-sm font-medium text-slate-900">
+                      {formatearPrecio(producto.precioARS)}
+                    </span>
+                  </div>
+                )}
+
+                {/* TOTAL */}
+                <div
+                  className={`flex items-center justify-between gap-4 ${
+                    tieneOferta
+                      ? "mt-3 border-t border-slate-100 pt-3"
+                      : "mt-3"
+                  }`}
+                >
                   <span className="font-semibold text-slate-900">
                     Total
                   </span>
 
-                  <span className="text-lg font-semibold text-slate-900">
-                    {formatearPrecio(producto.precioARS)}
+                  <span className="text-lg font-bold text-slate-900">
+                    {formatearPrecio(precioFinal)}
                   </span>
                 </div>
               </div>
 
-              {/* ENTREGA */}
+              {/* =================================================
+                  ENTREGA
+              ================================================== */}
+
               <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-3">
                 <div className="flex items-start gap-2.5">
                   <Mail
@@ -478,12 +661,15 @@ Quedo atento a las instrucciones de pago.`;
 
               {/* ERROR */}
               {error && (
-                <p className="mt-3 text-xs font-medium text-red-600">
+                <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
                   {error}
                 </p>
               )}
 
-              {/* WHATSAPP */}
+              {/* =================================================
+                  WHATSAPP
+              ================================================== */}
+
               <button
                 type="button"
                 onClick={comprarPorWhatsApp}
@@ -501,7 +687,10 @@ Quedo atento a las instrucciones de pago.`;
         </div>
       )}
 
-      {/* MODAL PREVIEW */}
+      {/* =========================================================
+          MODAL PREVIEW
+      ========================================================== */}
+
       {previewAbierto && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4"
@@ -514,14 +703,14 @@ Quedo atento a las instrucciones de pago.`;
             <button
               type="button"
               onClick={() => setPreviewAbierto(false)}
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-md hover:bg-slate-100"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-md transition hover:bg-slate-100"
               aria-label="Cerrar vista previa"
             >
               <X size={19} />
             </button>
 
             <img
-              src={producto.imagenes.preview}
+              src={producto.imagenes?.preview}
               alt={`Vista ampliada de ${producto.nombre}`}
               className="mx-auto max-h-[86vh] w-full object-contain"
             />
