@@ -1,5 +1,6 @@
 import { CONFIG } from "../datos/config";
 import { useState } from "react";
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,7 +12,10 @@ import {
   FileText,
 } from "lucide-react";
 
-import { fechasReservadas } from "../datos/disponibilidad";
+import {
+  fechasReservadas,
+  fechasNoDisponibles,
+} from "../datos/disponibilidad";
 
 const meses = [
   "Enero",
@@ -28,12 +32,48 @@ const meses = [
   "Diciembre",
 ];
 
+const provinciasArgentina = [
+  "Buenos Aires",
+  "Catamarca",
+  "Chaco",
+  "Chubut",
+  "Córdoba",
+  "Corrientes",
+  "Entre Ríos",
+  "Formosa",
+  "Jujuy",
+  "La Pampa",
+  "La Rioja",
+  "Mendoza",
+  "Misiones",
+  "Neuquén",
+  "Río Negro",
+  "Salta",
+  "San Juan",
+  "San Luis",
+  "Santa Cruz",
+  "Santa Fe",
+  "Santiago del Estero",
+  "Tierra del Fuego",
+  "Tucumán",
+  "Ciudad Autónoma de Buenos Aires",
+];
+
 const diasSemana = ["D", "L", "M", "M", "J", "V", "S"];
 
 const Disponibilidad = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState([]);
-  const [modalReservasAbierto, setModalReservasAbierto] = useState(false);
+  const [modalReservasAbierto, setModalReservasAbierto] =
+    useState(false);
+
+  const [provincia, setProvincia] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [errorUbicacion, setErrorUbicacion] = useState("");
+
+  // =========================================================
+  // FECHAS
+  // =========================================================
 
   const obtenerFechaString = (year, month, day) => {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(
@@ -54,7 +94,12 @@ const Disponibilidad = () => {
     };
   };
 
-  const { daysInMonth, firstDay } = getDaysInMonth(currentMonth);
+  const { daysInMonth, firstDay } =
+    getDaysInMonth(currentMonth);
+
+  // =========================================================
+  // SELECCIONAR FECHA
+  // =========================================================
 
   const toggleDate = (day) => {
     const fecha = obtenerFechaString(
@@ -63,7 +108,10 @@ const Disponibilidad = () => {
       day,
     );
 
-    if (fechasReservadas.includes(fecha)) {
+    if (
+      fechasReservadas.includes(fecha) ||
+      fechasNoDisponibles.includes(fecha)
+    ) {
       return;
     }
 
@@ -73,6 +121,10 @@ const Disponibilidad = () => {
         : [...prev, fecha].sort(),
     );
   };
+
+  // =========================================================
+  // NAVEGACIÓN DEL CALENDARIO
+  // =========================================================
 
   const mesAnterior = () => {
     setCurrentMonth(
@@ -94,29 +146,152 @@ const Disponibilidad = () => {
     );
   };
 
+  // =========================================================
+  // CONSULTA POR WHATSAPP
+  // =========================================================
+
+  const consultarPorWhatsApp = () => {
+    const ciudadLimpia = ciudad.trim();
+
+    if (!provincia || !ciudadLimpia) {
+      setErrorUbicacion(
+        "Seleccioná una provincia e ingresá una ciudad antes de continuar.",
+      );
+      return;
+    }
+
+    if (selectedDates.length === 0) {
+      setErrorUbicacion(
+        "Seleccioná al menos una fecha antes de continuar.",
+      );
+      return;
+    }
+
+    setErrorUbicacion("");
+
+    const mensaje = `Hola Andrés. Vi tu calendario en ${CONFIG.marca.dominio} y quiero consultar una estancia.
+
+*Ubicación:* ${ciudadLimpia}, ${provincia}
+*Fechas:* ${selectedDates.join(", ")}
+
+Quisiera saber si tenés disponibilidad para estas fechas y ubicación.`;
+
+    const url = `https://wa.me/${CONFIG.contacto.whatsapp}?text=${encodeURIComponent(
+      mensaje,
+    )}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <>
-      <section id="disponibilidad" className="seccion bg-white">
+      <section
+        id="disponibilidad"
+        className="seccion bg-white"
+      >
         <div className="mx-auto max-w-3xl">
-          {/* Encabezado */}
+          {/* =====================================================
+              ENCABEZADO
+          ====================================================== */}
 
           <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="eyebrow">Disponibilidad</p>
+            <p className="eyebrow">
+              Disponibilidad
+            </p>
 
             <h2 className="titulo-seccion">
               Consulta las fechas que necesitas
             </h2>
 
             <p className="subtitulo-seccion">
-              Los días disponibles pueden seleccionarse directamente. Las
-              fechas ya reservadas aparecen bloqueadas en el calendario.
-            </p>
+  La disponibilidad depende de las fechas y la ubicación del hogar.
+  Seleccionar fechas no confirma una reserva. Una vez recibida la
+  consulta, reviso la ubicación, los tiempos necesarios para llegar
+  desde una estancia anterior y los detalles de la estancia antes
+  de confirmar.
+</p>
           </div>
 
-          {/* Calendario */}
+          {/* =====================================================
+              UBICACIÓN
+          ====================================================== */}
+
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <p className="text-sm font-semibold text-slate-900">
+              ¿Dónde necesitás el cuidado?
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Por el momento realizo estancias únicamente en
+              Argentina.
+            </p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {/* PROVINCIA */}
+
+              <div>
+                <label
+                  htmlFor="provincia"
+                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                >
+                  Provincia
+                </label>
+
+                <select
+                  id="provincia"
+                  value={provincia}
+                  onChange={(e) => {
+                    setProvincia(e.target.value);
+                    setErrorUbicacion("");
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400"
+                >
+                  <option value="">
+                    Seleccioná una provincia
+                  </option>
+
+                  {provinciasArgentina.map((item) => (
+                    <option
+                      key={item}
+                      value={item}
+                    >
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* CIUDAD */}
+
+              <div>
+                <label
+                  htmlFor="ciudad"
+                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                >
+                  Ciudad
+                </label>
+
+                <input
+                  id="ciudad"
+                  type="text"
+                  value={ciudad}
+                  onChange={(e) => {
+                    setCiudad(e.target.value);
+                    setErrorUbicacion("");
+                  }}
+                  placeholder="Ej. Bariloche"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* =====================================================
+              CALENDARIO
+          ====================================================== */}
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-            {/* Mes */}
+            {/* MES */}
 
             <div className="mb-6 flex items-center justify-between">
               <button
@@ -143,9 +318,11 @@ const Disponibilidad = () => {
               </button>
             </div>
 
-            {/* Referencias */}
+            {/* =================================================
+                REFERENCIAS
+            ================================================== */}
 
-            <div className="mb-6 flex items-center justify-center gap-6 rounded-2xl bg-slate-50 px-4 py-3">
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-4 rounded-2xl bg-slate-50 px-4 py-3">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-full bg-emerald-500" />
 
@@ -161,9 +338,19 @@ const Disponibilidad = () => {
                   Reservado
                 </span>
               </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-slate-400" />
+
+                <span className="text-xs font-medium text-slate-600">
+                  No disponible
+                </span>
+              </div>
             </div>
 
-            {/* Días de semana */}
+            {/* =================================================
+                DÍAS DE SEMANA
+            ================================================== */}
 
             <div className="mb-2 grid grid-cols-7 gap-1">
               {diasSemana.map((dia, index) => (
@@ -176,26 +363,40 @@ const Disponibilidad = () => {
               ))}
             </div>
 
-            {/* Días */}
+            {/* =================================================
+                DÍAS DEL MES
+            ================================================== */}
 
             <div className="grid grid-cols-7 gap-1.5">
-              {Array.from({ length: firstDay }).map((_, index) => (
+              {Array.from({
+                length: firstDay,
+              }).map((_, index) => (
                 <div key={`empty-${index}`} />
               ))}
 
-              {Array.from({ length: daysInMonth }).map((_, index) => {
+              {Array.from({
+                length: daysInMonth,
+              }).map((_, index) => {
                 const day = index + 1;
 
-                const year = currentMonth.getFullYear();
-                const month = currentMonth.getMonth();
+                const year =
+                  currentMonth.getFullYear();
 
-                const fechaString = obtenerFechaString(
+                const month =
+                  currentMonth.getMonth();
+
+                const fechaString =
+                  obtenerFechaString(
+                    year,
+                    month,
+                    day,
+                  );
+
+                const fecha = new Date(
                   year,
                   month,
                   day,
                 );
-
-                const fecha = new Date(year, month, day);
 
                 const hoy = new Date();
 
@@ -205,16 +406,28 @@ const Disponibilidad = () => {
                   hoy.getDate(),
                 );
 
-                const isPast = fecha < inicioHoy;
+                const isPast =
+                  fecha < inicioHoy;
 
                 const isReserved =
-                  fechasReservadas.includes(fechaString);
+                  fechasReservadas.includes(
+                    fechaString,
+                  );
+
+                const isUnavailable =
+                  fechasNoDisponibles.includes(
+                    fechaString,
+                  );
 
                 const isSelected =
-                  selectedDates.includes(fechaString);
+                  selectedDates.includes(
+                    fechaString,
+                  );
 
                 const isAvailable =
-                  !isPast && !isReserved;
+                  !isPast &&
+                  !isReserved &&
+                  !isUnavailable;
 
                 let estilos =
                   "border border-transparent text-slate-700";
@@ -225,6 +438,9 @@ const Disponibilidad = () => {
                 } else if (isReserved) {
                   estilos =
                     "cursor-not-allowed border-rose-100 bg-rose-50 text-rose-500";
+                } else if (isUnavailable) {
+                  estilos =
+                    "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400";
                 } else if (isSelected) {
                   estilos =
                     "border-emerald-700 bg-emerald-700 text-white shadow-sm";
@@ -235,17 +451,27 @@ const Disponibilidad = () => {
 
                 return (
                   <button
-                    key={day}
+                    key={fechaString}
                     type="button"
-                    disabled={isPast || isReserved}
-                    onClick={() => toggleDate(day)}
+                    disabled={
+                      isPast ||
+                      isReserved ||
+                      isUnavailable
+                    }
+                    onClick={() =>
+                      toggleDate(day)
+                    }
                     className={`relative aspect-square rounded-xl text-xs font-semibold transition sm:text-sm ${estilos}`}
                     aria-label={
                       isReserved
                         ? `${fechaString}, reservado`
-                        : isSelected
-                          ? `${fechaString}, seleccionado`
-                          : `${fechaString}, disponible`
+                        : isUnavailable
+                          ? `${fechaString}, no disponible`
+                          : isSelected
+                            ? `${fechaString}, seleccionado`
+                            : isPast
+                              ? `${fechaString}, fecha pasada`
+                              : `${fechaString}, disponible`
                     }
                   >
                     {day}
@@ -253,12 +479,18 @@ const Disponibilidad = () => {
                     {isReserved && (
                       <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-rose-500" />
                     )}
+
+                    {isUnavailable && (
+                      <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-slate-400" />
+                    )}
                   </button>
                 );
               })}
             </div>
 
-            {/* Fechas elegidas */}
+            {/* =================================================
+                FECHAS ELEGIDAS
+            ================================================== */}
 
             {selectedDates.length > 0 && (
               <div className="mt-7 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
@@ -279,10 +511,12 @@ const Disponibilidad = () => {
                       key={fecha}
                       type="button"
                       onClick={() =>
-                        setSelectedDates((prev) =>
-                          prev.filter(
-                            (item) => item !== fecha,
-                          ),
+                        setSelectedDates(
+                          (prev) =>
+                            prev.filter(
+                              (item) =>
+                                item !== fecha,
+                            ),
                         )
                       }
                       className="inline-flex items-center gap-2 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:border-rose-200 hover:text-rose-600"
@@ -294,29 +528,40 @@ const Disponibilidad = () => {
                   ))}
                 </div>
 
-                <a
-                  href={`https://wa.me/${CONFIG.contacto.whatsapp}?text=${encodeURIComponent(
-                    `Hola Andrés. Vi tu calendario en ${CONFIG.marca.dominio} y quiero consultar disponibilidad para estas fechas: ${selectedDates.join(
-                      ", ",
-                    )}.`,
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                {/* ERROR */}
+
+                {errorUbicacion && (
+                  <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium leading-5 text-rose-600">
+                    {errorUbicacion}
+                  </p>
+                )}
+
+                {/* WHATSAPP */}
+
+                <button
+                  type="button"
+                  onClick={
+                    consultarPorWhatsApp
+                  }
                   className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
                 >
                   Consultar estas fechas
                   <MessageCircle size={17} />
-                </a>
+                </button>
               </div>
             )}
           </div>
 
-          {/* Acuerdos */}
+          {/* =====================================================
+              ACUERDOS
+          ====================================================== */}
 
           <div className="mt-5 flex justify-center">
             <button
               type="button"
-              onClick={() => setModalReservasAbierto(true)}
+              onClick={() =>
+                setModalReservasAbierto(true)
+              }
               className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-sky-700"
             >
               <Info size={16} />
@@ -326,100 +571,106 @@ const Disponibilidad = () => {
         </div>
       </section>
 
-      {/* Modal */}
+      {/* =========================================================
+          MODAL
+      ========================================================== */}
 
       {modalReservasAbierto && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-5 backdrop-blur-sm"
-          onClick={() => setModalReservasAbierto(false)}
+          onClick={() =>
+            setModalReservasAbierto(false)
+          }
         >
           <div
             className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl sm:p-7"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
-            {/* Cerrar */}
+            {/* CERRAR */}
 
             <button
               type="button"
-              onClick={() => setModalReservasAbierto(false)}
+              onClick={() =>
+                setModalReservasAbierto(false)
+              }
               className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
               aria-label="Cerrar"
             >
               <X size={18} />
             </button>
 
-            {/* Encabezado */}
+            {/* ENCABEZADO */}
 
             <div className="pr-10">
-              
-
               <h3 className="text-xl font-semibold text-slate-900">
-                Acuerdos y cancelaciones
+                Acuerdos previo
               </h3>
-
-              
             </div>
 
-            
+            {/* =================================================
+                CONTENIDO
+            ================================================== */}
 
-    {/* Contenido */}
+            <div className="-mt-2 space-y-4 text-sm leading-6 text-slate-600">
+              <div className="flex gap-3">
+                
 
-<div className="mt-6 space-y-4 text-sm leading-6 text-slate-600">
-  <div className="flex gap-3">
-    <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
+                
+              </div>
 
-    <p>
-      Las fechas seleccionadas representan una consulta de disponibilidad.
-      No generan una reserva automática.
-    </p>
-  </div>
+              <div className="flex gap-3">
+                
+              </div>
 
-  
-  <div className="flex gap-3">
-    <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-orange-500" />
+                 <div className="flex gap-3">
+                
+              </div>
 
-    <p>
-      Si ambas partes deciden avanzar, acordamos las condiciones y
-      completamos la documentación correspondiente. Recién entonces la
-      estancia se considera confirmada y las fechas pasan a figurar como
-      reservadas.
-    </p>
-  </div>
+              <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+                <div className="flex items-start gap-3">
+                  <FileText
+                    size={18}
+                    className="mt-0.5 min-w-5 text-sky-600"
+                  />
 
-  <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
-    <div className="flex items-start gap-3">
-      <FileText
-        size={18}
-        className="mt-0.5 min-w-5 text-sky-600"
-      />
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      Acuerdo e información de la
+                      estancia
+                    </p>
 
-      <div>
-        <p className="font-semibold text-slate-900">
-          Acuerdo e información de la estancia
-        </p>
+                    <p className="mt-1.5 text-sm leading-6 text-slate-600">
+                      Antes de comenzar una estancia
+                      completamos un acuerdo y una
+                      ficha del hogar y las mascotas.
+                      Allí dejamos por escrito las
+                      fechas, responsabilidades,
+                      instrucciones, contactos y
+                      condiciones acordadas entre
+                      ambas partes.
+                    </p>
 
-         <p className="mt-1.5 text-sm leading-6 text-slate-600">
-        Antes de comenzar una estancia completamos un acuerdo y una ficha
-        del hogar y las mascotas. Allí dejamos por escrito las fechas,
-        responsabilidades, instrucciones, contactos y condiciones acordadas
-        entre ambas partes.
-      </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      De esta manera, tanto el
+                      propietario como yo conservamos
+                      una copia de la información y de
+                      los acuerdos establecidos antes
+                      de la estancia.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        De esta manera, tanto el propietario como yo conservamos una copia
-        de la información y de los acuerdos establecidos antes de la
-        estancia.
-      </p>
-      </div>
-    </div>
-  </div>
-</div>
-
-            {/* Cerrar */}
+            {/* CERRAR */}
 
             <button
               type="button"
-              onClick={() => setModalReservasAbierto(false)}
+              onClick={() =>
+                setModalReservasAbierto(false)
+              }
               className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               Entendido

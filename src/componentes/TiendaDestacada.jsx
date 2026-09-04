@@ -104,14 +104,11 @@ const TiendaDestacada = ({ verProducto }) => {
                   {producto.nombre}
                 </h3>
 
-                {/* DESCRIPCIÓN */}
-                <p className="mt-1.5 line-clamp-2 text-[10px] leading-4 text-slate-500 sm:mt-2 sm:text-xs sm:leading-5">
-                  {producto.descripcion}
-                </p>
+                
 
                 {/* PRECIO + CTA */}
-<div className="mt-auto pt-4">
-  <div className="border-t border-slate-100 pt-3 sm:pt-4">
+<div className="mt-auto pt-3">
+  <div className="border-t border-slate-100 pt-3 sm:pt-3">
 
     
 
@@ -123,23 +120,23 @@ const TiendaDestacada = ({ verProducto }) => {
             {formatearPrecio(precioFinal)}
           </p>
 
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700 sm:text-[10px]">
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 sm:text-[10px]">
             -{descuento}%
           </span>
         </div>
 
         {/* PRECIO ORIGINAL */}
-        <p className="mt-0.5 text-[10px] text-slate-400 line-through sm:text-xs">
+        <p className="mt-0.5 text-[14px] text-slate-400 line-through sm:text-xs">
           {formatearPrecio(producto.precioARS)}
         </p>
 
         {/* OFERTA */}
         <div className="mt-2">
-          <p className="text-[9px] font-bold uppercase tracking-wide text-orange-600 sm:text-[10px]">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-orange-600 sm:text-[10px]">
             {producto.oferta.etiqueta}
           </p>
 
-          <p className="mt-0.5 text-[9px] font-medium text-emerald-700 sm:text-[10px]">
+          <p className="mt-0.5 text-[14px] font-medium text-emerald-700 sm:text-[10px]">
             Ahorrás {formatearPrecio(ahorro)}
           </p>
         </div>

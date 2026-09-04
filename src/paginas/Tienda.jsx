@@ -1,4 +1,5 @@
 import CalificacionProducto from "../componentes/CalificacionProducto";
+import ProductosRecomendados from "../componentes/ProductosRecomendados";
 
 import {
   ArrowLeft,
@@ -29,16 +30,7 @@ const Tienda = () => {
           VOLVER
       ========================================================== */}
 
-      <div className="mx-auto max-w-6xl px-5 pt-6">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-sky-600"
-        >
-          <ArrowLeft size={17} />
-          Volver
-        </button>
-      </div>
+      
 
       {/* =========================================================
           ENCABEZADO
@@ -60,6 +52,17 @@ const Tienda = () => {
           </p>
         </div>
       </section>
+
+      <div className="mx-auto max-w-6xl px-5 pt-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-sky-600"
+        >
+          <ArrowLeft size={17} />
+          Volver
+        </button>
+      </div>
 
       {/* =========================================================
           PRODUCTOS
@@ -133,11 +136,11 @@ const Tienda = () => {
                       className="block w-full bg-white"
                       aria-label={`Ver ${producto.nombre}`}
                     >
-                      <div className="aspect-[4/5] overflow-hidden bg-slate-50 p-2 sm:p-4">
+                      <div className="aspect-[4/6] overflow-hidden bg-slate-50 p-1 sm:p-4">
                         <img
                           src={producto.imagenes?.portada}
                           alt={producto.nombre}
-                          className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.02]"
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                         />
                       </div>
                     </button>
@@ -150,7 +153,7 @@ const Tienda = () => {
                       {/* BADGES */}
 
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:px-2.5 sm:text-[10px]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-sky-700 sm:px-2.5 sm:text-[12px]">
                           <Download
                             size={11}
                             className="shrink-0"
@@ -197,41 +200,35 @@ const Tienda = () => {
                         {producto.nombre}
                       </h3>
 
-                      {/* DESCRIPCIÓN */}
-
-                      <p className="mt-1.5 line-clamp-2 text-[10px] leading-4 text-slate-500 sm:mt-2 sm:text-xs sm:leading-5">
-                        {producto.descripcion}
-                      </p>
+                      
 
                       {/* =========================================
                           PRECIO + CTA
                       ========================================== */}
 
-                      <div className="mt-auto pt-4">
+                      <div className="mt-auto pt-3">
                         <div className="border-t border-slate-100 pt-3 sm:pt-4">
-                          <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[10px]">
-                            Precio
-                          </p>
+                          
 
                           {tieneOferta ? (
                             <>
                               {/* PRECIO OFERTA */}
 
-                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <div className="-mt-4 flex flex-wrap items-center gap-2">
                                 <p className="text-base font-bold tracking-tight text-slate-900 sm:text-xl">
                                   {formatearPrecio(
                                     precioFinal
                                   )}
                                 </p>
 
-                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700 sm:text-[10px]">
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 sm:text-[10px]">
                                   -{descuento}%
                                 </span>
                               </div>
 
                               {/* PRECIO ORIGINAL */}
 
-                              <p className="mt-0.5 text-[10px] text-slate-400 line-through sm:text-xs">
+                              <p className="mt-0.5 text-[14px] text-slate-400 line-through sm:text-xs">
                                 {formatearPrecio(
                                   producto.precioARS
                                 )}
@@ -247,7 +244,7 @@ const Tienda = () => {
                                   }
                                 </p>
 
-                                <p className="mt-0.5 text-[9px] font-medium text-emerald-700 sm:text-[10px]">
+                                <p className="mt-0.5 text-[14px] font-medium text-emerald-700 sm:text-[10px]">
                                   Ahorrás{" "}
                                   {formatearPrecio(
                                     ahorro
@@ -289,6 +286,8 @@ const Tienda = () => {
               })}
             </div>
           ) : (
+
+      
             /* =====================================================
                 SIN PRODUCTOS
             ====================================================== */
@@ -308,6 +307,10 @@ const Tienda = () => {
               </p>
             </div>
           )}
+
+           {/* PRODUCTOS RECOMENDADOS */}
+
+          <ProductosRecomendados />
         </div>
       </section>
     </main>
