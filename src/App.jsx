@@ -22,6 +22,8 @@ import WhatsAppFlotante from "./componentes/WhatsAppFlotante";
 
 import Tienda from "./paginas/Tienda";
 import DetalleProducto from "./paginas/DetalleProducto";
+import Recomendados from "./paginas/Recomendados";
+import GeneradorPdf from "./paginas/GeneradorPdf";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
@@ -130,10 +132,16 @@ const ContenidoApp = () => {
           <Route path="/" element={<Home />} />
 
           <Route path="/tienda" element={<Tienda />} />
+          <Route path="/recomendados" element={<Recomendados />} />
+          <Route
+  path="/generador-pdf"
+  element={<GeneradorPdf />}
+/>
 
           <Route
             path="/tienda/:id"
             element={<DetalleProducto />}
+            
           />
         </Routes>
       </div>

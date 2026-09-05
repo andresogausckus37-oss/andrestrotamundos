@@ -136,11 +136,11 @@ const Tienda = () => {
                       className="block w-full bg-white"
                       aria-label={`Ver ${producto.nombre}`}
                     >
-                      <div className="aspect-[4/6] overflow-hidden bg-slate-50 p-1 sm:p-4">
+                      <div className="aspect-[4/5] overflow-hidden bg-slate-50 p-1 sm:p-4">
                         <img
                           src={producto.imagenes?.portada}
                           alt={producto.nombre}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                          className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.02]"
                         />
                       </div>
                     </button>
