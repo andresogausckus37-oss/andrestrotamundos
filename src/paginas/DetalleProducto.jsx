@@ -36,6 +36,7 @@ const DetalleProducto = () => {
   const [previewAbierto, setPreviewAbierto] = useState(false);
   const [checkoutAbierto, setCheckoutAbierto] = useState(false);
   const [imagenActiva, setImagenActiva] = useState(0);
+  const [extraAgregado, setExtraAgregado] = useState(false);
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -86,6 +87,45 @@ const DetalleProducto = () => {
     : 0;
 
   // =========================================================
+// VENTA CRUZADA
+// =========================================================
+
+const productoExtra = producto.ventaCruzadaId
+  ? productos.find((p) => p.id === producto.ventaCruzadaId)
+  : null;
+
+const extraTieneOferta = productoExtra?.oferta?.activa === true;
+
+const precioExtra = productoExtra
+  ? extraTieneOferta
+    ? productoExtra.oferta.precioARS
+    : productoExtra.precioARS
+  : 0;
+
+const descuentoExtra =
+  productoExtra && extraTieneOferta
+    ? Math.round(
+        ((productoExtra.precioARS - productoExtra.oferta.precioARS) /
+          productoExtra.precioARS) *
+          100
+      )
+    : 0;
+
+const totalPedido =
+  precioFinal + (extraAgregado && productoExtra ? precioExtra : 0);
+
+  const precioOriginalPedido =
+  producto.precioARS +
+  (extraAgregado && productoExtra ? productoExtra.precioARS : 0);
+
+const ahorroPedido = precioOriginalPedido - totalPedido;
+
+const descuentoPedido =
+  precioOriginalPedido > 0
+    ? Math.round((ahorroPedido / precioOriginalPedido) * 100)
+    : 0;
+
+  // =========================================================
   // RESEÑAS
   // =========================================================
 
@@ -98,19 +138,21 @@ const DetalleProducto = () => {
   // =========================================================
 
   const imagenes = [
-    producto.imagenes?.portada,
-    producto.imagenes?.preview,
-    producto.imagenes?.previewIndividual,
-  ].filter(Boolean);
+  producto.imagenes?.portada,
+  producto.imagenes?.preview,
+  producto.imagenes?.previewIndividual,
+  ...(producto.imagenes?.previewsIndividuales || []),
+].filter(Boolean);
 
   // =========================================================
   // CHECKOUT
   // =========================================================
 
   const abrirCheckout = () => {
-    setError("");
-    setCheckoutAbierto(true);
-  };
+  setError("");
+  setExtraAgregado(false);
+  setCheckoutAbierto(true);
+};
 
   const comprarPorWhatsApp = () => {
     const nombreLimpio = nombre.trim();
@@ -130,19 +172,29 @@ const DetalleProducto = () => {
 
     setError("");
 
-    const detalleOferta = tieneOferta
-      ? `
-*Oferta:* ${producto.oferta.etiqueta}
-*Precio original:* ${formatearPrecio(producto.precioARS)}
-*Descuento:* -${descuento}%
-*Ahorrás:* ${formatearPrecio(ahorro)}`
-      : "";
+    const detalleOferta =
+  ahorroPedido > 0
+    ? `
+*Precio original del pedido:* ${formatearPrecio(precioOriginalPedido)}
+*Descuento:* -${descuentoPedido}%
+*Ahorrás:* ${formatearPrecio(ahorroPedido)}`
+    : "";
 
-    const mensaje = `Hola Andrés, quiero realizar esta compra:
+    const detalleExtra =
+  extraAgregado && productoExtra
+    ? `
+*Producto adicional:* ${productoExtra.nombre}`
+    : "";
 
-*Producto:* ${producto.nombre}
-*Formato:* ${producto.formato || "PDF"}${detalleOferta}
-*Total:* ${formatearPrecio(precioFinal)}
+const mensaje = `Hola Andrés, quiero realizar esta compra:
+
+*Producto:* ${producto.nombre}${detalleExtra}
+
+*Precio original del pedido:* ${formatearPrecio(precioOriginalPedido)}
+*Descuento:* -${descuentoPedido}%
+*Ahorro:* ${formatearPrecio(ahorroPedido)}
+
+*TOTAL DEL PEDIDO:* ${formatearPrecio(totalPedido)}
 
 *Nombre:* ${nombreLimpio}
 *Email:* ${emailLimpio}
@@ -190,10 +242,7 @@ Quedo atento a las instrucciones de pago.`;
               {/* MINIATURAS */}
               {imagenes.length > 1 && (
                 <div className="mt-3">
-                  <p className="mb-2 flex items-center gap-1.5 text-xs text-slate-500">
-                    <Eye size={13} />
-                    Deslizá para ver más
-                  </p>
+
 
                   <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth">
                     {imagenes.map((img, idx) => (
@@ -217,10 +266,18 @@ Quedo atento a las instrucciones de pago.`;
                     ))}
                   </div>
 
-                  <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                    <strong>Nota:</strong> La compra incluye el archivo en alta
-                    calidad, sin marcas de agua.
-                  </p>
+                  <div className="mt-1 flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-1.5">
+  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+    <Check size={12} />
+  </div>
+
+  <p className="text-sm leading-relaxed text-slate-700">
+    El archivo final se entrega en{" "}
+    <strong className="font-semibold text-emerald-700">
+      alta calidad y sin marcas de agua.
+    </strong>
+  </p>
+</div>
                 </div>
               )}
             </div>
@@ -333,12 +390,9 @@ Quedo atento a las instrucciones de pago.`;
                 <div className="mt-5">
                   <div className="mb-3">
                     <h2 className="text-base font-semibold text-slate-900">
-                      Reseñas
+                      Reseñas de personas que ya compraron este producto
                     </h2>
 
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Opiniones de personas que ya compraron este producto.
-                    </p>
                   </div>
 
                   <div className="space-y-3">
@@ -386,10 +440,19 @@ Quedo atento a las instrucciones de pago.`;
                   Descarga tras confirmar el pago
                 </p>
 
-                <p className="mt-1 text-xs leading-5 text-slate-600">
-                  Una vez abonado, recibirás el enlace de descarga por correo
-                  electrónico.
-                </p>
+                <div className="mt-1 rounded-xl border border-sky-100 bg-sky-50 p-3">
+                  <div className="flex items-start gap-2.5">
+                    <Mail
+                      size={17}
+                      className="mt-0.5 shrink-0 text-sky-600"
+                    />
+
+                    <p className="text-xs leading-5 text-slate-600">
+                      Una vez confirmado el pago, recibirás el enlace de descarga
+                      en el correo electrónico indicado.
+                    </p>
+                  </div>
+                </div>
 
                 {tieneOferta && (
                   <div className="mt-3 rounded-lg bg-white/80 px-3 py-2">
@@ -480,11 +543,11 @@ Quedo atento a las instrucciones de pago.`;
                   {tieneOferta ? (
                     <div className="mt-2">
                       <div className="flex flex-wrap items-center gap-2">                    
-                        
+
                       </div>
 
                       <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                        
+
                       </div>
                     </div>
                   ) : (
@@ -495,9 +558,97 @@ Quedo atento a las instrucciones de pago.`;
                 </div>
               </div>
 
-              {/* =================================================
-                  DATOS
-              ================================================== */}
+{/* =================================================
+    VENTA CRUZADA
+================================================== */}
+
+{productoExtra && (
+  <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50/60 p-3">
+    <div className="mb-3">
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-orange-600">
+        Completá tu colección
+      </p>
+
+      <h3 className="mt-0.5 text-sm font-semibold text-slate-900">
+        Sumá también este producto
+      </h3>
+    </div>
+
+    <div className="flex gap-3">
+      {/* IMAGEN */}
+      <div className="h-24 w-20 shrink-0 overflow-hidden rounded-lg bg-white">
+        <img
+          src={productoExtra.imagenes?.portada}
+          alt={productoExtra.nombre}
+          className="h-full w-full object-contain"
+        />
+      </div>
+
+      {/* INFORMACIÓN */}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold leading-5 text-slate-900">
+          {productoExtra.nombre}
+        </p>
+
+        <div className="mt-1">
+          <CalificacionProducto productoId={productoExtra.id} />
+        </div>
+
+        {/* PRECIO */}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-base font-bold text-slate-900">
+            {formatearPrecio(precioExtra)}
+          </span>
+
+          {extraTieneOferta && (
+            <>
+              <span className="text-xs text-slate-400 line-through">
+                {formatearPrecio(productoExtra.precioARS)}
+              </span>
+
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                -{descuentoExtra}%
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* BOTÓN */}
+    <button
+      type="button"
+      onClick={() => setExtraAgregado((estado) => !estado)}
+      className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+        extraAgregado
+          ? "bg-emerald-600 text-white hover:bg-emerald-700"
+          : "border border-orange-300 bg-white text-orange-700 hover:bg-orange-50"
+      }`}
+    >
+      {extraAgregado ? (
+        <>
+          <Check size={17} />
+          Agregado a la compra
+        </>
+      ) : (
+        <>
+          <ShoppingBag size={17} />
+          Agregar a la compra
+        </>
+      )}
+    </button>
+
+    {extraAgregado && (
+      <p className="mt-2 text-center text-[11px] font-medium text-emerald-700">
+        Se agregó al total de tu pedido.
+      </p>
+    )}
+  </div>
+)}
+
+                  {/* =================================================
+    DATOS
+================================================== */}
 
               <div className="mt-5">
                 <h3 className="text-sm font-semibold text-slate-900">
@@ -572,92 +723,87 @@ Quedo atento a las instrucciones de pago.`;
               </div>
 
               {/* =================================================
-                  RESUMEN
-              ================================================== */}
+    RESUMEN
+================================================== */}
 
-              <div className="mt-5 border-y border-slate-200 py-4">
-                {tieneOferta ? (
-                  <>
-                    {/* PRECIO ORIGINAL */}
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-sm text-slate-600">
-                        Precio original
-                      </span>
+<div className="mt-5 border-y border-slate-200 py-4">
+  {/* PRODUCTOS DEL PEDIDO */}
+  <div className="space-y-2">
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-sm text-slate-600">
+        {producto.nombre}
+      </span>
 
-                      <span className="text-sm text-slate-400 line-through">
-                        {formatearPrecio(producto.precioARS)}
-                      </span>
-                    </div>
+      <span className="shrink-0 text-sm font-medium text-slate-900">
+        {formatearPrecio(precioFinal)}
+      </span>
+    </div>
 
-                    {/* OFERTA */}
-                    <div className="mt-2 flex items-center justify-between gap-4">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-orange-600">
-                        {producto.oferta.etiqueta}
-                      </span>
+    {extraAgregado && productoExtra && (
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm text-slate-600">
+          + {productoExtra.nombre}
+        </span>
 
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                        -{descuento}%
-                      </span>
-                    </div>
+        <span className="shrink-0 text-sm font-medium text-slate-900">
+          {formatearPrecio(precioExtra)}
+        </span>
+      </div>
+    )}
+  </div>
 
-                    {/* AHORRO */}
-                    <div className="mt-2 flex items-center justify-between gap-4">
-                      <span className="text-sm font-medium text-emerald-700">
-                        Ahorrás
-                      </span>
+  {/* OFERTA */}
+  {ahorroPedido > 0 && (
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm text-slate-600">
+          Precio original
+        </span>
 
-                      <span className="text-sm font-semibold text-emerald-700">
-                        {formatearPrecio(ahorro)}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-slate-600">
-                      Producto
-                    </span>
+        <span className="text-sm text-slate-400 line-through">
+          {formatearPrecio(precioOriginalPedido)}
+        </span>
+      </div>
 
-                    <span className="text-sm font-medium text-slate-900">
-                      {formatearPrecio(producto.precioARS)}
-                    </span>
-                  </div>
-                )}
+      <div className="mt-2 flex items-center justify-between gap-4">
+        <span className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+          Oferta lanzamiento
+        </span>
 
-                {/* TOTAL */}
-                <div
-                  className={`flex items-center justify-between gap-4 ${
-                    tieneOferta
-                      ? "mt-3 border-t border-slate-100 pt-3"
-                      : "mt-3"
-                  }`}
-                >
-                  <span className="font-semibold text-slate-900">
-                    Total
-                  </span>
+        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+          -{descuentoPedido}%
+        </span>
+      </div>
 
-                  <span className="text-lg font-bold text-slate-900">
-                    {formatearPrecio(precioFinal)}
-                  </span>
-                </div>
-              </div>
+      <div className="mt-2 flex items-center justify-between gap-4">
+        <span className="text-sm font-medium text-emerald-700">
+          Ahorrás
+        </span>
+
+        <span className="text-sm font-semibold text-emerald-700">
+          {formatearPrecio(ahorroPedido)}
+        </span>
+      </div>
+    </div>
+  )}
+
+  {/* TOTAL */}
+  <div className="mt-4 flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
+    <span className="font-semibold text-slate-900">
+      Total
+    </span>
+
+    <span className="text-xl font-bold text-slate-900">
+      {formatearPrecio(totalPedido)}
+    </span>
+  </div>
+</div>
 
               {/* =================================================
                   ENTREGA
               ================================================== */}
 
-              <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-3">
-                <div className="flex items-start gap-2.5">
-                  <Mail
-                    size={17}
-                    className="mt-0.5 shrink-0 text-sky-600"
-                  />
 
-                  <p className="text-xs leading-5 text-slate-600">
-                    Una vez confirmado el pago, recibirás el enlace de descarga
-                    en el correo electrónico indicado.
-                  </p>
-                </div>
-              </div>
 
               {/* ERROR */}
               {error && (
