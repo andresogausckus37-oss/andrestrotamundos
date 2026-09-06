@@ -1,6 +1,6 @@
 export const CONFIG = {
   marca: {
-  nombre: "Andres House Sitter",
+  nombre: "Andrés House Sitter",
   lema: "Casas · Mascotas · Viajes",
   dominio: "andreshousesitter.com",
 },
@@ -19,7 +19,7 @@ export const CONFIG = {
   },
 
   imagenes: {
-    logo: "https://i.postimg.cc/Twpmm3RF/IMG-20260902-WA9504.jpg",
+    logo: "https://i.postimg.cc/Nf3c7WMc/IMG-20260901-WA8952.jpg",
     perfil: "https://i.postimg.cc/x8zD7MRH/FB-IMG-1781830431372-2.jpg",
   },
 

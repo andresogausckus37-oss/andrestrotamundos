@@ -274,4 +274,53 @@ export const productosAfiliados = [
 
     destacado: true,
   },
+
+  // =========================================================
+// 🔴 JUGUETES
+// =========================================================
+
+{
+  id: "juguete-perros-peluche-chifle-sonido-mordible",
+
+  nombre:
+    "Juguete Para Perros Peluche Zanahoria Con Chifle Sonido 15cm Mordible Irresistible",
+
+  descripcion:
+  "Peluche con forma de zanahoria, sonido y diseño mordible, pensado para entretener y estimular el juego de perros y cachorros.",
+
+categoria: "Juguetes",
+
+  categoria: "Juguetes",
+
+  imagen:
+    "https://i.postimg.cc/KzxLKqLT/IMG-20260905-WA1075.jpg",
+
+  enlaceAfiliado:
+    "https://meli.la/1nXbTbt",
+
+  plataforma: "Mercado Libre",
+
+  destacado: true,
+},
+  {
+id: "juguete-peluche-pato-con-sonido-perros-cachorros-mascotas",
+
+  nombre:
+    "Juguete Peluche Pato con Sonido Perros Cachorros Mascotas ",
+
+  descripcion:
+  "Peluche con forma de pato y sonido, diseñado para ofrecer entretenimiento y estimular el juego de perros y cachorros.",
+
+  categoria: "Juguetes",
+
+  imagen:
+    "https://i.postimg.cc/L6tR9m29/IMG-20260905-WA7558.jpg",
+
+  enlaceAfiliado:
+    "https://meli.la/1sN6X6Z",
+
+  plataforma: "Mercado Libre",
+
+  destacado: true,
+},
 ];

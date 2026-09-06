@@ -536,9 +536,31 @@ Quedo atento a las instrucciones de pago.`;
                     {producto.nombre}
                   </p>
 
-                  <p className="mt-1 text-xs text-slate-500">
-                    {producto.formato || "PDF"} · Producto digital
-                  </p>
+                  
+
+                  {/* CALIFICACIÓN */}
+<div className="mt-2">
+  <CalificacionProducto productoId={producto.id} />
+</div>
+
+{/* PRECIO + DESCUENTO */}
+<div className="mt-3 flex flex-wrap items-center gap-2">
+  <span className="text-gl font-bold text-slate-900">
+    {formatearPrecio(precioFinal)}
+  </span>
+
+  {tieneOferta && (
+    <>
+      <span className="text-sm text-slate-400 line-through">
+        {formatearPrecio(producto.precioARS)}
+      </span>
+
+      <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-bold text-red-600">
+        -{descuento}%
+      </span>
+    </>
+  )}
+</div>
 
                   {tieneOferta ? (
                     <div className="mt-2">

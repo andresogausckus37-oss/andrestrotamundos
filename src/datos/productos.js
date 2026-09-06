@@ -144,6 +144,8 @@ export const productos = [
 
   nombre: "50  Animales y Paisajes Divertidos para Colorear",
 
+    ventaCruzadaId: "10-razas-perros-colorear",
+
   descripcion:
     "Pack descargable con 50 láminas infantiles para imprimir y colorear, con animales, naturaleza, aventuras y mundos fantásticos.",
 

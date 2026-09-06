@@ -15,6 +15,10 @@ const ProductosRecomendados = () => {
     (producto) => producto.categoria === "Alimentación"
   );
 
+  const productosJuguetes = productosAfiliados.filter(
+  (producto) => producto.categoria === "Juguetes"
+);
+
   return (
     <section className="mt-16 border-t border-slate-200 pt-10">
       {/* =========================================================
@@ -53,6 +57,15 @@ const ProductosRecomendados = () => {
         titulo="Alimentación"
         productos={productosAlimentacion}
       />
+
+      {/* =========================================================
+    SLIDER JUGUETES
+========================================================== */}
+
+<SliderProductosAfiliados
+  titulo="Juguetes"
+  productos={productosJuguetes}
+/>
 
       {/* =========================================================
           BOTÓN VER TODOS
