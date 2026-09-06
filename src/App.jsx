@@ -89,7 +89,7 @@ const Home = () => {
 
       <ComoFunciona />
 
-      <Galeria />
+      {/* <Galeria /> */}
 
       <Resenas />
 

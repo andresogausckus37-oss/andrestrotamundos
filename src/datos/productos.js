@@ -165,15 +165,15 @@ export const productos = [
 
   imagenes: {
   portada:
-    "https://i.postimg.cc/bvQ8DhtG/file-000000001074820e8bfa303799776886.png",
+    "https://i.postimg.cc/25CSry1G/file-000000005a14820e8ffd3836c8de305a.png",
 
   preview:
     "https://i.postimg.cc/3Rd4QN67/file-00000000eb68820e93bf2f51b9664cfe.png",
 
   previewsIndividuales: [
-    "https://i.postimg.cc/rs4DzbMZ/file-00000000c770820eaf26a7924494e035.png",
+    "https://i.postimg.cc/634z4TD7/file-00000000c770820eaf26a7924494e035.png",
     
-    "https://i.postimg.cc/HkYLCjcv/file-00000000c878820e83d4f5cddfb494c4.png",
+    "https://i.postimg.cc/d3BChYtZ/file-0000000091dc820e9998f6489fdf8c42.png",
   ],
 },
 

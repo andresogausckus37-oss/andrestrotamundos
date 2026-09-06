@@ -8,7 +8,7 @@ export const CONFIG = {
   contacto: {
     whatsapp: "5493548619293",
     whatsappVisible: "+54 9 3548 619293",
-    email: "",
+    email: "andresogausckus37@gmail.com",
   },
 
   redes: {
