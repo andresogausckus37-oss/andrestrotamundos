@@ -1,4 +1,4 @@
-export const productos = [
+export const productosDigitales = [
   // =========================================================
   // PRODUCTO 1
   // =========================================================
@@ -104,8 +104,10 @@ export const productos = [
       preview:
         "https://i.postimg.cc/MZgx0Rfb/file-000000002998820e9c05d721c0889164.png",
 
-      previewIndividual:
-        "https://i.postimg.cc/J4bwbFL4/file-000000004e34820ea795b2dc26b1f5be.png",
+      previewsIndividuales: [
+        "https://i.postimg.cc/FRCLQQpD/file-00000000275c820eacfc3089ba4eddbd.png", 
+      "https://i.postimg.cc/J4bwbFL4/file-000000004e34820ea795b2dc26b1f5be.png", 
+  ],
     },
 
     formato: "PDF",

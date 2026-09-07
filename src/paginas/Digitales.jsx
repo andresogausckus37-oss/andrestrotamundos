@@ -20,10 +20,8 @@ const formatearPrecio = (precio) => {
   }).format(precio);
 };
 
-const Tienda = () => {
+const Digitales = () => {
   const navigate = useNavigate();
-
-  const productosDestacados = productosDigitales.slice(0, 4);
 
   return (
     <main className="min-h-screen bg-white">
@@ -31,7 +29,7 @@ const Tienda = () => {
           ENCABEZADO
       ========================================================== */}
 
-      <section className="border-b border-slate-200 bg-gradient-to-b from-sky-50 to-white px-5 py-8 sm:py-16">
+      <section className="border-b border-slate-200 bg-gradient-to-b from-purple-50 via-white to-white px-5 py-8 sm:py-14">
         <div className="mx-auto max-w-6xl text-center">
           <img
   src="https://i.postimg.cc/KvRB21tY/11206.png"
@@ -40,21 +38,24 @@ const Tienda = () => {
 />
 
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-            Juegos, actividades y láminas imprimibles para
-            jugar, aprender, colorear y disfrutar en casa. Descargá, imprimí y empezá a jugar.
+            Actividades digitales para imprimir, jugar,
+            colorear, aprender y disfrutar en casa.
           </p>
 
-          <div className="mt-7 flex justify-center">
-            <button
-              type="button"
-              onClick={() =>
-                navigate("/tienda/digitales")
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
-            >
-              <Download size={17} />
-              Ver todos los imprimibles
-            </button>
+          {/* INFO */}
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <span className="rounded-full bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-700">
+              PDF descargables
+            </span>
+
+            <span className="rounded-full bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-700">
+              Formato A4
+            </span>
+
+            <span className="rounded-full bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-700">
+              Listos para imprimir
+            </span>
           </div>
         </div>
       </section>
@@ -66,36 +67,48 @@ const Tienda = () => {
       <div className="mx-auto max-w-6xl px-5 pt-6">
         <button
           type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-sky-600"
+          onClick={() => navigate("/tienda")}
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-purple-600"
         >
           <ArrowLeft size={17} />
-          Volver
+          Volver a la tienda
         </button>
       </div>
 
       {/* =========================================================
-          PRODUCTOS DESTACADOS
+          CATÁLOGO
       ========================================================== */}
 
-      <section className="px-4 py-10 sm:px-5 sm:py-14">
+      <section className="px-4 py-8 sm:px-5 sm:py-12">
         <div className="mx-auto max-w-6xl">
           {/* CABECERA */}
 
-          <div className="mx-auto mb-7 max-w-2xl text-center">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">
+                Todos los imprimibles
+              </h2>
 
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-              Imprimibles destacados
-            </h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+                Elegí una actividad para conocer todos los detalles.
+              </p>
+            </div>
 
-            
+            <span className="hidden text-xs font-medium text-slate-400 sm:block">
+              {productosDigitales.length}{" "}
+              {productosDigitales.length === 1
+                ? "producto"
+                : "productos"}
+            </span>
           </div>
 
-          {/* PRODUCTOS */}
+          {/* =====================================================
+              PRODUCTOS
+          ====================================================== */}
 
-          {productosDestacados.length > 0 ? (
+          {productosDigitales.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:gap-6">
-              {productosDestacados.map((producto) => {
+              {productosDigitales.map((producto) => {
                 const tieneOferta =
                   producto.oferta?.activa === true;
 
@@ -120,14 +133,14 @@ const Tienda = () => {
                     key={producto.id}
                     className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
-                    {/* IMAGEN */}
+                    {/* =============================================
+                        IMAGEN
+                    ============================================== */}
 
                     <button
                       type="button"
                       onClick={() =>
-                        navigate(
-                          `/tienda/${producto.id}`
-                        )
+                        navigate(`/tienda/${producto.id}`)
                       }
                       className="block w-full bg-white"
                       aria-label={`Ver ${producto.nombre}`}
@@ -141,13 +154,15 @@ const Tienda = () => {
                       </div>
                     </button>
 
-                    {/* CONTENIDO */}
+                    {/* =============================================
+                        CONTENIDO
+                    ============================================== */}
 
                     <div className="flex flex-1 flex-col p-3 sm:p-5">
                       {/* BADGES */}
 
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-sky-700 sm:px-2.5 sm:text-[12px]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-purple-700 sm:px-2.5 sm:text-[11px]">
                           <Download
                             size={11}
                             className="shrink-0"
@@ -194,7 +209,9 @@ const Tienda = () => {
                         {producto.nombre}
                       </h3>
 
-                      {/* PRECIO */}
+                      {/* =========================================
+                          PRECIO
+                      ========================================== */}
 
                       <div className="mt-auto pt-3">
                         <div className="border-t border-slate-100 pt-3 sm:pt-4">
@@ -228,7 +245,7 @@ const Tienda = () => {
                                 </p>
                               )}
 
-                              <p className="mt-0.5 text-[12px] font-medium text-emerald-700 sm:text-[10px]">
+                              <p className="mt-0.5 text-[12px] font-medium text-emerald-700">
                                 Ahorrás{" "}
                                 {formatearPrecio(
                                   ahorro
@@ -252,7 +269,7 @@ const Tienda = () => {
                                 `/tienda/${producto.id}`
                               )
                             }
-                            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-sky-600 px-2 py-2.5 text-[11px] font-semibold text-white transition hover:bg-sky-700 sm:gap-2 sm:px-4 sm:py-3 sm:text-sm"
+                            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-2 py-2.5 text-[11px] font-semibold text-white transition hover:bg-purple-700 sm:gap-2 sm:px-4 sm:py-3 sm:text-sm"
                           >
                             <ShoppingBag
                               size={14}
@@ -269,8 +286,12 @@ const Tienda = () => {
               })}
             </div>
           ) : (
+            /* =====================================================
+                SIN PRODUCTOS
+            ====================================================== */
+
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-12 text-center">
-              <ShoppingBag
+              <Download
                 size={28}
                 className="mx-auto text-slate-400"
               />
@@ -279,43 +300,37 @@ const Tienda = () => {
                 Próximamente nuevos imprimibles
               </h2>
 
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                Estamos preparando nuevas actividades de
-                Toby y Luna para descargar e imprimir.
+              <p className="mt-1 text-sm text-slate-500">
+                Estamos preparando nuevas actividades para
+                imprimir y disfrutar.
               </p>
-            </div>
-          )}
-
-          {/* VER TODOS */}
-
-          {productosDigitales.length > 4 && (
-            <div className="mt-8 flex justify-center">
-              <button
-                type="button"
-                onClick={() =>
-                  navigate("/tienda/digitales")
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
-              >
-                <Download size={16} />
-                Ver todos los imprimibles
-              </button>
             </div>
           )}
         </div>
       </section>
 
       {/* =========================================================
-          INFORMACIÓN PRODUCTOS DIGITALES
+          VOLVER A TIENDA
       ========================================================== */}
 
-      <section className="border-t border-slate-200 bg-slate-50 px-5 py-12 sm:py-14">
-        <div className="mx-auto max-w-3xl text-center">
-           
+      <section className="border-t border-slate-200 bg-slate-50 px-5 py-10">
+        <div className="mx-auto max-w-6xl text-center">
+          <p className="text-sm text-slate-600">
+            ¿Querés explorar otros productos?
+          </p>
+
+          <button
+            type="button"
+            onClick={() => navigate("/tienda")}
+            className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700"
+          >
+            <ShoppingBag size={17} />
+            Volver a la tienda
+          </button>
         </div>
       </section>
     </main>
   );
 };
 
-export default Tienda;
+export default Digitales;

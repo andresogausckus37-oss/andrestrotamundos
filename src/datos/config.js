@@ -19,7 +19,7 @@ export const CONFIG = {
   },
 
   imagenes: {
-    logo: "https://i.postimg.cc/Nf3c7WMc/IMG-20260901-WA8952.jpg",
+    logo: "https://i.postimg.cc/02LCh7Hk/file-0000000020b4820eb0a72016cae15582.png",
     perfil: "https://i.postimg.cc/x8zD7MRH/FB-IMG-1781830431372-2.jpg",
   },
 

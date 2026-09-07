@@ -82,7 +82,7 @@ const Navbar = () => {
           <img
             src={CONFIG.imagenes.logo}
             alt={`Logo de ${CONFIG.marca.nombre}`}
-            className="h-14 w-14 shrink-0 rounded-full object-cover"
+            className="h-12 w-12 shrink-0 rounded-full object-cover"
           />
 
           <div className="ml-10 flex flex-col items-start text-left">

@@ -1,5 +1,6 @@
 import CalificacionProducto from "../componentes/CalificacionProducto";
 import { resenasProductos } from "../datos/resenasProductos";
+import { productosDigitales } from "../datos/productosDigitales";
 
 import {
   ArrowLeft,
@@ -15,7 +16,6 @@ import {
 
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { productos } from "../datos/productos";
 
 const WHATSAPP = "5493548619293";
 
@@ -42,7 +42,9 @@ const DetalleProducto = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
 
-  const producto = productos.find((p) => p.id === id);
+  const producto = productosDigitales.find(
+  (p) => p.id === id
+);
 
   if (!producto) {
     return (
@@ -91,7 +93,9 @@ const DetalleProducto = () => {
 // =========================================================
 
 const productoExtra = producto.ventaCruzadaId
-  ? productos.find((p) => p.id === producto.ventaCruzadaId)
+  ? productosDigitales.find(
+      (p) => p.id === producto.ventaCruzadaId
+    )
   : null;
 
 const extraTieneOferta = productoExtra?.oferta?.activa === true;
@@ -387,49 +391,55 @@ Quedo atento a las instrucciones de pago.`;
               ================================================== */}
 
               {resenasDelProducto.length > 0 && (
-                <div className="mt-5">
-                  <div className="mb-3">
-                    <h2 className="text-base font-semibold text-slate-900">
-                      Reseñas de personas que ya compraron este producto
-                    </h2>
+  <div className="mt-5">
+    {/* TÍTULO */}
 
-                  </div>
+    <div className="mb-3">
+      <h2 className="text-base font-semibold text-slate-900">
+        Reseñas de personas que compraron este producto
+      </h2>
+    </div>
 
-                  <div className="space-y-3">
-                    {resenasDelProducto.map((resena) => (
-                      <div
-                        key={resena.id}
-                        className="rounded-xl border border-slate-200 bg-white p-4"
-                      >
-                        <div className="flex items-center gap-1 text-amber-500">
-                          {[1, 2, 3, 4, 5].map((estrella) => (
-                            <span key={estrella}>
-                              {estrella <= resena.estrellas ? "★" : "☆"}
-                            </span>
-                          ))}
-                        </div>
+    {/* LISTA DE RESEÑAS */}
 
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          “{resena.texto}”
-                        </p>
+    <div className="space-y-3">
+      {resenasDelProducto.map((resena) => (
+        <div
+          key={resena.id}
+          className="rounded-xl border border-slate-200 bg-white p-4"
+        >
+          {/* ESTRELLAS + COMPRA VERIFICADA */}
 
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                          <p className="text-xs font-medium text-slate-700">
-                            {resena.nombre}
-                            {resena.lugar && ` · ${resena.lugar}`}
-                          </p>
+          <div className="flex items-center justify-between gap-3">
+            {/* ESTRELLAS */}
 
-                          {resena.compraVerificada && (
-                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
-                              Compra verificada
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="flex items-center gap-1 text-amber-500">
+              {[1, 2, 3, 4, 5].map((estrella) => (
+                <span key={estrella}>
+                  {estrella <= resena.estrellas ? "★" : "☆"}
+                </span>
+              ))}
+            </div>
+
+            {/* BADGE */}
+
+            {resena.compraVerificada && (
+              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                Compra verificada
+              </span>
+            )}
+          </div>
+
+          {/* TEXTO */}
+
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            “{resena.texto}”
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
               {/* =================================================
                   COMPRA

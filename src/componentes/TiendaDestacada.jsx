@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { productos } from "../datos/productos";
+import { productosDigitales } from "../datos/productosDigitales";
 import CalificacionProducto from "./CalificacionProducto";
 
 const formatearPrecio = (precio) =>
@@ -18,7 +18,7 @@ const formatearPrecio = (precio) =>
 const TiendaDestacada = ({ verProducto }) => {
   const navigate = useNavigate();
 
-  const destacados = productos.slice(0, 3);
+  const destacados = productosDigitales.slice(0, 3);
 
   return (
     <section id="tienda" className="seccion bg-orange-50/50">

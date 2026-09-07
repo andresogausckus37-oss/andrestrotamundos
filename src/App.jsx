@@ -24,6 +24,7 @@ import Tienda from "./paginas/Tienda";
 import DetalleProducto from "./paginas/DetalleProducto";
 import Recomendados from "./paginas/Recomendados";
 import GeneradorPdf from "./paginas/GeneradorPdf";
+import Digitales from "./paginas/Digitales";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
@@ -99,8 +100,6 @@ const Home = () => {
 
       <Contacto />
 
-      <Footer />
-
       <WhatsAppFlotante />
     </div>
   );
@@ -137,13 +136,17 @@ const ContenidoApp = () => {
   path="/generador-pdf"
   element={<GeneradorPdf />}
 />
+          <Route path="/tienda/digitales" element={<Digitales />} />
 
           <Route
             path="/tienda/:id"
             element={<DetalleProducto />}
-            
           />
         </Routes>
+
+        {/* GLOBAL */}
+      <Footer />
+        
       </div>
     </>
   );
