@@ -173,9 +173,9 @@ export const productosDigitales = [
     "https://i.postimg.cc/3Rd4QN67/file-00000000eb68820e93bf2f51b9664cfe.png",
 
   previewsIndividuales: [
-    "https://i.postimg.cc/634z4TD7/file-00000000c770820eaf26a7924494e035.png",
+    "https://i.postimg.cc/RCXf1YBW/IMG-20260904-WA1809.jpg",
     
-    "https://i.postimg.cc/d3BChYtZ/file-0000000091dc820e9998f6489fdf8c42.png",
+    "https://i.postimg.cc/CKgzpCgs/IMG-20260904-WA1197.jpg",
   ],
 },
 
@@ -208,4 +208,76 @@ export const productosDigitales = [
 
   destacado: true,
 },
+  {
+  id: "50-laberintos-toby-luna",
+
+  nombre: "50 Laberintos - Las Aventuras de Toby y Luna",
+
+  ventaCruzadaId: "50-dibujos-para-colorear",
+
+  descripcion:
+    "50 laberintos imprimibles con Toby y Luna, organizados en 3 niveles de dificultad para aprender, explorar y divertirse.",
+
+  descripcionLarga:
+    "Una colección de 50 laberintos imprimibles protagonizados por Toby y Luna, pensada para niños de 6 a 10 años. Incluye desafíos de nivel fácil, medio y difícil, además de todas las soluciones. Cada actividad está preparada en formato A4 para imprimir fácilmente en casa o en una imprenta.",
+
+  tipo: "digital",
+  categoria: "laberintos",
+
+  precioARS: 5000,
+
+  oferta: {
+    activa: true,
+    precioARS: 3000,
+    etiqueta: "Oferta lanzamiento",
+  },
+
+  imagenes: {
+    portada:
+      "https://i.postimg.cc/mgNBWYkH/file-000000001250820eaf8a962eb7cee307.png",
+
+    preview:
+      "https://i.postimg.cc/gk1QtnKk/file-000000008a10820e8ae339b75b68c0fe.png",
+
+    previewsIndividuales: [
+      "https://i.postimg.cc/43Q03wRm/file-0000000020c8820ea13e3cd8c927f07f.png",
+      "https://i.postimg.cc/4ym2Bg7W/file-000000007b38820eb91e7f8f85402947.png",
+    ],
+  },
+
+  formato: "PDF",
+  tamano: "A4",
+
+  paginas: 102,
+  laminas: 50,
+
+  incluye: [
+    "50 laberintos imprimibles",
+    "3 niveles de dificultad",
+    "Nivel fácil, medio y difícil",
+    "50 soluciones",
+    "Formato A4 vertical",
+    "Archivo PDF digital",
+    "Portada y lámina final",
+    "Listo para imprimir",
+  ],
+
+  beneficios: [
+    "Favorece la concentración",
+    "Estimula el razonamiento lógico",
+    "Ayuda a desarrollar la resolución de problemas",
+    "Fortalece la atención visual",
+    "Promueve la paciencia",
+    "Actividad educativa y recreativa",
+  ],
+
+  edadRecomendada: "6 a 10 años",
+
+  nivel: "Fácil, medio y difícil",
+
+  entrega: "Descarga digital",
+
+  destacado: true,
+},
+    
 ];

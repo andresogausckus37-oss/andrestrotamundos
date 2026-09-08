@@ -1,6 +1,7 @@
 import CalificacionProducto from "../componentes/CalificacionProducto";
 import { resenasProductos } from "../datos/resenasProductos";
 import { productosDigitales } from "../datos/productosDigitales";
+import ProteccionComercial from "../generador/componentes/ProteccionComercial";
 
 import {
   ArrowLeft,
@@ -225,11 +226,21 @@ Quedo atento a las instrucciones de pago.`;
               {/* IMAGEN PRINCIPAL */}
               <div className="relative overflow-hidden rounded-2xl bg-white p-2 shadow-sm">
                 <div className="aspect-[4/6] w-full overflow-hidden rounded-xl bg-white">
-                  <img
-                    src={imagenes[imagenActiva]}
-                    alt={`${producto.nombre} — Imagen ${imagenActiva + 1}`}
-                    className="h-full w-full object-contain"
-                  />
+                  {imagenActiva === 0 ? (
+  <img
+    src={imagenes[imagenActiva]}
+    alt={producto.nombre}
+    className="h-full w-full object-contain"
+  />
+) : (
+  <ProteccionComercial>
+    <img
+      src={imagenes[imagenActiva]}
+      alt={`Vista ${imagenActiva + 1} de ${producto.nombre}`}
+      className="h-full w-full object-contain"
+    />
+  </ProteccionComercial>
+)}
                 </div>
               </div>
 

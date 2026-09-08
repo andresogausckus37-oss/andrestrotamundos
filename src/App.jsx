@@ -25,6 +25,7 @@ import DetalleProducto from "./paginas/DetalleProducto";
 import Recomendados from "./paginas/Recomendados";
 import GeneradorPdf from "./paginas/GeneradorPdf";
 import Digitales from "./paginas/Digitales";
+import GeneradorLaminas from "./paginas/GeneradorLaminas";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
@@ -142,6 +143,10 @@ const ContenidoApp = () => {
             path="/tienda/:id"
             element={<DetalleProducto />}
           />
+          <Route
+  path="/generador-laminas"
+  element={<GeneradorLaminas />}
+/>
         </Routes>
 
         {/* GLOBAL */}
