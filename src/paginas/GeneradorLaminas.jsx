@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -21,77 +22,125 @@ import { validarLaberinto } from "../generador/juegos/Laberinto";
 const ANCHO_A4 = 794;
 const ALTO_A4 = 1123;
 
-const CONFIG_LABERINTO = {
-  facil: {
-    nombre: "Fácil",
-    filas: 8,
-    columnas: 6,
-  },
+const VALIDACIONES_POR_PAGINA = 25;
 
-  medio: {
-    nombre: "Medio",
-    filas: 12,
-    columnas: 9,
-  },
+const LIMITE_SELECTOR_PAGINAS = 300;
 
-  dificil: {
-    nombre: "Difícil",
-    filas: 16,
-    columnas: 12,
-  },
+/* =========================================================
+   NIVELES
+========================================================= */
 
-  experto: {
-    nombre: "Experto",
-    filas: 20,
-    columnas: 15,
-  },
+  const CONFIG_LABERINTO = {
+    facil: {
+      nombre: "Fácil",
+      filas: 8,
+      columnas: 6,
+    },
 
-  legendario: {
-    nombre: "Legendario",
-    filas: 24,
-    columnas: 18,
-  },
-};
+    medio: {
+      nombre: "Medio",
+      filas: 12,
+      columnas: 9,
+    },
 
-const NOMBRE_NIVEL = {
-  facil: "Fácil",
-  medio: "Medio",
-  dificil: "Difícil",
-  experto: "Experto",
-  legendario: "Legendario",
-};
+    dificil: {
+      nombre: "Dificil",
+      filas: 16,
+      columnas: 12,
+    },
+
+    experto: {
+      nombre: "Experto",
+      filas: 20,
+      columnas: 15,
+    },
+
+    legendario: {
+      nombre: "Legendario",
+      filas: 24,
+      columnas: 18,
+    },
+  };
+
+  const NOMBRE_NIVEL = {
+    facil: "Fácil",
+    medio: "Medio",
+    dificil: "Difícil",
+    experto: "Experto",
+    legendario: "Legendario",
+  };
+
+/* =========================================================
+   RANGOS PROVISIONALES DE COMPLEJIDAD
+========================================================= */
 
 const RANGOS_COMPLEJIDAD = {
   facil: {
     solucion: [15, 37],
-    giros: [8, 24],
-    callejones: [4, 7],
+    giros: [7, 24],
+    callejones: [3, 7],
   },
 
   medio: {
-    solucion: [22, 68],
-    giros: [9, 44],
-    callejones: [9, 15],
+    solucion: [28, 78],
+    giros: [15, 48],
+    callejones: [8, 15],
   },
 
   dificil: {
-    solucion: [63, 121],
-    giros: [39, 75],
+    solucion: [43, 121],
+    giros: [25, 78],
     callejones: [16, 24],
   },
 
   experto: {
-    solucion: [80, 178],
-    giros: [51, 114],
-    callejones: [26, 39],
+    solucion: [62, 180],
+    giros: [37, 116],
+    callejones: [26, 36],
   },
 
   legendario: {
-    solucion: [85, 215],
-    giros: [45, 141],
-    callejones: [35, 51],
+    solucion: [93, 259],
+    giros: [57, 167],
+    callejones: [38, 51],
   },
 };
+
+const BANDAS_COMPLEJIDAD = {
+  muyBaja: {
+    nombre: "Muy baja",
+    minimo: 0,
+    maximo: 20,
+  },
+
+  baja: {
+    nombre: "Baja",
+    minimo: 21,
+    maximo: 40,
+  },
+
+  media: {
+    nombre: "Media",
+    minimo: 41,
+    maximo: 60,
+  },
+
+  alta: {
+    nombre: "Alta",
+    minimo: 61,
+    maximo: 80,
+  },
+
+  muyAlta: {
+    nombre: "Muy alta",
+    minimo: 81,
+    maximo: 100,
+  },
+};
+
+/* =========================================================
+   NORMALIZACIÓN
+========================================================= */
 
 function normalizarValor(
   valor,
@@ -115,6 +164,10 @@ function normalizarValor(
     )
   );
 }
+
+/* =========================================================
+   COMPLEJIDAD
+========================================================= */
 
 function calcularComplejidad(
   item
@@ -150,27 +203,241 @@ function calcularComplejidad(
     );
 
   const puntuacion =
-    puntuacionSolucion *
-      0.4 +
-    puntuacionGiros *
-      0.35 +
-    puntuacionCallejones *
-      0.25;
+    puntuacionSolucion * 0.4 +
+    puntuacionGiros * 0.35 +
+    puntuacionCallejones * 0.25;
 
   return Math.round(
     puntuacion
   );
 }
 
-function calcularPercentil(
-  valores,
-  percentil
+function obtenerBandaComplejidad(
+  complejidad
+) {
+  const entrada =
+    Object.values(
+      BANDAS_COMPLEJIDAD
+    ).find(
+      (banda) =>
+        complejidad >=
+          banda.minimo &&
+        complejidad <=
+          banda.maximo
+    );
+
+  return entrada
+    ? entrada.nombre
+    : "Sin clasificar";
+}
+
+function contarBandasComplejidad(
+  items
+) {
+  const resultado = {
+    "Muy baja": 0,
+    Baja: 0,
+    Media: 0,
+    Alta: 0,
+    "Muy alta": 0,
+  };
+
+  items.forEach(
+    (item) => {
+      if (
+        resultado[
+          item.bandaComplejidad
+        ] !== undefined
+      ) {
+        resultado[
+          item.bandaComplejidad
+        ] += 1;
+      }
+    }
+  );
+
+  return resultado;
+}
+
+function filtrarPorBandaComplejidad(
+  items,
+  bandaObjetivo
+) {
+  if (
+    !Array.isArray(items) ||
+    items.length === 0
+  ) {
+    return [];
+  }
+
+  return items.filter(
+    (item) =>
+      item.bandaComplejidad ===
+      bandaObjetivo
+  );
+}
+
+function seleccionarPorComplejidad({
+  items,
+  banda,
+  cantidad,
+}) {
+  const candidatos =
+    filtrarPorBandaComplejidad(
+      items,
+      banda
+    );
+
+  if (
+    candidatos.length === 0 ||
+    cantidad <= 0
+  ) {
+    return [];
+  }
+
+  const ordenados =
+    [...candidatos].sort(
+      (a, b) =>
+        a.complejidad -
+        b.complejidad
+    );
+
+  if (
+    ordenados.length <=
+    cantidad
+  ) {
+    return ordenados;
+  }
+
+  const seleccion = [];
+
+  if (cantidad === 1) {
+    const indiceCentral =
+      Math.floor(
+        ordenados.length /
+          2
+      );
+
+    return [
+      ordenados[
+        indiceCentral
+      ],
+    ];
+  }
+
+  for (
+    let i = 0;
+    i < cantidad;
+    i += 1
+  ) {
+    const posicion =
+      i /
+      (cantidad - 1);
+
+    const indice =
+      Math.round(
+        posicion *
+          (ordenados.length - 1)
+      );
+
+    seleccion.push(
+      ordenados[indice]
+    );
+  }
+
+  return seleccion;
+}
+
+function seleccionarProgresivo({
+  items,
+  cantidad,
+}) {
+  if (
+    !Array.isArray(items) ||
+    items.length === 0 ||
+    cantidad <= 0
+  ) {
+    return [];
+  }
+
+  const bandas = [
+    "Muy baja",
+    "Baja",
+    "Media",
+    "Alta",
+    "Muy alta",
+  ];
+
+  const cantidadBase =
+    Math.floor(
+      cantidad /
+        bandas.length
+    );
+
+  let sobrantes =
+    cantidad %
+    bandas.length;
+
+  const seleccion = [];
+
+  bandas.forEach(
+    (banda) => {
+      const cantidadBanda =
+        cantidadBase +
+        (
+          sobrantes > 0
+            ? 1
+            : 0
+        );
+
+      if (
+        sobrantes > 0
+      ) {
+        sobrantes -= 1;
+      }
+
+      const candidatos =
+        seleccionarPorComplejidad({
+          items,
+          banda,
+          cantidad:
+            cantidadBanda,
+        });
+
+      seleccion.push(
+        ...candidatos
+      );
+    }
+  );
+
+  return seleccion.sort(
+    (a, b) =>
+      a.complejidad -
+      b.complejidad
+  );
+}
+
+/* =========================================================
+   PERCENTILES
+
+   Ordenamos cada conjunto una sola vez.
+   Esto evita ordenar el mismo array cinco veces.
+========================================================= */
+
+function calcularPercentiles(
+  valores
 ) {
   if (
     !Array.isArray(valores) ||
     valores.length === 0
   ) {
-    return 0;
+    return {
+      p05: 0,
+      p25: 0,
+      p50: 0,
+      p75: 0,
+      p95: 0,
+    };
   }
 
   const ordenados = [
@@ -179,44 +446,60 @@ function calcularPercentil(
     (a, b) => a - b
   );
 
-  if (ordenados.length === 1) {
-    return ordenados[0];
-  }
-
-  const posicion =
-    (percentil / 100) *
-    (ordenados.length - 1);
-
-  const indiceInferior =
-    Math.floor(posicion);
-
-  const indiceSuperior =
-    Math.ceil(posicion);
-
-  if (
-    indiceInferior ===
-    indiceSuperior
+  function obtener(
+    percentil
   ) {
-    return ordenados[
-      indiceInferior
-    ];
+    if (
+      ordenados.length === 1
+    ) {
+      return ordenados[0];
+    }
+
+    const posicion =
+      (percentil / 100) *
+      (ordenados.length - 1);
+
+    const indiceInferior =
+      Math.floor(posicion);
+
+    const indiceSuperior =
+      Math.ceil(posicion);
+
+    if (
+      indiceInferior ===
+      indiceSuperior
+    ) {
+      return ordenados[
+        indiceInferior
+      ];
+    }
+
+    const pesoSuperior =
+      posicion -
+      indiceInferior;
+
+    const valor =
+      ordenados[
+        indiceInferior
+      ] *
+        (1 - pesoSuperior) +
+      ordenados[
+        indiceSuperior
+      ] *
+        pesoSuperior;
+
+    return Math.round(
+      valor
+    );
   }
 
-  const pesoSuperior =
-    posicion -
-    indiceInferior;
-
-  const valor =
-    ordenados[
-      indiceInferior
-    ] *
-      (1 - pesoSuperior) +
-    ordenados[
-      indiceSuperior
-    ] *
-      pesoSuperior;
-
-  return Math.round(valor);
+  return {
+    p05: obtener(5),
+    p25: obtener(25),
+    p50: obtener(50),
+    p75: obtener(75),
+    p95: obtener(95),
+  };
 }
 
 /* =========================================================
@@ -254,20 +537,22 @@ export default function GeneradorLaminas() {
   ] = useState(5);
 
   const [
-  cantidadExpertos,
-  setCantidadExpertos,
-] = useState(0);
+    cantidadExpertos,
+    setCantidadExpertos,
+  ] = useState(0);
 
-const [
-  cantidadLegendarios,
-  setCantidadLegendarios,
-] = useState(0);
+  const [
+    cantidadLegendarios,
+    setCantidadLegendarios,
+  ] = useState(0);
 
-  const [semilla, setSemilla] =
-    useState(1);
+  const [
+    semilla,
+    setSemilla,
+  ] = useState(1);
 
   /* =======================================================
-     NAVEGACIÓN
+     NAVEGACIÓN DEL PRODUCTO
   ======================================================= */
 
   const [
@@ -279,6 +564,15 @@ const [
     escalaPreview,
     setEscalaPreview,
   ] = useState(1);
+
+  /* =======================================================
+     NAVEGACIÓN DE VALIDACIONES
+  ======================================================= */
+
+  const [
+    paginaValidacion,
+    setPaginaValidacion,
+  ] = useState(0);
 
   /* =======================================================
      PDF
@@ -298,190 +592,254 @@ const [
     porcentaje: 0,
   });
 
-  /* =========================================================
+  /* =======================================================
      CANTIDAD TOTAL
-  ========================================================= */
+  ======================================================= */
 
   const cantidadActividades =
-  cantidadFaciles +
-  cantidadMedios +
-  cantidadDificiles +
-  cantidadExpertos +
-  cantidadLegendarios;
+    cantidadFaciles +
+    cantidadMedios +
+    cantidadDificiles +
+    cantidadExpertos +
+    cantidadLegendarios;
 
-  /* /* =========================================================
+  /* =======================================================
      ACTIVIDADES
-  ========================================================= */
 
-  const actividades = [
-    /* FÁCIL */
+     useMemo evita reconstruir miles de objetos al cambiar
+     solamente la página visible.
+  ======================================================= */
 
-    ...Array.from(
-      {
-        length: cantidadFaciles,
-      },
-      (_, index) => ({
-        numero: index + 1,
-        nivel: "facil",
-      })
-    ),
+  const actividades =
+    useMemo(
+      () => [
+        /* FÁCIL */
 
-    /* MEDIO */
+        ...Array.from(
+          {
+            length:
+              cantidadFaciles,
+          },
+          (
+            _,
+            index
+          ) => ({
+            numero:
+              index + 1,
 
-    ...Array.from(
-      {
-        length: cantidadMedios,
-      },
-      (_, index) => ({
-        numero:
-          cantidadFaciles +
-          index +
-          1,
+            nivel:
+              "facil",
+          })
+        ),
 
-        nivel: "medio",
-      })
-    ),
+        /* MEDIO */
 
-    /* DIFÍCIL */
+        ...Array.from(
+          {
+            length:
+              cantidadMedios,
+          },
+          (
+            _,
+            index
+          ) => ({
+            numero:
+              cantidadFaciles +
+              index +
+              1,
 
-    ...Array.from(
-      {
-        length: cantidadDificiles,
-      },
-      (_, index) => ({
-        numero:
-          cantidadFaciles +
-          cantidadMedios +
-          index +
-          1,
+            nivel:
+              "medio",
+          })
+        ),
 
-        nivel: "dificil",
-      })
-    ),
+        /* DIFÍCIL */
 
-    /* EXPERTO */
+        ...Array.from(
+          {
+            length:
+              cantidadDificiles,
+          },
+          (
+            _,
+            index
+          ) => ({
+            numero:
+              cantidadFaciles +
+              cantidadMedios +
+              index +
+              1,
 
-    ...Array.from(
-      {
-        length: cantidadExpertos,
-      },
-      (_, index) => ({
-        numero:
-          cantidadFaciles +
-          cantidadMedios +
-          cantidadDificiles +
-          index +
-          1,
+            nivel:
+              "dificil",
+          })
+        ),
 
-        nivel: "experto",
-      })
-    ),
+        /* EXPERTO */
 
-    /* LEGENDARIO */
+        ...Array.from(
+          {
+            length:
+              cantidadExpertos,
+          },
+          (
+            _,
+            index
+          ) => ({
+            numero:
+              cantidadFaciles +
+              cantidadMedios +
+              cantidadDificiles +
+              index +
+              1,
 
-    ...Array.from(
-      {
-        length: cantidadLegendarios,
-      },
-      (_, index) => ({
-        numero:
-          cantidadFaciles +
-          cantidadMedios +
-          cantidadDificiles +
-          cantidadExpertos +
-          index +
-          1,
+            nivel:
+              "experto",
+          })
+        ),
 
-        nivel: "legendario",
-      })
-    ),
-  ];
+        /* LEGENDARIO */
 
-  /* =========================================================
+        ...Array.from(
+          {
+            length:
+              cantidadLegendarios,
+          },
+          (
+            _,
+            index
+          ) => ({
+            numero:
+              cantidadFaciles +
+              cantidadMedios +
+              cantidadDificiles +
+              cantidadExpertos +
+              index +
+              1,
+
+            nivel:
+              "legendario",
+          })
+        ),
+      ],
+      [
+        cantidadFaciles,
+        cantidadMedios,
+        cantidadDificiles,
+        cantidadExpertos,
+        cantidadLegendarios,
+      ]
+    );
+
+  /* =======================================================
      PÁGINAS DE JUEGOS
-  ========================================================= */
+  ======================================================= */
 
   const paginasJuegos =
-    actividades.map(
-      (
-        actividad,
-        index
-      ) => ({
-        id: `juego-${actividad.numero}`,
+    useMemo(
+      () =>
+        actividades.map(
+          (
+            actividad,
+            index
+          ) => ({
+            id:
+              `juego-${actividad.numero}`,
 
-        nombre:
-          `Laberinto ${actividad.numero}`,
+            nombre:
+              `Laberinto ${actividad.numero}`,
 
-        tipo: "juego",
+            tipo:
+              "juego",
 
-        indiceActividad:
-          index,
+            indiceActividad:
+              index,
 
-        nivel:
-          actividad.nivel,
-      })
+            nivel:
+              actividad.nivel,
+          })
+        ),
+      [
+        actividades,
+      ]
     );
 
-  /* =========================================================
+  /* =======================================================
      PÁGINAS DE SOLUCIONES
-  ========================================================= */
+  ======================================================= */
 
   const paginasSoluciones =
-    actividades.map(
-      (
-        actividad,
-        index
-      ) => ({
-        id: `solucion-${actividad.numero}`,
+    useMemo(
+      () =>
+        actividades.map(
+          (
+            actividad,
+            index
+          ) => ({
+            id:
+              `solucion-${actividad.numero}`,
 
-        nombre:
-          `Solución ${actividad.numero}`,
+            nombre:
+              `Solución ${actividad.numero}`,
 
-        tipo:
-          "solucion",
+            tipo:
+              "solucion",
 
-        indiceActividad:
-          index,
+            indiceActividad:
+              index,
 
-        nivel:
-          actividad.nivel,
-      })
+            nivel:
+              actividad.nivel,
+          })
+        ),
+      [
+        actividades,
+      ]
     );
 
-  /* =========================================================
+  /* =======================================================
      ESTRUCTURA COMPLETA DEL PDF
-  ========================================================= */
+  ======================================================= */
 
-  const paginas = [
-    {
-      id:
-        "portada",
+  const paginas =
+    useMemo(
+      () => [
+        {
+          id:
+            "portada",
 
-      nombre:
-        "Portada",
+          nombre:
+            "Portada",
 
-      tipo:
-        "portada",
-    },
+          tipo:
+            "portada",
+        },
 
-    ...paginasJuegos,
+        ...paginasJuegos,
 
-    ...paginasSoluciones,
+        ...paginasSoluciones,
 
-    {
-      id:
-        "lamina-final",
+        {
+          id:
+            "lamina-final",
 
-      nombre:
-        "Lámina final",
+          nombre:
+            "Lámina final",
 
-      tipo:
-        "final",
-    },
-  ];
+          tipo:
+            "final",
+        },
+      ],
+      [
+        paginasJuegos,
+        paginasSoluciones,
+      ]
+    );
 
   const pagina =
-    paginas[paginaActual];
+    paginas[
+      paginaActual
+    ];
 
   const indiceActividad =
     pagina?.indiceActividad ??
@@ -500,9 +858,9 @@ const [
       nivelPagina
     ];
 
-  /* =========================================================
+    /* =======================================================
      PREVIEW RESPONSIVE
-  ========================================================= */
+  ======================================================= */
 
   useEffect(() => {
     const contenedor =
@@ -541,9 +899,9 @@ const [
     };
   }, []);
 
-  /* =========================================================
-     CORREGIR PÁGINA AL CAMBIAR CANTIDADES
-  ========================================================= */
+  /* =======================================================
+     CORREGIR PÁGINA DEL PRODUCTO
+  ======================================================= */
 
   useEffect(() => {
     if (
@@ -563,58 +921,145 @@ const [
     paginas.length,
   ]);
 
-/* =========================================================
-   VALIDACIÓN
-========================================================= */
+  /* =======================================================
+     REINICIAR PÁGINA DE VALIDACIONES
 
-const validaciones =
-  actividades.map(
-    (
-      actividad,
-      index
-    ) => {
-      const configuracion =
-        CONFIG_LABERINTO[
-          actividad.nivel
-        ];
+     Cuando cambia el producto o la semilla volvemos
+     automáticamente a la primera página de resultados.
+  ======================================================= */
 
-      const semillaActividad =
-        semilla +
-        index;
+  useEffect(() => {
+    setPaginaValidacion(0);
+  }, [
+    cantidadFaciles,
+    cantidadMedios,
+    cantidadDificiles,
+    cantidadExpertos,
+    cantidadLegendarios,
+    semilla,
+  ]);
 
-      const validacion =
-        validarLaberinto(
-          configuracion.filas,
-          configuracion.columnas,
-          semillaActividad
-        );
+  /* =======================================================
+     VALIDACIÓN
 
-      const item = {
-        numero:
-          actividad.numero,
+     Esta es una de las mejoras principales de rendimiento.
 
-        nivel:
-          actividad.nivel,
+     Antes validarLaberinto() se ejecutaba nuevamente en cada
+     render de React.
 
-        ...validacion,
-      };
+     Ahora solamente vuelve a ejecutarse cuando cambian:
+     - las actividades
+     - la semilla
+  ======================================================= */
 
-      return {
-        ...item,
+  const validaciones =
+    useMemo(
+      () =>
+        actividades.map(
+          (
+            actividad,
+            index
+          ) => {
+            const configuracion =
+              CONFIG_LABERINTO[
+                actividad.nivel
+              ];
 
-        complejidad:
-          calcularComplejidad(
-            item
-          ),
-      };
-    }
+            const semillaActividad =
+              semilla +
+              index;
+
+            const validacion =
+              validarLaberinto(
+                configuracion.filas,
+                configuracion.columnas,
+                semillaActividad
+              );
+
+            const item = {
+              numero:
+                actividad.numero,
+
+              nivel:
+                actividad.nivel,
+
+              ...validacion,
+            };
+
+            const complejidad =
+  calcularComplejidad(
+    item
   );
 
+return {
+  ...item,
+
+  complejidad,
+
+  bandaComplejidad:
+    obtenerBandaComplejidad(
+      complejidad
+    ),
+};
+          }
+        ),
+      [
+        actividades,
+        semilla,
+      ]
+    );
+
+  /* =======================================================
+   PRUEBA DE SELECCIÓN PROGRESIVA
+======================================================= */
+
+const seleccionProgresivaPrueba =
+  useMemo(
+    () => {
+      const faciles =
+        validaciones.filter(
+          (item) =>
+            item.nivel ===
+            "facil"
+        );
+
+      return seleccionarProgresivo({
+        items:
+          faciles,
+
+        cantidad:
+          Math.min(
+            20,
+            faciles.length
+          ),
+      });
+    },
+    [
+      validaciones,
+    ]
+  );
+
+  /* =======================================================
+     CANTIDAD DE LABERINTOS VÁLIDOS
+  ======================================================= */
+
   const cantidadValidos =
-    validaciones.filter(
-      (item) =>
-        item.valido
-    ).length;
+    useMemo(
+      () =>
+        validaciones.reduce(
+          (
+            total,
+            item
+          ) =>
+            item.valido
+              ? total + 1
+              : total,
+          0
+        ),
+      [
+        validaciones,
+      ]
+    );
 
   const productoValido =
     cantidadActividades >
@@ -622,375 +1067,411 @@ const validaciones =
     cantidadValidos ===
       cantidadActividades;
 
-  const resumenPorNivel =
-  Object.keys(
-    CONFIG_LABERINTO
-  ).map((nivel) => {
-    const itemsNivel =
-      validaciones.filter(
-        (item) =>
-          item.nivel ===
-          nivel
-      );
+  /* =======================================================
+     PAGINACIÓN DE VALIDACIONES
 
+     Todos los laberintos siguen siendo analizados.
+     Solamente mostramos 25 tarjetas a la vez.
+  ======================================================= */
+
+  const totalPaginasValidacion =
+    Math.max(
+      1,
+      Math.ceil(
+        validaciones.length /
+          VALIDACIONES_POR_PAGINA
+      )
+    );
+
+  const inicioValidacion =
+    paginaValidacion *
+    VALIDACIONES_POR_PAGINA;
+
+  const finValidacion =
+    Math.min(
+      inicioValidacion +
+        VALIDACIONES_POR_PAGINA,
+      validaciones.length
+    );
+
+  const validacionesVisibles =
+    useMemo(
+      () =>
+        validaciones.slice(
+          inicioValidacion,
+          finValidacion
+        ),
+      [
+        validaciones,
+        inicioValidacion,
+        finValidacion,
+      ]
+    );
+
+  useEffect(() => {
     if (
-      itemsNivel.length === 0
+      paginaValidacion >=
+      totalPaginasValidacion
     ) {
-      return null;
+      setPaginaValidacion(
+        Math.max(
+          totalPaginasValidacion -
+            1,
+          0
+        )
+      );
     }
+  }, [
+    paginaValidacion,
+    totalPaginasValidacion,
+  ]);
 
-    const totalSolucion =
-      itemsNivel.reduce(
-        (acumulado, item) =>
-          acumulado +
-          item.longitudSolucion,
-        0
-      );
+  /* =======================================================
+     ESTADÍSTICAS POR NIVEL
 
-    const totalGiros =
-      itemsNivel.reduce(
-        (acumulado, item) =>
-          acumulado +
-          item.cantidadGiros,
-        0
-      );
+     También están memoizadas.
 
-    const totalCallejones =
-  itemsNivel.reduce(
-    (acumulado, item) =>
-      acumulado +
-      item.cantidadCallejones,
-    0
+     Cambiar de página en el preview ya no recalcula:
+     - promedios
+     - mínimos
+     - máximos
+     - percentiles
+  ======================================================= */
+
+  const resumenPorNivel =
+    useMemo(
+      () =>
+        Object.keys(
+          CONFIG_LABERINTO
+        )
+          .map(
+            (
+              nivel
+            ) => {
+              const itemsNivel =
+                validaciones.filter(
+                  (
+                    item
+                  ) =>
+                    item.nivel ===
+                    nivel
+                );
+
+              if (
+                itemsNivel.length ===
+                0
+              ) {
+                return null;
+              }
+
+              const soluciones =
+                itemsNivel.map(
+                  (
+                    item
+                  ) =>
+                    item.longitudSolucion
+                );
+
+              const giros =
+                itemsNivel.map(
+                  (
+                    item
+                  ) =>
+                    item.cantidadGiros
+                );
+
+              const callejones =
+                itemsNivel.map(
+                  (
+                    item
+                  ) =>
+                    item.cantidadCallejones
+                );
+
+              const recorridos =
+                itemsNivel.map(
+                  (
+                    item
+                  ) =>
+                    item.porcentajeRecorrido
+                );
+
+              const densidadesGiros =
+                itemsNivel.map(
+                  (
+                    item
+                  ) =>
+                    item.densidadGiros
+                );
+
+              const densidadesCallejones =
+                itemsNivel.map(
+                  (
+                    item
+                  ) =>
+                    item.densidadCallejones
+                );
+
+              const complejidades =
+                itemsNivel.map(
+                  (
+                    item
+                  ) =>
+                    item.complejidad
+                );
+
+              const bandasComplejidad =
+  contarBandasComplejidad(
+    itemsNivel
   );
 
-    const totalDensidadGiros =
-  itemsNivel.reduce(
-    (acumulado, item) =>
-      acumulado +
-      item.densidadGiros,
-    0
-  );
+              const totalSolucion =
+                soluciones.reduce(
+                  (
+                    total,
+                    valor
+                  ) =>
+                    total + valor,
+                  0
+                );
 
-const totalDensidadCallejones =
-  itemsNivel.reduce(
-    (acumulado, item) =>
-      acumulado +
-      item.densidadCallejones,
-    0
-  );
+              const totalGiros =
+                giros.reduce(
+                  (
+                    total,
+                    valor
+                  ) =>
+                    total + valor,
+                  0
+                );
 
-    const totalRecorrido =
-      itemsNivel.reduce(
-        (acumulado, item) =>
-          acumulado +
-          item.porcentajeRecorrido,
-        0
-      );
+              const totalCallejones =
+                callejones.reduce(
+                  (
+                    total,
+                    valor
+                  ) =>
+                    total + valor,
+                  0
+                );
 
-    const soluciones =
-      itemsNivel.map(
-        (item) =>
-          item.longitudSolucion
-      );
+              const totalRecorrido =
+                recorridos.reduce(
+                  (
+                    total,
+                    valor
+                  ) =>
+                    total + valor,
+                  0
+                );
 
-    const giros =
-      itemsNivel.map(
-        (item) =>
-          item.cantidadGiros
-      );
+              const totalDensidadGiros =
+                densidadesGiros.reduce(
+                  (
+                    total,
+                    valor
+                  ) =>
+                    total + valor,
+                  0
+                );
 
-    const callejones =
-  itemsNivel.map(
-    (item) =>
-      item.cantidadCallejones
-  );
+              const totalDensidadCallejones =
+                densidadesCallejones.reduce(
+                  (
+                    total,
+                    valor
+                  ) =>
+                    total + valor,
+                  0
+                );
 
-    const complejidades =
-  itemsNivel.map(
-    (item) =>
-      item.complejidad
-  );
+              const totalComplejidad =
+                complejidades.reduce(
+                  (
+                    total,
+                    valor
+                  ) =>
+                    total + valor,
+                  0
+                );
 
-    const percentilesSolucion = {
-  p05: calcularPercentil(
-    soluciones,
-    5
-  ),
+              return {
+                nivel,
 
-  p25: calcularPercentil(
-    soluciones,
-    25
-  ),
+                cantidad:
+                  itemsNivel.length,
 
-  p50: calcularPercentil(
-    soluciones,
-    50
-  ),
+                /* PROMEDIOS */
 
-  p75: calcularPercentil(
-    soluciones,
-    75
-  ),
+                promedioSolucion:
+                  Math.round(
+                    totalSolucion /
+                      itemsNivel.length
+                  ),
 
-  p95: calcularPercentil(
-    soluciones,
-    95
-  ),
-};
+                promedioGiros:
+                  Math.round(
+                    totalGiros /
+                      itemsNivel.length
+                  ),
 
-const percentilesGiros = {
-  p05: calcularPercentil(
-    giros,
-    5
-  ),
+                promedioCallejones:
+                  Math.round(
+                    totalCallejones /
+                      itemsNivel.length
+                  ),
 
-  p25: calcularPercentil(
-    giros,
-    25
-  ),
+                promedioRecorrido:
+                  Math.round(
+                    totalRecorrido /
+                      itemsNivel.length
+                  ),
 
-  p50: calcularPercentil(
-    giros,
-    50
-  ),
+                promedioDensidadGiros:
+                  Math.round(
+                    totalDensidadGiros /
+                      itemsNivel.length
+                  ),
 
-  p75: calcularPercentil(
-    giros,
-    75
-  ),
+                promedioDensidadCallejones:
+                  Math.round(
+                    totalDensidadCallejones /
+                      itemsNivel.length
+                  ),
 
-  p95: calcularPercentil(
-    giros,
-    95
-  ),
-};
+                promedioComplejidad:
+                  Math.round(
+                    totalComplejidad /
+                      itemsNivel.length
+                  ),
 
-const percentilesCallejones = {
-  p05: calcularPercentil(
-    callejones,
-    5
-  ),
+                /* MÍNIMOS */
 
-  p25: calcularPercentil(
-    callejones,
-    25
-  ),
+                minimoSolucion:
+                  Math.min(
+                    ...soluciones
+                  ),
 
-  p50: calcularPercentil(
-    callejones,
-    50
-  ),
+                minimoGiros:
+                  Math.min(
+                    ...giros
+                  ),
 
-  p75: calcularPercentil(
-    callejones,
-    75
-  ),
+                minimoCallejones:
+                  Math.min(
+                    ...callejones
+                  ),
 
-  p95: calcularPercentil(
-    callejones,
-    95
-  ),
-};
+                minimoRecorrido:
+                  Math.min(
+                    ...recorridos
+                  ),
 
-const percentilesComplejidad = {
-  p05: calcularPercentil(
-    complejidades,
-    5
-  ),
+                minimoDensidadGiros:
+                  Math.min(
+                    ...densidadesGiros
+                  ),
 
-  p25: calcularPercentil(
-    complejidades,
-    25
-  ),
+                minimoDensidadCallejones:
+                  Math.min(
+                    ...densidadesCallejones
+                  ),
 
-  p50: calcularPercentil(
-    complejidades,
-    50
-  ),
+                minimoComplejidad:
+                  Math.min(
+                    ...complejidades
+                  ),
 
-  p75: calcularPercentil(
-    complejidades,
-    75
-  ),
+                /* MÁXIMOS */
 
-  p95: calcularPercentil(
-    complejidades,
-    95
-  ),
-};
+                maximoSolucion:
+                  Math.max(
+                    ...soluciones
+                  ),
 
-const totalComplejidad =
-  complejidades.reduce(
-    (acumulado, valor) =>
-      acumulado + valor,
-    0
-  );
+                maximoGiros:
+                  Math.max(
+                    ...giros
+                  ),
 
-    const recorridos =
-      itemsNivel.map(
-        (item) =>
-          item.porcentajeRecorrido
-      );
+                maximoCallejones:
+                  Math.max(
+                    ...callejones
+                  ),
 
-    const densidadesGiros =
-  itemsNivel.map(
-    (item) =>
-      item.densidadGiros
-  );
+                maximoRecorrido:
+                  Math.max(
+                    ...recorridos
+                  ),
 
-const densidadesCallejones =
-  itemsNivel.map(
-    (item) =>
-      item.densidadCallejones
-  );
+                maximoDensidadGiros:
+                  Math.max(
+                    ...densidadesGiros
+                  ),
 
-  return {
-  nivel,
+                maximoDensidadCallejones:
+                  Math.max(
+                    ...densidadesCallejones
+                  ),
 
-  cantidad:
-    itemsNivel.length,
+                maximoComplejidad:
+                  Math.max(
+                    ...complejidades
+                  ),
 
-  /* PROMEDIOS */
+              /* PERCENTILES */
 
-  promedioSolucion:
-    Math.round(
-      totalSolucion /
-        itemsNivel.length
-    ),
+              percentilesSolucion:
+                calcularPercentiles(
+                  soluciones
+                ),
 
-  promedioGiros:
-    Math.round(
-      totalGiros /
-        itemsNivel.length
-    ),
+              percentilesGiros:
+                calcularPercentiles(
+                  giros
+                ),
 
-  promedioCallejones:
-    Math.round(
-      totalCallejones /
-        itemsNivel.length
-    ),
+              percentilesCallejones:
+                calcularPercentiles(
+                  callejones
+                ),
 
-  promedioRecorrido:
-    Math.round(
-      totalRecorrido /
-        itemsNivel.length
-    ),
+              percentilesComplejidad:
+                calcularPercentiles(
+                  complejidades
+                ),
 
-  promedioDensidadGiros:
-    Math.round(
-      totalDensidadGiros /
-        itemsNivel.length
-    ),
+              /* BANDAS DE COMPLEJIDAD */
 
-  promedioDensidadCallejones:
-    Math.round(
-      totalDensidadCallejones /
-        itemsNivel.length
-    ),
+              bandasComplejidad,
+              };
+            }
+          )
+          .filter(Boolean),
+      [
+        validaciones,
+      ]
+    );
 
-  /* MÍNIMOS */
-
-  minimoSolucion:
-    Math.min(
-      ...soluciones
-    ),
-
-  minimoGiros:
-    Math.min(
-      ...giros
-    ),
-
-  minimoCallejones:
-    Math.min(
-      ...callejones
-    ),
-
-  minimoRecorrido:
-    Math.min(
-      ...recorridos
-    ),
-
-  minimoDensidadGiros:
-    Math.min(
-      ...densidadesGiros
-    ),
-
-  minimoDensidadCallejones:
-    Math.min(
-      ...densidadesCallejones
-    ),
-
-  /* MÁXIMOS */
-
-  maximoSolucion:
-    Math.max(
-      ...soluciones
-    ),
-
-  maximoGiros:
-    Math.max(
-      ...giros
-    ),
-
-  maximoCallejones:
-    Math.max(
-      ...callejones
-    ),
-
-  maximoRecorrido:
-    Math.max(
-      ...recorridos
-    ),
-
-  maximoDensidadGiros:
-    Math.max(
-      ...densidadesGiros
-    ),
-
-  maximoDensidadCallejones:
-    Math.max(
-      ...densidadesCallejones
-    ),
-
-    promedioComplejidad:
-  Math.round(
-    totalComplejidad /
-      itemsNivel.length
-  ),
-
-minimoComplejidad:
-  Math.min(
-    ...complejidades
-  ),
-
-maximoComplejidad:
-  Math.max(
-    ...complejidades
-  ),
-percentilesSolucion,
-percentilesGiros,
-percentilesCallejones,
-percentilesComplejidad,
-    
-};
-}).filter(Boolean);
-
-    /* =========================================================
+  /* =======================================================
      GENERAR NUEVO CONJUNTO
-  ========================================================= */
+  ======================================================= */
 
   function generarNuevoConjunto() {
     setSemilla(
-      (actual) =>
+      (
+        actual
+      ) =>
         actual + 1
     );
 
     setPaginaActual(0);
+    setPaginaValidacion(0);
   }
 
-  /* =========================================================
+  /* =======================================================
      GENERAR PDF
-  ========================================================= */
+  ======================================================= */
 
   async function descargarPdfCompleto() {
     if (
@@ -1000,12 +1481,16 @@ percentilesComplejidad,
       return;
     }
 
-    setExportandoPdf(true);
+    setExportandoPdf(
+      true
+    );
 
     setProgresoPdf({
       actual: 0,
+
       total:
         paginas.length,
+
       porcentaje: 0,
     });
 
@@ -1078,38 +1563,41 @@ percentilesComplejidad,
     }
   }
 
-  /* =========================================================
-     SIN ACTIVIDADES
-  ========================================================= */
+  /* =======================================================
+     SIN PÁGINA
+  ======================================================= */
 
   if (!pagina) {
     return (
       <main className="min-h-screen bg-slate-100 p-4">
+
         <div className="mx-auto max-w-xl rounded-2xl bg-white p-5 text-center shadow-sm">
+
           <p className="font-bold text-slate-900">
-            No hay actividades
+            No hay páginas disponibles
           </p>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Agregá al menos una actividad.
-          </p>
         </div>
+
       </main>
     );
   }
 
-  return (
+    return (
     <main className="min-h-screen overflow-x-hidden bg-slate-100">
+
       <div className="mx-auto w-full max-w-7xl px-3 py-4">
 
-        {/* =====================================================
+        {/* ===================================================
             PANEL PRINCIPAL
-        ====================================================== */}
+        ==================================================== */}
 
         <section className="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
 
           <div className="flex items-center justify-between gap-3">
+
             <div>
+
               <h1 className="text-lg font-bold text-slate-900">
                 Generador de laberintos
               </h1>
@@ -1117,14 +1605,14 @@ percentilesComplejidad,
               <p className="text-xs text-slate-500">
                 Toby y Luna Imprimibles
               </p>
+
             </div>
 
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-              {
-                cantidadActividades
-              }{" "}
+              {cantidadActividades}{" "}
               actividades
             </span>
+
           </div>
 
           {/* =================================================
@@ -1190,6 +1678,7 @@ percentilesComplejidad,
               />
 
             </div>
+
           </div>
 
           {/* =================================================
@@ -1249,14 +1738,10 @@ percentilesComplejidad,
               </div>
 
               <p className="mt-1 text-center text-[11px] font-semibold text-slate-500">
-                {
-                  progresoPdf.actual
-                }{" "}
-                de{" "}
-                {
-                  progresoPdf.total
-                }{" "}
-                páginas
+                {progresoPdf.actual}
+                {" de "}
+                {progresoPdf.total}
+                {" páginas"}
               </p>
 
             </div>
@@ -1264,22 +1749,24 @@ percentilesComplejidad,
 
         </section>
 
-        {/* =====================================================
+        {/* ===================================================
             VALIDACIÓN
-        ====================================================== */}
+        ==================================================== */}
 
         <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm sm:p-4">
 
           <div className="flex items-center justify-between gap-3">
 
             <div>
+
               <h2 className="text-sm font-bold text-slate-900">
                 Validación
               </h2>
 
               <p className="text-[11px] text-slate-500">
-                Entrada, salida y solución.
+                Entrada, salida, solución y métricas.
               </p>
+
             </div>
 
             <span
@@ -1289,439 +1776,458 @@ percentilesComplejidad,
                   : "bg-red-100 text-red-700"
               }`}
             >
-              {
-                cantidadValidos
-              }
+              {cantidadValidos}
               /
-              {
-                cantidadActividades
-              }
+              {cantidadActividades}
             </span>
 
           </div>
 
-          <div className="mt-3 max-h-96 space-y-1.5 overflow-y-auto">
-
-            {validaciones.map(
-  (item) => (
-    <div
-      key={item.numero}
-      className="rounded-lg bg-slate-50 px-2.5 py-2"
-    >
-
-        <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
-
-  <div className="mb-4">
-
-    <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">
-      Estadísticas
-    </p>
-
-    <h3 className="mt-1 text-base font-bold text-slate-800">
-      Resumen por nivel
-    </h3>
-
-    <p className="mt-1 text-xs text-slate-500">
-      Promedios, mínimos y máximos de los laberintos generados.
-    </p>
-
-  </div>
-
-  <div className="space-y-3">
-
-    {resumenPorNivel.map(
-      (resumen) => (
-        <div
-          key={
-            resumen.nivel
-          }
-          className="rounded-xl bg-slate-50 p-3"
-        >
-
-          <div className="mb-3 flex items-center justify-between gap-2">
-
-            <p className="text-sm font-bold text-slate-800">
-              {
-                NOMBRE_NIVEL[
-                  resumen.nivel
-                ]
-              }
+          {validaciones.length >
+            0 && (
+            <p className="mt-3 text-[11px] font-semibold text-slate-500">
+              Mostrando{" "}
+              {inicioValidacion +
+                1}
+              {" - "}
+              {finValidacion}
+              {" de "}
+              {validaciones.length}
             </p>
+          )}
 
-            <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">
-              {
-                resumen.cantidad
-              }{" "}
-              laberintos
-            </span>
+          <div className="mt-2 space-y-1.5">
 
-          </div>
+            {validacionesVisibles.map(
+              (
+                item
+              ) => (
+                <div
+                  key={
+                    item.numero
+                  }
+                  className="rounded-lg bg-slate-50 px-2.5 py-2"
+                >
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {/* CABECERA */}
 
-            <div className="rounded-lg bg-white p-2 text-center">
+                  <div className="flex items-center justify-between gap-2">
 
-  <p className="text-[9px] font-semibold uppercase text-slate-400">
-    Callejones
-  </p>
+                    <div className="flex min-w-0 items-center gap-2">
 
-  <p className="mt-1 text-sm font-bold text-slate-700">
-    {resumen.promedioCallejones}
-  </p>
+                      <span
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          item.valido
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {item.valido
+                          ? "✓"
+                          : "×"}
+                      </span>
 
-  <p className="text-[9px] text-slate-400">
-    {resumen.minimoCallejones}
-    {" - "}
-    {resumen.maximoCallejones}
-  </p>          
+                      <span className="truncate text-xs font-semibold text-slate-700">
+                        Laberinto{" "}
+                        {item.numero}
+                        {" · "}
+                        {
+                          NOMBRE_NIVEL[
+                            item.nivel
+                          ]
+                        }
+                      </span>
 
-</div>
+                    </div>
 
-            <div className="mt-1 text-[9px] leading-4 text-slate-500">
-  P05 {resumen.percentilesCallejones.p05}
-  {" · "}
-  P25 {resumen.percentilesCallejones.p25}
-  {" · "}
-  P50 {resumen.percentilesCallejones.p50}
-  {" · "}
-  P75 {resumen.percentilesCallejones.p75}
-  {" · "}
-  P95 {resumen.percentilesCallejones.p95}
-</div>       
+                    <span
+                      className={`shrink-0 text-[10px] font-bold ${
+                        item.valido
+                          ? "text-emerald-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {item.valido
+                        ? "VÁLIDO"
+                        : "ERROR"}
+                    </span>
 
-            <div className="rounded-lg bg-white p-2 text-center">
+                  </div>
 
-              <p className="text-[9px] font-semibold uppercase text-slate-400">
-                Solución
-              </p>
+                  {/* MÉTRICAS */}
 
-              <p className="mt-1 text-sm font-bold text-slate-700">
-                {
-                  resumen.promedioSolucion
-                }
-              </p>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
 
-              <p className="text-[9px] text-slate-400">
-                {
-                  resumen.minimoSolucion
-                }
-                {" - "}
-                {
-                  resumen.maximoSolucion
-                }
-              </p>
+                    <Metrica
+                      titulo="Celdas"
+                      valor={
+                        item.totalCeldas
+                      }
+                    />
 
-            </div>
+                    <Metrica
+                      titulo="Solución"
+                      valor={
+                        item.longitudSolucion
+                      }
+                    />
 
-            <div className="mt-1 text-[9px] leading-4 text-slate-500">
-  P05 {resumen.percentilesSolucion.p05}
-  {" · "}
-  P25 {resumen.percentilesSolucion.p25}
-  {" · "}
-  P50 {resumen.percentilesSolucion.p50}
-  {" · "}
-  P75 {resumen.percentilesSolucion.p75}
-  {" · "}
-  P95 {resumen.percentilesSolucion.p95}
-</div>
+                    <Metrica
+                      titulo="Giros"
+                      valor={
+                        item.cantidadGiros
+                      }
+                    />
 
-            <div className="rounded-lg bg-white p-2 text-center">
+                    <Metrica
+                      titulo="Callejones"
+                      valor={
+                        item.cantidadCallejones
+                      }
+                    />
 
-              <p className="text-[9px] font-semibold uppercase text-slate-400">
-                Giros
-              </p>
+                    <Metrica
+                      titulo="Recorrido"
+                      valor={`${item.porcentajeRecorrido}%`}
+                    />
 
-              <p className="mt-1 text-sm font-bold text-slate-700">
-                {
-                  resumen.promedioGiros
-                }
-              </p>
+                    <Metrica
+                      titulo="Dens. giros"
+                      valor={`${item.densidadGiros}%`}
+                    />
 
-              <p className="text-[9px] text-slate-400">
-                {
-                  resumen.minimoGiros
-                }
-                {" - "}
-                {
-                  resumen.maximoGiros
-                }
-              </p>
+                    <Metrica
+                      titulo="Dens. callejones"
+                      valor={`${item.densidadCallejones}%`}
+                    />
 
-            </div>
+                    <div className="rounded-md bg-slate-900 px-1.5 py-1.5 text-center">
 
-            <div className="mt-1 text-[9px] leading-4 text-slate-500">
-  P05 {resumen.percentilesGiros.p05}
-  {" · "}
-  P25 {resumen.percentilesGiros.p25}
-  {" · "}
-  P50 {resumen.percentilesGiros.p50}
-  {" · "}
-  P75 {resumen.percentilesGiros.p75}
-  {" · "}
-  P95 {resumen.percentilesGiros.p95}
-</div>
+                      <p className="text-[9px] font-semibold uppercase text-slate-400">
+                        Complejidad
+                      </p>
 
-            <div className="rounded-lg bg-white p-2 text-center">
+                      <p className="text-xs font-bold text-white">
+  {item.complejidad}
+  /100
+</p>
 
-              <p className="text-[9px] font-semibold uppercase text-slate-400">
-                Recorrido
-              </p>
+<p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+  {item.bandaComplejidad}
+</p>
 
-              <p className="mt-1 text-sm font-bold text-slate-700">
-                {
-                  resumen.promedioRecorrido
-                }
-                %
-              </p>
+                    </div>
 
-              <p className="text-[9px] text-slate-400">
-                {
-                  resumen.minimoRecorrido
-                }
-                %
-                {" - "}
-                {
-                  resumen.maximoRecorrido
-                }
-                %
-              </p>
+                    
+                  </div>
 
-            </div>
-
-<div className="mt-2 grid grid-cols-2 gap-2">
-
-  <div className="rounded-lg bg-white p-2 text-center">
-
-    <p className="text-[9px] font-semibold uppercase text-slate-400">
-      Dens. giros
-    </p>
-
-    <p className="mt-1 text-sm font-bold text-slate-700">
-      {resumen.promedioDensidadGiros}%
-    </p>
-
-    <p className="text-[9px] text-slate-400">
-      {resumen.minimoDensidadGiros}%
-      {" - "}
-      {resumen.maximoDensidadGiros}%
-    </p>
-
-  </div>
-
-  <div className="rounded-lg bg-white p-2 text-center">
-
-    <p className="text-[9px] font-semibold uppercase text-slate-400">
-      Dens. callejones
-    </p>
-
-    <p className="mt-1 text-sm font-bold text-slate-700">
-      {resumen.promedioDensidadCallejones}%
-    </p>
-
-    <p className="text-[9px] text-slate-400">
-      {resumen.minimoDensidadCallejones}%
-      {" - "}
-      {resumen.maximoDensidadCallejones}%
-    </p>
-
-  </div>
-
-  <div className="mt-2 rounded-lg bg-slate-900 p-2 text-center">
-
-    <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-      Complejidad interna
-    </p>
-
-    <p className="mt-1 text-sm font-bold text-white">
-      {resumen.promedioComplejidad}/100
-    </p>
-
-    <p className="text-[9px] text-slate-400">
-      {resumen.minimoComplejidad}
-      {" - "}
-      {resumen.maximoComplejidad}
-    </p>
-
-  </div>
-
-  <div className="mt-1 text-[9px] leading-4 text-slate-400">
-  P05 {resumen.percentilesComplejidad.p05}
-  {" · "}
-  P25 {resumen.percentilesComplejidad.p25}
-  {" · "}
-  P50 {resumen.percentilesComplejidad.p50}
-  {" · "}
-  P75 {resumen.percentilesComplejidad.p75}
-  {" · "}
-  P95 {resumen.percentilesComplejidad.p95}
-</div>
-
-</div>
-            
+                </div>
+              )
+            )}
 
           </div>
 
-        </div>
-      )
-    )}
+          {/* =================================================
+              PAGINACIÓN DE VALIDACIONES
+          ================================================== */}
 
-  </div>
+          {totalPaginasValidacion >
+            1 && (
+            <div className="mt-4 flex items-center justify-between gap-3">
 
-</section>
+              <button
+                type="button"
+                onClick={() =>
+                  setPaginaValidacion(
+                    (
+                      actual
+                    ) =>
+                      Math.max(
+                        actual -
+                          1,
+                        0
+                      )
+                  )
+                }
+                disabled={
+                  paginaValidacion ===
+                  0
+                }
+                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-30"
+              >
+                ← Anterior
+              </button>
 
-      {/* CABECERA */}
+              <span className="text-center text-[11px] font-semibold text-slate-500">
+                Página{" "}
+                {paginaValidacion +
+                  1}
+                {" de "}
+                {totalPaginasValidacion}
+              </span>
 
-      <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setPaginaValidacion(
+                    (
+                      actual
+                    ) =>
+                      Math.min(
+                        actual +
+                          1,
+                        totalPaginasValidacion -
+                          1
+                      )
+                  )
+                }
+                disabled={
+                  paginaValidacion ===
+                  totalPaginasValidacion -
+                    1
+                }
+                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-30"
+              >
+                Siguiente →
+              </button>
 
-        <div className="flex min-w-0 items-center gap-2">
+            </div>
+          )}
 
-          <span
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-              item.valido
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-red-100 text-red-700"
-            }`}
-          >
-            {item.valido
-              ? "✓"
-              : "×"}
-          </span>
+          {productoValido && (
+            <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-center">
 
-          <span className="truncate text-xs font-semibold text-slate-700">
-            Laberinto{" "}
-            {item.numero}{" "}
-            ·{" "}
-            {
-              NOMBRE_NIVEL[
-                item.nivel
-              ]
-            }
-          </span>
+              <p className="text-xs font-bold text-emerald-700">
+                ✓ PRODUCTO LISTO
+              </p>
 
-        </div>
+            </div>
+          )}
 
-        <span
-          className={`shrink-0 text-[10px] font-bold ${
-            item.valido
-              ? "text-emerald-600"
-              : "text-red-600"
-          }`}
-        >
-          {item.valido
-            ? "VÁLIDO"
-            : "ERROR"}
-        </span>
+        </section>
 
-      </div>
+        {/* ===================================================
+    PRUEBA DE PROGRESIÓN
+=================================================== */}
 
-      {/* MÉTRICAS */}
+{seleccionProgresivaPrueba.length > 0 && (
+  <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm sm:p-4">
 
-      <div className="mt-2 grid grid-cols-5 gap-1.5">
+    <div className="mb-3">
 
-        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
-          <p className="text-[9px] font-semibold uppercase text-slate-400">
-            Celdas
-          </p>
+      <p className="text-xs font-bold uppercase tracking-wide text-sky-600">
+        Prueba de progresión
+      </p>
 
-          <p className="text-xs font-bold text-slate-700">
-            {item.totalCeldas}
-          </p>
-        </div>
+      <h3 className="mt-1 text-sm font-bold text-slate-900">
+        Selección automática · Fácil
+      </h3>
 
-        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
-          <p className="text-[9px] font-semibold uppercase text-slate-400">
-            Solución
-          </p>
-
-          <p className="text-xs font-bold text-slate-700">
-            {
-              item.longitudSolucion
-            }
-          </p>
-        </div>
-
-        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
-          <p className="text-[9px] font-semibold uppercase text-slate-400">
-            Giros
-          </p>
-
-          <p className="text-xs font-bold text-slate-700">
-            {
-              item.cantidadGiros
-            }
-          </p>
-        </div>
-
-        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
-  <p className="text-[9px] font-semibold uppercase text-slate-400">
-    Callejones
-  </p>
-
-  <p className="text-xs font-bold text-slate-700">
-    {item.cantidadCallejones}
-  </p>
-</div>
-
-        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
-          <p className="text-[9px] font-semibold uppercase text-slate-400">
-            Recorrido
-          </p>
-
-          <p className="text-xs font-bold text-slate-700">
-            {
-              item.porcentajeRecorrido
-            }
-            %
-          </p>
-        </div>
-
-        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-
-  <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
-    <p className="text-[9px] font-semibold uppercase text-slate-400">
-      Dens. giros
-    </p>
-
-    <p className="text-xs font-bold text-slate-700">
-      {item.densidadGiros}%
-    </p>
-  </div>
-
-  <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
-    <p className="text-[9px] font-semibold uppercase text-slate-400">
-      Dens. callejones
-    </p>
-
-    <p className="text-xs font-bold text-slate-700">
-      {item.densidadCallejones}%
-    </p>
-  </div>
-
-</div>
-
-      </div>
+      <p className="mt-1 text-[11px] text-slate-500">
+        20 laberintos seleccionados y ordenados por complejidad.
+      </p>
 
     </div>
-  )
+
+    <div className="space-y-1.5">
+
+      {seleccionProgresivaPrueba.map(
+        (
+          item,
+          index
+        ) => (
+          <div
+            key={
+              item.numero
+            }
+            className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
+          >
+
+            <div>
+
+              <p className="text-xs font-bold text-slate-700">
+                {index + 1}
+                . Laberinto{" "}
+                {item.numero}
+              </p>
+
+              <p className="text-[10px] text-slate-400">
+                {
+                  item.bandaComplejidad
+                }
+              </p>
+
+            </div>
+
+            <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-bold text-white">
+              {
+                item.complejidad
+              }
+              /100
+            </span>
+
+          </div>
+        )
+      )}
+
+    </div>
+
+  </section>
 )}
 
-</div>
+        {/* ===================================================
+            ESTADÍSTICAS
+        ==================================================== */}
 
-{productoValido && (
-  <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-center">
+        <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm sm:p-4">
 
-    <p className="text-xs font-bold text-emerald-700">
-      ✓ PRODUCTO LISTO
-    </p>
+          <div className="mb-4">
 
-  </div>
-)}
+            <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">
+              Estadísticas
+            </p>
 
-</section>
+            <h3 className="mt-1 text-base font-bold text-slate-800">
+              Resumen por nivel
+            </h3>
 
-                {/* =====================================================
+            <p className="mt-1 text-xs text-slate-500">
+              Promedios, mínimos, máximos y percentiles.
+            </p>
+
+          </div>
+
+          <div className="space-y-3">
+
+            {resumenPorNivel.map(
+              (
+                resumen
+              ) => (
+                <div
+                  key={
+                    resumen.nivel
+                  }
+                  className="rounded-xl bg-slate-50 p-3"
+                >
+
+                  <div className="mb-3 flex items-center justify-between gap-2">
+
+                    <p className="text-sm font-bold text-slate-800">
+                      {
+                        NOMBRE_NIVEL[
+                          resumen.nivel
+                        ]
+                      }
+                    </p>
+
+                    <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">
+                      {
+                        resumen.cantidad
+                      }{" "}
+                      laberintos
+                    </span>
+
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+
+                    <EstadisticaPercentiles
+                      titulo="Callejones"
+                      promedio={
+                        resumen.promedioCallejones
+                      }
+                      minimo={
+                        resumen.minimoCallejones
+                      }
+                      maximo={
+                        resumen.maximoCallejones
+                      }
+                      percentiles={
+                        resumen.percentilesCallejones
+                      }
+                    />
+
+                    <EstadisticaPercentiles
+                      titulo="Solución"
+                      promedio={
+                        resumen.promedioSolucion
+                      }
+                      minimo={
+                        resumen.minimoSolucion
+                      }
+                      maximo={
+                        resumen.maximoSolucion
+                      }
+                      percentiles={
+                        resumen.percentilesSolucion
+                      }
+                    />
+
+                    <EstadisticaPercentiles
+                      titulo="Giros"
+                      promedio={
+                        resumen.promedioGiros
+                      }
+                      minimo={
+                        resumen.minimoGiros
+                      }
+                      maximo={
+                        resumen.maximoGiros
+                      }
+                      percentiles={
+                        resumen.percentilesGiros
+                      }
+                    />
+
+                    <EstadisticaSimple
+                      titulo="Recorrido"
+                      promedio={`${resumen.promedioRecorrido}%`}
+                      rango={`${resumen.minimoRecorrido}% - ${resumen.maximoRecorrido}%`}
+                    />
+
+                    <EstadisticaSimple
+                      titulo="Dens. giros"
+                      promedio={`${resumen.promedioDensidadGiros}%`}
+                      rango={`${resumen.minimoDensidadGiros}% - ${resumen.maximoDensidadGiros}%`}
+                    />
+
+                    <EstadisticaSimple
+                      titulo="Dens. callejones"
+                      promedio={`${resumen.promedioDensidadCallejones}%`}
+                      rango={`${resumen.minimoDensidadCallejones}% - ${resumen.maximoDensidadCallejones}%`}
+                    />
+
+                    <EstadisticaComplejidad
+                      promedio={
+                        resumen.promedioComplejidad
+                      }
+                      minimo={
+                        resumen.minimoComplejidad
+                      }
+                      maximo={
+                        resumen.maximoComplejidad
+                      }
+                      percentiles={
+                        resumen.percentilesComplejidad
+                      }
+                      bandas={
+                        resumen.bandasComplejidad
+                      }
+                    />
+
+                  </div>
+
+                </div>
+              )
+            )}
+
+          </div>
+
+        </section>
+
+                {/* ===================================================
             NAVEGACIÓN
-        ====================================================== */}
+        ==================================================== */}
 
         <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm">
 
@@ -1753,21 +2259,15 @@ percentilesComplejidad,
             <div className="min-w-0 text-center">
 
               <p className="truncate text-sm font-bold text-slate-900">
-                {
-                  pagina.nombre
-                }
+                {pagina.nombre}
               </p>
 
               <p className="text-[11px] text-slate-500">
                 Página{" "}
-                {
-                  paginaActual +
-                  1
-                }{" "}
-                de{" "}
-                {
-                  paginas.length
-                }
+                {paginaActual +
+                  1}
+                {" de "}
+                {paginas.length}
               </p>
 
             </div>
@@ -1801,58 +2301,129 @@ percentilesComplejidad,
 
           {/* =================================================
               SELECTOR DE PÁGINA
+
+              Para productos pequeños usamos select.
+
+              Para productos grandes usamos input numérico
+              para no crear miles de elementos <option>.
           ================================================== */}
 
-          <select
-            value={
-              paginaActual
-            }
-            onChange={(e) =>
-              setPaginaActual(
-                Number(
-                  e.target.value
+          {paginas.length <=
+          LIMITE_SELECTOR_PAGINAS ? (
+
+            <select
+              value={
+                paginaActual
+              }
+              onChange={(e) =>
+                setPaginaActual(
+                  Number(
+                    e.target.value
+                  )
                 )
-              )
-            }
-            className={`${CLASE_CAMPO} mt-3`}
-          >
-            {paginas.map(
-              (
-                item,
-                index
-              ) => (
-                <option
-                  key={
-                    item.id
+              }
+              className={`${CLASE_CAMPO} mt-3`}
+            >
+
+              {paginas.map(
+                (
+                  item,
+                  index
+                ) => (
+                  <option
+                    key={
+                      item.id
+                    }
+                    value={
+                      index
+                    }
+                  >
+                    {index + 1}
+                    .{" "}
+                    {item.nombre}
+                  </option>
+                )
+              )}
+
+            </select>
+
+          ) : (
+
+            <div className="mt-3">
+
+              <label className="block">
+
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Ir a página
+                </span>
+
+                <input
+                  type="number"
+                  min="1"
+                  max={
+                    paginas.length
                   }
                   value={
-                    index
-                  }
-                >
-                  {
-                    index +
+                    paginaActual +
                     1
                   }
-                  .{" "}
-                  {
-                    item.nombre
+                  onChange={(e) => {
+                    const valor =
+                      Number(
+                        e.target.value
+                      );
+
+                    if (
+                      !Number.isFinite(
+                        valor
+                      )
+                    ) {
+                      return;
+                    }
+
+                    const paginaDestino =
+                      Math.min(
+                        Math.max(
+                          Math.round(
+                            valor
+                          ),
+                          1
+                        ),
+                        paginas.length
+                      );
+
+                    setPaginaActual(
+                      paginaDestino -
+                        1
+                    );
+                  }}
+                  className={
+                    CLASE_CAMPO
                   }
-                </option>
-              )
-            )}
-          </select>
+                />
+
+              </label>
+
+              <p className="mt-1 text-[10px] text-slate-400">
+                Producto grande: el selector completo se desactiva para ahorrar memoria.
+              </p>
+
+            </div>
+
+          )}
 
         </section>
 
-        {/* =====================================================
+        {/* ===================================================
             PREVIEW
-        ====================================================== */}
+        ==================================================== */}
 
         <section className="mt-3">
 
           <div className="mb-2 flex items-center justify-between">
 
             <div>
+
               <p className="text-xs font-bold text-slate-700">
                 Vista previa
               </p>
@@ -1860,6 +2431,7 @@ percentilesComplejidad,
               <p className="text-[11px] text-slate-500">
                 A4 · 210 × 297 mm
               </p>
+
             </div>
 
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-500 shadow-sm">
@@ -2001,6 +2573,7 @@ percentilesComplejidad,
         </section>
 
       </div>
+
     </main>
   );
 }
@@ -2052,5 +2625,200 @@ function Cantidad({
       />
 
     </label>
+  );
+}
+
+/* =========================================================
+   MÉTRICA INDIVIDUAL
+========================================================= */
+
+function Metrica({
+  titulo,
+  valor,
+}) {
+  return (
+    <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
+
+      <p className="text-[9px] font-semibold uppercase text-slate-400">
+        {titulo}
+      </p>
+
+      <p className="text-xs font-bold text-slate-700">
+        {valor}
+      </p>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ESTADÍSTICA SIMPLE
+========================================================= */
+
+function EstadisticaSimple({
+  titulo,
+  promedio,
+  rango,
+}) {
+  return (
+    <div className="rounded-lg bg-white p-2 text-center">
+
+      <p className="text-[9px] font-semibold uppercase text-slate-400">
+        {titulo}
+      </p>
+
+      <p className="mt-1 text-sm font-bold text-slate-700">
+        {promedio}
+      </p>
+
+      <p className="text-[9px] text-slate-400">
+        {rango}
+      </p>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ESTADÍSTICA CON PERCENTILES
+========================================================= */
+
+function EstadisticaPercentiles({
+  titulo,
+  promedio,
+  minimo,
+  maximo,
+  percentiles,
+}) {
+  return (
+    <div className="rounded-lg bg-white p-2 text-center">
+
+      <p className="text-[9px] font-semibold uppercase text-slate-400">
+        {titulo}
+      </p>
+
+      <p className="mt-1 text-sm font-bold text-slate-700">
+        {promedio}
+      </p>
+
+      <p className="text-[9px] text-slate-400">
+        {minimo}
+        {" - "}
+        {maximo}
+      </p>
+
+      <p className="mt-1 text-[9px] leading-4 text-slate-500">
+        P05{" "}
+        {percentiles.p05}
+        {" · "}
+        P25{" "}
+        {percentiles.p25}
+        {" · "}
+        P50{" "}
+        {percentiles.p50}
+        {" · "}
+        P75{" "}
+        {percentiles.p75}
+        {" · "}
+        P95{" "}
+        {percentiles.p95}
+      </p>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ESTADÍSTICA DE COMPLEJIDAD
+========================================================= */
+
+function EstadisticaComplejidad({
+  promedio,
+  minimo,
+  maximo,
+  percentiles,
+  bandas,
+}) {
+  return (
+    <div className="space-y-2 sm:col-span-2">
+
+      {/* COMPLEJIDAD */}
+
+      <div className="rounded-lg bg-slate-900 p-2 text-center">
+
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+          Complejidad interna
+        </p>
+
+        <p className="mt-1 text-sm font-bold text-white">
+          {promedio}
+          /100
+        </p>
+
+        <p className="text-[9px] text-slate-400">
+          {minimo}
+          {" - "}
+          {maximo}
+        </p>
+
+        <p className="mt-1 text-[9px] leading-4 text-slate-400">
+          P05{" "}
+          {percentiles.p05}
+          {" · "}
+          P25{" "}
+          {percentiles.p25}
+          {" · "}
+          P50{" "}
+          {percentiles.p50}
+          {" · "}
+          P75{" "}
+          {percentiles.p75}
+          {" · "}
+          P95{" "}
+          {percentiles.p95}
+        </p>
+
+      </div>
+
+      {/* DISTRIBUCIÓN */}
+
+      <div className="rounded-lg bg-white p-3">
+
+        <p className="text-center text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+          Distribución por complejidad
+        </p>
+
+        <div className="mt-2 grid grid-cols-5 gap-1">
+
+          {[
+            "Muy baja",
+            "Baja",
+            "Media",
+            "Alta",
+            "Muy alta",
+          ].map(
+            (banda) => (
+              <div
+                key={banda}
+                className="rounded-md bg-slate-50 px-1 py-2 text-center"
+              >
+
+                <p className="text-[8px] font-semibold leading-3 text-slate-400">
+                  {banda}
+                </p>
+
+                <p className="mt-1 text-xs font-bold text-slate-700">
+                  {bandas?.[banda] ?? 0}
+                </p>
+
+              </div>
+            )
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
   );
 }
