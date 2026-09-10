@@ -1,826 +1,1579 @@
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import { generarPdfLaminas } from "../utilidades/generarPdfLaminas";
-import LaminaFinalLaberintos from "../generador/comerciales/LaminaFinalLaberintos";
-import LaminaLaberinto from "../generador/componentes/LaminaLaberinto";
+
 import PortadaLaberintos from "../generador/comerciales/PortadaLaberintos";
-import Laberinto, {
-  validarLaberinto,
-} from "../generador/juegos/Laberinto";
-import UnirPuntos from "../generador/juegos/UnirPuntos";
-import { useEffect, useRef, useState } from "react";
+import LaminaFinalLaberintos from "../generador/comerciales/LaminaFinalLaberintos";
+
 import LaminaBase from "../generador/componentes/LaminaBase";
+import LaminaLaberinto from "../generador/componentes/LaminaLaberinto";
+
+import { validarLaberinto } from "../generador/juegos/Laberinto";
+
+/* =========================================================
+   CONFIGURACIÓN GENERAL
+========================================================= */
 
 const ANCHO_A4 = 794;
 const ALTO_A4 = 1123;
 
-export default function GeneradorLaminas() {
-  const contenedorPreviewRef = useRef(null);
-
-  // TEXTO
-  const [titulo, setTitulo] = useState("El laberinto de Toby");
-  const [instrucciones, setInstrucciones] = useState(
-    "Ayudá a Toby a encontrar el camino correcto."
-  );
-
-
-  const laminaExportarRef = useRef(null);
-
-const [exportandoPdf, setExportandoPdf] = useState(false);
-
-const [progresoPdf, setProgresoPdf] = useState({
-  actual: 0,
-  total: 0,
-  porcentaje: 0,
-});
-
-  // TAMAÑOS
-  const [tamanoTitulo, setTamanoTitulo] = useState(28);
-  const [tamanoInstrucciones, setTamanoInstrucciones] = useState(16);
-
-  // LOGO
-  const [mostrarLogo, setMostrarLogo] = useState(true);
-  const [anchoLogo, setAnchoLogo] = useState(120);
-  const [logoTop, setLogoTop] = useState(32);
-  const [logoRight, setLogoRight] = useState(32);
-
-  // PREVIEW
-  const [escalaPreview, setEscalaPreview] = useState(1);
-
-  const [cantidadFaciles, setCantidadFaciles] = useState(5);
-const [cantidadMedios, setCantidadMedios] = useState(10);
-const [cantidadDificiles, setCantidadDificiles] = useState(5);
-
-  const [semilla, setSemilla] = useState(1);
-
-  const [tipoProducto, setTipoProducto] =
-  useState("laberintos");
-
-  const [cantidadPuntos, setCantidadPuntos] =
-  useState(25);
-
-  const [figuraUnirPuntos, setFiguraUnirPuntos] =
-  useState("pez");
-
-const cantidadLaberintos =
-  cantidadFaciles +
-  cantidadMedios +
-  cantidadDificiles;
-
-  
-
-  // =========================================================
-// PÁGINAS DEL PRODUCTO
-// =========================================================
-
-const [paginaActual, setPaginaActual] = useState(0);
-
-const laberintosConfigurados = [
-  ...Array.from(
-    { length: cantidadFaciles },
-    (_, index) => ({
-      numero: index + 1,
-      nivel: "facil",
-    })
-  ),
-
-  ...Array.from(
-    { length: cantidadMedios },
-    (_, index) => ({
-      numero:
-        cantidadFaciles +
-        index +
-        1,
-      nivel: "medio",
-    })
-  ),
-
-  ...Array.from(
-    { length: cantidadDificiles },
-    (_, index) => ({
-      numero:
-        cantidadFaciles +
-        cantidadMedios +
-        index +
-        1,
-      nivel: "dificil",
-    })
-  ),
-];
-
-const paginasJuegos = laberintosConfigurados.map(
-  (item, index) => ({
-    id: `laberinto-${item.numero}`,
-    nombre: `Laberinto ${item.numero}`,
-    tipo: "juego",
-    indiceLaberinto: index,
-    nivel: item.nivel,
-  })
-);
-
-const paginasSoluciones =
-  laberintosConfigurados.map(
-    (item, index) => ({
-      id: `solucion-${item.numero}`,
-      nombre: `Solución ${item.numero}`,
-      tipo: "solucion",
-      indiceLaberinto: index,
-      nivel: item.nivel,
-    })
-  );
-
-const paginas = [
-  {
-    id: "portada",
-    nombre: "Portada",
-    tipo: "portada",
-  },
-
-  ...paginasJuegos,
-
-  ...paginasSoluciones,
-
-  {
-    id: "lamina-final",
-    nombre: "Lámina final",
-    tipo: "final",
-  },
-];
-
-const pagina = paginas[paginaActual];
-
-  const configuracionLaberinto = {
+const CONFIG_LABERINTO = {
   facil: {
+    nombre: "Fácil",
     filas: 8,
     columnas: 6,
   },
 
   medio: {
+    nombre: "Medio",
     filas: 12,
     columnas: 9,
   },
 
   dificil: {
+    nombre: "Difícil",
     filas: 16,
     columnas: 12,
   },
+
+  experto: {
+    nombre: "Experto",
+    filas: 20,
+    columnas: 15,
+  },
+
+  legendario: {
+    nombre: "Legendario",
+    filas: 24,
+    columnas: 18,
+  },
 };
 
+const NOMBRE_NIVEL = {
+  facil: "Fácil",
+  medio: "Medio",
+  dificil: "Difícil",
+  experto: "Experto",
+  legendario: "Legendario",
+};
+
+const RANGOS_COMPLEJIDAD = {
+  facil: {
+    solucion: [15, 37],
+    giros: [8, 24],
+    callejones: [4, 7],
+  },
+
+  medio: {
+    solucion: [22, 68],
+    giros: [9, 44],
+    callejones: [9, 15],
+  },
+
+  dificil: {
+    solucion: [63, 121],
+    giros: [39, 75],
+    callejones: [16, 24],
+  },
+
+  experto: {
+    solucion: [80, 178],
+    giros: [51, 114],
+    callejones: [26, 39],
+  },
+
+  legendario: {
+    solucion: [85, 215],
+    giros: [45, 141],
+    callejones: [35, 51],
+  },
+};
+
+function normalizarValor(
+  valor,
+  minimo,
+  maximo
+) {
+  if (maximo === minimo) {
+    return 50;
+  }
+
+  const resultado =
+    ((valor - minimo) /
+      (maximo - minimo)) *
+    100;
+
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      resultado
+    )
+  );
+}
+
+function calcularComplejidad(
+  item
+) {
+  const rangos =
+    RANGOS_COMPLEJIDAD[
+      item.nivel
+    ];
+
+  if (!rangos) {
+    return 0;
+  }
+
+  const puntuacionSolucion =
+    normalizarValor(
+      item.longitudSolucion,
+      rangos.solucion[0],
+      rangos.solucion[1]
+    );
+
+  const puntuacionGiros =
+    normalizarValor(
+      item.cantidadGiros,
+      rangos.giros[0],
+      rangos.giros[1]
+    );
+
+  const puntuacionCallejones =
+    normalizarValor(
+      item.cantidadCallejones,
+      rangos.callejones[0],
+      rangos.callejones[1]
+    );
+
+  const puntuacion =
+    puntuacionSolucion *
+      0.4 +
+    puntuacionGiros *
+      0.35 +
+    puntuacionCallejones *
+      0.25;
+
+  return Math.round(
+    puntuacion
+  );
+}
+
+function calcularPercentil(
+  valores,
+  percentil
+) {
+  if (
+    !Array.isArray(valores) ||
+    valores.length === 0
+  ) {
+    return 0;
+  }
+
+  const ordenados = [
+    ...valores,
+  ].sort(
+    (a, b) => a - b
+  );
+
+  if (ordenados.length === 1) {
+    return ordenados[0];
+  }
+
+  const posicion =
+    (percentil / 100) *
+    (ordenados.length - 1);
+
+  const indiceInferior =
+    Math.floor(posicion);
+
+  const indiceSuperior =
+    Math.ceil(posicion);
+
+  if (
+    indiceInferior ===
+    indiceSuperior
+  ) {
+    return ordenados[
+      indiceInferior
+    ];
+  }
+
+  const pesoSuperior =
+    posicion -
+    indiceInferior;
+
+  const valor =
+    ordenados[
+      indiceInferior
+    ] *
+      (1 - pesoSuperior) +
+    ordenados[
+      indiceSuperior
+    ] *
+      pesoSuperior;
+
+  return Math.round(valor);
+}
+
+/* =========================================================
+   COMPONENTE
+========================================================= */
+
+export default function GeneradorLaminas() {
+  /* =======================================================
+     REFERENCIAS
+  ======================================================= */
+
+  const contenedorPreviewRef =
+    useRef(null);
+
+  const laminaExportarRef =
+    useRef(null);
+
+  /* =======================================================
+     CONFIGURACIÓN DEL PRODUCTO
+  ======================================================= */
+
+  const [
+    cantidadFaciles,
+    setCantidadFaciles,
+  ] = useState(5);
+
+  const [
+    cantidadMedios,
+    setCantidadMedios,
+  ] = useState(10);
+
+  const [
+    cantidadDificiles,
+    setCantidadDificiles,
+  ] = useState(5);
+
+  const [
+  cantidadExpertos,
+  setCantidadExpertos,
+] = useState(0);
+
+const [
+  cantidadLegendarios,
+  setCantidadLegendarios,
+] = useState(0);
+
+  const [semilla, setSemilla] =
+    useState(1);
+
+  /* =======================================================
+     NAVEGACIÓN
+  ======================================================= */
+
+  const [
+    paginaActual,
+    setPaginaActual,
+  ] = useState(0);
+
+  const [
+    escalaPreview,
+    setEscalaPreview,
+  ] = useState(1);
+
+  /* =======================================================
+     PDF
+  ======================================================= */
+
+  const [
+    exportandoPdf,
+    setExportandoPdf,
+  ] = useState(false);
+
+  const [
+    progresoPdf,
+    setProgresoPdf,
+  ] = useState({
+    actual: 0,
+    total: 0,
+    porcentaje: 0,
+  });
+
+  /* =========================================================
+     CANTIDAD TOTAL
+  ========================================================= */
+
+  const cantidadActividades =
+  cantidadFaciles +
+  cantidadMedios +
+  cantidadDificiles +
+  cantidadExpertos +
+  cantidadLegendarios;
+
+  /* /* =========================================================
+     ACTIVIDADES
+  ========================================================= */
+
+  const actividades = [
+    /* FÁCIL */
+
+    ...Array.from(
+      {
+        length: cantidadFaciles,
+      },
+      (_, index) => ({
+        numero: index + 1,
+        nivel: "facil",
+      })
+    ),
+
+    /* MEDIO */
+
+    ...Array.from(
+      {
+        length: cantidadMedios,
+      },
+      (_, index) => ({
+        numero:
+          cantidadFaciles +
+          index +
+          1,
+
+        nivel: "medio",
+      })
+    ),
+
+    /* DIFÍCIL */
+
+    ...Array.from(
+      {
+        length: cantidadDificiles,
+      },
+      (_, index) => ({
+        numero:
+          cantidadFaciles +
+          cantidadMedios +
+          index +
+          1,
+
+        nivel: "dificil",
+      })
+    ),
+
+    /* EXPERTO */
+
+    ...Array.from(
+      {
+        length: cantidadExpertos,
+      },
+      (_, index) => ({
+        numero:
+          cantidadFaciles +
+          cantidadMedios +
+          cantidadDificiles +
+          index +
+          1,
+
+        nivel: "experto",
+      })
+    ),
+
+    /* LEGENDARIO */
+
+    ...Array.from(
+      {
+        length: cantidadLegendarios,
+      },
+      (_, index) => ({
+        numero:
+          cantidadFaciles +
+          cantidadMedios +
+          cantidadDificiles +
+          cantidadExpertos +
+          index +
+          1,
+
+        nivel: "legendario",
+      })
+    ),
+  ];
+
+  /* =========================================================
+     PÁGINAS DE JUEGOS
+  ========================================================= */
+
+  const paginasJuegos =
+    actividades.map(
+      (
+        actividad,
+        index
+      ) => ({
+        id: `juego-${actividad.numero}`,
+
+        nombre:
+          `Laberinto ${actividad.numero}`,
+
+        tipo: "juego",
+
+        indiceActividad:
+          index,
+
+        nivel:
+          actividad.nivel,
+      })
+    );
+
+  /* =========================================================
+     PÁGINAS DE SOLUCIONES
+  ========================================================= */
+
+  const paginasSoluciones =
+    actividades.map(
+      (
+        actividad,
+        index
+      ) => ({
+        id: `solucion-${actividad.numero}`,
+
+        nombre:
+          `Solución ${actividad.numero}`,
+
+        tipo:
+          "solucion",
+
+        indiceActividad:
+          index,
+
+        nivel:
+          actividad.nivel,
+      })
+    );
+
+  /* =========================================================
+     ESTRUCTURA COMPLETA DEL PDF
+  ========================================================= */
+
+  const paginas = [
+    {
+      id:
+        "portada",
+
+      nombre:
+        "Portada",
+
+      tipo:
+        "portada",
+    },
+
+    ...paginasJuegos,
+
+    ...paginasSoluciones,
+
+    {
+      id:
+        "lamina-final",
+
+      nombre:
+        "Lámina final",
+
+      tipo:
+        "final",
+    },
+  ];
+
+  const pagina =
+    paginas[paginaActual];
+
+  const indiceActividad =
+    pagina?.indiceActividad ??
+    0;
+
   const nivelPagina =
-  pagina?.nivel ?? "facil";
+    pagina?.nivel ??
+    "facil";
 
-const configuracionPagina =
-  configuracionLaberinto[nivelPagina];
+  const semillaPagina =
+    semilla +
+    indiceActividad;
 
-const indiceLaberinto =
-  pagina?.indiceLaberinto ?? 0;
+  const configuracionPagina =
+    CONFIG_LABERINTO[
+      nivelPagina
+    ];
 
-const semillaPagina =
-  semilla + indiceLaberinto;
+  /* =========================================================
+     PREVIEW RESPONSIVE
+  ========================================================= */
 
   useEffect(() => {
-  const contenedor = contenedorPreviewRef.current;
+    const contenedor =
+      contenedorPreviewRef.current;
 
-  if (!contenedor) return;
+    if (!contenedor) {
+      return;
+    }
 
-  function calcularEscala() {
-    const anchoDisponible = contenedor.clientWidth;
+    function calcularEscala() {
+      const anchoDisponible =
+        contenedor.clientWidth;
 
-    const nuevaEscala = Math.min(
-      anchoDisponible / ANCHO_A4,
-      1
-    );
+      setEscalaPreview(
+        Math.min(
+          anchoDisponible /
+            ANCHO_A4,
+          1
+        )
+      );
+    }
 
-    setEscalaPreview(nuevaEscala);
-  }
+    calcularEscala();
 
-  calcularEscala();
-
-  const observer = new ResizeObserver(calcularEscala);
-
-  observer.observe(contenedor);
-
-  return () => {
-    observer.disconnect();
-  };
-}, []);
-
-useEffect(() => {
-  if (paginaActual >= paginas.length) {
-    setPaginaActual(
-      Math.max(paginas.length - 1, 0)
-    );
-  }
-}, [
-  cantidadLaberintos,
-  paginaActual,
-  paginas.length,
-]);
-
-  const validacion = validarLaberinto(
-  configuracionPagina.filas,
-  configuracionPagina.columnas,
-  semillaPagina
-);
-
-  // =========================================================
-// VALIDACIÓN DE TODO EL PRODUCTO
-// =========================================================
-
-const validacionesProducto =
-  laberintosConfigurados.map(
-    (item, index) => {
-      const semillaLaberinto =
-        semilla + index;
-
-      const configuracion =
-        configuracionLaberinto[item.nivel];
-
-      const resultado = validarLaberinto(
-        configuracion.filas,
-        configuracion.columnas,
-        semillaLaberinto
+    const observer =
+      new ResizeObserver(
+        calcularEscala
       );
 
+    observer.observe(
+      contenedor
+    );
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  /* =========================================================
+     CORREGIR PÁGINA AL CAMBIAR CANTIDADES
+  ========================================================= */
+
+  useEffect(() => {
+    if (
+      paginaActual >=
+      paginas.length
+    ) {
+      setPaginaActual(
+        Math.max(
+          paginas.length -
+            1,
+          0
+        )
+      );
+    }
+  }, [
+    paginaActual,
+    paginas.length,
+  ]);
+
+/* =========================================================
+   VALIDACIÓN
+========================================================= */
+
+const validaciones =
+  actividades.map(
+    (
+      actividad,
+      index
+    ) => {
+      const configuracion =
+        CONFIG_LABERINTO[
+          actividad.nivel
+        ];
+
+      const semillaActividad =
+        semilla +
+        index;
+
+      const validacion =
+        validarLaberinto(
+          configuracion.filas,
+          configuracion.columnas,
+          semillaActividad
+        );
+
+      const item = {
+        numero:
+          actividad.numero,
+
+        nivel:
+          actividad.nivel,
+
+        ...validacion,
+      };
+
       return {
-        numero: item.numero,
-        nivel: item.nivel,
-        semilla: semillaLaberinto,
-        ...resultado,
+        ...item,
+
+        complejidad:
+          calcularComplejidad(
+            item
+          ),
       };
     }
   );
 
-const cantidadValidos =
-  validacionesProducto.filter(
-    (item) => item.valido
-  ).length;
+  const cantidadValidos =
+    validaciones.filter(
+      (item) =>
+        item.valido
+    ).length;
 
-const productoValido =
-  cantidadValidos === cantidadLaberintos;
+  const productoValido =
+    cantidadActividades >
+      0 &&
+    cantidadValidos ===
+      cantidadActividades;
+
+  const resumenPorNivel =
+  Object.keys(
+    CONFIG_LABERINTO
+  ).map((nivel) => {
+    const itemsNivel =
+      validaciones.filter(
+        (item) =>
+          item.nivel ===
+          nivel
+      );
+
+    if (
+      itemsNivel.length === 0
+    ) {
+      return null;
+    }
+
+    const totalSolucion =
+      itemsNivel.reduce(
+        (acumulado, item) =>
+          acumulado +
+          item.longitudSolucion,
+        0
+      );
+
+    const totalGiros =
+      itemsNivel.reduce(
+        (acumulado, item) =>
+          acumulado +
+          item.cantidadGiros,
+        0
+      );
+
+    const totalCallejones =
+  itemsNivel.reduce(
+    (acumulado, item) =>
+      acumulado +
+      item.cantidadCallejones,
+    0
+  );
+
+    const totalDensidadGiros =
+  itemsNivel.reduce(
+    (acumulado, item) =>
+      acumulado +
+      item.densidadGiros,
+    0
+  );
+
+const totalDensidadCallejones =
+  itemsNivel.reduce(
+    (acumulado, item) =>
+      acumulado +
+      item.densidadCallejones,
+    0
+  );
+
+    const totalRecorrido =
+      itemsNivel.reduce(
+        (acumulado, item) =>
+          acumulado +
+          item.porcentajeRecorrido,
+        0
+      );
+
+    const soluciones =
+      itemsNivel.map(
+        (item) =>
+          item.longitudSolucion
+      );
+
+    const giros =
+      itemsNivel.map(
+        (item) =>
+          item.cantidadGiros
+      );
+
+    const callejones =
+  itemsNivel.map(
+    (item) =>
+      item.cantidadCallejones
+  );
+
+    const complejidades =
+  itemsNivel.map(
+    (item) =>
+      item.complejidad
+  );
+
+    const percentilesSolucion = {
+  p05: calcularPercentil(
+    soluciones,
+    5
+  ),
+
+  p25: calcularPercentil(
+    soluciones,
+    25
+  ),
+
+  p50: calcularPercentil(
+    soluciones,
+    50
+  ),
+
+  p75: calcularPercentil(
+    soluciones,
+    75
+  ),
+
+  p95: calcularPercentil(
+    soluciones,
+    95
+  ),
+};
+
+const percentilesGiros = {
+  p05: calcularPercentil(
+    giros,
+    5
+  ),
+
+  p25: calcularPercentil(
+    giros,
+    25
+  ),
+
+  p50: calcularPercentil(
+    giros,
+    50
+  ),
+
+  p75: calcularPercentil(
+    giros,
+    75
+  ),
+
+  p95: calcularPercentil(
+    giros,
+    95
+  ),
+};
+
+const percentilesCallejones = {
+  p05: calcularPercentil(
+    callejones,
+    5
+  ),
+
+  p25: calcularPercentil(
+    callejones,
+    25
+  ),
+
+  p50: calcularPercentil(
+    callejones,
+    50
+  ),
+
+  p75: calcularPercentil(
+    callejones,
+    75
+  ),
+
+  p95: calcularPercentil(
+    callejones,
+    95
+  ),
+};
+
+const percentilesComplejidad = {
+  p05: calcularPercentil(
+    complejidades,
+    5
+  ),
+
+  p25: calcularPercentil(
+    complejidades,
+    25
+  ),
+
+  p50: calcularPercentil(
+    complejidades,
+    50
+  ),
+
+  p75: calcularPercentil(
+    complejidades,
+    75
+  ),
+
+  p95: calcularPercentil(
+    complejidades,
+    95
+  ),
+};
+
+const totalComplejidad =
+  complejidades.reduce(
+    (acumulado, valor) =>
+      acumulado + valor,
+    0
+  );
+
+    const recorridos =
+      itemsNivel.map(
+        (item) =>
+          item.porcentajeRecorrido
+      );
+
+    const densidadesGiros =
+  itemsNivel.map(
+    (item) =>
+      item.densidadGiros
+  );
+
+const densidadesCallejones =
+  itemsNivel.map(
+    (item) =>
+      item.densidadCallejones
+  );
+
+  return {
+  nivel,
+
+  cantidad:
+    itemsNivel.length,
+
+  /* PROMEDIOS */
+
+  promedioSolucion:
+    Math.round(
+      totalSolucion /
+        itemsNivel.length
+    ),
+
+  promedioGiros:
+    Math.round(
+      totalGiros /
+        itemsNivel.length
+    ),
+
+  promedioCallejones:
+    Math.round(
+      totalCallejones /
+        itemsNivel.length
+    ),
+
+  promedioRecorrido:
+    Math.round(
+      totalRecorrido /
+        itemsNivel.length
+    ),
+
+  promedioDensidadGiros:
+    Math.round(
+      totalDensidadGiros /
+        itemsNivel.length
+    ),
+
+  promedioDensidadCallejones:
+    Math.round(
+      totalDensidadCallejones /
+        itemsNivel.length
+    ),
+
+  /* MÍNIMOS */
+
+  minimoSolucion:
+    Math.min(
+      ...soluciones
+    ),
+
+  minimoGiros:
+    Math.min(
+      ...giros
+    ),
+
+  minimoCallejones:
+    Math.min(
+      ...callejones
+    ),
+
+  minimoRecorrido:
+    Math.min(
+      ...recorridos
+    ),
+
+  minimoDensidadGiros:
+    Math.min(
+      ...densidadesGiros
+    ),
+
+  minimoDensidadCallejones:
+    Math.min(
+      ...densidadesCallejones
+    ),
+
+  /* MÁXIMOS */
+
+  maximoSolucion:
+    Math.max(
+      ...soluciones
+    ),
+
+  maximoGiros:
+    Math.max(
+      ...giros
+    ),
+
+  maximoCallejones:
+    Math.max(
+      ...callejones
+    ),
+
+  maximoRecorrido:
+    Math.max(
+      ...recorridos
+    ),
+
+  maximoDensidadGiros:
+    Math.max(
+      ...densidadesGiros
+    ),
+
+  maximoDensidadCallejones:
+    Math.max(
+      ...densidadesCallejones
+    ),
+
+    promedioComplejidad:
+  Math.round(
+    totalComplejidad /
+      itemsNivel.length
+  ),
+
+minimoComplejidad:
+  Math.min(
+    ...complejidades
+  ),
+
+maximoComplejidad:
+  Math.max(
+    ...complejidades
+  ),
+percentilesSolucion,
+percentilesGiros,
+percentilesCallejones,
+percentilesComplejidad,
+    
+};
+}).filter(Boolean);
+
+    /* =========================================================
+     GENERAR NUEVO CONJUNTO
+  ========================================================= */
+
+  function generarNuevoConjunto() {
+    setSemilla(
+      (actual) =>
+        actual + 1
+    );
+
+    setPaginaActual(0);
+  }
+
+  /* =========================================================
+     GENERAR PDF
+  ========================================================= */
 
   async function descargarPdfCompleto() {
-  if (exportandoPdf) return;
+    if (
+      exportandoPdf ||
+      paginas.length === 0
+    ) {
+      return;
+    }
 
-  setExportandoPdf(true);
+    setExportandoPdf(true);
 
-  setProgresoPdf({
-    actual: 0,
-    total: paginas.length,
-    porcentaje: 0,
-  });
-
-  try {
-    await generarPdfLaminas({
-      totalPaginas: paginas.length,
-
-      cambiarPagina: async (indice) => {
-        setPaginaActual(indice);
-
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(resolve);
-          });
-        });
-      },
-
-      obtenerElemento: () =>
-        laminaExportarRef.current,
-
-      nombreArchivo:
-        "50-Laberintos-Las-Aventuras-de-Toby-y-Luna.pdf",
-
-      calidad: 0.92,
-
-      pixelRatio: 1.5,
-
-      alActualizarProgreso: ({
-        actual,
-        total,
-        porcentaje,
-      }) => {
-        setProgresoPdf({
-          actual,
-          total,
-          porcentaje,
-        });
-      },
+    setProgresoPdf({
+      actual: 0,
+      total:
+        paginas.length,
+      porcentaje: 0,
     });
-  } catch (error) {
-    console.error(error);
 
-    alert(
-      "No se pudo generar el PDF. Revisá la consola para ver el error."
-    );
-  } finally {
-    setExportandoPdf(false);
+    try {
+      await generarPdfLaminas({
+        totalPaginas:
+          paginas.length,
+
+        cambiarPagina:
+          async (
+            indice
+          ) => {
+            setPaginaActual(
+              indice
+            );
+
+            await new Promise(
+              (
+                resolve
+              ) => {
+                requestAnimationFrame(
+                  () => {
+                    requestAnimationFrame(
+                      resolve
+                    );
+                  }
+                );
+              }
+            );
+          },
+
+        obtenerElemento:
+          () =>
+            laminaExportarRef.current,
+
+        nombreArchivo:
+          "Laberintos-Toby-y-Luna.pdf",
+
+        calidad:
+          0.92,
+
+        pixelRatio:
+          1.5,
+
+        alActualizarProgreso:
+          ({
+            actual,
+            total,
+            porcentaje,
+          }) => {
+            setProgresoPdf({
+              actual,
+              total,
+              porcentaje,
+            });
+          },
+      });
+    } catch (error) {
+      console.error(
+        error
+      );
+
+      alert(
+        "No se pudo generar el PDF. Revisá la consola."
+      );
+    } finally {
+      setExportandoPdf(
+        false
+      );
+    }
   }
-}
+
+  /* =========================================================
+     SIN ACTIVIDADES
+  ========================================================= */
+
+  if (!pagina) {
+    return (
+      <main className="min-h-screen bg-slate-100 p-4">
+        <div className="mx-auto max-w-xl rounded-2xl bg-white p-5 text-center shadow-sm">
+          <p className="font-bold text-slate-900">
+            No hay actividades
+          </p>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Agregá al menos una actividad.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-slate-100">
-      <div className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-4">
+      <div className="mx-auto w-full max-w-7xl px-3 py-4">
 
-        {/* PANEL */}
+        {/* =====================================================
+            PANEL PRINCIPAL
+        ====================================================== */}
 
-        <section className="rounded-2xl bg-white p-4 shadow-sm sm:p-5">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">
-              Generador de láminas
-            </h1>
+        <section className="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
 
-            <p className="mt-1 text-sm text-slate-500">
-              Toby y Luna Imprimibles
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">
+                Generador de laberintos
+              </h1>
+
+              <p className="text-xs text-slate-500">
+                Toby y Luna Imprimibles
+              </p>
+            </div>
+
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+              {
+                cantidadActividades
+              }{" "}
+              actividades
+            </span>
+          </div>
+
+          {/* =================================================
+              NIVELES
+          ================================================== */}
+
+          <div className="mt-4">
+
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Cantidad por nivel
             </p>
-          </div>
 
-          {/* TEXTOS */}
+            <div className="mt-2 grid grid-cols-3 gap-2">
 
-          <div className="mt-6">
-            <h2 className="text-sm font-bold text-slate-900">
-              Contenido
-            </h2>
-
-            <div className="mt-3 grid gap-4 md:grid-cols-2">
-
-              {/* TIPO DE PRODUCTO */}
-
-<div>
-  <label
-    htmlFor="tipoProducto"
-    className="text-sm font-medium text-slate-700"
-  >
-    Tipo de producto
-  </label>
-
-  <select
-    id="tipoProducto"
-    value={tipoProducto}
-    onChange={(e) => {
-      setTipoProducto(e.target.value);
-      setPaginaActual(0);
-    }}
-    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
-  >
-    <option value="laberintos">
-      Laberintos
-    </option>
-
-    <option value="unir-puntos">
-      Unir puntos
-    </option>
-  </select>
-</div>
-
-              {tipoProducto === "unir-puntos" && (
-  <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
-    <h3 className="text-sm font-bold text-slate-900">
-      Configuración de Unir puntos
-    </h3>
-
-    {/* FIGURA */}
-    <div className="mt-4">
-      <label
-        htmlFor="figuraUnirPuntos"
-        className="text-sm font-medium text-slate-700"
-      >
-        Figura
-      </label>
-
-      <select
-        id="figuraUnirPuntos"
-        value={figuraUnirPuntos}
-        onChange={(e) => {
-          setFiguraUnirPuntos(e.target.value);
-          setPaginaActual(0);
-        }}
-        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
-      >
-        <option value="pez">
-          Pez
-        </option>
-
-        <option value="gato">
-          Gato
-        </option>
-
-        <option value="perro">
-          Perro
-        </option>
-      </select>
-    </div>
-
-    {/* CANTIDAD DE PUNTOS */}
-    <div className="mt-5">
-      <label
-        htmlFor="cantidadPuntos"
-        className="text-sm font-medium text-slate-700"
-      >
-        Cantidad de puntos
-      </label>
-
-      <input
-        id="cantidadPuntos"
-        type="range"
-        min="10"
-        max="60"
-        step="1"
-        value={cantidadPuntos}
-        onChange={(e) =>
-          setCantidadPuntos(
-            Number(e.target.value)
-          )
-        }
-        className="mt-3 w-full"
-      />
-
-      <div className="mt-1 flex justify-between text-xs text-slate-500">
-        <span>10</span>
-
-        <span className="font-bold text-slate-900">
-          {cantidadPuntos} puntos
-        </span>
-
-        <span>60</span>
-      </div>
-    </div>
-  </div>
-)}
-
-              {/* TÍTULO */}
-
-              <div>
-                <label className="text-sm font-medium text-slate-700">
-                  Título
-                </label>
-
-                <input
-                  type="text"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-sky-400"
-                />
-              </div>
-
-              {/* INSTRUCCIONES */}
-
-              <div>
-                <label className="text-sm font-medium text-slate-700">
-                  Instrucciones
-                </label>
-
-                <textarea
-                  value={instrucciones}
-                  onChange={(e) =>
-                    setInstrucciones(e.target.value)
-                  }
-                  rows="2"
-                  className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-sky-400"
-                />
-              </div>
-
-            </div>
-          </div>
-
-          {/* TIPOGRAFÍA */}
-
-          <div className="mt-6 border-t border-slate-100 pt-5">
-            <h2 className="text-sm font-bold text-slate-900">
-              Tipografía
-            </h2>
-
-            <div className="mt-4 grid gap-5 md:grid-cols-2">
-
-              <ControlRango
-                titulo="Tamaño del título"
-                valor={tamanoTitulo}
-                min={18}
-                max={48}
-                unidad="px"
-                onChange={setTamanoTitulo}
+              <Cantidad
+                titulo="Fácil"
+                valor={
+                  cantidadFaciles
+                }
+                onChange={
+                  setCantidadFaciles
+                }
               />
 
-              <ControlRango
-                titulo="Tamaño de instrucciones"
-                valor={tamanoInstrucciones}
-                min={10}
-                max={28}
-                unidad="px"
-                onChange={setTamanoInstrucciones}
+              <Cantidad
+                titulo="Medio"
+                valor={
+                  cantidadMedios
+                }
+                onChange={
+                  setCantidadMedios
+                }
+              />
+
+              <Cantidad
+                titulo="Difícil"
+                valor={
+                  cantidadDificiles
+                }
+                onChange={
+                  setCantidadDificiles
+                }
+              />
+
+              <Cantidad
+                titulo="Experto"
+                valor={
+                  cantidadExpertos
+                }
+                onChange={
+                  setCantidadExpertos
+                }
+              />
+
+              <Cantidad
+                titulo="Legendario"
+                valor={
+                  cantidadLegendarios
+                }
+                onChange={
+                  setCantidadLegendarios
+                }
               />
 
             </div>
           </div>
 
-          {/* LOGO */}
+          {/* =================================================
+              ACCIONES
+          ================================================== */}
 
-          <div className="mt-6 border-t border-slate-100 pt-5">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
 
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-sm font-bold text-slate-900">
-                Logo Toby y Luna
-              </h2>
+            <button
+              type="button"
+              onClick={
+                generarNuevoConjunto
+              }
+              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white"
+            >
+              Generar nuevo conjunto
+            </button>
 
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={mostrarLogo}
-                  onChange={(e) =>
-                    setMostrarLogo(e.target.checked)
-                  }
-                  className="h-4 w-4"
-                />
+            <button
+              type="button"
+              onClick={
+                descargarPdfCompleto
+              }
+              disabled={
+                exportandoPdf
+              }
+              className={`rounded-xl px-4 py-2.5 text-sm font-bold ${
+                exportandoPdf
+                  ? "bg-slate-300 text-slate-600"
+                  : "bg-sky-500 text-white"
+              }`}
+            >
+              {exportandoPdf
+                ? `PDF ${progresoPdf.porcentaje}%`
+                : "Descargar PDF"}
+            </button>
 
-                Mostrar
-              </label>
-            </div>
+          </div>
 
-            {mostrarLogo && (
-              <div className="mt-4 grid gap-5 md:grid-cols-3">
+          {/* =================================================
+              PROGRESO PDF
+          ================================================== */}
 
-                <ControlRango
-                  titulo="Tamaño"
-                  valor={anchoLogo}
-                  min={60}
-                  max={250}
-                  unidad="px"
-                  onChange={setAnchoLogo}
-                />
+          {exportandoPdf && (
+            <div className="mt-3">
 
-                <ControlRango
-                  titulo="Desde arriba"
-                  valor={logoTop}
-                  min={10}
-                  max={120}
-                  unidad="px"
-                  onChange={setLogoTop}
-                />
+              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
 
-                <ControlRango
-                  titulo="Desde la derecha"
-                  valor={logoRight}
-                  min={10}
-                  max={120}
-                  unidad="px"
-                  onChange={setLogoRight}
+                <div
+                  className="h-full bg-slate-900 transition-all"
+                  style={{
+                    width:
+                      `${progresoPdf.porcentaje}%`,
+                  }}
                 />
 
               </div>
-            )}
-          </div>
 
-          {/* JUEGO */}
+              <p className="mt-1 text-center text-[11px] font-semibold text-slate-500">
+                {
+                  progresoPdf.actual
+                }{" "}
+                de{" "}
+                {
+                  progresoPdf.total
+                }{" "}
+                páginas
+              </p>
 
-<div className="mt-6 border-t border-slate-100 pt-5">
-  <h2 className="text-sm font-bold text-slate-900">
-    Juego
-  </h2>
+            </div>
+          )}
 
-  <div className="mt-4 grid gap-4 md:grid-cols-2">
-
-    {/* NIVEL */}
-
-    <div className="grid grid-cols-3 gap-3">
-
-  <div>
-    <label className="text-xs font-semibold text-slate-600">
-      Fáciles
-    </label>
-
-    <input
-      type="number"
-      min="0"
-      max="50"
-      value={cantidadFaciles}
-      onChange={(e) => {
-        setCantidadFaciles(
-          Math.max(0, Number(e.target.value))
-        );
-        setPaginaActual(0);
-      }}
-      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-center text-sm outline-none"
-    />
-  </div>
-
-  <div>
-    <label className="text-xs font-semibold text-slate-600">
-      Intermedios
-    </label>
-
-    <input
-      type="number"
-      min="0"
-      max="50"
-      value={cantidadMedios}
-      onChange={(e) => {
-        setCantidadMedios(
-          Math.max(0, Number(e.target.value))
-        );
-        setPaginaActual(0);
-      }}
-      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-center text-sm outline-none"
-    />
-  </div>
-
-  <div>
-    <label className="text-xs font-semibold text-slate-600">
-      Difíciles
-    </label>
-
-    <input
-      type="number"
-      min="0"
-      max="50"
-      value={cantidadDificiles}
-      onChange={(e) => {
-        setCantidadDificiles(
-          Math.max(0, Number(e.target.value))
-        );
-        setPaginaActual(0);
-      }}
-      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-center text-sm outline-none"
-    />
-  </div>
-
-</div>
-
-<p className="mt-2 text-xs text-slate-500">
-  Total: {cantidadLaberintos} laberintos ·{" "}
-  {cantidadLaberintos} soluciones
-</p>
-
-    {/* CANTIDAD */}
-
-<div>
-  <label
-    htmlFor="cantidadLaberintos"
-    className="text-sm font-medium text-slate-700"
-  >
-    Cantidad de laberintos
-  </label>
-
-  <input
-    id="cantidadLaberintos"
-    type="number"
-    min="1"
-    max="50"
-    value={cantidadLaberintos}
-    onChange={(e) => {
-      const cantidad = Number(e.target.value);
-
-      setCantidadLaberintos(
-        Math.min(
-          Math.max(cantidad, 1),
-          50
-        )
-      );
-
-      setPaginaActual(0);
-    }}
-    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
-  />
-
-  <p className="mt-1 text-xs text-slate-500">
-    Se generarán {cantidadLaberintos} juegos y{" "}
-    {cantidadLaberintos} soluciones.
-  </p>
-</div>
-
-    {/* GENERAR */}
-
-    <div className="flex items-end">
-      <button
-        type="button"
-        onClick={() =>
-          setSemilla((actual) => actual + 1)
-        }
-        className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-      >
-        Generar nuevo conjunto
-      </button>
-
-{/* VALIDACIÓN */}
-
-<div className="mt-5 rounded-xl bg-slate-50 p-4">
-  <div className="flex items-center justify-between gap-3">
-    <h3 className="text-sm font-bold text-slate-900">
-      Validación
-    </h3>
-
-    <span
-      className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-        validacion.valido
-          ? "bg-emerald-100 text-emerald-700"
-          : "bg-red-100 text-red-700"
-      }`}
-    >
-      {validacion.valido
-        ? "Listo"
-        : "Revisar"}
-    </span>
-  </div>
-
-  <div className="mt-3 space-y-2 text-sm">
-
-    <EstadoValidacion
-      correcto={validacion.entradaCorrecta}
-      texto="Entrada correcta"
-    />
-
-    <EstadoValidacion
-      correcto={validacion.salidaCorrecta}
-      texto="Salida correcta"
-    />
-
-    <EstadoValidacion
-      correcto={validacion.todasConectadas}
-      texto={`${validacion.totalCeldas} celdas conectadas`}
-    />
-
-    <EstadoValidacion
-      correcto={validacion.solucionEncontrada}
-      texto="Solución encontrada"
-    />
-
-  </div>
-
-  {validacion.solucionEncontrada && (
-    <p className="mt-3 text-xs text-slate-500">
-      Longitud de la solución:{" "}
-      {validacion.longitudSolucion} celdas
-    </p>
-  )}
-</div>
-      
-    </div>
-
-  </div>
-</div>
-          
         </section>
 
         {/* =====================================================
-    VALIDACIÓN DEL PRODUCTO
-===================================================== */}
+            VALIDACIÓN
+        ====================================================== */}
 
-<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
-  <div className="flex items-start justify-between gap-3">
-    <div>
-      <h3 className="text-sm font-bold text-slate-900">
-        Validación del producto
-      </h3>
+        <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm sm:p-4">
 
-      <p className="mt-1 text-xs text-slate-500">
-        Revisión automática de todos los laberintos.
-      </p>
-    </div>
+          <div className="flex items-center justify-between gap-3">
 
-    <span
-      className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-        productoValido
-          ? "bg-emerald-100 text-emerald-700"
-          : "bg-red-100 text-red-700"
-      }`}
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">
+                Validación
+              </h2>
+
+              <p className="text-[11px] text-slate-500">
+                Entrada, salida y solución.
+              </p>
+            </div>
+
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
+                productoValido
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {
+                cantidadValidos
+              }
+              /
+              {
+                cantidadActividades
+              }
+            </span>
+
+          </div>
+
+          <div className="mt-3 max-h-96 space-y-1.5 overflow-y-auto">
+
+            {validaciones.map(
+  (item) => (
+    <div
+      key={item.numero}
+      className="rounded-lg bg-slate-50 px-2.5 py-2"
     >
-      {productoValido
-        ? "Producto listo"
-        : "Revisar"}
-    </span>
-  </div>
 
-  {/* RESUMEN */}
+        <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm">
 
-  <div className="mt-4 grid grid-cols-2 gap-3">
+  <div className="mb-4">
 
-    <div className="rounded-xl bg-slate-50 p-3 text-center">
-      <p className="text-xl font-extrabold text-slate-900">
-        {cantidadValidos}/{cantidadLaberintos}
-      </p>
+    <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">
+      Estadísticas
+    </p>
 
-      <p className="mt-1 text-xs text-slate-500">
-        Laberintos correctos
-      </p>
-    </div>
+    <h3 className="mt-1 text-base font-bold text-slate-800">
+      Resumen por nivel
+    </h3>
 
-    <div className="rounded-xl bg-slate-50 p-3 text-center">
-      <p className="text-xl font-extrabold text-slate-900">
-        {cantidadLaberintos}
-      </p>
-
-      <p className="mt-1 text-xs text-slate-500">
-        Soluciones generadas
-      </p>
-    </div>
+    <p className="mt-1 text-xs text-slate-500">
+      Promedios, mínimos y máximos de los laberintos generados.
+    </p>
 
   </div>
 
-  {/* LISTA */}
+  <div className="space-y-3">
 
-  <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
-    {validacionesProducto.map((item) => (
-      <div
-        key={item.numero}
-        className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"
-      >
-        <div className="flex items-center gap-2">
+    {resumenPorNivel.map(
+      (resumen) => (
+        <div
+          key={
+            resumen.nivel
+          }
+          className="rounded-xl bg-slate-50 p-3"
+        >
+
+          <div className="mb-3 flex items-center justify-between gap-2">
+
+            <p className="text-sm font-bold text-slate-800">
+              {
+                NOMBRE_NIVEL[
+                  resumen.nivel
+                ]
+              }
+            </p>
+
+            <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">
+              {
+                resumen.cantidad
+              }{" "}
+              laberintos
+            </span>
+
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+
+            <div className="rounded-lg bg-white p-2 text-center">
+
+  <p className="text-[9px] font-semibold uppercase text-slate-400">
+    Callejones
+  </p>
+
+  <p className="mt-1 text-sm font-bold text-slate-700">
+    {resumen.promedioCallejones}
+  </p>
+
+  <p className="text-[9px] text-slate-400">
+    {resumen.minimoCallejones}
+    {" - "}
+    {resumen.maximoCallejones}
+  </p>          
+
+</div>
+
+            <div className="mt-1 text-[9px] leading-4 text-slate-500">
+  P05 {resumen.percentilesCallejones.p05}
+  {" · "}
+  P25 {resumen.percentilesCallejones.p25}
+  {" · "}
+  P50 {resumen.percentilesCallejones.p50}
+  {" · "}
+  P75 {resumen.percentilesCallejones.p75}
+  {" · "}
+  P95 {resumen.percentilesCallejones.p95}
+</div>       
+
+            <div className="rounded-lg bg-white p-2 text-center">
+
+              <p className="text-[9px] font-semibold uppercase text-slate-400">
+                Solución
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-slate-700">
+                {
+                  resumen.promedioSolucion
+                }
+              </p>
+
+              <p className="text-[9px] text-slate-400">
+                {
+                  resumen.minimoSolucion
+                }
+                {" - "}
+                {
+                  resumen.maximoSolucion
+                }
+              </p>
+
+            </div>
+
+            <div className="mt-1 text-[9px] leading-4 text-slate-500">
+  P05 {resumen.percentilesSolucion.p05}
+  {" · "}
+  P25 {resumen.percentilesSolucion.p25}
+  {" · "}
+  P50 {resumen.percentilesSolucion.p50}
+  {" · "}
+  P75 {resumen.percentilesSolucion.p75}
+  {" · "}
+  P95 {resumen.percentilesSolucion.p95}
+</div>
+
+            <div className="rounded-lg bg-white p-2 text-center">
+
+              <p className="text-[9px] font-semibold uppercase text-slate-400">
+                Giros
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-slate-700">
+                {
+                  resumen.promedioGiros
+                }
+              </p>
+
+              <p className="text-[9px] text-slate-400">
+                {
+                  resumen.minimoGiros
+                }
+                {" - "}
+                {
+                  resumen.maximoGiros
+                }
+              </p>
+
+            </div>
+
+            <div className="mt-1 text-[9px] leading-4 text-slate-500">
+  P05 {resumen.percentilesGiros.p05}
+  {" · "}
+  P25 {resumen.percentilesGiros.p25}
+  {" · "}
+  P50 {resumen.percentilesGiros.p50}
+  {" · "}
+  P75 {resumen.percentilesGiros.p75}
+  {" · "}
+  P95 {resumen.percentilesGiros.p95}
+</div>
+
+            <div className="rounded-lg bg-white p-2 text-center">
+
+              <p className="text-[9px] font-semibold uppercase text-slate-400">
+                Recorrido
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-slate-700">
+                {
+                  resumen.promedioRecorrido
+                }
+                %
+              </p>
+
+              <p className="text-[9px] text-slate-400">
+                {
+                  resumen.minimoRecorrido
+                }
+                %
+                {" - "}
+                {
+                  resumen.maximoRecorrido
+                }
+                %
+              </p>
+
+            </div>
+
+<div className="mt-2 grid grid-cols-2 gap-2">
+
+  <div className="rounded-lg bg-white p-2 text-center">
+
+    <p className="text-[9px] font-semibold uppercase text-slate-400">
+      Dens. giros
+    </p>
+
+    <p className="mt-1 text-sm font-bold text-slate-700">
+      {resumen.promedioDensidadGiros}%
+    </p>
+
+    <p className="text-[9px] text-slate-400">
+      {resumen.minimoDensidadGiros}%
+      {" - "}
+      {resumen.maximoDensidadGiros}%
+    </p>
+
+  </div>
+
+  <div className="rounded-lg bg-white p-2 text-center">
+
+    <p className="text-[9px] font-semibold uppercase text-slate-400">
+      Dens. callejones
+    </p>
+
+    <p className="mt-1 text-sm font-bold text-slate-700">
+      {resumen.promedioDensidadCallejones}%
+    </p>
+
+    <p className="text-[9px] text-slate-400">
+      {resumen.minimoDensidadCallejones}%
+      {" - "}
+      {resumen.maximoDensidadCallejones}%
+    </p>
+
+  </div>
+
+  <div className="mt-2 rounded-lg bg-slate-900 p-2 text-center">
+
+    <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+      Complejidad interna
+    </p>
+
+    <p className="mt-1 text-sm font-bold text-white">
+      {resumen.promedioComplejidad}/100
+    </p>
+
+    <p className="text-[9px] text-slate-400">
+      {resumen.minimoComplejidad}
+      {" - "}
+      {resumen.maximoComplejidad}
+    </p>
+
+  </div>
+
+  <div className="mt-1 text-[9px] leading-4 text-slate-400">
+  P05 {resumen.percentilesComplejidad.p05}
+  {" · "}
+  P25 {resumen.percentilesComplejidad.p25}
+  {" · "}
+  P50 {resumen.percentilesComplejidad.p50}
+  {" · "}
+  P75 {resumen.percentilesComplejidad.p75}
+  {" · "}
+  P95 {resumen.percentilesComplejidad.p95}
+</div>
+
+</div>
+            
+
+          </div>
+
+        </div>
+      )
+    )}
+
+  </div>
+
+</section>
+
+      {/* CABECERA */}
+
+      <div className="flex items-center justify-between gap-2">
+
+        <div className="flex min-w-0 items-center gap-2">
 
           <span
             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
@@ -829,359 +1582,475 @@ const productoValido =
                 : "bg-red-100 text-red-700"
             }`}
           >
-            {item.valido ? "✓" : "×"}
+            {item.valido
+              ? "✓"
+              : "×"}
           </span>
 
-          <span className="text-sm font-medium text-slate-700">
-            Laberinto {item.numero} ·{" "}
-{item.nivel === "facil"
-  ? "Fácil"
-  : item.nivel === "medio"
-    ? "Intermedio"
-    : "Difícil"}
+          <span className="truncate text-xs font-semibold text-slate-700">
+            Laberinto{" "}
+            {item.numero}{" "}
+            ·{" "}
+            {
+              NOMBRE_NIVEL[
+                item.nivel
+              ]
+            }
           </span>
 
         </div>
 
-        <span className="text-xs text-slate-500">
-          {item.longitudSolucion} pasos
+        <span
+          className={`shrink-0 text-[10px] font-bold ${
+            item.valido
+              ? "text-emerald-600"
+              : "text-red-600"
+          }`}
+        >
+          {item.valido
+            ? "VÁLIDO"
+            : "ERROR"}
         </span>
-      </div>
-    ))}
-  </div>
 
-  {/* ESTADO FINAL */}
-
-  {productoValido && (
-    <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-center">
-      <p className="text-sm font-bold text-emerald-700">
-        ✓ PRODUCTO LISTO
-      </p>
-
-      <p className="mt-1 text-xs text-emerald-600">
-        Todos los laberintos tienen entrada,
-        salida y solución válida.
-      </p>
-    </div>
-  )}
-</div>
-
-        {/* PREVIEW */}
-
-        <section className="mt-6">
-
-          {/* NAVEGADOR DE PÁGINAS */}
-
-<div className="mb-5 rounded-2xl bg-white p-3 shadow-sm">
-  <div className="flex items-center justify-between gap-3">
-
-    {/* ANTERIOR */}
-
-    <button
-      type="button"
-      onClick={() =>
-        setPaginaActual((actual) =>
-          Math.max(actual - 1, 0)
-        )
-      }
-      disabled={paginaActual === 0}
-      className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
-    >
-      ←
-    </button>
-
-    {/* INFORMACIÓN */}
-
-    <div className="text-center">
-      <p className="text-sm font-bold text-slate-900">
-        {pagina.nombre}
-      </p>
-
-      <p className="mt-0.5 text-xs text-slate-500">
-        Página {paginaActual + 1} de {paginas.length}
-      </p>
-    </div>
-
-    <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
-  <button
-    type="button"
-    onClick={descargarPdfCompleto}
-    disabled={exportandoPdf}
-    className={`w-full rounded-xl px-5 py-3 text-sm font-bold transition ${
-      exportandoPdf
-        ? "cursor-not-allowed bg-slate-300 text-slate-600"
-        : "bg-slate-900 text-white hover:bg-slate-800"
-    }`}
-  >
-    {exportandoPdf
-      ? `Generando PDF... ${progresoPdf.actual}/${progresoPdf.total}`
-      : "Descargar PDF completo"}
-  </button>
-
-  {exportandoPdf && (
-    <div className="mt-4">
-      <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-        <div
-          className="h-full bg-slate-900 transition-all duration-300"
-          style={{
-            width: `${progresoPdf.porcentaje}%`,
-          }}
-        />
       </div>
 
-      <div className="mt-2 text-center text-xs font-semibold text-slate-600">
-        {progresoPdf.porcentaje}% ·{" "}
-        {progresoPdf.actual} de{" "}
-        {progresoPdf.total} páginas
+      {/* MÉTRICAS */}
+
+      <div className="mt-2 grid grid-cols-5 gap-1.5">
+
+        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
+          <p className="text-[9px] font-semibold uppercase text-slate-400">
+            Celdas
+          </p>
+
+          <p className="text-xs font-bold text-slate-700">
+            {item.totalCeldas}
+          </p>
+        </div>
+
+        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
+          <p className="text-[9px] font-semibold uppercase text-slate-400">
+            Solución
+          </p>
+
+          <p className="text-xs font-bold text-slate-700">
+            {
+              item.longitudSolucion
+            }
+          </p>
+        </div>
+
+        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
+          <p className="text-[9px] font-semibold uppercase text-slate-400">
+            Giros
+          </p>
+
+          <p className="text-xs font-bold text-slate-700">
+            {
+              item.cantidadGiros
+            }
+          </p>
+        </div>
+
+        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
+  <p className="text-[9px] font-semibold uppercase text-slate-400">
+    Callejones
+  </p>
+
+  <p className="text-xs font-bold text-slate-700">
+    {item.cantidadCallejones}
+  </p>
+</div>
+
+        <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
+          <p className="text-[9px] font-semibold uppercase text-slate-400">
+            Recorrido
+          </p>
+
+          <p className="text-xs font-bold text-slate-700">
+            {
+              item.porcentajeRecorrido
+            }
+            %
+          </p>
+        </div>
+
+        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+
+  <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
+    <p className="text-[9px] font-semibold uppercase text-slate-400">
+      Dens. giros
+    </p>
+
+    <p className="text-xs font-bold text-slate-700">
+      {item.densidadGiros}%
+    </p>
+  </div>
+
+  <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
+    <p className="text-[9px] font-semibold uppercase text-slate-400">
+      Dens. callejones
+    </p>
+
+    <p className="text-xs font-bold text-slate-700">
+      {item.densidadCallejones}%
+    </p>
+  </div>
+
+</div>
+
       </div>
+
     </div>
-  )}
+  )
+)}
+
 </div>
 
-    {/* SIGUIENTE */}
+{productoValido && (
+  <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-center">
 
-    <button
-      type="button"
-      onClick={() =>
-        setPaginaActual((actual) =>
-          Math.min(
-            actual + 1,
-            paginas.length - 1
-          )
-        )
-      }
-      disabled={paginaActual === paginas.length - 1}
-      className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
-    >
-      →
-    </button>
+    <p className="text-xs font-bold text-emerald-700">
+      ✓ PRODUCTO LISTO
+    </p>
 
   </div>
+)}
 
-  {/* MINI SELECTOR */}
+</section>
 
-  <div className="mt-3 flex justify-center gap-2">
-    {paginas.map((item, index) => (
-      <button
-        key={item.id}
-        type="button"
-        onClick={() => setPaginaActual(index)}
-        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-          paginaActual === index
-            ? "bg-slate-900 text-white"
-            : "bg-slate-100 text-slate-600"
-        }`}
-      >
-        {index + 1}
-      </button>
-    ))}
-  </div>
-</div>
+                {/* =====================================================
+            NAVEGACIÓN
+        ====================================================== */}
 
-          <div className="mb-3 flex items-end justify-between gap-3">
+        <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm">
+
+          <div className="flex items-center justify-between gap-3">
+
+            <button
+              type="button"
+              onClick={() =>
+                setPaginaActual(
+                  (
+                    actual
+                  ) =>
+                    Math.max(
+                      actual -
+                        1,
+                      0
+                    )
+                )
+              }
+              disabled={
+                paginaActual ===
+                0
+              }
+              className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 text-lg font-bold disabled:opacity-30"
+            >
+              ←
+            </button>
+
+            <div className="min-w-0 text-center">
+
+              <p className="truncate text-sm font-bold text-slate-900">
+                {
+                  pagina.nombre
+                }
+              </p>
+
+              <p className="text-[11px] text-slate-500">
+                Página{" "}
+                {
+                  paginaActual +
+                  1
+                }{" "}
+                de{" "}
+                {
+                  paginas.length
+                }
+              </p>
+
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setPaginaActual(
+                  (
+                    actual
+                  ) =>
+                    Math.min(
+                      actual +
+                        1,
+                      paginas.length -
+                        1
+                    )
+                )
+              }
+              disabled={
+                paginaActual ===
+                paginas.length -
+                  1
+              }
+              className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 text-lg font-bold disabled:opacity-30"
+            >
+              →
+            </button>
+
+          </div>
+
+          {/* =================================================
+              SELECTOR DE PÁGINA
+          ================================================== */}
+
+          <select
+            value={
+              paginaActual
+            }
+            onChange={(e) =>
+              setPaginaActual(
+                Number(
+                  e.target.value
+                )
+              )
+            }
+            className={`${CLASE_CAMPO} mt-3`}
+          >
+            {paginas.map(
+              (
+                item,
+                index
+              ) => (
+                <option
+                  key={
+                    item.id
+                  }
+                  value={
+                    index
+                  }
+                >
+                  {
+                    index +
+                    1
+                  }
+                  .{" "}
+                  {
+                    item.nombre
+                  }
+                </option>
+              )
+            )}
+          </select>
+
+        </section>
+
+        {/* =====================================================
+            PREVIEW
+        ====================================================== */}
+
+        <section className="mt-3">
+
+          <div className="mb-2 flex items-center justify-between">
+
             <div>
-              <p className="text-sm font-semibold text-slate-700">
+              <p className="text-xs font-bold text-slate-700">
                 Vista previa
               </p>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] text-slate-500">
                 A4 · 210 × 297 mm
               </p>
             </div>
 
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm">
-              {Math.round(escalaPreview * 100)}%
+            <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-500 shadow-sm">
+              {Math.round(
+                escalaPreview *
+                  100
+              )}
+              %
             </span>
+
           </div>
 
           <div
-            ref={contenedorPreviewRef}
+            ref={
+              contenedorPreviewRef
+            }
             className="w-full overflow-hidden"
           >
+
+            <div
+              className="mx-auto"
+              style={{
+                width:
+                  ANCHO_A4 *
+                  escalaPreview,
+
+                height:
+                  ALTO_A4 *
+                  escalaPreview,
+              }}
+            >
+
+              <div
+                style={{
+                  width:
+                    ANCHO_A4,
+
+                  height:
+                    ALTO_A4,
+
+                  transform:
+                    `scale(${escalaPreview})`,
+
+                  transformOrigin:
+                    "top left",
+                }}
+              >
+
                 <div
-                  className="mx-auto"
+                  ref={
+                    laminaExportarRef
+                  }
                   style={{
-                    width: `${ANCHO_A4 * escalaPreview}px`,
-                    height: `${ALTO_A4 * escalaPreview}px`,
+                    width:
+                      ANCHO_A4,
+
+                    height:
+                      ALTO_A4,
                   }}
                 >
-                  <div
-                    style={{
-                      width: `${ANCHO_A4}px`,
-                      height: `${ALTO_A4}px`,
-                      transform: `scale(${escalaPreview})`,
-                      transformOrigin: "top left",
-                    }}
-                  >
-                    <div
-                      ref={laminaExportarRef}
-                      style={{
-                        width: `${ANCHO_A4}px`,
-                        height: `${ALTO_A4}px`,
-                      }}
+
+                  {/* =========================================
+                      PORTADA
+                  ========================================== */}
+
+                  {pagina.tipo ===
+                  "portada" ? (
+
+                    <PortadaLaberintos
+                      cantidad={
+                        cantidadActividades
+                      }
+                      faciles={
+                        cantidadFaciles
+                      }
+                      medios={
+                        cantidadMedios
+                      }
+                      dificiles={
+                        cantidadDificiles
+                      }
+                    />
+
+                  ) : pagina.tipo ===
+                    "final" ? (
+
+                    /* =======================================
+                       LÁMINA FINAL
+                    ======================================== */
+
+                    <LaminaFinalLaberintos />
+
+                  ) : (
+
+                    /* =======================================
+                       JUEGO / SOLUCIÓN
+                    ======================================== */
+
+                    <LaminaBase
+                      titulo=""
+                      instrucciones=""
                     >
 
-    {pagina.tipo === "portada" ? (
-      <PortadaLaberintos
-        cantidad={cantidadLaberintos}
-        faciles={cantidadFaciles}
-        medios={cantidadMedios}
-        dificiles={cantidadDificiles}
-      />
-    ) : pagina.tipo === "final" ? (
-      <LaminaFinalLaberintos />
-    ) : (
-      <LaminaBase
-        titulo={
-          tipoProducto === "laberintos"
-            ? ""
-            : titulo
-        }
-        instrucciones={
-          tipoProducto === "laberintos"
-            ? ""
-            : instrucciones
-        }
-        tamanoTitulo={tamanoTitulo}
-        tamanoInstrucciones={tamanoInstrucciones}
-        mostrarLogo={mostrarLogo}
-        anchoLogo={anchoLogo}
-        logoTop={logoTop}
-        logoRight={logoRight}
-      >
-  {pagina.tipo === "juego" && (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-      }}
-    >
-        {tipoProducto === "laberintos" && (
-  <LaminaLaberinto
-    numero={indiceLaberinto + 1}
-    nivel={nivelPagina}
-    filas={configuracionPagina.filas}
-    columnas={configuracionPagina.columnas}
-    semilla={semillaPagina}
-  />
-)}
+                      <LaminaLaberinto
+                        numero={
+                          indiceActividad +
+                          1
+                        }
+                        nivel={
+                          nivelPagina
+                        }
+                        filas={
+                          configuracionPagina.filas
+                        }
+                        columnas={
+                          configuracionPagina.columnas
+                        }
+                        semilla={
+                          semillaPagina
+                        }
+                        mostrarSolucion={
+                          pagina.tipo ===
+                          "solucion"
+                        }
+                      />
 
-        {tipoProducto === "unir-puntos" && (
-          <UnirPuntos
-            cantidadPuntos={cantidadPuntos}
-            semilla={semillaPagina}
-            figura={figuraUnirPuntos}
-          />
-        )}
-      </div>
-    )}
+                    </LaminaBase>
 
-    {pagina.tipo === "solucion" && (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-        }}
-      >
-        {tipoProducto === "laberintos" && (
-          <LaminaLaberinto
-            numero={indiceLaberinto + 1}
-            nivel={nivelPagina}
-            filas={configuracionPagina.filas}
-            columnas={configuracionPagina.columnas}
-            semilla={semillaPagina}
-            mostrarSolucion={true}
-          />
-        )}
+                  )}
 
-        {tipoProducto === "unir-puntos" && (
-          <UnirPuntos
-            cantidadPuntos={cantidadPuntos}
-            semilla={semillaPagina}
-            figura={figuraUnirPuntos}
-            mostrarSolucion={true}
-          />
-        )}
-      </div>
-    )}
-  </LaminaBase>
-)}
-                      </div>
+                </div>
+
               </div>
+
             </div>
+
           </div>
 
         </section>
+
       </div>
     </main>
   );
 }
 
-
 /* =========================================================
-   CONTROL REUTILIZABLE
+   ESTILOS REUTILIZABLES
 ========================================================= */
 
-function ControlRango({
+const CLASE_CAMPO =
+  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400";
+
+/* =========================================================
+   CANTIDAD
+========================================================= */
+
+function Cantidad({
   titulo,
   valor,
-  min,
-  max,
-  unidad,
   onChange,
 }) {
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3">
-        <label className="text-sm font-medium text-slate-700">
-          {titulo}
-        </label>
+    <label className="block">
 
-        <span className="text-xs font-semibold text-slate-500">
-          {valor}
-          {unidad}
-        </span>
-      </div>
+      <span className="block text-center text-[11px] font-semibold text-slate-500">
+        {titulo}
+      </span>
 
       <input
-        type="range"
-        min={min}
-        max={max}
-        value={valor}
+        type="number"
+        min="0"
+        max="10000"
+        value={
+          valor
+        }
         onChange={(e) =>
-          onChange(Number(e.target.value))
+          onChange(
+            Math.min(
+              Math.max(
+                Number(
+                  e.target.value
+                ),
+                0
+              ),
+              10000
+            )
+          )
         }
-        className="mt-2 block w-full"
+        className="mt-1 w-full rounded-xl border border-slate-200 px-2 py-2 text-center text-sm font-bold outline-none focus:border-sky-400"
       />
-    </div>
-  );
-}
 
-function EstadoValidacion({
-  correcto,
-  texto,
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-          correcto
-            ? "bg-emerald-100 text-emerald-700"
-            : "bg-red-100 text-red-700"
-        }`}
-      >
-        {correcto ? "✓" : "×"}
-      </span>
-
-      <span
-        className={
-          correcto
-            ? "text-slate-700"
-            : "text-red-700"
-        }
-      >
-        {texto}
-      </span>
-    </div>
+    </label>
   );
 }

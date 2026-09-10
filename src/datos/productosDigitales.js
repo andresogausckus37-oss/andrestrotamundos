@@ -18,8 +18,11 @@ export const productosDigitales = [
 
     tipo: "digital",
     categoria: "colorear",
+    linea: "juegos",
 
     precioARS: 3000,
+
+    descuento: 0,
 
     oferta: {
       activa: true,
@@ -29,17 +32,20 @@ export const productosDigitales = [
 
     imagenes: {
       portada:
-        "https://i.postimg.cc/nhrwnzLx/file-000000009654820ea5285c9b458659b1.png",
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50-laberintos/portada",
 
       preview:
-        "https://i.postimg.cc/htv3KjGW/file-000000008948820e8c82231c5d50d8d4.png",
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50-laberintos/preview%20general-YSBkuSMu8HJXfhEqb9xmLocZ5kMCRB",
 
-      previewIndividual:
-        "https://i.postimg.cc/TwRSJ2T8/file-0000000033e8820ebca9ace5d7596752.png",
+      previewsIndividuales: [
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50-laberintos/preview-1",
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50-laberintos/preview-2",
+      ],
     },
 
     formato: "PDF",
     tamano: "A4",
+
     paginas: 12,
     laminas: 10,
 
@@ -62,6 +68,7 @@ export const productosDigitales = [
     ],
 
     edadRecomendada: "4 años en adelante",
+
     nivel: "Fácil",
 
     entrega: "Descarga digital",
@@ -81,15 +88,18 @@ export const productosDigitales = [
     ventaCruzadaId: "10-razas-perros-colorear",
 
     descripcion:
-  "10 adorables razas de gatos listas para imprimir y colorear. Un pack creativo en PDF A4 para disfrutar, crear y divertirse.",
+      "10 adorables razas de gatos listas para imprimir y colorear. Un pack creativo en PDF A4 para disfrutar, crear y divertirse.",
 
     descripcionLarga:
-  "¡Convertí cada momento en una experiencia creativa! Descubrí 10 razas de gatos en láminas listas para imprimir y colorear, diseñadas para disfrutar en casa y dar rienda suelta a la imaginación. Recibís un archivo PDF en formato A4, práctico y listo para imprimir todas las veces que necesites. Elegí tus colores, imprimí tus láminas y empezá a crear. ¡Compralo ahora y comenzá a colorear!",
+      "¡Convertí cada momento en una experiencia creativa! Descubrí 10 razas de gatos en láminas listas para imprimir y colorear, diseñadas para disfrutar en casa y dar rienda suelta a la imaginación. Recibís un archivo PDF en formato A4, práctico y listo para imprimir todas las veces que necesites. Elegí tus colores, imprimí tus láminas y empezá a crear. ¡Compralo ahora y comenzá a colorear!",
 
     tipo: "digital",
     categoria: "colorear",
-
+linea: "juegos",
+    
     precioARS: 3000,
+
+    descuento: 0,
 
     oferta: {
       activa: true,
@@ -99,19 +109,20 @@ export const productosDigitales = [
 
     imagenes: {
       portada:
-        "https://i.postimg.cc/8z83cmJy/file-000000005c24820ea5c7be96b92ae8ac.png",
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/colorear/10%20gatos%20para%20colorear/portada",
 
       preview:
-        "https://i.postimg.cc/MZgx0Rfb/file-000000002998820e9c05d721c0889164.png",
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/colorear/10%20gatos%20para%20colorear/preview-general",
 
       previewsIndividuales: [
-        "https://i.postimg.cc/FRCLQQpD/file-00000000275c820eacfc3089ba4eddbd.png", 
-      "https://i.postimg.cc/J4bwbFL4/file-000000004e34820ea795b2dc26b1f5be.png", 
-  ],
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/colorear/10%20gatos%20para%20colorear/preview-1",
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/colorear/10%20gatos%20para%20colorear/preview-2",
+      ],
     },
 
     formato: "PDF",
     tamano: "A4",
+
     paginas: 12,
     laminas: 10,
 
@@ -134,6 +145,7 @@ export const productosDigitales = [
     ],
 
     edadRecomendada: "4 años en adelante",
+
     nivel: "Fácil",
 
     entrega: "Descarga digital",
@@ -141,143 +153,159 @@ export const productosDigitales = [
     destacado: true,
   },
 
-  {
-  id: "50-dibujos-para-colorear",
+  // =========================================================
+  // PRODUCTO 3
+  // =========================================================
 
-  nombre: "50  Animales y Paisajes Divertidos para Colorear",
+  {
+    id: "50-dibujos-para-colorear",
+
+    nombre: "50 Animales y Paisajes Divertidos para Colorear",
 
     ventaCruzadaId: "10-razas-perros-colorear",
 
-  descripcion:
-    "Pack descargable con 50 láminas infantiles para imprimir y colorear, con animales, naturaleza, aventuras y mundos fantásticos.",
+    descripcion:
+      "Pack descargable con 50 láminas infantiles para imprimir y colorear, con animales, naturaleza, aventuras y mundos fantásticos.",
 
-  descripcionLarga:
-    "Una colección de 50 dibujos para colorear pensada para niños de 5 a 10 años. Incluye divertidas ilustraciones de animales, naturaleza, aventuras y mundos fantásticos. Las láminas están preparadas en formato A4 para imprimir fácilmente en casa o en una imprenta.",
+    descripcionLarga:
+      "Una colección de 50 dibujos para colorear pensada para niños de 5 a 10 años. Incluye divertidas ilustraciones de animales, naturaleza, aventuras y mundos fantásticos. Las láminas están preparadas en formato A4 para imprimir fácilmente en casa o en una imprenta.",
 
-  tipo: "digital",
-  categoria: "colorear",
+    tipo: "digital",
+    categoria: "colorear",
+    linea: "juegos",
 
-  precioARS: 8000,
+    precioARS: 8000,
 
-  oferta: {
-    activa: true,
-    precioARS: 5000,
-    etiqueta: "Oferta lanzamiento",
-  },
+    descuento: 0,
 
-  imagenes: {
-  portada:
-    "https://i.postimg.cc/25CSry1G/file-000000005a14820e8ffd3836c8de305a.png",
+    oferta: {
+      activa: true,
+      precioARS: 5000,
+      etiqueta: "Oferta lanzamiento",
+    },
 
-  preview:
-    "https://i.postimg.cc/3Rd4QN67/file-00000000eb68820e93bf2f51b9664cfe.png",
+    imagenes: {
+      portada:
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/colorear/50%20Animales%20y%20Paisajes%20Divertidos%20para%20Colorear/portada",
 
-  previewsIndividuales: [
-    "https://i.postimg.cc/RCXf1YBW/IMG-20260904-WA1809.jpg",
-    
-    "https://i.postimg.cc/CKgzpCgs/IMG-20260904-WA1197.jpg",
-  ],
-},
+      preview:
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/colorear/50%20Animales%20y%20Paisajes%20Divertidos%20para%20Colorear/pre-gen.png",
 
-  formato: "PDF",
-  tamano: "A4",
-  paginas: 52,
-  laminas: 50,
+      previewsIndividuales: [
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/colorear/50%20Animales%20y%20Paisajes%20Divertidos%20para%20Colorear/pre1.png",
+        "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/colorear/50%20Animales%20y%20Paisajes%20Divertidos%20para%20Colorear/pre2.png",
+      ],
+    },
 
-  incluye: [
-    "50 láminas para colorear",
-    "Animales, naturaleza y aventuras",
-    "Mundos fantásticos",
-    "Formato A4 vertical",
-    "Archivo PDF digital",
-    "Portada y página final",
-    "Listo para imprimir",
-  ],
+    formato: "PDF",
+    tamano: "A4",
 
-  beneficios: [
-    "Estimula la creatividad",
-    "Favorece la concentración",
-    "Desarrolla la motricidad fina",
-    "Estimula la imaginación",
-    "Actividad educativa y recreativa",
-  ],
+    paginas: 52,
+    laminas: 50,
 
-  edadRecomendada: "5 a 10 años",
-
-  entrega: "Descarga digital",
-
-  destacado: true,
-},
-  {
-  id: "50-laberintos-toby-luna",
-
-  nombre: "50 Laberintos - Las Aventuras de Toby y Luna",
-
-  ventaCruzadaId: "50-dibujos-para-colorear",
-
-  descripcion:
-    "50 laberintos imprimibles con Toby y Luna, organizados en 3 niveles de dificultad para aprender, explorar y divertirse.",
-
-  descripcionLarga:
-    "Una colección de 50 laberintos imprimibles protagonizados por Toby y Luna, pensada para niños de 6 a 10 años. Incluye desafíos de nivel fácil, medio y difícil, además de todas las soluciones. Cada actividad está preparada en formato A4 para imprimir fácilmente en casa o en una imprenta.",
-
-  tipo: "digital",
-  categoria: "laberintos",
-
-  precioARS: 5000,
-
-  oferta: {
-    activa: true,
-    precioARS: 3000,
-    etiqueta: "Oferta lanzamiento",
-  },
-
-  imagenes: {
-    portada:
-      "https://i.postimg.cc/mgNBWYkH/file-000000001250820eaf8a962eb7cee307.png",
-
-    preview:
-      "https://i.postimg.cc/gk1QtnKk/file-000000008a10820e8ae339b75b68c0fe.png",
-
-    previewsIndividuales: [
-      "https://i.postimg.cc/43Q03wRm/file-0000000020c8820ea13e3cd8c927f07f.png",
-      "https://i.postimg.cc/4ym2Bg7W/file-000000007b38820eb91e7f8f85402947.png",
+    incluye: [
+      "50 láminas para colorear",
+      "Animales, naturaleza y aventuras",
+      "Mundos fantásticos",
+      "Formato A4 vertical",
+      "Archivo PDF digital",
+      "Portada y página final",
+      "Listo para imprimir",
     ],
+
+    beneficios: [
+      "Estimula la creatividad",
+      "Favorece la concentración",
+      "Desarrolla la motricidad fina",
+      "Estimula la imaginación",
+      "Actividad educativa y recreativa",
+    ],
+
+    edadRecomendada: "5 a 10 años",
+
+    nivel: "Fácil",
+
+    entrega: "Descarga digital",
+
+    destacado: true,
   },
 
-  formato: "PDF",
-  tamano: "A4",
+  // =========================================================
+  // PRODUCTO 4
+  // =========================================================
 
-  paginas: 102,
-  laminas: 50,
+  {
+    id: "50-laberintos-toby-luna",
 
-  incluye: [
-    "50 laberintos imprimibles",
-    "3 niveles de dificultad",
-    "Nivel fácil, medio y difícil",
-    "50 soluciones",
-    "Formato A4 vertical",
-    "Archivo PDF digital",
-    "Portada y lámina final",
-    "Listo para imprimir",
-  ],
+    nombre: "50 Laberintos - Las Aventuras de Toby y Luna",
 
-  beneficios: [
-    "Favorece la concentración",
-    "Estimula el razonamiento lógico",
-    "Ayuda a desarrollar la resolución de problemas",
-    "Fortalece la atención visual",
-    "Promueve la paciencia",
-    "Actividad educativa y recreativa",
-  ],
+    ventaCruzadaId: "50-dibujos-para-colorear",
 
-  edadRecomendada: "6 a 10 años",
+    descripcion:
+      "50 laberintos imprimibles con Toby y Luna, organizados en 3 niveles de dificultad para aprender, explorar y divertirse.",
 
-  nivel: "Fácil, medio y difícil",
+    descripcionLarga:
+      "Una colección de 50 laberintos imprimibles protagonizados por Toby y Luna, pensada para niños de 6 a 10 años. Incluye desafíos de nivel fácil, medio y difícil, además de todas las soluciones. Cada actividad está preparada en formato A4 para imprimir fácilmente en casa o en una imprenta.",
 
-  entrega: "Descarga digital",
+    tipo: "digital",
+    categoria: "laberintos",
+    linea: "juegos",
 
-  destacado: true,
-},
-    
+    precioARS: 5000,
+
+    descuento: 0,
+
+    oferta: {
+      activa: true,
+      precioARS: 3000,
+      etiqueta: "Oferta lanzamiento",
+    },
+
+    imagenes: {
+      portada:
+        "https://i.postimg.cc/XYWmtrCB/file-00000000bd7c820e87b26d36f5358e9b.png",
+
+      preview:
+        "https://i.postimg.cc/t4rkDJdw/file-000000006c88820ead48f060a56064d8.png",
+
+      previewsIndividuales: [
+        "https://i.postimg.cc/XJ9wMYFv/file-00000000c5e8820ea9b81031973dc3b7.png",
+        "https://i.postimg.cc/fLP1P5xr/file-00000000b8c4820e83783303b51d47f3.png",
+      ],
+    },
+
+    formato: "PDF",
+    tamano: "A4",
+
+    paginas: 102,
+    laminas: 50,
+
+    incluye: [
+      "50 laberintos imprimibles",
+      "3 niveles de dificultad",
+      "Nivel fácil, medio y difícil",
+      "50 soluciones",
+      "Formato A4 vertical",
+      "Archivo PDF digital",
+      "Portada y lámina final",
+      "Listo para imprimir",
+    ],
+
+    beneficios: [
+      "Favorece la concentración",
+      "Estimula el razonamiento lógico",
+      "Ayuda a desarrollar la resolución de problemas",
+      "Fortalece la atención visual",
+      "Promueve la paciencia",
+      "Actividad educativa y recreativa",
+    ],
+
+    edadRecomendada: "6 a 10 años",
+
+    nivel: "Fácil, medio y difícil",
+
+    entrega: "Descarga digital",
+
+    destacado: true,
+  },
 ];

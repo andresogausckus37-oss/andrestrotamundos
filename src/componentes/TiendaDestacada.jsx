@@ -18,7 +18,7 @@ const formatearPrecio = (precio) =>
 const TiendaDestacada = ({ verProducto }) => {
   const navigate = useNavigate();
 
-  const destacados = productosDigitales.slice(0, 3);
+  const destacados = productosDigitales.slice(0, 4);
 
   return (
     <section id="tienda" className="seccion bg-orange-50/50">

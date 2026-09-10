@@ -1,17 +1,27 @@
+import { useMemo, useState } from "react";
+
 import CalificacionProducto from "../componentes/CalificacionProducto";
 
 import {
   ArrowLeft,
+  Baby,
   Download,
+  Gamepad2,
+  Home,
   ShoppingBag,
-  Star,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 import { productosDigitales } from "../datos/productosDigitales";
 
+/* =========================================================
+   FORMATEAR PRECIO
+========================================================= */
+
 const formatearPrecio = (precio) => {
-  if (!precio) return "Precio a definir";
+  if (!precio) {
+    return "Precio a definir";
+  }
 
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -20,29 +30,89 @@ const formatearPrecio = (precio) => {
   }).format(precio);
 };
 
+/* =========================================================
+   FILTROS
+========================================================= */
+
+const FILTROS = [
+  {
+    id: "todos",
+    nombre: "Todos",
+  },
+  {
+    id: "juegos",
+    nombre: "Juegos y actividades",
+    icono: Gamepad2,
+  },
+  {
+    id: "hogar",
+    nombre: "Hogar y mascotas",
+    icono: Home,
+  },
+];
+
+/* =========================================================
+   TIENDA
+========================================================= */
+
 const Tienda = () => {
   const navigate = useNavigate();
 
-  const productosDestacados = productosDigitales.slice(0, 4);
+  const [filtroActivo, setFiltroActivo] =
+    useState("todos");
+
+  /* =======================================================
+     PRODUCTOS FILTRADOS
+  ======================================================= */
+
+  const productosMostrados = useMemo(() => {
+    if (filtroActivo === "hogar") {
+      return productosDigitales.filter(
+        (producto) => producto.linea === "hogar"
+      );
+    }
+
+    const juegos = productosDigitales.filter(
+      (producto) =>
+        !producto.linea ||
+        producto.linea === "juegos"
+    );
+
+    return juegos.slice(0, 4);
+  }, [filtroActivo]);
 
   return (
     <main className="min-h-screen bg-white">
-      {/* =========================================================
+      {/* =====================================================
           ENCABEZADO
-      ========================================================== */}
+      ====================================================== */}
 
       <section className="border-b border-slate-200 bg-gradient-to-b from-sky-50 to-white px-5 py-8 sm:py-16">
         <div className="mx-auto max-w-6xl text-center">
+          {/* LOGO */}
+
           <img
-  src="https://i.postimg.cc/KvRB21tY/11206.png"
-  alt="Toby y Luna Imprimibles"
-  className="mx-auto h-auto w-full max-w-[300px] object-contain sm:max-w-[320px]"
-/>
+            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logo-andres-imprimibles"
+            alt="Andres Imprimibles"
+            className="mx-auto h-auto w-full max-w-[240px] object-contain sm:max-w-[320px]"
+          />
+
+          {/* COLECCIÓN */}
+
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-sm">
+            Una colección de Andres House Sitter
+          </p>
+
+          {/* DESCRIPCIÓN */}
 
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-            Juegos, actividades y láminas imprimibles para
-            jugar, aprender, colorear y disfrutar en casa. Descargá, imprimí y empezá a jugar.
+            Imprimibles para jugar, aprender y organizar.
+            Actividades para disfrutar en casa y recursos
+            prácticos para el cuidado del hogar y las
+            mascotas. Descargá, imprimí y usá.
           </p>
+
+          {/* CTA */}
 
           <div className="mt-7 flex justify-center">
             <button
@@ -59,11 +129,11 @@ const Tienda = () => {
         </div>
       </section>
 
-      {/* =========================================================
+      {/* =====================================================
           VOLVER
-      ========================================================== */}
+      ====================================================== */}
 
-      <div className="mx-auto max-w-6xl px-5 pt-6">
+      <div className="mx-auto max-w-6xl px-5 pt-4">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -74,28 +144,82 @@ const Tienda = () => {
         </button>
       </div>
 
-      {/* =========================================================
-          PRODUCTOS DESTACADOS
-      ========================================================== */}
+      {/* =====================================================
+          EXPLORAR POR COLECCIÓN
+      ====================================================== */}
+
+      <section className="px-4 pt-2 sm:px-5 sm:pt-10">
+        <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-2xl text-center">
+            
+          </div>
+
+          {/* FILTROS */}
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2 sm:gap-3">
+            {FILTROS.map((filtro) => {
+              const activo =
+                filtroActivo === filtro.id;
+
+              const Icono = filtro.icono;
+
+              return (
+                <button
+                  key={filtro.id}
+                  type="button"
+                  onClick={() =>
+                    setFiltroActivo(filtro.id)
+                  }
+                  className={`inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition sm:px-5 sm:text-sm ${
+                    activo
+                      ? "border-sky-600 bg-sky-600 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+                  }`}
+                >
+                  {Icono && (
+                    <Icono
+                      size={15}
+                      className="shrink-0"
+                    />
+                  )}
+
+                  {filtro.nombre}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          PRODUCTOS
+      ====================================================== */}
 
       <section className="px-4 py-10 sm:px-5 sm:py-14">
         <div className="mx-auto max-w-6xl">
           {/* CABECERA */}
 
           <div className="mx-auto mb-7 max-w-2xl text-center">
-
             <h2 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-              Imprimibles destacados
+              {filtroActivo === "hogar"
+                ? "Hogar y mascotas"
+                : "Imprimibles destacados"}
             </h2>
 
-            
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
+              {filtroActivo === "hogar"
+                ? "Recursos imprimibles para organizar el hogar, las mascotas y la información importante."
+                : "Una selección de nuestros imprimibles para jugar, organizar y disfrutar en casa."}
+            </p>
           </div>
 
-          {/* PRODUCTOS */}
+          {/* =================================================
+              PRODUCTOS EXISTENTES
+          ================================================== */}
 
-          {productosDestacados.length > 0 ? (
+          {productosMostrados.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:gap-6">
-              {productosDestacados.map((producto) => {
+              {productosMostrados.map((producto) => {
                 const tieneOferta =
                   producto.oferta?.activa === true;
 
@@ -108,12 +232,15 @@ const Tienda = () => {
                     producto.oferta.precioARS
                   : 0;
 
-                const descuento = tieneOferta
-                  ? Math.round(
-                      (ahorro / producto.precioARS) *
-                        100
-                    )
-                  : 0;
+                const descuento =
+                  tieneOferta &&
+                  producto.precioARS
+                    ? Math.round(
+                        (ahorro /
+                          producto.precioARS) *
+                          100
+                      )
+                    : 0;
 
                 return (
                   <article
@@ -134,7 +261,10 @@ const Tienda = () => {
                     >
                       <div className="aspect-[4/5] overflow-hidden bg-slate-50 p-1 sm:p-4">
                         <img
-                          src={producto.imagenes?.portada}
+                          src={
+                            producto.imagenes
+                              ?.portada
+                          }
                           alt={producto.nombre}
                           className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.02]"
                         />
@@ -146,39 +276,40 @@ const Tienda = () => {
                     <div className="flex flex-1 flex-col p-3 sm:p-5">
                       {/* BADGES */}
 
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-sky-700 sm:px-2.5 sm:text-[12px]">
-                          <Download
-                            size={11}
-                            className="shrink-0"
-                          />
+<div className="flex flex-nowrap items-center gap-1.5">
+  {/* PDF */}
 
-                          <span className="hidden sm:inline">
-                            Descargable
-                          </span>
+  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:px-2.5 sm:text-[10px]">
+    <Download
+      size={10}
+      className="shrink-0"
+    />
 
-                          <span className="sm:hidden">
-                            PDF
-                          </span>
-                        </span>
+    PDF
+  </span>
 
-                        {producto.destacado && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-amber-700 sm:px-2.5 sm:text-[10px]">
-                            <Star
-                              size={10}
-                              fill="currentColor"
-                            />
+  {/* TIPO DE IMPRIMIBLE */}
 
-                            <span className="hidden sm:inline">
-                              Destacado
-                            </span>
+  {producto.linea === "hogar" ? (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-emerald-700 sm:px-2.5 sm:text-[10px]">
+      <Home
+        size={10}
+        className="shrink-0"
+      />
 
-                            <span className="sm:hidden">
-                              Top
-                            </span>
-                          </span>
-                        )}
-                      </div>
+      Hogar
+    </span>
+  ) : (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-violet-700 sm:px-2.5 sm:text-[10px]">
+      <Baby
+        size={10}
+        className="shrink-0"
+      />
+
+      Infantil
+    </span>
+  )}
+</div>
 
                       {/* RESEÑAS */}
 
@@ -269,49 +400,46 @@ const Tienda = () => {
               })}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-12 text-center">
-              <ShoppingBag
-                size={28}
+            /* =================================================
+               HOGAR Y MASCOTAS SIN PRODUCTOS TODAVÍA
+            ================================================== */
+
+            <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+              <Home
+                size={30}
                 className="mx-auto text-slate-400"
               />
 
-              <h2 className="mt-3 text-lg font-semibold text-slate-900">
-                Próximamente nuevos imprimibles
-              </h2>
-
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                Estamos preparando nuevas actividades de
-                Toby y Luna para descargar e imprimir.
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                Próximamente vas a encontrar aquí
+                nuevos recursos imprimibles para el
+                hogar y las mascotas.
               </p>
             </div>
           )}
 
-          {/* VER TODOS */}
+          {/* =================================================
+              VER TODOS
+          ================================================== */}
 
-          {productosDigitales.length > 4 && (
-            <div className="mt-8 flex justify-center">
-              <button
-                type="button"
-                onClick={() =>
-                  navigate("/tienda/digitales")
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
-              >
-                <Download size={16} />
-                Ver todos los imprimibles
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
+          {filtroActivo !== "hogar" &&
+            productosDigitales.length > 4 && (
+              <div className="mt-8 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      "/tienda/digitales"
+                    )
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+                >
+                  <Download size={16} />
 
-      {/* =========================================================
-          INFORMACIÓN PRODUCTOS DIGITALES
-      ========================================================== */}
-
-      <section className="border-t border-slate-200 bg-slate-50 px-5 py-12 sm:py-14">
-        <div className="mx-auto max-w-3xl text-center">
-           
+                  Ver todos los imprimibles
+                </button>
+              </div>
+            )}
         </div>
       </section>
     </main>

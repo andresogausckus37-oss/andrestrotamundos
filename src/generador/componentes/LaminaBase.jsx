@@ -1,5 +1,9 @@
 import { ESTILOS_IMPRIMIBLES } from "../config/estilosImprimibles";
 
+/* =========================================================
+   LÁMINA BASE
+========================================================= */
+
 export default function LaminaBase({
   children,
 
@@ -30,7 +34,10 @@ export default function LaminaBase({
         boxSizing: "border-box",
       }}
     >
-      {/* LOGO OFICIAL */}
+      {/* =====================================================
+          LOGO
+      ====================================================== */}
+
       {mostrarLogo && (
         <img
           src={logo.url}
@@ -48,56 +55,60 @@ export default function LaminaBase({
         />
       )}
 
-      {/* ENCABEZADO */}
-      <header
-        style={{
-          position: "absolute",
-          top: "45px",
-          left: "45px",
-          width: "500px",
-        }}
-      >
-        {titulo && (
-          <h1
-            style={{
-              margin: 0,
+      {/* =====================================================
+          ENCABEZADO
+      ====================================================== */}
 
-              fontFamily:
-                tipografia.titulo,
+      {(titulo || instrucciones) && (
+        <header
+          style={{
+            position: "absolute",
+            top: "45px",
+            left: "45px",
+            width: "500px",
+          }}
+        >
+          {titulo && (
+            <h1
+              style={{
+                margin: 0,
+                fontFamily:
+                  tipografia.titulo,
+                fontSize:
+                  `${tamanoTitulo}px`,
+                fontWeight: 400,
+                lineHeight: 1.15,
+              }}
+            >
+              {titulo}
+            </h1>
+          )}
 
-              fontSize:
-                `${tamanoTitulo}px`,
+          {instrucciones && (
+            <p
+              style={{
+                marginTop:
+                  titulo
+                    ? "12px"
+                    : 0,
+                marginBottom: 0,
+                fontFamily:
+                  tipografia.instrucciones,
+                fontSize:
+                  `${tamanoInstrucciones}px`,
+                lineHeight: 1.3,
+              }}
+            >
+              {instrucciones}
+            </p>
+          )}
+        </header>
+      )}
 
-              fontWeight: 400,
+      {/* =====================================================
+          CONTENIDO
+      ====================================================== */}
 
-              lineHeight: 1.15,
-            }}
-          >
-            {titulo}
-          </h1>
-        )}
-
-        {instrucciones && (
-          <p
-            style={{
-              marginTop: "12px",
-              marginBottom: 0,
-
-              fontFamily:
-                tipografia.instrucciones,
-
-              fontSize:
-                `${tamanoInstrucciones}px`,
-
-              lineHeight: 1.3,
-            }}
-          >
-            {instrucciones}
-          </p>
-        )}
-      </header>
-
-      {/* CONTENIDO */}
       <main
         style={{
           position: "absolute",

@@ -1,6 +1,6 @@
 export const ESTILOS_IMPRIMIBLES = {
   logo: {
-    url: "https://i.postimg.cc/KvRB21tY/11206.png",
+    url: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logo-andres-imprimibles",
     ancho: 130,
     top: 20,
     right: 20,
@@ -18,7 +18,7 @@ export const ESTILOS_IMPRIMIBLES = {
     blur: 0,
 
     marcaAgua: {
-      texto: "TOBY Y LUNA IMPRIMIBLES",
+      texto: "ANDRÉS IMPRIMIBLES",
 
       cantidad: 6,
 
