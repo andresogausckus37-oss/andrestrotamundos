@@ -231,6 +231,237 @@ function obtenerBandaComplejidad(
     : "Sin clasificar";
 }
 
+function calcularObjetivoBandas(cantidad) {
+  const bandas = [
+    "Muy baja",
+    "Baja",
+    "Media",
+    "Alta",
+    "Muy alta",
+  ];
+
+  const objetivo = {
+    "Muy baja": 0,
+    Baja: 0,
+    Media: 0,
+    Alta: 0,
+    "Muy alta": 0,
+  };
+
+  if (
+    !Number.isFinite(cantidad) ||
+    cantidad <= 0
+  ) {
+    return objetivo;
+  }
+
+  const cantidadEntera =
+    Math.floor(cantidad);
+
+  const cantidadBase =
+    Math.floor(
+      cantidadEntera /
+        bandas.length
+    );
+
+  let sobrantes =
+    cantidadEntera %
+    bandas.length;
+
+  bandas.forEach(
+    (banda) => {
+      objetivo[banda] =
+        cantidadBase +
+        (sobrantes > 0
+          ? 1
+          : 0);
+
+      if (sobrantes > 0) {
+        sobrantes -= 1;
+      }
+    }
+  );
+
+  return objetivo;
+}
+
+function calcularFaltantesPorBanda(
+  items,
+  cantidad
+) {
+  const objetivo =
+    calcularObjetivoBandas(
+      cantidad
+    );
+
+  const disponibles =
+    contarBandasComplejidad(
+      items
+    );
+
+  return {
+    "Muy baja":
+      Math.max(
+        0,
+        objetivo["Muy baja"] -
+          (disponibles["Muy baja"] ?? 0)
+      ),
+
+    Baja:
+      Math.max(
+        0,
+        objetivo.Baja -
+          (disponibles.Baja ?? 0)
+      ),
+
+    Media:
+      Math.max(
+        0,
+        objetivo.Media -
+          (disponibles.Media ?? 0)
+      ),
+
+    Alta:
+      Math.max(
+        0,
+        objetivo.Alta -
+          (disponibles.Alta ?? 0)
+      ),
+
+    "Muy alta":
+      Math.max(
+        0,
+        objetivo["Muy alta"] -
+          (disponibles["Muy alta"] ?? 0)
+      ),
+  };
+}
+
+function generarCandidatosDirigidos({
+  nivel,
+  faltantes,
+  semillaInicial,
+  maxIntentos = 1000,
+}) {
+  const configuracion =
+    CONFIG_LABERINTO[nivel];
+
+  if (!configuracion) {
+    return {
+      encontrados: [],
+      pendientes: faltantes,
+      intentos: 0,
+      completo: false,
+    };
+  }
+
+  const pendientes = {
+    "Muy baja":
+      faltantes["Muy baja"] ?? 0,
+
+    Baja:
+      faltantes.Baja ?? 0,
+
+    Media:
+      faltantes.Media ?? 0,
+
+    Alta:
+      faltantes.Alta ?? 0,
+
+    "Muy alta":
+      faltantes["Muy alta"] ?? 0,
+  };
+
+  const totalObjetivo =
+    Object.values(
+      pendientes
+    ).reduce(
+      (total, cantidad) =>
+        total + cantidad,
+      0
+    );
+
+  const encontrados = [];
+
+  let semillaCandidata =
+    semillaInicial;
+
+  let intentos = 0;
+
+  while (
+    encontrados.length <
+      totalObjetivo &&
+    intentos < maxIntentos
+  ) {
+    const validacion =
+      validarLaberinto(
+        configuracion.filas,
+        configuracion.columnas,
+        semillaCandidata
+      );
+
+    const item = {
+      nivel,
+      ...validacion,
+    };
+
+    const complejidad =
+      calcularComplejidad(
+        item
+      );
+
+    const bandaComplejidad =
+      obtenerBandaComplejidad(
+        complejidad
+      );
+
+    if (
+      validacion.valido &&
+      (
+        pendientes[
+          bandaComplejidad
+        ] ?? 0
+      ) > 0
+    ) {
+      encontrados.push({
+  ...item,
+
+  complejidad,
+
+  bandaComplejidad,
+
+  semillaLaberinto:
+    semillaCandidata,
+
+  esGenerado:
+    true,
+});
+
+      pendientes[
+        bandaComplejidad
+      ] -= 1;
+    }
+
+    semillaCandidata += 1;
+    intentos += 1;
+  }
+
+  const completo =
+    Object.values(
+      pendientes
+    ).every(
+      (cantidad) =>
+        cantidad === 0
+    );
+
+  return {
+    encontrados,
+    pendientes,
+    intentos,
+    completo,
+  };
+}
+
 function contarBandasComplejidad(
   items
 ) {
@@ -360,6 +591,12 @@ function seleccionarProgresivo({
     return [];
   }
 
+  const objetivo =
+    Math.min(
+      cantidad,
+      items.length
+    );
+
   const bandas = [
     "Muy baja",
     "Baja",
@@ -370,15 +607,17 @@ function seleccionarProgresivo({
 
   const cantidadBase =
     Math.floor(
-      cantidad /
+      objetivo /
         bandas.length
     );
 
   let sobrantes =
-    cantidad %
+    objetivo %
     bandas.length;
 
   const seleccion = [];
+  const seleccionados =
+    new Set();
 
   bandas.forEach(
     (banda) => {
@@ -404,11 +643,94 @@ function seleccionarProgresivo({
             cantidadBanda,
         });
 
-      seleccion.push(
-        ...candidatos
+      candidatos.forEach(
+        (item) => {
+          if (
+            !seleccionados.has(
+              item
+            )
+          ) {
+            seleccionados.add(
+              item
+            );
+
+            seleccion.push(
+              item
+            );
+          }
+        }
       );
     }
   );
+
+  /* =====================================================
+     COMPLETAR FALTANTES
+  ===================================================== */
+
+  const faltantes =
+    objetivo -
+    seleccion.length;
+
+  if (
+    faltantes > 0
+  ) {
+    const disponibles =
+      items
+        .filter(
+          (item) =>
+            !seleccionados.has(
+              item
+            )
+        )
+        .sort(
+          (a, b) =>
+            a.complejidad -
+            b.complejidad
+        );
+
+    if (
+      faltantes >=
+      disponibles.length
+    ) {
+      seleccion.push(
+        ...disponibles
+      );
+    } else if (
+      faltantes === 1
+    ) {
+      seleccion.push(
+        disponibles[
+          Math.floor(
+            disponibles.length /
+              2
+          )
+        ]
+      );
+    } else {
+      for (
+        let i = 0;
+        i < faltantes;
+        i += 1
+      ) {
+        const posicion =
+          i /
+          (faltantes - 1);
+
+        const indice =
+          Math.round(
+            posicion *
+              (
+                disponibles.length -
+                1
+              )
+          );
+
+        seleccion.push(
+          disponibles[indice]
+        );
+      }
+    }
+  }
 
   return seleccion.sort(
     (a, b) =>
@@ -545,6 +867,9 @@ export default function GeneradorLaminas() {
     cantidadLegendarios,
     setCantidadLegendarios,
   ] = useState(0);
+
+  const [modoGeneracion, setModoGeneracion] =
+  useState("aleatorio");
 
   const [
     semilla,
@@ -731,6 +1056,237 @@ export default function GeneradorLaminas() {
       ]
     );
 
+  const validaciones =
+    useMemo(
+      () =>
+        actividades.map(
+          (
+            actividad,
+            index
+          ) => {
+            const configuracion =
+              CONFIG_LABERINTO[
+                actividad.nivel
+              ];
+
+            const semillaActividad =
+              semilla +
+              index;
+
+            const validacion =
+              validarLaberinto(
+                configuracion.filas,
+                configuracion.columnas,
+                semillaActividad
+              );
+
+            const item = {
+  numero: actividad.numero,
+  nivel: actividad.nivel,
+  indiceActividad: index,
+              semillaLaberinto: semillaActividad,
+  ...validacion,
+};
+
+            const complejidad =
+  calcularComplejidad(
+    item
+  );
+
+return {
+  ...item,
+
+  complejidad,
+
+  bandaComplejidad:
+    obtenerBandaComplejidad(
+      complejidad
+    ),
+};
+          }
+        ),
+      [
+        actividades,
+        semilla,
+      ]
+    );
+
+  const validacionesFinales =
+  useMemo(
+    () => {
+      if (
+        modoGeneracion ===
+        "aleatorio"
+      ) {
+        return validaciones;
+      }
+
+      const niveles = [
+        "facil",
+        "medio",
+        "dificil",
+        "experto",
+        "legendario",
+      ];
+
+      const resultado = [];
+
+      niveles.forEach(
+        (nivel) => {
+          const itemsNivel =
+            validaciones.filter(
+              (item) =>
+                item.nivel ===
+                nivel
+            );
+
+          const seleccion =
+            seleccionarProgresivo({
+              items:
+                itemsNivel,
+
+              cantidad:
+                itemsNivel.length,
+            });
+
+          resultado.push(
+            ...seleccion
+          );
+        }
+      );
+
+      return resultado;
+    },
+    [
+      validaciones,
+      modoGeneracion,
+    ]
+  );
+
+  const faltantesPrueba =
+  useMemo(
+    () => {
+      const faciles =
+        validaciones.filter(
+          (item) =>
+            item.nivel ===
+            "facil"
+        );
+
+      return calcularFaltantesPorBanda(
+        faciles,
+        faciles.length
+      );
+    },
+    [
+      validaciones,
+    ]
+  );
+
+  const candidatosDirigidosPrueba =
+  useMemo(
+    () =>
+      generarCandidatosDirigidos({
+        nivel:
+          "facil",
+
+        faltantes:
+          faltantesPrueba,
+
+        semillaInicial:
+          semilla +
+          actividades.length,
+
+        maxIntentos:
+          1000,
+      }),
+    [
+      faltantesPrueba,
+      semilla,
+      actividades.length,
+    ]
+  );
+
+  const seleccionDirigidaPrueba =
+  useMemo(
+    () => {
+      const faciles =
+        validaciones.filter(
+          (item) =>
+            item.nivel ===
+            "facil"
+        );
+
+      const candidatosCombinados = [
+        ...faciles,
+        ...candidatosDirigidosPrueba
+          .encontrados,
+      ];
+
+      return seleccionarProgresivo({
+        items:
+          candidatosCombinados,
+
+        cantidad:
+          faciles.length,
+      });
+    },
+    [
+      validaciones,
+      candidatosDirigidosPrueba,
+    ]
+  );
+
+  const bandasSeleccionDirigidaPrueba =
+  useMemo(
+    () =>
+      contarBandasComplejidad(
+        seleccionDirigidaPrueba
+      ),
+    [
+      seleccionDirigidaPrueba,
+    ]
+  );
+
+  const actividadesFinales =
+    useMemo(
+      () =>
+        validacionesFinales
+          .map(
+            (
+              item,
+              index
+            ) => {
+              const actividad =
+                actividades[
+                  item.indiceActividad
+                ];
+
+              if (!actividad) {
+                return null;
+              }
+
+              return {
+                ...actividad,
+
+                numeroOriginal:
+                  actividad.numero,
+
+                numeroProducto:
+                  index + 1,
+
+                semillaLaberinto:
+  item.semillaLaberinto,
+              };
+            }
+          )
+          .filter(Boolean),
+      [
+        validacionesFinales,
+        actividades,
+      ]
+    );
+
   /* =======================================================
      PÁGINAS DE JUEGOS
   ======================================================= */
@@ -738,16 +1294,16 @@ export default function GeneradorLaminas() {
   const paginasJuegos =
     useMemo(
       () =>
-        actividades.map(
+        actividadesFinales.map(
           (
             actividad,
             index
           ) => ({
             id:
-              `juego-${actividad.numero}`,
+              `juego-${index + 1}`,
 
             nombre:
-              `Laberinto ${actividad.numero}`,
+              `Laberinto ${index + 1}`,
 
             tipo:
               "juego",
@@ -755,12 +1311,22 @@ export default function GeneradorLaminas() {
             indiceActividad:
               index,
 
+            numeroProducto:
+              index + 1,
+
+            numeroOriginal:
+              actividad.numeroOriginal ??
+              actividad.numero,
+
+            semillaLaberinto:
+  actividad.semillaLaberinto,
+
             nivel:
               actividad.nivel,
           })
         ),
       [
-        actividades,
+        actividadesFinales,
       ]
     );
 
@@ -771,16 +1337,16 @@ export default function GeneradorLaminas() {
   const paginasSoluciones =
     useMemo(
       () =>
-        actividades.map(
+        actividadesFinales.map(
           (
             actividad,
             index
           ) => ({
             id:
-              `solucion-${actividad.numero}`,
+              `solucion-${index + 1}`,
 
             nombre:
-              `Solución ${actividad.numero}`,
+              `Solución ${index + 1}`,
 
             tipo:
               "solucion",
@@ -788,12 +1354,19 @@ export default function GeneradorLaminas() {
             indiceActividad:
               index,
 
+            numeroProducto:
+              index + 1,
+
+            numeroOriginal:
+              actividad.numeroOriginal ??
+              actividad.numero,
+
             nivel:
               actividad.nivel,
           })
         ),
       [
-        actividades,
+        actividadesFinales,
       ]
     );
 
@@ -850,7 +1423,8 @@ export default function GeneradorLaminas() {
     "facil";
 
   const semillaPagina =
-    semilla +
+  pagina?.semillaLaberinto ??
+  semilla +
     indiceActividad;
 
   const configuracionPagina =
@@ -951,63 +1525,6 @@ export default function GeneradorLaminas() {
      - las actividades
      - la semilla
   ======================================================= */
-
-  const validaciones =
-    useMemo(
-      () =>
-        actividades.map(
-          (
-            actividad,
-            index
-          ) => {
-            const configuracion =
-              CONFIG_LABERINTO[
-                actividad.nivel
-              ];
-
-            const semillaActividad =
-              semilla +
-              index;
-
-            const validacion =
-              validarLaberinto(
-                configuracion.filas,
-                configuracion.columnas,
-                semillaActividad
-              );
-
-            const item = {
-              numero:
-                actividad.numero,
-
-              nivel:
-                actividad.nivel,
-
-              ...validacion,
-            };
-
-            const complejidad =
-  calcularComplejidad(
-    item
-  );
-
-return {
-  ...item,
-
-  complejidad,
-
-  bandaComplejidad:
-    obtenerBandaComplejidad(
-      complejidad
-    ),
-};
-          }
-        ),
-      [
-        actividades,
-        semilla,
-      ]
-    );
 
   /* =======================================================
    PRUEBA DE SELECCIÓN PROGRESIVA
@@ -1149,7 +1666,7 @@ const seleccionProgresivaPrueba =
               nivel
             ) => {
               const itemsNivel =
-                validaciones.filter(
+                validacionesFinales.filter(
                   (
                     item
                   ) =>
@@ -1449,7 +1966,7 @@ const seleccionProgresivaPrueba =
           )
           .filter(Boolean),
       [
-        validaciones,
+        validacionesFinales,
       ]
     );
 
@@ -1680,6 +2197,183 @@ const seleccionProgresivaPrueba =
             </div>
 
           </div>
+
+          <div className="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
+
+  <p className="text-xs font-bold uppercase tracking-wide text-sky-600">
+    Modo de generación
+  </p>
+
+  <div className="mt-3 grid grid-cols-2 gap-2">
+
+    <button
+      type="button"
+      onClick={() =>
+        setModoGeneracion(
+          "aleatorio"
+        )
+      }
+      className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
+        modoGeneracion ===
+        "aleatorio"
+          ? "bg-slate-900 text-white"
+          : "bg-slate-100 text-slate-600"
+      }`}
+    >
+      Aleatorio
+    </button>
+
+    <button
+      type="button"
+      onClick={() =>
+        setModoGeneracion(
+          "progresivo"
+        )
+      }
+      className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
+        modoGeneracion ===
+        "progresivo"
+          ? "bg-slate-900 text-white"
+          : "bg-slate-100 text-slate-600"
+      }`}
+    >
+      Progresivo
+    </button>
+
+  </div>
+
+  <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+    {modoGeneracion ===
+    "progresivo"
+      ? "Los laberintos se seleccionarán y ordenarán de menor a mayor complejidad dentro de cada nivel."
+      : "Los laberintos se mantendrán en el orden normal generado por la semilla."}
+  </p>
+
+</div>
+
+          <p className="mt-2 text-xs text-slate-500">
+  Laberintos finales:{" "}
+  {validacionesFinales.length}
+</p>
+
+          <p className="mt-1 text-xs text-slate-500">
+  Actividades finales:{" "}
+  {actividadesFinales.length}
+</p>
+
+          <div className="mt-2 text-xs text-slate-500">
+  <p>
+    Faltantes Muy baja:{" "}
+    {faltantesPrueba["Muy baja"]}
+  </p>
+
+  <p>
+    Faltantes Baja:{" "}
+    {faltantesPrueba.Baja}
+  </p>
+
+  <p>
+    Faltantes Media:{" "}
+    {faltantesPrueba.Media}
+  </p>
+
+  <p>
+    Faltantes Alta:{" "}
+    {faltantesPrueba.Alta}
+  </p>
+
+  <p>
+    Faltantes Muy alta:{" "}
+    {faltantesPrueba["Muy alta"]}
+  </p>
+</div>
+
+          <div className="mt-2 text-xs text-slate-500">
+
+  <p>
+    Candidatos nuevos:{" "}
+    {
+      candidatosDirigidosPrueba
+        .encontrados.length
+    }
+  </p>
+
+  <p>
+    Intentos realizados:{" "}
+    {
+      candidatosDirigidosPrueba
+        .intentos
+    }
+  </p>
+
+  <p>
+    Búsqueda completa:{" "}
+    {
+      candidatosDirigidosPrueba
+        .completo
+        ? "Sí"
+        : "No"
+    }
+  </p>
+
+</div>
+
+          <div className="mt-3 rounded-xl bg-slate-100 p-3 text-xs text-slate-600">
+
+  <p className="font-bold text-slate-800">
+    Selección dirigida final
+  </p>
+
+  <p className="mt-2">
+    Total:{" "}
+    {
+      seleccionDirigidaPrueba.length
+    }
+  </p>
+
+  <p>
+    Muy baja:{" "}
+    {
+      bandasSeleccionDirigidaPrueba[
+        "Muy baja"
+      ] ?? 0
+    }
+  </p>
+
+  <p>
+    Baja:{" "}
+    {
+      bandasSeleccionDirigidaPrueba
+        .Baja ?? 0
+    }
+  </p>
+
+  <p>
+    Media:{" "}
+    {
+      bandasSeleccionDirigidaPrueba
+        .Media ?? 0
+    }
+  </p>
+
+  <p>
+    Alta:{" "}
+    {
+      bandasSeleccionDirigidaPrueba
+        .Alta ?? 0
+    }
+  </p>
+
+  <p>
+    Muy alta:{" "}
+    {
+      bandasSeleccionDirigidaPrueba[
+        "Muy alta"
+      ] ?? 0
+    }
+  </p>
+
+</div>
 
           {/* =================================================
               ACCIONES
