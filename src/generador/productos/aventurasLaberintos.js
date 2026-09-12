@@ -2,36 +2,345 @@
    PERSONAJES
 ========================================================= */
 
-export const PERSONAJES_LABERINTOS = {
-  toby: {
-    nombre: "Toby",
+  /* =========================================================
+     PERSONAJES
+  ========================================================= */
 
-    imagen:
-      "https://i.postimg.cc/fTwWBqBM/file-000000000204820e8213b33f08a90324.png",
+  export const PERSONAJES_LABERINTOS = {
+    /* =======================================================
+       MASCOTAS
+    ======================================================== */
 
-    emoji: "🐶",
+    toby: {
+      nombre: "Toby",
+      tema: "mascotas",
 
-    color:
-      "#0F7490",
+      imagen:
+        "https://i.postimg.cc/fTwWBqBM/file-000000000204820e8213b33f08a90324.png",
 
-    decoracion:
-      "🐾",
-  },
+      emoji: "🐶",
+      color: "#0F7490",
+      decoracion: "🐾",
 
-  luna: {
-    nombre: "Luna",
+      habilidades: [],
+    },
 
-    imagen:
-      "https://i.postimg.cc/7hPvMdwk/file-00000000e68c820ead57a74bfc91b08f.png",
+    luna: {
+      nombre: "Luna",
+      tema: "mascotas",
 
-    emoji: "🐱",
+      imagen:
+        "https://i.postimg.cc/7hPvMdwk/file-00000000e68c820ead57a74bfc91b08f.png",
 
-    color:
-      "#DB5685",
+      emoji: "🐱",
+      color: "#DB5685",
+      decoracion: "🐾",
 
-    decoracion:
-      "🐾",
-  },
+      habilidades: [],
+    },
+
+    /* =======================================================
+       OCÉANO
+    ======================================================== */
+
+    marina: {
+      nombre: "Marina",
+      tema: "oceano",
+      imagen: "",
+      emoji: "🧜‍♀️",
+      color: "#0284C7",
+      decoracion: "🫧",
+      habilidades: [],
+    },
+
+    finn: {
+      nombre: "Finn",
+      tema: "oceano",
+      imagen: "",
+      emoji: "🐬",
+      color: "#0891B2",
+      decoracion: "🌊",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       ESPACIO
+    ======================================================== */
+
+    nova: {
+      nombre: "Nova",
+      tema: "espacio",
+      imagen: "",
+      emoji: "👩‍🚀",
+      color: "#7C3AED",
+      decoracion: "⭐",
+      habilidades: [],
+    },
+
+    astro: {
+      nombre: "Astro",
+      tema: "espacio",
+      imagen: "",
+      emoji: "🤖",
+      color: "#2563EB",
+      decoracion: "✨",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       MONTAÑA
+    ======================================================== */
+
+    kai: {
+      nombre: "Kai",
+      tema: "montana",
+      imagen: "",
+      emoji: "🧗",
+      color: "#15803D",
+      decoracion: "🌲",
+      habilidades: [],
+    },
+
+    nora: {
+      nombre: "Nora",
+      tema: "montana",
+      imagen: "",
+      emoji: "🥾",
+      color: "#65A30D",
+      decoracion: "🏔️",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       PIRATAS
+    ======================================================== */
+
+    capitanRoco: {
+      nombre: "Capitán Roco",
+      tema: "piratas",
+      imagen: "",
+      emoji: "🏴‍☠️",
+      color: "#334155",
+      decoracion: "☠️",
+      habilidades: [],
+    },
+
+    perla: {
+      nombre: "Perla",
+      tema: "piratas",
+      imagen: "",
+      emoji: "🦜",
+      color: "#B45309",
+      decoracion: "⚓",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       CASTILLOS
+    ======================================================== */
+
+    arthur: {
+      nombre: "Arthur",
+      tema: "castillos",
+      imagen: "",
+      emoji: "🤴",
+      color: "#1D4ED8",
+      decoracion: "✨",
+      habilidades: [],
+    },
+
+    elara: {
+      nombre: "Elara",
+      tema: "castillos",
+      imagen: "",
+      emoji: "👸",
+      color: "#BE185D",
+      decoracion: "👑",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       DINOSAURIOS
+    ======================================================== */
+
+    rex: {
+      nombre: "Rex",
+      tema: "dinosaurios",
+      imagen: "",
+      emoji: "🦖",
+      color: "#166534",
+      decoracion: "🌿",
+      habilidades: [],
+    },
+
+    trika: {
+      nombre: "Trika",
+      tema: "dinosaurios",
+      imagen: "",
+      emoji: "🦕",
+      color: "#0F766E",
+      decoracion: "🌿",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       VIAJES
+    ======================================================== */
+
+    atlas: {
+      nombre: "Atlas",
+      tema: "viajes",
+      imagen: "",
+      emoji: "🧳",
+      color: "#0369A1",
+      decoracion: "🧭",
+      habilidades: [],
+    },
+
+    mila: {
+      nombre: "Mila",
+      tema: "viajes",
+      imagen: "",
+      emoji: "✈️",
+      color: "#C2410C",
+      decoracion: "🌍",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       NAVIDAD
+    ======================================================== */
+
+    nico: {
+      nombre: "Nico",
+      tema: "navidad",
+      imagen: "",
+      emoji: "🎅",
+      color: "#B91C1C",
+      decoracion: "❄️",
+      habilidades: [],
+    },
+
+    neva: {
+      nombre: "Neva",
+      tema: "navidad",
+      imagen: "",
+      emoji: "⛄",
+      color: "#0369A1",
+      decoracion: "❄️",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       HALLOWEEN
+    ======================================================== */
+
+    sombra: {
+      nombre: "Sombra",
+      tema: "halloween",
+      imagen: "",
+      emoji: "👻",
+      color: "#6D28D9",
+      decoracion: "🎃",
+      habilidades: [],
+    },
+
+    bruma: {
+      nombre: "Bruma",
+      tema: "halloween",
+      imagen: "",
+      emoji: "🧙",
+      color: "#7E22CE",
+      decoracion: "✨",
+      habilidades: [],
+    },
+
+    /* =======================================================
+       FAMILIA
+    ======================================================== */
+
+    sol: {
+      nombre: "Sol",
+      tema: "familia",
+      imagen: "",
+      emoji: "👧",
+      color: "#EA580C",
+      decoracion: "❤️",
+      habilidades: [],
+    },
+
+    teo: {
+      nombre: "Teo",
+      tema: "familia",
+      imagen: "",
+      emoji: "👦",
+      color: "#0284C7",
+      decoracion: "❤️",
+      habilidades: [],
+      
+    },
+    };
+
+    /* =========================================================
+   PERSONAJES POR TEMÁTICA
+========================================================= */
+
+export const PERSONAJES_POR_TEMATICA = {
+  mascotas: [
+    "toby",
+    "luna",
+  ],
+
+  oceano: [
+    "marina",
+    "finn",
+  ],
+
+  espacio: [
+    "nova",
+    "astro",
+  ],
+
+  montana: [
+    "kai",
+    "nora",
+  ],
+
+  piratas: [
+    "capitanRoco",
+    "perla",
+  ],
+
+  castillos: [
+    "arthur",
+    "elara",
+  ],
+
+  dinosaurios: [
+    "rex",
+    "trika",
+  ],
+
+  viajes: [
+    "atlas",
+    "mila",
+  ],
+
+  navidad: [
+    "nico",
+    "neva",
+  ],
+
+  halloween: [
+    "sombra",
+    "bruma",
+  ],
+
+  familia: [
+    "sol",
+    "teo",
+  ],
+};
 
   /* =======================================================
      PERSONAJES FUTUROS
@@ -49,7 +358,7 @@ export const PERSONAJES_LABERINTOS = {
        decoracion: "🐾",
      },
   ======================================================== */
-};
+
 
 /* =========================================================
    OBJETOS Y EMOJIS
@@ -61,31 +370,43 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   pelota: {
+    nombre: "pelota",
+    articulo: "la",
     emoji: "🏀",
     imagen: "",
   },
 
   ovillo: {
+    nombre: "ovillo",
+    articulo: "el",
     emoji: "🧶",
     imagen: "",
   },
 
   hueso: {
+    nombre: "hueso",
+    articulo: "el",
     emoji: "🦴",
     imagen: "",
   },
 
   comida: {
+    nombre: "comida",
+    articulo: "la",
     emoji: "🥣",
     imagen: "",
   },
 
   frisbee: {
+    nombre: "frisbee",
+    articulo: "el",
     emoji: "🥏",
     imagen: "",
   },
 
   pescado: {
+    nombre: "pescado",
+    articulo: "el",
     emoji: "🐟",
     imagen: "",
   },
@@ -95,36 +416,50 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   sombrilla: {
+    nombre: "sombrilla",
+    articulo: "la",
     emoji: "⛱️",
     imagen: "",
   },
 
   caracola: {
+    nombre: "caracola",
+    articulo: "la",
     emoji: "🐚",
     imagen: "",
   },
 
   coral: {
+    nombre: "coral",
+    articulo: "el",
     emoji: "🪸",
     imagen: "",
   },
 
   isla: {
+    nombre: "isla",
+    articulo: "la",
     emoji: "🏝️",
     imagen: "",
   },
 
   barco: {
+    nombre: "barco",
+    articulo: "el",
     emoji: "⛵",
     imagen: "",
   },
 
   salvavidas: {
+    nombre: "salvavidas",
+    articulo: "el",
     emoji: "🛟",
     imagen: "",
   },
 
   ancla: {
+    nombre: "ancla",
+    articulo: "el",
     emoji: "⚓",
     imagen: "",
   },
@@ -134,26 +469,36 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   cohete: {
+    nombre: "cohete",
+    articulo: "el",
     emoji: "🚀",
     imagen: "",
   },
 
   planeta: {
+    nombre: "planeta",
+    articulo: "el",
     emoji: "🪐",
     imagen: "",
   },
 
   estrella: {
+    nombre: "estrella",
+    articulo: "la",
     emoji: "⭐",
     imagen: "",
   },
 
   satelite: {
+    nombre: "satélite",
+    articulo: "el",
     emoji: "🛰️",
     imagen: "",
   },
 
   meteorito: {
+    nombre: "meteorito",
+    articulo: "el",
     emoji: "☄️",
     imagen: "",
   },
@@ -163,31 +508,43 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   montana: {
+    nombre: "montaña",
+    articulo: "la",
     emoji: "🏔️",
     imagen: "",
   },
 
   bosque: {
+    nombre: "bosque",
+    articulo: "el",
     emoji: "🌲",
     imagen: "",
   },
 
   tiendaCampana: {
+    nombre: "tienda de campaña",
+    articulo: "la",
     emoji: "⛺",
     imagen: "",
   },
 
   mochila: {
+    nombre: "mochila",
+    articulo: "la",
     emoji: "🎒",
     imagen: "",
   },
 
   brujula: {
+    nombre: "brújula",
+    articulo: "la",
     emoji: "🧭",
     imagen: "",
   },
 
   fogata: {
+    nombre: "fogata",
+    articulo: "la",
     emoji: "🔥",
     imagen: "",
   },
@@ -197,16 +554,22 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   tesoro: {
+    nombre: "tesoro",
+    articulo: "el",
     emoji: "💰",
     imagen: "",
   },
 
   cofre: {
+    nombre: "cofre",
+    articulo: "el",
     emoji: "🧰",
     imagen: "",
   },
 
   mapa: {
+    nombre: "mapa",
+    articulo: "el",
     emoji: "🗺️",
     imagen: "",
   },
@@ -216,16 +579,22 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   castillo: {
+    nombre: "castillo",
+    articulo: "el",
     emoji: "🏰",
     imagen: "",
   },
 
   corona: {
+    nombre: "corona",
+    articulo: "la",
     emoji: "👑",
     imagen: "",
   },
 
   llave: {
+    nombre: "llave",
+    articulo: "la",
     emoji: "🗝️",
     imagen: "",
   },
@@ -235,6 +604,8 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   huevoDinosaurio: {
+    nombre: "huevo de dinosaurio",
+    articulo: "el",
     emoji: "🥚",
     imagen: "",
   },
@@ -244,26 +615,36 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   avion: {
+    nombre: "avión",
+    articulo: "el",
     emoji: "✈️",
     imagen: "",
   },
 
   auto: {
+    nombre: "auto",
+    articulo: "el",
     emoji: "🚗",
     imagen: "",
   },
 
   tren: {
+    nombre: "tren",
+    articulo: "el",
     emoji: "🚂",
     imagen: "",
   },
 
   autobus: {
+    nombre: "autobús",
+    articulo: "el",
     emoji: "🚌",
     imagen: "",
   },
 
   valija: {
+    nombre: "valija",
+    articulo: "la",
     emoji: "🧳",
     imagen: "",
   },
@@ -273,31 +654,43 @@ export const OBJETOS_LABERINTOS = {
   ======================================================== */
 
   arbolNavidad: {
+    nombre: "árbol de Navidad",
+    articulo: "el",
     emoji: "🎄",
     imagen: "",
   },
 
   regalo: {
+    nombre: "regalo",
+    articulo: "el",
     emoji: "🎁",
     imagen: "",
   },
 
   calabaza: {
+    nombre: "calabaza",
+    articulo: "la",
     emoji: "🎃",
     imagen: "",
   },
 
   fantasma: {
+    nombre: "fantasma",
+    articulo: "el",
     emoji: "👻",
     imagen: "",
   },
 
   corazon: {
+    nombre: "corazón",
+    articulo: "el",
     emoji: "❤️",
     imagen: "",
   },
 
   flores: {
+    nombre: "ramo de flores",
+    articulo: "el",
     emoji: "💐",
     imagen: "",
   },
@@ -345,92 +738,181 @@ export const IMAGENES_LABERINTOS = {
 
 export const TEMATICAS_LABERINTOS = {
   mascotas: {
-    nombre:
-      "Mascotas",
-
-    decoracion:
-      "🐾",
+    nombre: "Mascotas",
+    decoracion: "🐾",
+    tituloBase: "¡Una nueva aventura!",
+    instruccionBase:
+      "Encontrá el camino correcto hasta el objetivo.",
   },
 
   oceano: {
-    nombre:
-      "Océano",
-
-    decoracion:
-      "🫧",
+    nombre: "Océano",
+    decoracion: "🫧",
+    tituloBase: "¡Aventura bajo el mar!",
+    instruccionBase:
+      "Encontrá el camino correcto entre las profundidades del océano.",
   },
 
   espacio: {
-    nombre:
-      "Espacio",
-
-    decoracion:
-      "⭐",
+    nombre: "Espacio",
+    decoracion: "⭐",
+    tituloBase: "¡Misión espacial!",
+    instruccionBase:
+      "Encontrá la ruta correcta a través del espacio.",
   },
 
   montana: {
-    nombre:
-      "Montaña",
-
-    decoracion:
-      "🌲",
+    nombre: "Montaña",
+    decoracion: "🌲",
+    tituloBase: "¡Aventura en la montaña!",
+    instruccionBase:
+      "Encontrá el camino correcto entre senderos y naturaleza.",
   },
 
   piratas: {
-    nombre:
-      "Piratas",
-
-    decoracion:
-      "☠️",
+    nombre: "Piratas",
+    decoracion: "☠️",
+    tituloBase: "¡Aventura pirata!",
+    instruccionBase:
+      "Encontrá la ruta correcta hasta el objetivo pirata.",
   },
 
   castillos: {
-    nombre:
-      "Castillos",
-
-    decoracion:
-      "✨",
+    nombre: "Castillos",
+    decoracion: "✨",
+    tituloBase: "¡Misión en el castillo!",
+    instruccionBase:
+      "Encontrá el camino correcto entre torres y pasadizos.",
   },
 
   dinosaurios: {
-    nombre:
-      "Dinosaurios",
-
-    decoracion:
-      "🦖",
+    nombre: "Dinosaurios",
+    decoracion: "🦖",
+    tituloBase: "¡Aventura jurásica!",
+    instruccionBase:
+      "Encontrá el camino correcto en tierra de dinosaurios.",
   },
 
   viajes: {
-    nombre:
-      "Viajes",
-
-    decoracion:
-      "🧭",
+    nombre: "Viajes",
+    decoracion: "🧭",
+    tituloBase: "¡Comienza el viaje!",
+    instruccionBase:
+      "Encontrá la ruta correcta para continuar la aventura.",
   },
 
   navidad: {
-    nombre:
-      "Navidad",
-
-    decoracion:
-      "❄️",
+    nombre: "Navidad",
+    decoracion: "❄️",
+    tituloBase: "¡Misión navideña!",
+    instruccionBase:
+      "Encontrá el camino correcto en esta aventura de Navidad.",
   },
 
   halloween: {
-    nombre:
-      "Halloween",
-
-    decoracion:
-      "🎃",
+    nombre: "Halloween",
+    decoracion: "🎃",
+    tituloBase: "¡Aventura de Halloween!",
+    instruccionBase:
+      "Encontrá el camino correcto entre sorpresas y misterios.",
   },
 
   familia: {
-    nombre:
-      "Familia",
-
-    decoracion:
-      "❤️",
+    nombre: "Familia",
+    decoracion: "❤️",
+    tituloBase: "¡Una misión especial!",
+    instruccionBase:
+      "Encontrá el camino correcto hasta el objetivo.",
   },
+};
+
+/* =========================================================
+   OBJETOS POR TEMÁTICA
+========================================================= */
+
+export const OBJETOS_POR_TEMATICA = {
+  mascotas: [
+    "pelota",
+    "ovillo",
+    "hueso",
+    "comida",
+    "frisbee",
+    "pescado",
+  ],
+
+  oceano: [
+    "sombrilla",
+    "caracola",
+    "coral",
+    "isla",
+    "barco",
+    "salvavidas",
+    "ancla",
+  ],
+
+  espacio: [
+    "cohete",
+    "planeta",
+    "estrella",
+    "satelite",
+    "meteorito",
+  ],
+
+  montana: [
+    "montana",
+    "bosque",
+    "tiendaCampana",
+    "mochila",
+    "brujula",
+    "fogata",
+  ],
+
+  piratas: [
+    "tesoro",
+    "cofre",
+    "mapa",
+    "barco",
+    "brujula",
+    "isla",
+  ],
+
+  castillos: [
+    "castillo",
+    "corona",
+    "llave",
+  ],
+
+  dinosaurios: [
+    "huevoDinosaurio",
+    "bosque",
+    "montana",
+  ],
+
+  viajes: [
+    "avion",
+    "auto",
+    "tren",
+    "autobus",
+    "valija",
+    "mapa",
+  ],
+
+  navidad: [
+    "arbolNavidad",
+    "regalo",
+    "estrella",
+  ],
+
+  halloween: [
+    "calabaza",
+    "fantasma",
+  ],
+
+  familia: [
+    "corazon",
+    "flores",
+    "regalo",
+  ],
 };
 
 /* =========================================================
@@ -695,43 +1177,95 @@ export function obtenerTematicaLaberinto(
  * Esto permite generar 20, 50, 100
  * o más laberintos reutilizando aventuras.
  */
-export function obtenerAventuraLaberinto(
-  indice = 0
-) {
-  if (
-    AVENTURAS_LABERINTOS.length === 0
-  ) {
-    return {
-      tema:
-        "mascotas",
 
-      personaje:
-        "toby",
+/* =========================================================
+   GENERAR TEXTO DE AVENTURA
+========================================================= */
 
-      nombrePersonaje:
-        "Toby",
-
-      emojiPersonaje:
-        "🐶",
-
-      colorPersonaje:
-        "#0F7490",
-
-      decoracion:
-        "🐾",
-
-      objeto:
-        "pelota",
-
-      emojiObjeto:
-        "🏀",
-
+function generarTextoAventura({
+  indice,
+  personaje,
+  articulo,
+  objeto,
+}) {
+  const variantes = [
+    {
       titulo:
-        "¡Encontrá el camino!",
+        `¡${personaje} busca ${articulo} ${objeto}!`,
 
       instrucciones:
-        "Encontrá el camino correcto hasta la meta.",
-    };
+        `Ayudá a ${personaje} a encontrar el camino hasta ${articulo} ${objeto}.`,
+    },
+
+    {
+      titulo:
+        `¡${personaje} tiene una misión!`,
+
+      instrucciones:
+        `${personaje} necesita llegar hasta ${articulo} ${objeto}. Encontrá el camino correcto.`,
+    },
+
+    {
+      titulo:
+        `¡A encontrar ${articulo} ${objeto}!`,
+
+      instrucciones:
+        `Mostrale a ${personaje} qué camino debe seguir para llegar hasta ${articulo} ${objeto}.`,
+    },
+
+    {
+      titulo:
+        `¡Una nueva aventura para ${personaje}!`,
+
+      instrucciones:
+        `Encontrá la ruta correcta para que ${personaje} llegue hasta ${articulo} ${objeto}.`,
+    },
+
+    {
+      titulo:
+        `¡${personaje} va por ${articulo} ${objeto}!`,
+
+      instrucciones:
+        `Recorré el laberinto y ayudá a ${personaje} a alcanzar ${articulo} ${objeto}.`,
+    },
+
+    {
+      titulo:
+        `¡El desafío de ${personaje}!`,
+
+      instrucciones:
+        `${personaje} quiere encontrar ${articulo} ${objeto}. ¿Podés descubrir el camino correcto?`,
+    },
+  ];
+
+  return variantes[
+    indice %
+      variantes.length
+  ];
+}
+
+/* =========================================================
+   SELECCIONAR PERSONAJE
+========================================================= */
+
+function seleccionarPersonajeLaberinto({
+  tema,
+  personajeSeleccionado,
+  modoPersonaje,
+  indice,
+  semilla,
+}) {
+  const personajesTema =
+    PERSONAJES_POR_TEMATICA[
+      tema
+    ] ||
+    PERSONAJES_POR_TEMATICA
+      .mascotas;
+
+  if (
+    personajesTema.length === 0
+  ) {
+    return "toby";
   }
 
   const indiceSeguro =
@@ -741,8 +1275,330 @@ export function obtenerAventuraLaberinto(
         : 0
     );
 
-  return AVENTURAS_LABERINTOS[
-    indiceSeguro %
-      AVENTURAS_LABERINTOS.length
+    /* =======================================================
+     FIJO
+  ======================================================== */
+
+  if (
+    modoPersonaje ===
+    "fijo"
+  ) {
+    if (
+      personajeSeleccionado !==
+        "automatico" &&
+      personajesTema.includes(
+        personajeSeleccionado
+      )
+    ) {
+      return personajeSeleccionado;
+    }
+
+    return personajesTema[0];
+  }
+
+  /* =======================================================
+     ALEATORIO DETERMINISTA
+  ======================================================== */
+
+  if (
+    modoPersonaje ===
+    "aleatorio"
+  ) {
+    const semillaSegura =
+      Number.isFinite(semilla)
+        ? semilla
+        : 1;
+
+    const valor =
+      Math.sin(
+        semillaSegura *
+          12.9898 +
+        indiceSeguro *
+          78.233
+      ) *
+      43758.5453;
+
+    const fraccion =
+      valor -
+      Math.floor(valor);
+
+    const indiceAleatorio =
+      Math.floor(
+        fraccion *
+          personajesTema.length
+      );
+
+    return personajesTema[
+      indiceAleatorio
+    ];
+  }
+
+  /* =======================================================
+     ROTATIVO
+  ======================================================== */
+
+  let inicioRotacion = 0;
+
+  if (
+    personajeSeleccionado !==
+      "automatico" &&
+    personajesTema.includes(
+      personajeSeleccionado
+    )
+  ) {
+    inicioRotacion =
+      personajesTema.indexOf(
+        personajeSeleccionado
+      );
+  }
+
+  return personajesTema[
+    (
+      inicioRotacion +
+      indiceSeguro
+    ) %
+      personajesTema.length
   ];
+}
+
+export function obtenerAventuraLaberinto(
+  indice = 0,
+  tema = "mascotas",
+  opciones = {}
+) {
+  const indiceSeguro =
+    Math.abs(
+      Number.isFinite(indice)
+        ? Math.floor(indice)
+        : 0
+    );
+
+  const {
+  personajeSeleccionado =
+    "automatico",
+
+  modoPersonaje =
+    "rotativo",
+
+  semilla = 1,
+} = opciones;
+
+  /* =======================================================
+     MASCOTAS
+  ======================================================== */
+
+  if (tema === "mascotas") {
+  if (
+    AVENTURAS_LABERINTOS.length === 0
+  ) {
+    return null;
+  }
+
+  const aventuraBase =
+    AVENTURAS_LABERINTOS[
+      indiceSeguro %
+        AVENTURAS_LABERINTOS.length
+    ];
+
+    const personajeId =
+      seleccionarPersonajeLaberinto({
+        tema,
+
+        personajeSeleccionado,
+
+        modoPersonaje,
+
+        indice:
+          indiceSeguro,
+
+        semilla,
+      });
+
+    const personaje =
+      PERSONAJES_LABERINTOS[
+        personajeId
+      ];
+
+  const objeto =
+    OBJETOS_LABERINTOS[
+      aventuraBase.objeto
+    ];
+
+  const nombreObjeto =
+    objeto?.nombre ||
+    aventuraBase.objeto ||
+    "objetivo";
+
+  const articuloObjeto =
+    objeto?.articulo ||
+    "el";
+
+  /*
+    Si coincide con el personaje original,
+    conservamos el texto especial que ya existía.
+
+    Si cambió por modo fijo o aleatorio,
+    generamos un texto compatible con el nuevo personaje.
+  */
+
+  const mismoPersonaje =
+    personajeId ===
+    aventuraBase.personaje;
+
+  const textoAventura =
+    mismoPersonaje
+      ? {
+          titulo:
+            aventuraBase.titulo,
+
+          instrucciones:
+            aventuraBase.instrucciones,
+        }
+      : generarTextoAventura({
+          indice:
+            indiceSeguro,
+
+          personaje:
+            personaje.nombre,
+
+          articulo:
+            articuloObjeto,
+
+          objeto:
+            nombreObjeto,
+        });
+
+  return {
+    ...aventuraBase,
+
+    personaje:
+      personajeId,
+
+    nombrePersonaje:
+      personaje.nombre,
+
+    emojiPersonaje:
+      personaje.emoji,
+
+    colorPersonaje:
+      personaje.color,
+
+    decoracion:
+      personaje.decoracion ||
+      aventuraBase.decoracion,
+
+    emojiObjeto:
+      objeto?.emoji ||
+      aventuraBase.emojiObjeto ||
+      "⭐",
+
+    titulo:
+      textoAventura.titulo,
+
+    instrucciones:
+      textoAventura.instrucciones,
+  };
+}
+
+  /* =======================================================
+     OTRAS TEMÁTICAS
+  ======================================================== */
+
+  const objetosTema =
+    OBJETOS_POR_TEMATICA[tema] ||
+    OBJETOS_POR_TEMATICA.mascotas;
+
+  const idObjeto =
+    objetosTema[
+      indiceSeguro %
+        objetosTema.length
+    ];
+
+  const objeto =
+    OBJETOS_LABERINTOS[
+      idObjeto
+    ];
+
+  const nombreObjeto =
+  objeto?.nombre ||
+  "objetivo";
+
+const articuloObjeto =
+  objeto?.articulo ||
+  "el";
+
+  const configuracionTematica =
+    TEMATICAS_LABERINTOS[
+      tema
+    ] ||
+    TEMATICAS_LABERINTOS.mascotas;
+
+  /* =======================================================
+     SELECCIÓN DE PERSONAJE
+  ======================================================= */
+
+  const personajeId =
+    seleccionarPersonajeLaberinto({
+      tema,
+
+      personajeSeleccionado,
+
+      modoPersonaje,
+
+      indice:
+        indiceSeguro,
+
+      semilla,
+    });
+
+  const personaje =
+    PERSONAJES_LABERINTOS[
+      personajeId
+    ];
+
+  const textoAventura =
+    generarTextoAventura({
+      indice:
+        indiceSeguro,
+
+      personaje:
+        personaje.nombre,
+
+      articulo:
+        articuloObjeto,
+
+      objeto:
+        nombreObjeto,
+    });
+
+  return {
+    tema,
+
+    personaje:
+      personajeId,
+
+    nombrePersonaje:
+      personaje.nombre,
+
+    emojiPersonaje:
+      personaje.emoji,
+
+    colorPersonaje:
+      personaje.color,
+
+    decoracion:
+      configuracionTematica.decoracion,
+
+    objeto:
+      idObjeto,
+
+    emojiObjeto:
+      objeto?.emoji || "⭐",
+
+    titulo:
+  textoAventura.titulo,
+
+instrucciones:
+  textoAventura.instrucciones,
+  };
 }

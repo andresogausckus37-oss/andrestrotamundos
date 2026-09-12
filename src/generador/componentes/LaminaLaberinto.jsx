@@ -57,6 +57,11 @@ export default function LaminaLaberinto({
   filas = 8,
   columnas = 6,
   semilla = 1,
+  publico,
+  edad,
+  tematica,
+  personaje = "automatico",
+  modoPersonaje = "rotativo",
   mostrarSolucion = false,
 }) {
   /* =======================================================
@@ -64,7 +69,18 @@ export default function LaminaLaberinto({
   ======================================================== */
 
   const aventura =
-    obtenerAventuraLaberinto(numero - 1);
+  obtenerAventuraLaberinto(
+    numero - 1,
+    tematica,
+    {
+      personajeSeleccionado:
+        personaje,
+
+      modoPersonaje,
+
+      semilla,
+    }
+  );
 
   /* =======================================================
      NIVEL
