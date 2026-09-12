@@ -462,6 +462,142 @@ function generarCandidatosDirigidos({
   };
 }
 
+function generarSeleccionDirigidaPorNivel({
+  validaciones,
+  nivel,
+  cantidad,
+  semillaInicial,
+  maxIntentos = 2000,
+}) {
+  const itemsNivel =
+    validaciones.filter(
+      (item) =>
+        item.nivel === nivel
+    );
+
+  if (
+    cantidad <= 0 ||
+    itemsNivel.length === 0
+  ) {
+    return {
+      seleccion: [],
+      candidatosNuevos: [],
+      faltantes: {
+        "Muy baja": 0,
+        Baja: 0,
+        Media: 0,
+        Alta: 0,
+        "Muy alta": 0,
+      },
+      intentos: 0,
+      completo: true,
+    };
+  }
+
+  const faltantes =
+    calcularFaltantesPorBanda(
+      itemsNivel,
+      cantidad
+    );
+
+  const busqueda =
+    generarCandidatosDirigidos({
+      nivel,
+      faltantes,
+      semillaInicial,
+      maxIntentos,
+    });
+
+  const candidatosCombinados = [
+    ...itemsNivel,
+    ...busqueda.encontrados,
+  ];
+
+  const seleccion =
+    seleccionarProgresivo({
+      items:
+        candidatosCombinados,
+      cantidad,
+    });
+
+  return {
+    seleccion,
+    candidatosNuevos:
+      busqueda.encontrados,
+    faltantes,
+    intentos:
+      busqueda.intentos,
+    completo:
+      busqueda.completo,
+  };
+}
+
+function generarSeleccionDirigidaGlobal({
+  validaciones,
+  cantidades,
+  semillaInicial,
+}) {
+  const niveles = [
+    "facil",
+    "medio",
+    "dificil",
+    "experto",
+    "legendario",
+  ];
+
+  const seleccionGlobal = [];
+  const resumen = {};
+
+  let desplazamientoSemilla = 0;
+
+  niveles.forEach(
+    (nivel) => {
+      const cantidad =
+        cantidades[nivel] ?? 0;
+
+      if (cantidad <= 0) {
+        resumen[nivel] = {
+          seleccion: [],
+          candidatosNuevos: [],
+          faltantes: {},
+          intentos: 0,
+          completo: true,
+        };
+
+        return;
+      }
+
+      const resultado =
+        generarSeleccionDirigidaPorNivel({
+          validaciones,
+          nivel,
+          cantidad,
+          semillaInicial:
+            semillaInicial +
+            desplazamientoSemilla,
+          maxIntentos: 3000,
+        });
+
+      seleccionGlobal.push(
+        ...resultado.seleccion
+      );
+
+      resumen[nivel] =
+        resultado;
+
+      desplazamientoSemilla +=
+        resultado.intentos +
+        1000;
+    }
+  );
+
+  return {
+    seleccion:
+      seleccionGlobal,
+    resumen,
+  };
+}
+
 function contarBandasComplejidad(
   items
 ) {
@@ -1111,142 +1247,60 @@ return {
       ]
     );
 
+  
   const validacionesFinales =
-  useMemo(
-    () => {
-      if (
-        modoGeneracion ===
-        "aleatorio"
-      ) {
-        return validaciones;
-      }
-
-      const niveles = [
-        "facil",
-        "medio",
-        "dificil",
-        "experto",
-        "legendario",
-      ];
-
-      const resultado = [];
-
-      niveles.forEach(
-        (nivel) => {
-          const itemsNivel =
-            validaciones.filter(
-              (item) =>
-                item.nivel ===
-                nivel
-            );
-
-          const seleccion =
-            seleccionarProgresivo({
-              items:
-                itemsNivel,
-
-              cantidad:
-                itemsNivel.length,
-            });
-
-          resultado.push(
-            ...seleccion
-          );
+    useMemo(
+      () => {
+        if (
+          modoGeneracion ===
+          "aleatorio"
+        ) {
+          return validaciones;
         }
-      );
 
-      return resultado;
-    },
-    [
-      validaciones,
-      modoGeneracion,
-    ]
-  );
+        const resultado =
+          generarSeleccionDirigidaGlobal({
+            validaciones,
 
-  const faltantesPrueba =
-  useMemo(
-    () => {
-      const faciles =
-        validaciones.filter(
-          (item) =>
-            item.nivel ===
-            "facil"
-        );
+            cantidades: {
+              facil:
+                cantidadFaciles,
 
-      return calcularFaltantesPorBanda(
-        faciles,
-        faciles.length
-      );
-    },
-    [
-      validaciones,
-    ]
-  );
+              medio:
+                cantidadMedios,
 
-  const candidatosDirigidosPrueba =
-  useMemo(
-    () =>
-      generarCandidatosDirigidos({
-        nivel:
-          "facil",
+              dificil:
+                cantidadDificiles,
 
-        faltantes:
-          faltantesPrueba,
+              experto:
+                cantidadExpertos,
 
-        semillaInicial:
-          semilla +
-          actividades.length,
+              legendario:
+                cantidadLegendarios,
+            },
 
-        maxIntentos:
-          1000,
-      }),
-    [
-      faltantesPrueba,
-      semilla,
-      actividades.length,
-    ]
-  );
+            semillaInicial:
+              semilla +
+              actividades.length +
+              10000,
+          });
 
-  const seleccionDirigidaPrueba =
-  useMemo(
-    () => {
-      const faciles =
-        validaciones.filter(
-          (item) =>
-            item.nivel ===
-            "facil"
-        );
+        return resultado.seleccion;
+      },
+      [
+        validaciones,
+        modoGeneracion,
+        cantidadFaciles,
+        cantidadMedios,
+        cantidadDificiles,
+        cantidadExpertos,
+        cantidadLegendarios,
+        semilla,
+        actividades.length,
+      ]
+    );
 
-      const candidatosCombinados = [
-        ...faciles,
-        ...candidatosDirigidosPrueba
-          .encontrados,
-      ];
-
-      return seleccionarProgresivo({
-        items:
-          candidatosCombinados,
-
-        cantidad:
-          faciles.length,
-      });
-    },
-    [
-      validaciones,
-      candidatosDirigidosPrueba,
-    ]
-  );
-
-  const bandasSeleccionDirigidaPrueba =
-  useMemo(
-    () =>
-      contarBandasComplejidad(
-        seleccionDirigidaPrueba
-      ),
-    [
-      seleccionDirigidaPrueba,
-    ]
-  );
+  
 
   const actividadesFinales =
     useMemo(
@@ -1257,30 +1311,48 @@ return {
               item,
               index
             ) => {
-              const actividad =
-                actividades[
+              const actividadOriginal =
+                Number.isInteger(
                   item.indiceActividad
-                ];
+                )
+                  ? actividades[
+                      item.indiceActividad
+                    ]
+                  : null;
 
-              if (!actividad) {
-                return null;
-              }
+              const actividadBase =
+                actividadOriginal ?? {
+                  numero:
+                    index + 1,
+
+                  nivel:
+                    item.nivel,
+                };
 
               return {
-                ...actividad,
+                ...actividadBase,
 
                 numeroOriginal:
-                  actividad.numero,
+                  actividadOriginal
+                    ?.numero ??
+                  item.numero ??
+                  null,
 
                 numeroProducto:
                   index + 1,
 
+                nivel:
+                  item.nivel,
+
                 semillaLaberinto:
-  item.semillaLaberinto,
+                  item.semillaLaberinto,
+
+                esGenerado:
+                  item.esGenerado ??
+                  false,
               };
             }
-          )
-          .filter(Boolean),
+          ),
       [
         validacionesFinales,
         actividades,
@@ -1361,6 +1433,9 @@ return {
               actividad.numeroOriginal ??
               actividad.numero,
 
+            semillaLaberinto:
+  actividad.semillaLaberinto,
+
             nivel:
               actividad.nivel,
           })
@@ -1424,8 +1499,10 @@ return {
 
   const semillaPagina =
   pagina?.semillaLaberinto ??
-  semilla +
-    indiceActividad;
+  (
+    semilla +
+    indiceActividad
+  );
 
   const configuracionPagina =
     CONFIG_LABERINTO[
@@ -2133,72 +2210,52 @@ const seleccionProgresivaPrueba =
           </div>
 
           {/* =================================================
-              NIVELES
-          ================================================== */}
+    NIVELES
+================================================== */}
 
-          <div className="mt-4">
+<div className="mt-4">
 
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-              Cantidad por nivel
-            </p>
+  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+    Cantidad por nivel
+  </p>
 
-            <div className="mt-2 grid grid-cols-3 gap-2">
+  <div className="mt-2 grid grid-cols-3 gap-2">
 
-              <Cantidad
-                titulo="Fácil"
-                valor={
-                  cantidadFaciles
-                }
-                onChange={
-                  setCantidadFaciles
-                }
-              />
+    <Cantidad
+      titulo="Fácil"
+      valor={cantidadFaciles}
+      onChange={setCantidadFaciles}
+    />
 
-              <Cantidad
-                titulo="Medio"
-                valor={
-                  cantidadMedios
-                }
-                onChange={
-                  setCantidadMedios
-                }
-              />
+    <Cantidad
+      titulo="Medio"
+      valor={cantidadMedios}
+      onChange={setCantidadMedios}
+    />
 
-              <Cantidad
-                titulo="Difícil"
-                valor={
-                  cantidadDificiles
-                }
-                onChange={
-                  setCantidadDificiles
-                }
-              />
+    <Cantidad
+      titulo="Difícil"
+      valor={cantidadDificiles}
+      onChange={setCantidadDificiles}
+    />
 
-              <Cantidad
-                titulo="Experto"
-                valor={
-                  cantidadExpertos
-                }
-                onChange={
-                  setCantidadExpertos
-                }
-              />
+    <Cantidad
+      titulo="Experto"
+      valor={cantidadExpertos}
+      onChange={setCantidadExpertos}
+    />
 
-              <Cantidad
-                titulo="Legendario"
-                valor={
-                  cantidadLegendarios
-                }
-                onChange={
-                  setCantidadLegendarios
-                }
-              />
+    <Cantidad
+      titulo="Legendario"
+      valor={cantidadLegendarios}
+      onChange={setCantidadLegendarios}
+    />
 
-            </div>
+  </div>
 
-          </div>
+</div>
 
-          <div className="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
+<div className="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
 
   <p className="text-xs font-bold uppercase tracking-wide text-sky-600">
     Modo de generación
@@ -2251,129 +2308,15 @@ const seleccionProgresivaPrueba =
 
 </div>
 
-          <p className="mt-2 text-xs text-slate-500">
+<p className="mt-2 text-xs text-slate-500">
   Laberintos finales:{" "}
   {validacionesFinales.length}
 </p>
 
-          <p className="mt-1 text-xs text-slate-500">
+<p className="mt-1 text-xs text-slate-500">
   Actividades finales:{" "}
   {actividadesFinales.length}
-</p>
-
-          <div className="mt-2 text-xs text-slate-500">
-  <p>
-    Faltantes Muy baja:{" "}
-    {faltantesPrueba["Muy baja"]}
-  </p>
-
-  <p>
-    Faltantes Baja:{" "}
-    {faltantesPrueba.Baja}
-  </p>
-
-  <p>
-    Faltantes Media:{" "}
-    {faltantesPrueba.Media}
-  </p>
-
-  <p>
-    Faltantes Alta:{" "}
-    {faltantesPrueba.Alta}
-  </p>
-
-  <p>
-    Faltantes Muy alta:{" "}
-    {faltantesPrueba["Muy alta"]}
-  </p>
-</div>
-
-          <div className="mt-2 text-xs text-slate-500">
-
-  <p>
-    Candidatos nuevos:{" "}
-    {
-      candidatosDirigidosPrueba
-        .encontrados.length
-    }
-  </p>
-
-  <p>
-    Intentos realizados:{" "}
-    {
-      candidatosDirigidosPrueba
-        .intentos
-    }
-  </p>
-
-  <p>
-    Búsqueda completa:{" "}
-    {
-      candidatosDirigidosPrueba
-        .completo
-        ? "Sí"
-        : "No"
-    }
-  </p>
-
-</div>
-
-          <div className="mt-3 rounded-xl bg-slate-100 p-3 text-xs text-slate-600">
-
-  <p className="font-bold text-slate-800">
-    Selección dirigida final
-  </p>
-
-  <p className="mt-2">
-    Total:{" "}
-    {
-      seleccionDirigidaPrueba.length
-    }
-  </p>
-
-  <p>
-    Muy baja:{" "}
-    {
-      bandasSeleccionDirigidaPrueba[
-        "Muy baja"
-      ] ?? 0
-    }
-  </p>
-
-  <p>
-    Baja:{" "}
-    {
-      bandasSeleccionDirigidaPrueba
-        .Baja ?? 0
-    }
-  </p>
-
-  <p>
-    Media:{" "}
-    {
-      bandasSeleccionDirigidaPrueba
-        .Media ?? 0
-    }
-  </p>
-
-  <p>
-    Alta:{" "}
-    {
-      bandasSeleccionDirigidaPrueba
-        .Alta ?? 0
-    }
-  </p>
-
-  <p>
-    Muy alta:{" "}
-    {
-      bandasSeleccionDirigidaPrueba[
-        "Muy alta"
-      ] ?? 0
-    }
-  </p>
-
-</div>
+</p>    
 
           {/* =================================================
               ACCIONES
