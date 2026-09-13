@@ -226,96 +226,87 @@ const decoracion =
       >
         {/* DESAFÍO + NIVEL */}
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            marginBottom: "5px",
-          }}
-        >
-          <div
-            style={{
-              fontFamily:
-                '"Chewy", cursive',
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "5px",
+  }}
+>
+  <div
+    style={{
+      fontSize: "18px",
+      fontWeight: 700,
+      color: "#64748B",
+    }}
+  >
+    DESAFÍO{" "}
+    {String(numero).padStart(
+      2,
+      "0"
+    )}
+  </div>
 
-              fontSize: "18px",
-              fontWeight: 700,
-              color: "#64748B",
-            }}
-          >
-            DESAFÍO{" "}
-            {String(numero).padStart(
-              2,
-              "0"
-            )}
-          </div>
+  <div
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
 
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
+      padding: "6px 12px",
 
-              padding: "6px 12px",
+      borderRadius: "999px",
 
-              borderRadius: "999px",
+      background:
+        configuracionNivel.fondo,
 
-              background:
-                configuracionNivel.fondo,
+      border:
+        `2px solid ${configuracionNivel.borde}`,
 
-              border: `2px solid ${configuracionNivel.borde}`,
+      color:
+        configuracionNivel.texto,
 
-              color:
-                configuracionNivel.texto,
+      fontSize: "16px",
+      fontWeight: 700,
+    }}
+  >
+    {configuracionNivel.etiqueta}
+  </div>
+</div>
 
-              fontFamily:
-                '"Chewy", cursive',
+{/* TÍTULO */}
 
-              fontSize: "16px",
-              fontWeight: 700,
-            }}
-          >
-            {configuracionNivel.etiqueta}
-          </div>
-        </div>     
+<div
+  style={{
+    fontSize: "36px",
+    fontWeight: 700,
+    lineHeight: 1.05,
 
-        {/* TÍTULO */}
+    color:
+      colorTematicaPrincipal,
+  }}
+>
+  {aventura.titulo}
+</div>
 
-        <div
-          style={{
-            fontFamily:
-              '"Chewy", cursive',
+{/* INSTRUCCIONES */}
 
-            fontSize: "36px",
-            lineHeight: 1.05,
+<div
+  style={{
+    marginTop: "6px",
 
-            color:
-  colorTematicaPrincipal,
-          }}
-        >
-          {aventura.titulo}
-        </div>
+    fontSize: "19px",
+    fontWeight: 400,
+    lineHeight: 1.2,
 
-        {/* INSTRUCCIONES */}
-
-        <div
-          style={{
-            marginTop: "6px",
-
-            fontFamily:
-              '"Chewy", cursive',
-
-            fontSize: "19px",
-            lineHeight: 1.2,
-
-            color:
-  colorTematicaTexto,
-          }}
-        >
-          {mostrarSolucion
-            ? "Seguí el camino marcado para comprobar la solución."
-            : aventura.instrucciones}
-        </div>
+    color:
+      colorTematicaTexto,
+  }}
+>
+  {mostrarSolucion
+    ? "Seguí el camino marcado para comprobar la solución."
+    : aventura.instrucciones}
+</div>
       </div>
 
       {/* =====================================================

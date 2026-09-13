@@ -7,12 +7,9 @@ export const ESTILOS_IMPRIMIBLES = {
   },
 
   tipografia: {
-    titulo:
-      '"Chewy", "Comic Sans MS", cursive',
-
-    instrucciones:
-      '"Patrick Hand", "Comic Sans MS", cursive',
-  },
+  principal:
+    '"Kalam", cursive',
+},
 
   comercial: {
     blur: 0,

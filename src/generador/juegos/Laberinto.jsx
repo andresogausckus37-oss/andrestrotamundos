@@ -9,6 +9,56 @@ const MARGEN_X = 20;
 const MARGEN_Y = 20;
 
 /* =========================================================
+   CAMINOS FALSOS
+========================================================= */
+
+const PROFUNDIDAD_MINIMA_CAMINO_FALSO = 3;
+
+const REGLAS_CAMINOS_FALSOS = {
+  facil: {
+    cantidad: 0,
+    profundidadMinima: 0,
+    zonas: [],
+  },
+
+  medio: {
+    cantidad: 0,
+    profundidadMinima: 0,
+    zonas: [],
+  },
+
+  dificil: {
+    cantidad: 1,
+    profundidadMinima: 4,
+
+    zonas: [
+      [20, 70],
+    ],
+  },
+
+  experto: {
+    cantidad: 2,
+    profundidadMinima: 5,
+
+    zonas: [
+      [15, 42],
+      [48, 75],
+    ],
+  },
+
+  legendario: {
+    cantidad: 3,
+    profundidadMinima: 6,
+
+    zonas: [
+      [15, 32],
+      [36, 53],
+      [57, 74],
+    ],
+  },
+};
+
+/* =========================================================
    COMPONENTE LABERINTO
 ========================================================= */
 
@@ -16,8 +66,11 @@ export default function Laberinto({
   filas = 10,
   columnas = 8,
   semilla = 1,
+  nivel = "facil",
   mostrarSolucion = false,
+  mostrarDiagnosticoCaminosFalsos = false,
 }) {
+  
   const anchoCelda =
     (ANCHO - MARGEN_X * 2) /
     columnas;
@@ -39,6 +92,28 @@ export default function Laberinto({
       filas,
       columnas
     );
+
+  const analisisCaminosFalsos =
+  analizarCaminosFalsos(
+    celdas,
+    filas,
+    columnas,
+    solucion
+  );
+
+const reglaCaminosFalsos =
+  REGLAS_CAMINOS_FALSOS[
+    nivel
+  ] ||
+  REGLAS_CAMINOS_FALSOS
+    .facil;
+
+const caminosFalsosPrincipales =
+  seleccionarCaminosFalsosPrincipales(
+    analisisCaminosFalsos
+      .caminosFalsos,
+    reglaCaminosFalsos
+  );
 
   const cantidadGiros =
   contarGirosSolucion(
@@ -64,6 +139,12 @@ export default function Laberinto({
       })
       .join(" ");
 
+  const COLORES_DIAGNOSTICO = [
+  "#F97316",
+  "#2563EB",
+  "#9333EA",
+];
+
   return (
     <svg
       viewBox={`0 0 ${ANCHO} ${ALTO}`}
@@ -82,6 +163,76 @@ export default function Laberinto({
         height={ALTO}
         fill="white"
       />
+
+      {/* =====================================================
+    DIAGNÓSTICO CAMINOS FALSOS
+====================================================== */}
+
+{mostrarDiagnosticoCaminosFalsos &&
+  caminosFalsosPrincipales.map(
+    (camino, indiceCamino) => {
+      const color =
+        COLORES_DIAGNOSTICO[
+          indiceCamino %
+            COLORES_DIAGNOSTICO.length
+        ];
+
+      return (
+        <g
+          key={`camino-falso-${indiceCamino}`}
+        >
+          {camino.celdas.map(
+            (celda) => {
+              const x =
+                MARGEN_X +
+                celda.columna *
+                  anchoCelda;
+
+              const y =
+                MARGEN_Y +
+                celda.fila *
+                  altoCelda;
+
+              return (
+                <rect
+                  key={`${celda.fila}-${celda.columna}`}
+                  x={x + 2}
+                  y={y + 2}
+                  width={
+                    anchoCelda - 4
+                  }
+                  height={
+                    altoCelda - 4
+                  }
+                  fill={color}
+                  opacity="0.28"
+                />
+              );
+            }
+          )}
+
+          {/* ORIGEN DEL CAMINO FALSO */}
+
+          <circle
+            cx={
+              MARGEN_X +
+              camino.columnaOrigen *
+                anchoCelda +
+              anchoCelda / 2
+            }
+            cy={
+              MARGEN_Y +
+              camino.filaOrigen *
+                altoCelda +
+              altoCelda / 2
+            }
+            r="8"
+            fill={color}
+          />
+        </g>
+      );
+    }
+  )}
 
       {/* =====================================================
           PAREDES
@@ -197,51 +348,7 @@ export default function Laberinto({
           />
         )}
 
-      {/* =====================================================
-          INICIO
-      ====================================================== */}
-
-      <text
-        x={MARGEN_X + 8}
-        y={
-          MARGEN_Y +
-          altoCelda / 2
-        }
-        fontSize="18"
-        fontWeight="700"
-        dominantBaseline="middle"
-        fill="black"
-      >
-        INICIO
-      </text>
-
-      {/* =====================================================
-          META
-      ====================================================== */}
-
-      <text
-        x={
-          MARGEN_X +
-          (columnas - 1) *
-            anchoCelda +
-          anchoCelda -
-          8
-        }
-        y={
-          MARGEN_Y +
-          (filas - 1) *
-            altoCelda +
-          altoCelda / 2
-        }
-        fontSize="18"
-        fontWeight="700"
-        textAnchor="end"
-        dominantBaseline="middle"
-        fill="black"
-      >
-        META
-      </text>
-    </svg>
+      </svg>
   );
 }
 
@@ -1007,13 +1114,566 @@ function contarCallejonesSinSalida(
 }
 
 /* =========================================================
+   ANALIZAR CAMINOS FALSOS RELEVANTES
+========================================================= */
+
+/*
+  Un camino falso relevante es un callejón
+  que NO pertenece a la solución y cuya
+  profundidad desde el camino correcto es
+  suficientemente grande como para engañar
+  al jugador.
+
+  profundidadMinima = 3 significa que el
+  jugador debe avanzar al menos 3 celdas
+  fuera de la ruta correcta.
+*/
+
+/* =========================================================
+   ANALIZAR CAMINOS FALSOS RELEVANTES
+========================================================= */
+
+function analizarCaminosFalsos(
+  celdas,
+  filas,
+  columnas,
+  solucion,
+  profundidadMinima =
+    PROFUNDIDAD_MINIMA_CAMINO_FALSO
+) {
+  if (
+    !Array.isArray(solucion) ||
+    solucion.length === 0
+  ) {
+    return {
+      cantidadCaminosFalsos: 0,
+      caminosFalsos: [],
+      profundidadesCaminosFalsos: [],
+      profundidadFalsoMaxima: 0,
+      profundidadFalsoPromedio: 0,
+    };
+  }
+
+  const clavesSolucion =
+    new Set(
+      solucion.map(
+        (celda) =>
+          `${celda.fila}-${celda.columna}`
+      )
+    );
+
+  const meta =
+    obtenerCelda(
+      celdas,
+      filas,
+      columnas,
+      filas - 1,
+      columnas - 1
+    );
+
+  const caminosFalsos = [];
+
+  const componentesVisitados =
+    new Set();
+
+  solucion.forEach(
+    (
+      celdaSolucion,
+      indiceSolucion
+    ) => {
+      const vecinos =
+        obtenerVecinosConectados(
+          celdas,
+          filas,
+          columnas,
+          celdaSolucion
+        );
+
+      vecinos.forEach(
+        (vecinoInicial) => {
+          const claveInicial =
+            `${vecinoInicial.fila}-${vecinoInicial.columna}`;
+
+          /*
+            Si pertenece a la solución,
+            seguimos por el camino correcto.
+          */
+
+          if (
+            clavesSolucion.has(
+              claveInicial
+            )
+          ) {
+            return;
+          }
+
+          /*
+            Una rama de un laberinto perfecto
+            sólo se conecta una vez con
+            la solución.
+
+            Si ya analizamos este componente,
+            no lo repetimos.
+          */
+
+          if (
+            componentesVisitados.has(
+              claveInicial
+            )
+          ) {
+            return;
+          }
+
+          /* =================================================
+             EXPLORAR LA RAMA
+
+             Conservamos el recorrido más profundo
+             hasta un verdadero extremo muerto.
+          ================================================= */
+
+          const pila = [
+            {
+              celda:
+                vecinoInicial,
+
+              camino: [
+                vecinoInicial,
+              ],
+            },
+          ];
+
+          const visitadasRama =
+            new Set();
+
+          let mejorCamino = [];
+
+          let cantidadCeldas = 0;
+
+          let cantidadExtremos = 0;
+
+          while (
+            pila.length > 0
+          ) {
+            const actual =
+              pila.pop();
+
+            const celda =
+              actual.celda;
+
+            const camino =
+              actual.camino;
+
+            const clave =
+              `${celda.fila}-${celda.columna}`;
+
+            if (
+              visitadasRama.has(
+                clave
+              )
+            ) {
+              continue;
+            }
+
+            if (
+              clavesSolucion.has(
+                clave
+              )
+            ) {
+              continue;
+            }
+
+            visitadasRama.add(
+              clave
+            );
+
+            componentesVisitados.add(
+              clave
+            );
+
+            cantidadCeldas += 1;
+
+            const vecinosRama =
+              obtenerVecinosConectados(
+                celdas,
+                filas,
+                columnas,
+                celda
+              ).filter(
+                (vecino) => {
+                  const claveVecino =
+                    `${vecino.fila}-${vecino.columna}`;
+
+                  return (
+                    !clavesSolucion.has(
+                      claveVecino
+                    )
+                  );
+                }
+              );
+
+            const vecinosPendientes =
+              vecinosRama.filter(
+                (vecino) => {
+                  const claveVecino =
+                    `${vecino.fila}-${vecino.columna}`;
+
+                  return (
+                    !visitadasRama.has(
+                      claveVecino
+                    )
+                  );
+                }
+              );
+
+            /*
+              Llegamos a un extremo muerto.
+            */
+
+            if (
+              vecinosPendientes.length ===
+              0
+            ) {
+              cantidadExtremos += 1;
+
+              if (
+                camino.length >
+                mejorCamino.length
+              ) {
+                mejorCamino =
+                  camino;
+              }
+
+              continue;
+            }
+
+            vecinosPendientes.forEach(
+              (vecino) => {
+                pila.push({
+                  celda:
+                    vecino,
+
+                  camino: [
+                    ...camino,
+                    vecino,
+                  ],
+                });
+              }
+            );
+          }
+
+          const profundidad =
+            mejorCamino.length;
+
+          if (
+            profundidad <
+            profundidadMinima
+          ) {
+            return;
+          }
+
+          /* =================================================
+             POSICIÓN DEL ORIGEN
+          ================================================= */
+
+          const porcentajeOrigen =
+            solucion.length > 1
+              ? Math.round(
+                  (
+                    indiceSolucion /
+                    (
+                      solucion.length -
+                      1
+                    )
+                  ) *
+                    100
+                )
+              : 0;
+
+          /* =================================================
+             DIRECCIÓN INICIAL HACIA LA META
+
+             Queremos que entrar al falso camino
+             parezca razonable.
+
+             El primer paso debe acercar al jugador
+             a la posición física de la meta.
+          ================================================= */
+
+          const distanciaOrigenMeta =
+            Math.abs(
+              celdaSolucion.fila -
+                meta.fila
+            ) +
+            Math.abs(
+              celdaSolucion.columna -
+                meta.columna
+            );
+
+          const distanciaPrimerPasoMeta =
+            Math.abs(
+              vecinoInicial.fila -
+                meta.fila
+            ) +
+            Math.abs(
+              vecinoInicial.columna -
+                meta.columna
+            );
+
+          const entradaOrientadaMeta =
+            distanciaPrimerPasoMeta <
+            distanciaOrigenMeta;
+
+          caminosFalsos.push({
+            filaOrigen:
+              celdaSolucion.fila,
+
+            columnaOrigen:
+              celdaSolucion.columna,
+
+            indiceOrigen:
+              indiceSolucion,
+
+            porcentajeOrigen,
+
+            profundidad,
+
+            cantidadCeldas,
+
+            cantidadExtremos,
+
+            entradaOrientadaMeta,
+
+            primeraCelda: {
+              fila:
+                vecinoInicial.fila,
+
+              columna:
+                vecinoInicial.columna,
+            },
+
+            /*
+              Ahora guardamos solamente
+              el corredor profundo que
+              queremos considerar como
+              camino falso principal.
+            */
+
+            celdas:
+              mejorCamino.map(
+                (celda) => ({
+                  fila:
+                    celda.fila,
+
+                  columna:
+                    celda.columna,
+                })
+              ),
+          });
+        }
+      );
+    }
+  );
+
+  const profundidades =
+    caminosFalsos.map(
+      (camino) =>
+        camino.profundidad
+    );
+
+  const cantidadCaminosFalsos =
+    caminosFalsos.length;
+
+  const profundidadFalsoMaxima =
+    cantidadCaminosFalsos > 0
+      ? Math.max(
+          ...profundidades
+        )
+      : 0;
+
+  const sumaProfundidades =
+    profundidades.reduce(
+      (
+        suma,
+        profundidad
+      ) =>
+        suma +
+        profundidad,
+      0
+    );
+
+  const profundidadFalsoPromedio =
+    cantidadCaminosFalsos > 0
+      ? Math.round(
+          (
+            sumaProfundidades /
+            cantidadCaminosFalsos
+          ) *
+            100
+        ) / 100
+      : 0;
+
+  return {
+    cantidadCaminosFalsos,
+
+    caminosFalsos,
+
+    profundidadesCaminosFalsos:
+      [...profundidades].sort(
+        (a, b) =>
+          b - a
+      ),
+
+    profundidadFalsoMaxima,
+
+    profundidadFalsoPromedio,
+  };
+}
+
+/* =========================================================
+   SELECCIONAR CAMINOS FALSOS PRINCIPALES
+========================================================= */
+
+function seleccionarCaminosFalsosPrincipales(
+  caminosFalsos,
+  regla
+) {
+  if (
+    !Array.isArray(caminosFalsos) ||
+    caminosFalsos.length === 0
+  ) {
+    return [];
+  }
+
+  const cantidadObjetivo =
+    regla?.cantidad ?? 0;
+
+  if (
+    cantidadObjetivo === 0
+  ) {
+    return [];
+  }
+
+  const profundidadMinima =
+    regla?.profundidadMinima ??
+    0;
+
+  const zonas =
+    Array.isArray(regla?.zonas)
+      ? regla.zonas
+      : [];
+
+  const candidatos =
+    caminosFalsos.filter(
+      (camino) =>
+        camino.profundidad >=
+        profundidadMinima
+    );
+
+  const seleccionados = [];
+
+  zonas.forEach(
+    (zona) => {
+      if (
+        seleccionados.length >=
+        cantidadObjetivo
+      ) {
+        return;
+      }
+
+      const [
+        porcentajeMinimo,
+        porcentajeMaximo,
+      ] = zona;
+
+      const centroZona =
+        (
+          porcentajeMinimo +
+          porcentajeMaximo
+        ) / 2;
+
+      const candidatosZona =
+        candidatos
+          .filter(
+            (camino) =>
+              camino
+                .porcentajeOrigen >=
+                porcentajeMinimo &&
+              camino
+                .porcentajeOrigen <=
+                porcentajeMaximo &&
+              !seleccionados.includes(
+                camino
+              )
+          )
+          .sort(
+            (a, b) => {
+              /*
+                Primero preferimos
+                mayor profundidad.
+              */
+
+              const diferenciaProfundidad =
+                b.profundidad -
+                a.profundidad;
+
+              if (
+                diferenciaProfundidad !==
+                0
+              ) {
+                return diferenciaProfundidad;
+              }
+
+              /*
+                En empate, preferimos
+                el centro de la zona.
+              */
+
+              const distanciaA =
+                Math.abs(
+                  a.porcentajeOrigen -
+                    centroZona
+                );
+
+              const distanciaB =
+                Math.abs(
+                  b.porcentajeOrigen -
+                    centroZona
+                );
+
+              return (
+                distanciaA -
+                distanciaB
+              );
+            }
+          );
+
+      if (
+        candidatosZona.length >
+        0
+      ) {
+        seleccionados.push(
+          candidatosZona[0]
+        );
+      }
+    }
+  );
+
+  return seleccionados.sort(
+    (a, b) =>
+      a.indiceOrigen -
+      b.indiceOrigen
+  );
+}
+
+/* =========================================================
    VALIDAR LABERINTO
 ========================================================= */
 
 export function validarLaberinto(
   filas,
   columnas,
-  semilla
+  semilla,
+  nivel = "facil"
 ) {
   /*
     Primero validamos la configuración
@@ -1037,6 +1697,17 @@ export function validarLaberinto(
   longitudSolucion: 0,
   cantidadGiros: 0,
       cantidadCallejones: 0,
+      cantidadCaminosFalsos: 0,
+      caminosFalsos: [],
+      caminosFalsosPrincipales: [],
+cantidadCaminosFalsosPrincipales: 0,
+      cantidadObjetivoCaminosFalsos: 0,
+cumpleCaminosFalsosPrincipales: true,
+origenesCaminosFalsosPrincipales: [],
+profundidadesCaminosFalsosPrincipales: [],
+profundidadesCaminosFalsos: [],
+profundidadFalsoMaxima: 0,
+profundidadFalsoPromedio: 0,
       densidadGiros: 0,
 densidadCallejones: 0,
   porcentajeRecorrido: 0,
@@ -1070,6 +1741,57 @@ densidadCallejones: 0,
     columnas
   );
 
+  const analisisCaminosFalsos =
+    analizarCaminosFalsos(
+      celdas,
+      filas,
+      columnas,
+      solucion
+    );
+
+  const {
+    cantidadCaminosFalsos,
+    caminosFalsos,
+    profundidadesCaminosFalsos,
+    profundidadFalsoMaxima,
+    profundidadFalsoPromedio,
+  } = analisisCaminosFalsos;
+
+  const reglaCaminosFalsos =
+    REGLAS_CAMINOS_FALSOS[
+      nivel
+    ] ||
+    REGLAS_CAMINOS_FALSOS
+      .facil;
+
+  const caminosFalsosPrincipales =
+    seleccionarCaminosFalsosPrincipales(
+      caminosFalsos,
+      reglaCaminosFalsos
+    );
+
+  const cantidadObjetivoCaminosFalsos =
+    reglaCaminosFalsos.cantidad;
+
+  const cantidadCaminosFalsosPrincipales =
+    caminosFalsosPrincipales.length;
+
+  const cumpleCaminosFalsosPrincipales =
+    cantidadCaminosFalsosPrincipales ===
+    cantidadObjetivoCaminosFalsos;
+
+  const origenesCaminosFalsosPrincipales =
+    caminosFalsosPrincipales.map(
+      (camino) =>
+        camino.porcentajeOrigen
+    );
+
+  const profundidadesCaminosFalsosPrincipales =
+    caminosFalsosPrincipales.map(
+      (camino) =>
+        camino.profundidad
+    );
+  
   const inicio =
     obtenerCelda(
       celdas,
@@ -1160,6 +1882,16 @@ const densidadGiros =
 cantidadGiros,
 
 cantidadCallejones,
+    cantidadCaminosFalsos,
+profundidadesCaminosFalsos,
+    caminosFalsosPrincipales,
+cantidadCaminosFalsosPrincipales,
+    cantidadObjetivoCaminosFalsos,
+cumpleCaminosFalsosPrincipales,
+origenesCaminosFalsosPrincipales,
+profundidadesCaminosFalsosPrincipales,
+profundidadFalsoMaxima,
+profundidadFalsoPromedio,
     densidadGiros,
 densidadCallejones,
 
@@ -1167,4 +1899,116 @@ porcentajeRecorrido,
 
 totalCeldas,
 };
+}
+
+/* =========================================================
+   BUSCAR SEMILLA VÁLIDA PARA EL NIVEL
+========================================================= */
+
+/*
+  Busca semillas consecutivas hasta encontrar
+  un laberinto que:
+
+  1. sea estructuralmente válido;
+  2. cumpla la cantidad de caminos falsos
+     principales requerida por su nivel;
+  3. cumpla profundidad y distribución por zonas.
+
+  La semilla ganadora se devuelve para que
+  desafío y solución generen exactamente
+  el mismo laberinto.
+*/
+
+export function buscarSemillaValidaParaNivel({
+  filas,
+  columnas,
+  semillaInicial,
+  nivel = "facil",
+  maxIntentos = 1000,
+}) {
+  let semillaCandidata =
+    Number.isFinite(
+      semillaInicial
+    )
+      ? Math.floor(
+          semillaInicial
+        )
+      : 1;
+
+  /*
+    Fácil y Medio no necesitan
+    caminos falsos obligatorios.
+
+    Igual validamos normalmente
+    la primera semilla.
+  */
+
+  const regla =
+    REGLAS_CAMINOS_FALSOS[
+      nivel
+    ] ||
+    REGLAS_CAMINOS_FALSOS
+      .facil;
+
+  for (
+    let intento = 1;
+    intento <= maxIntentos;
+    intento += 1
+  ) {
+    const validacion =
+      validarLaberinto(
+        filas,
+        columnas,
+        semillaCandidata,
+        nivel
+      );
+
+    const cumpleEstructura =
+      validacion.valido ===
+      true;
+
+    const cumpleCaminosFalsos =
+      regla.cantidad === 0 ||
+      validacion
+        .cumpleCaminosFalsosPrincipales ===
+        true;
+
+    if (
+      cumpleEstructura &&
+      cumpleCaminosFalsos
+    ) {
+      return {
+        encontrada: true,
+
+        semilla:
+          semillaCandidata,
+
+        validacion,
+
+        intentos:
+          intento,
+      };
+    }
+
+    semillaCandidata += 1;
+  }
+
+  /*
+    Si excepcionalmente no encontramos
+    ninguna semilla dentro del límite,
+    NO afirmamos que sea válida.
+  */
+
+  return {
+    encontrada: false,
+
+    semilla:
+      null,
+
+    validacion:
+      null,
+
+    intentos:
+      maxIntentos,
+  };
 }

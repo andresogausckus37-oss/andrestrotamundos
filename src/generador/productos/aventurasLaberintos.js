@@ -193,6 +193,80 @@
     },
 
     /* =======================================================
+   OCÉANO
+======================================================= */
+
+marina: {
+  nombre: "Marina",
+  tema: "oceano",
+
+  especie: "sirena",
+
+  imagen: "",
+
+  emoji: "🧜‍♀️",
+  color: "#0284C7",
+  decoracion: "🫧",
+
+  rol: "La exploradora marina",
+
+  personalidad:
+    "Curiosa, valiente, amable y fascinada por descubrir los secretos del océano.",
+
+  apariencia:
+    "Sirena joven y amigable, de aspecto alegre, ojos grandes y estilo infantil.",
+
+  accesorios:
+    "Detalles marinos y accesorios en tonos azul y turquesa.",
+
+  habilidades: [
+    "visionRuta",
+  ],
+
+  assets: {
+    principal: "",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+finn: {
+  nombre: "Finn",
+  tema: "oceano",
+
+  especie: "delfin",
+
+  imagen: "",
+
+  emoji: "🐬",
+  color: "#0891B2",
+  decoracion: "🌊",
+
+  rol: "El navegante",
+
+  personalidad:
+    "Alegre, rápido, inteligente y siempre dispuesto a encontrar nuevas rutas.",
+
+  apariencia:
+    "Delfín pequeño y simpático, ojos grandes, expresión alegre y formas redondeadas.",
+
+  accesorios:
+    "Pequeño pañuelo o detalle turquesa distintivo.",
+
+  habilidades: [
+    "radar",
+  ],
+
+  assets: {
+    principal: "",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+    /* =======================================================
        ESPACIO
     ======================================================= */
 
@@ -294,7 +368,7 @@
       ],
 
       assets: {
-        principal: "",
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Orion%20principal",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -329,7 +403,7 @@
       ],
 
       assets: {
-        principal: "",
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Vega%20principal",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -364,7 +438,7 @@
       ],
 
       assets: {
-        principal: "",
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Cosmo%20principal",
         avatar: "",
         movimiento: "",
         habilidad: "",
