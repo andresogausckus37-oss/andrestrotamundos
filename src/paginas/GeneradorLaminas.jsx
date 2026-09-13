@@ -18,6 +18,9 @@ import { validarLaberinto } from "../generador/juegos/Laberinto";
 import {
   PERSONAJES_LABERINTOS,
   PERSONAJES_POR_TEMATICA,
+  OBJETOS_LABERINTOS,
+  OBJETOS_POR_TEMATICA,
+  TEMATICAS_LABERINTOS,
 } from "../generador/productos/aventurasLaberintos";
 
 /* =========================================================
@@ -48,6 +51,21 @@ const OPCIONES_EDAD = [
 ];
 
 const OPCIONES_MODO_PERSONAJE = [
+  {
+    id: "fijo",
+    nombre: "Fijo",
+  },
+  {
+    id: "rotativo",
+    nombre: "Rotativo",
+  },
+  {
+    id: "aleatorio",
+    nombre: "Aleatorio",
+  },
+];
+
+const OPCIONES_MODO_OBJETIVO = [
   {
     id: "fijo",
     nombre: "Fijo",
@@ -976,6 +994,16 @@ export default function GeneradorLaminas() {
 ] = useState("rotativo");
 
   const [
+  objetivo,
+  setObjetivo,
+] = useState("automatico");
+
+const [
+  modoObjetivo,
+  setModoObjetivo,
+] = useState("rotativo");
+
+  const [
     cantidadFaciles,
     setCantidadFaciles,
   ] = useState(5);
@@ -1009,15 +1037,19 @@ export default function GeneradorLaminas() {
     useState(1);
 
   useEffect(
-    () => {
-      setPersonaje(
-        "automatico"
-      );
-    },
-    [
-      tematica,
-    ]
-  );
+  () => {
+    setPersonaje(
+      "automatico"
+    );
+
+    setObjetivo(
+      "automatico"
+    );
+  },
+  [
+    tematica,
+  ]
+);
 
   const personajesDisponibles =
   useMemo(
@@ -1033,6 +1065,34 @@ export default function GeneradorLaminas() {
             id,
 
             ...PERSONAJES_LABERINTOS[
+              id
+            ],
+          })
+        )
+        .filter(
+          (item) =>
+            item.nombre
+        );
+    },
+    [
+      tematica,
+    ]
+  );
+
+  const objetivosDisponibles =
+  useMemo(
+    () => {
+      const ids =
+        OBJETOS_POR_TEMATICA[
+          tematica
+        ] || [];
+
+      return ids
+        .map(
+          (id) => ({
+            id,
+
+            ...OBJETOS_LABERINTOS[
               id
             ],
           })
@@ -1084,6 +1144,9 @@ export default function GeneradorLaminas() {
         personaje,
         modoPersonaje,
 
+        objetivo,
+        modoObjetivo,
+
         cantidades:
           cantidadesProducto,
 
@@ -1096,6 +1159,8 @@ export default function GeneradorLaminas() {
         tematica,
         personaje,
         modoPersonaje,
+        objetivo,
+        modoObjetivo,
         cantidadesProducto,
         modoGeneracion,
         semilla,
@@ -1385,6 +1450,12 @@ export default function GeneradorLaminas() {
 modoPersonaje:
   configuracionProducto.modoPersonaje,
 
+              objetivo:
+  configuracionProducto.objetivo,
+
+modoObjetivo:
+  configuracionProducto.modoObjetivo,
+
               semillaLaberinto:
                 item.semillaLaberinto,
 
@@ -1401,7 +1472,8 @@ modoPersonaje:
         configuracionProducto.edad,
         configuracionProducto.tematica,
         configuracionProducto.personaje,
-configuracionProducto.modoPersonaje,
+configuracionProducto.modoPersonaje,    configuracionProducto.objetivo,
+configuracionProducto.modoObjetivo,
       ]
     );
 
@@ -1434,6 +1506,11 @@ configuracionProducto.modoPersonaje,
 
 modoPersonaje:
   actividad.modoPersonaje,
+          objetivo:
+  actividad.objetivo,
+
+modoObjetivo:
+  actividad.modoObjetivo,
           semillaLaberinto:
             actividad.semillaLaberinto,
         })),
@@ -1481,6 +1558,12 @@ modoPersonaje:
 
             modoPersonaje:
               actividad.modoPersonaje,
+
+            objetivo:
+              actividad.objetivo,
+
+            modoObjetivo:
+              actividad.modoObjetivo,
 
             semillaLaberinto:
               actividad.semillaLaberinto,
@@ -2222,6 +2305,65 @@ modoPersonaje:
   </select>
 </div>
 
+              <div>
+  <label className="block text-center text-[10px] font-bold text-slate-600">
+    Objetivo
+  </label>
+
+  <select
+    value={objetivo}
+    onChange={(e) =>
+      setObjetivo(
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+  >
+    <option value="automatico">
+      Automático
+    </option>
+
+    {objetivosDisponibles.map(
+      (item) => (
+        <option
+          key={item.id}
+          value={item.id}
+        >
+          {item.emoji}{" "}
+          {item.nombre}
+        </option>
+      )
+    )}
+  </select>
+</div>
+
+<div>
+  <label className="block text-center text-[10px] font-bold text-slate-600">
+    Modo objetivo
+  </label>
+
+  <select
+    value={modoObjetivo}
+    onChange={(e) =>
+      setModoObjetivo(
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+  >
+    {OPCIONES_MODO_OBJETIVO.map(
+      (opcion) => (
+        <option
+          key={opcion.id}
+          value={opcion.id}
+        >
+          {opcion.nombre}
+        </option>
+      )
+    )}
+  </select>
+</div>
+
             </div>
           
 
@@ -2616,6 +2758,14 @@ modoPersonaje:
 
 modoPersonaje={
   pagina?.modoPersonaje
+}
+
+                          objetivo={
+  pagina?.objetivo
+}
+
+modoObjetivo={
+  pagina?.modoObjetivo
 }
                           mostrarSolucion={
                             pagina.tipo ===

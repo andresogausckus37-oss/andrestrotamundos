@@ -3,6 +3,7 @@ import Laberinto from "../juegos/Laberinto";
 import {
   IMAGENES_LABERINTOS,
   PERSONAJES_LABERINTOS,
+  TEMATICAS_LABERINTOS,
   obtenerAventuraLaberinto,
 } from "../productos/aventurasLaberintos";
 
@@ -62,6 +63,8 @@ export default function LaminaLaberinto({
   tematica,
   personaje = "automatico",
   modoPersonaje = "rotativo",
+  objetivo = "automatico",
+  modoObjetivo = "rotativo",
   mostrarSolucion = false,
 }) {
   /* =======================================================
@@ -78,9 +81,49 @@ export default function LaminaLaberinto({
 
       modoPersonaje,
 
+      objetivoSeleccionado:
+        objetivo,
+
+      modoObjetivo,
+
       semilla,
     }
   );
+
+  /* =======================================================
+   IDENTIDAD VISUAL DE LA TEMÁTICA
+======================================================= */
+
+const configuracionTematica =
+  TEMATICAS_LABERINTOS[
+    tematica
+  ] ||
+  TEMATICAS_LABERINTOS.mascotas;
+
+const colorTematicaPrincipal =
+  configuracionTematica
+    .colorPrincipal ||
+  "#0F7490";
+
+const colorTematicaSecundario =
+  configuracionTematica
+    .colorSecundario ||
+  "#DB5685";
+
+const colorTematicaSuave =
+  configuracionTematica
+    .colorSuave ||
+  "#ECFEFF";
+
+const colorTematicaTexto =
+  configuracionTematica
+    .colorTexto ||
+  "#155E75";
+
+const decoracionTematica =
+  configuracionTematica
+    .decoracion ||
+  "🐾";
 
   /* =======================================================
      NIVEL
@@ -90,7 +133,7 @@ export default function LaminaLaberinto({
     COLORES_NIVEL[nivel] ||
     COLORES_NIVEL.facil;
 
-  /* /* =======================================================
+ /* =======================================================
    PERSONAJE
 ======================================================== */
 
@@ -118,6 +161,8 @@ const configuracionPersonaje =
   };
 
 const imagenPersonaje =
+  configuracionPersonaje.assets
+    ?.principal ||
   configuracionPersonaje.imagen ||
   IMAGENES_LABERINTOS.personajes[
     aventura.personaje
@@ -192,7 +237,7 @@ const decoracion =
           <div
             style={{
               fontFamily:
-                '"Patrick Hand", cursive',
+                '"Chewy", cursive',
 
               fontSize: "18px",
               fontWeight: 700,
@@ -224,7 +269,7 @@ const decoracion =
                 configuracionNivel.texto,
 
               fontFamily:
-                '"Patrick Hand", cursive',
+                '"Chewy", cursive',
 
               fontSize: "16px",
               fontWeight: 700,
@@ -232,7 +277,7 @@ const decoracion =
           >
             {configuracionNivel.etiqueta}
           </div>
-        </div>
+        </div>     
 
         {/* TÍTULO */}
 
@@ -244,7 +289,8 @@ const decoracion =
             fontSize: "36px",
             lineHeight: 1.05,
 
-            color: colorPersonaje,
+            color:
+  colorTematicaPrincipal,
           }}
         >
           {aventura.titulo}
@@ -257,12 +303,13 @@ const decoracion =
             marginTop: "6px",
 
             fontFamily:
-              '"Patrick Hand", cursive',
+              '"Chewy", cursive',
 
-            fontSize: "21px",
+            fontSize: "19px",
             lineHeight: 1.2,
 
-            color: "#334155",
+            color:
+  colorTematicaTexto,
           }}
         >
           {mostrarSolucion
@@ -449,7 +496,8 @@ const decoracion =
             '"Patrick Hand", cursive',
 
           fontSize: "17px",
-          color: "#64748B",
+          color:
+  colorTematicaTexto,
         }}
       >
         <span
@@ -463,9 +511,10 @@ const decoracion =
               "rotate(-8deg)",
           }}
         >
-          {decoracion}{" "}
-{decoracion}{" "}
-{decoracion}
+          
+          {decoracionTematica}{" "}
+{decoracionTematica}{" "}
+{decoracionTematica}
         </span>
 
         <span>
