@@ -224,7 +224,7 @@ marina: {
   ],
 
   assets: {
-    principal: "",
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/marina%20principal%20",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -259,7 +259,112 @@ finn: {
   ],
 
   assets: {
-    principal: "",
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/finn%20principal%20",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+    coral: {
+  nombre: "Coral",
+  tema: "oceano",
+
+  especie: "caballito_de_mar",
+
+  imagen: "",
+
+  emoji: "🐠",
+  color: "#FB7185",
+  decoracion: "🪸",
+
+  rol: "La guía de los arrecifes",
+
+  personalidad:
+    "Dulce, inteligente, tranquila y muy observadora.",
+
+  apariencia:
+    "Caballito de mar pequeño y amigable, color coral rosado con detalles amarillos, ojos grandes y formas redondeadas.",
+
+  accesorios:
+    "Flor marina turquesa distintiva cerca de la cabeza.",
+
+  habilidades: [
+    "brujula",
+  ],
+
+  assets: {
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/coral%20principal%20",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+brisa: {
+  nombre: "Brisa",
+  tema: "oceano",
+
+  especie: "ballena",
+
+  imagen: "",
+
+  emoji: "🐋",
+  color: "#6366F1",
+  decoracion: "💦",
+
+  rol: "La protectora del océano",
+
+  personalidad:
+    "Amable, tranquila, protectora y divertida.",
+
+  apariencia:
+    "Ballena joven de cuerpo redondeado, color azul lavanda, vientre claro, ojos grandes y expresión tierna.",
+
+  accesorios:
+    "Pequeña estrella de mar rosa cerca de una de sus aletas.",
+
+  habilidades: [
+    "soploBrisa",
+  ],
+
+  assets: {
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/brisa%20principal%20",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+rocco: {
+  nombre: "Rocco",
+  tema: "oceano",
+
+  especie: "pulpo",
+
+  imagen: "",
+
+  emoji: "🐙",
+  color: "#9333EA",
+  decoracion: "🫧",
+
+  rol: "El inventor",
+
+  personalidad:
+    "Ingenioso, curioso, divertido y un poco travieso.",
+
+  apariencia:
+    "Pulpo joven violeta, cabeza redondeada, ocho tentáculos expresivos, ojos grandes y detalles turquesa.",
+
+  accesorios:
+    "Gafas redondas amarillas como elemento distintivo.",
+
+  habilidades: [
+    "ochoSoluciones",
+  ],
+
+  assets: {
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/rocco%20principal%20",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -445,52 +550,277 @@ finn: {
       },
     },
 
-    /* =======================================================
-       MONTAÑA
-    ======================================================== */
+    // ============================================================
+    // MONTAÑA
+    // ============================================================
 
     kai: {
       nombre: "Kai",
       tema: "montana",
+      especie: "lobo",
       imagen: "",
-      emoji: "🧗",
-      color: "#15803D",
+      emoji: "🐺",
+      color: "#64748B",
       decoracion: "🌲",
-      habilidades: [],
+
+      rol: "Líder explorador",
+      personalidad: "Valiente, decidido, leal y aventurero.",
+      apariencia:
+        "Lobo joven gris azulado, con pecho y hocico claros y ojos grandes.",
+      accesorios: "Pañuelo verde alrededor del cuello.",
+
+      habilidades: ["instintoSendero"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/kai%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
-    nora: {
-      nombre: "Nora",
+    luma: {
+      nombre: "Luma",
       tema: "montana",
+      especie: "cabra_montes",
       imagen: "",
-      emoji: "🥾",
-      color: "#65A30D",
-      decoracion: "🏔️",
-      habilidades: [],
+      emoji: "🐐",
+      color: "#D6A76C",
+      decoracion: "⛰️",
+
+      rol: "Escaladora y exploradora",
+      personalidad: "Enérgica, valiente, alegre y perseverante.",
+      apariencia:
+        "Cabra montés joven de pelaje beige claro, zonas crema y cuernos curvos.",
+      accesorios: "Bandana violeta en una pata delantera.",
+
+      habilidades: ["saltoCumbre"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/luma%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
-    /* =======================================================
-       PIRATAS
-    ======================================================== */
-
-    capitanRoco: {
-      nombre: "Capitán Roco",
-      tema: "piratas",
+    boreal: {
+      nombre: "Boreal",
+      tema: "montana",
+      especie: "oso",
       imagen: "",
+      emoji: "🐻",
+      color: "#92400E",
+      decoracion: "🏔️",
+
+      rol: "Protector de la montaña",
+      personalidad: "Noble, tranquilo, fuerte y amigable.",
+      apariencia:
+        "Oso pardo joven de cuerpo robusto, pelaje marrón y pecho y hocico beige.",
+      accesorios: "Mochila naranja de explorador.",
+
+      habilidades: ["fuerzaMontana"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/boreal%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    kira: {
+      nombre: "Kira",
+      tema: "montana",
+      especie: "aguila",
+      imagen: "",
+      emoji: "🦅",
+      color: "#B45309",
+      decoracion: "☁️",
+
+      rol: "Exploradora de las alturas",
+      personalidad: "Atenta, valiente, rápida y segura.",
+      apariencia:
+        "Águila joven de plumaje marrón dorado, pecho crema y alas amplias.",
+      accesorios: "Gafas de aviadora azules.",
+
+      habilidades: ["vistaCumbre"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/kira%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    milo: {
+      nombre: "Milo",
+      tema: "montana",
+      especie: "zorro",
+      imagen: "",
+      emoji: "🦊",
+      color: "#EA580C",
+      decoracion: "🗺️",
+
+      rol: "Rastreador y explorador",
+      personalidad: "Curioso, astuto, alegre y creativo.",
+      apariencia:
+        "Zorro joven naranja rojizo, pecho crema y gran cola esponjosa con punta clara.",
+      accesorios: "Pañuelo verde y pequeña mochila de explorador.",
+
+      habilidades: ["rastroMontana"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/milo%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    // ============================================================
+    // PIRATAS
+    // ============================================================
+
+    capitanBronce: {
+      nombre: "Capitán Bronce",
+      tema: "piratas",
+      especie: "humano",
+      imagen: "",
+
       emoji: "🏴‍☠️",
-      color: "#334155",
-      decoracion: "☠️",
-      habilidades: [],
+      color: "#1E3A8A",
+      decoracion: "🧭",
+
+      rol: "Capitán y líder de la tripulación",
+      personalidad:
+        "Valiente, carismático, aventurero y algo presumido.",
+      apariencia:
+        "Joven capitán pirata de cabello castaño, barba corta y expresión alegre.",
+      accesorios:
+        "Parche negro, sombrero de capitán con pluma roja y brújula dorada.",
+
+      habilidades: ["liderazgoPirata"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/capitan%20bronco%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    marea: {
+      nombre: "Marea",
+      tema: "piratas",
+      especie: "guacamayo",
+      imagen: "",
+
+      emoji: "🦜",
+      color: "#DC2626",
+      decoracion: "🪙",
+
+      rol: "Vigía de la tripulación",
+      personalidad:
+        "Curioso, hablador, rápido, atento y ligeramente travieso.",
+      apariencia:
+        "Guacamayo pirata de plumaje rojo intenso con detalles azules, violetas y amarillos y gran pico curvado.",
+      accesorios:
+        "Sombrero pirata, pañuelo rojo y medallón dorado.",
+
+      habilidades: ["vistaVigia"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/marea%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    garfio: {
+      nombre: "Garfio",
+      tema: "piratas",
+      especie: "humano",
+      imagen: "",
+
+      emoji: "🪝",
+      color: "#7E22CE",
+      decoracion: "🗺️",
+
+      rol: "Navegante y cazador de tesoros",
+      personalidad:
+        "Astuto, atrevido, divertido y algo rebelde.",
+      apariencia:
+        "Pirata joven de cabello negro despeinado y expresión traviesa.",
+      accesorios:
+        "Garfio metálico, pañuelo violeta y mapa enrollado.",
+
+      habilidades: ["instintoTesoro"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/garfio%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    nilo: {
+      nombre: "Nilo",
+      tema: "piratas",
+      especie: "mono",
+      imagen: "",
+
+      emoji: "🐒",
+      color: "#92400E",
+      decoracion: "🪙",
+
+      rol: "Acróbata y recolector de tesoros",
+      personalidad:
+        "Inquieto, ingenioso, divertido y travieso.",
+      apariencia:
+        "Mono joven de pelaje marrón oscuro, rostro beige, brazos largos y cola muy curvada.",
+      accesorios:
+        "Sombrero pirata y bolsa de monedas.",
+
+      habilidades: ["manosRapidas"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/nilo%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
     perla: {
       nombre: "Perla",
       tema: "piratas",
+      especie: "gata",
       imagen: "",
-      emoji: "🦜",
-      color: "#B45309",
-      decoracion: "⚓",
-      habilidades: [],
+
+      emoji: "🐈‍⬛",
+      color: "#9D174D",
+      decoracion: "⚔️",
+
+      rol: "Pirata sigilosa y cazadora de tesoros",
+      personalidad:
+        "Astuta, malvada, desafiante, elegante y peligrosa.",
+      apariencia:
+        "Gata pirata de pelaje negro oscuro, mirada verde intensa y expresión maliciosa.",
+      accesorios:
+        "Sombrero pirata, espada, vestimenta borgoña y gran perla como amuleto.",
+
+      habilidades: ["pasoSilencioso"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/perla%20principal%20",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
     /* =======================================================
@@ -693,9 +1023,12 @@ export const PERSONAJES_POR_TEMATICA = {
 ],
 
   oceano: [
-    "marina",
-    "finn",
-  ],
+  "marina",
+  "finn",
+  "coral",
+  "brisa",
+  "rocco",
+],
 
   espacio: [
   "nova",
@@ -706,14 +1039,20 @@ export const PERSONAJES_POR_TEMATICA = {
 ],
 
   montana: [
-    "kai",
-    "nora",
-  ],
+  "kai",
+  "luma",
+  "boreal",
+  "kira",
+  "milo",
+],
 
   piratas: [
-    "capitanRoco",
-    "perla",
-  ],
+  "capitanBronce",
+  "marea",
+  "garfio",
+  "nilo",
+  "perla",
+],
 
   castillos: [
     "arthur",
