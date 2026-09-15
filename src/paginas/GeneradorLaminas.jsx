@@ -1080,32 +1080,79 @@ const [
   );
 
   const objetivosDisponibles =
-  useMemo(
-    () => {
-      const ids =
-        OBJETOS_POR_TEMATICA[
-          tematica
-        ] || [];
+    useMemo(
+      () => {
+        const configuracionObjetos =
+          OBJETOS_POR_TEMATICA[
+            tematica
+          ];
 
-      return ids
-        .map(
-          (id) => ({
-            id,
+        let ids = [];
 
-            ...OBJETOS_LABERINTOS[
-              id
-            ],
-          })
-        )
-        .filter(
-          (item) =>
-            item.nombre
-        );
-    },
-    [
-      tematica,
-    ]
-  );
+        // Temáticas antiguas:
+        // ["objeto1", "objeto2", ...]
+        if (
+          Array.isArray(
+            configuracionObjetos
+          )
+        ) {
+          ids =
+            configuracionObjetos;
+        }
+
+        // Nueva estructura:
+        // { personaje: ["objeto1", "objeto2"] }
+        else if (
+          configuracionObjetos &&
+          typeof configuracionObjetos ===
+            "object"
+        ) {
+          // Si elegimos un personaje concreto,
+          // mostramos solo sus objetivos.
+          if (
+            personaje &&
+            personaje !==
+              "automatico"
+          ) {
+            ids =
+              configuracionObjetos[
+                personaje
+              ] || [];
+          }
+
+          // Si el personaje está en automático,
+          // mostramos todos los objetivos disponibles.
+          else {
+            ids = [
+              ...new Set(
+                Object.values(
+                  configuracionObjetos
+                ).flat()
+              ),
+            ];
+          }
+        }
+
+        return ids
+          .map(
+            (id) => ({
+              id,
+
+              ...OBJETOS_LABERINTOS[
+                id
+              ],
+            })
+          )
+          .filter(
+            (item) =>
+              item.nombre
+          );
+      },
+      [
+        tematica,
+        personaje,
+      ]
+    );
 
   /*
     Separar las cantidades del resto de la configuración

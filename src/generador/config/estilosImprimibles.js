@@ -2,7 +2,7 @@ export const ESTILOS_IMPRIMIBLES = {
   logo: {
     url: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logo-andres-imprimibles",
     ancho: 130,
-    top: 20,
+    top: -2,
     right: 20,
   },
 

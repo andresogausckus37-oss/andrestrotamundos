@@ -823,150 +823,839 @@ rocco: {
       },
     },
 
-    /* =======================================================
-       CASTILLOS
-    ======================================================== */
+    // ============================================================
+    // CASTILLOS
+    // ============================================================
 
     arthur: {
       nombre: "Arthur",
       tema: "castillos",
+      especie: "humano",
       imagen: "",
-      emoji: "🤴",
-      color: "#1D4ED8",
-      decoracion: "✨",
-      habilidades: [],
+
+      emoji: "🛡️",
+      color: "#2563EB",
+      decoracion: "🏰",
+
+      rol: "Joven caballero protector del reino",
+      personalidad:
+        "Valiente, noble, leal y decidido.",
+      apariencia:
+        "Joven caballero de cabello castaño, ojos azules y expresión amigable y segura.",
+      accesorios:
+        "Armadura plateada con detalles azul real, escudo azul con león dorado, espada y capa azul.",
+
+      habilidades: ["valorReino"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/arthur%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
     elara: {
       nombre: "Elara",
       tema: "castillos",
+      especie: "humana",
       imagen: "",
-      emoji: "👸",
-      color: "#BE185D",
-      decoracion: "👑",
-      habilidades: [],
+
+      emoji: "🔮",
+      color: "#7C3AED",
+      decoracion: "✨",
+
+      rol: "Maga protectora del castillo",
+      personalidad:
+        "Inteligente, serena, valiente y misteriosa.",
+      apariencia:
+        "Joven maga de cabello largo plateado y ojos violetas.",
+      accesorios:
+        "Túnica medieval violeta y azul, bastón mágico con cristal violeta y libro de hechizos.",
+
+      habilidades: ["luzEncantada"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/elara%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
-    /* =======================================================
-       DINOSAURIOS
-    ======================================================== */
+    cedric: {
+      nombre: "Cedric",
+      tema: "castillos",
+      especie: "dragon",
+      imagen: "",
+
+      emoji: "🐉",
+      color: "#059669",
+      decoracion: "🔥",
+
+      rol: "Guardián de las torres del castillo",
+      personalidad:
+        "Fuerte, leal, orgulloso y protector.",
+      apariencia:
+        "Dragón joven de escamas verde esmeralda, vientre dorado, grandes alas, cuernos y larga cola.",
+      accesorios:
+        "Medallón real dorado y brazalete azul con el emblema del reino.",
+
+      habilidades: ["fuegoReal"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/cedric%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    lyra: {
+      nombre: "Lyra",
+      tema: "castillos",
+      especie: "unicornio",
+      imagen: "",
+
+      emoji: "🦄",
+      color: "#60A5FA",
+      decoracion: "💎",
+
+      rol: "Guardiana mágica de los jardines reales",
+      personalidad:
+        "Elegante, valiente, curiosa y bondadosa.",
+      apariencia:
+        "Unicornio de pelaje blanco perlado, ojos azules y larga crin celeste y violeta.",
+      accesorios:
+        "Cuerno dorado, collar real azul y gema celeste.",
+
+      habilidades: ["luzReal"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/lyra%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    drako: {
+      nombre: "Drako",
+      tema: "castillos",
+      especie: "draconiano",
+      imagen: "",
+
+      emoji: "🐲",
+      color: "#991B1B",
+      decoracion: "🔥",
+
+      rol: "Hechicero oscuro y antagonista del reino",
+      personalidad:
+        "Malvado, calculador, ambicioso, orgulloso y poderoso.",
+      apariencia:
+        "Draconiano reptiliano humanoide de escamas rojas, vientre dorado, grandes cuernos negros, ojos amarillos y larga cola.",
+      accesorios:
+        "Armadura negra con detalles dorados, capa rojo oscuro y bastón con cristal rojo.",
+
+      habilidades: ["fuegoOscuro"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/drako%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    // ============================================================
+    // DINOSAURIOS
+    // ============================================================
 
     rex: {
       nombre: "Rex",
       tema: "dinosaurios",
+      especie: "tiranosaurio",
       imagen: "",
       emoji: "🦖",
-      color: "#166534",
+      color: "#15803D",
       decoracion: "🌿",
-      habilidades: [],
+
+      rol: "Líder y protector del grupo",
+      personalidad: "Valiente, enérgico, competitivo y divertido.",
+      apariencia:
+        "T-Rex joven y robusto, de escamas verdes, vientre claro, cabeza grande y cola potente.",
+      accesorios:
+        "Pañuelo naranja alrededor del cuello y pequeña cicatriz sobre una ceja.",
+
+      habilidades: ["rugidoJurasico"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/rex%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
     trika: {
       nombre: "Trika",
       tema: "dinosaurios",
+      especie: "triceratops",
       imagen: "",
       emoji: "🦕",
-      color: "#0F766E",
-      decoracion: "🌿",
-      habilidades: [],
+      color: "#0891B2",
+      decoracion: "🌸",
+
+      rol: "Defensora del grupo",
+      personalidad: "Fuerte, tranquila, protectora y perseverante.",
+      apariencia:
+        "Triceratops joven azul turquesa, vientre claro, cuernos marfil y detalles violetas.",
+      accesorios:
+        "Flor violeta junto a uno de sus cuernos.",
+
+      habilidades: ["escudoJurasico"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/trika%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
-    /* =======================================================
-       VIAJES
-    ======================================================== */
+    bronto: {
+      nombre: "Bronto",
+      tema: "dinosaurios",
+      especie: "braquiosaurio",
+      imagen: "",
+      emoji: "🦕",
+      color: "#F59E0B",
+      decoracion: "🍃",
+
+      rol: "Gigante amable y observador",
+      personalidad: "Tranquilo, bondadoso, paciente y curioso.",
+      apariencia:
+        "Braquiosaurio joven amarillo anaranjado, vientre crema, manchas marrones y cuello muy largo.",
+      accesorios:
+        "Pañuelo azul y pequeñas hojas verdes cerca de la cabeza.",
+
+      habilidades: ["vistaAlturas"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/bronto%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    velo: {
+      nombre: "Velo",
+      tema: "dinosaurios",
+      especie: "velociraptor",
+      imagen: "",
+      emoji: "🦖",
+      color: "#EA580C",
+      decoracion: "🧭",
+
+      rol: "Explorador veloz del grupo",
+      personalidad: "Astuto, inquieto, curioso y competitivo.",
+      apariencia:
+        "Velociraptor joven rojo anaranjado con detalles azul oscuro, cuerpo ágil y larga cola.",
+      accesorios:
+        "Gafas de explorador, pañuelo azul y pequeña brújula.",
+
+      habilidades: ["velocidadJurasica"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/velo%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    tera: {
+      nombre: "Tera",
+      tema: "dinosaurios",
+      especie: "pterodactilo",
+      imagen: "",
+      emoji: "🪽",
+      color: "#7C3AED",
+      decoracion: "☁️",
+
+      rol: "Exploradora aérea del grupo",
+      personalidad: "Aventurera, alegre, observadora y atrevida.",
+      apariencia:
+        "Pterodáctilo joven violeta con detalles rosados, vientre crema, pico largo y grandes alas.",
+      accesorios:
+        "Bufanda amarilla y medallón con una huella jurásica.",
+
+      habilidades: ["vueloJurasico"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/tera%20principal",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    // ============================================================
+    // VIAJES
+    // ============================================================
 
     atlas: {
       nombre: "Atlas",
       tema: "viajes",
+      especie: "humano",
       imagen: "",
-      emoji: "🧳",
-      color: "#0369A1",
-      decoracion: "🧭",
-      habilidades: [],
+      emoji: "🧭",
+      color: "#4D7C0F",
+      decoracion: "🗺️",
+
+      rol: "Líder explorador y guía del grupo",
+      personalidad:
+        "Curioso, valiente, optimista y aventurero.",
+      apariencia:
+        "Joven viajero de cabello castaño, ojos verdes y expresión entusiasta.",
+      accesorios:
+        "Mochila de explorador, gorra, cámara fotográfica, mapa y brújula.",
+
+      habilidades: ["rumboAventurero"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000000048820e8ca7580a6d758f0d-Wyu1as6yXodsPTNqj1X9d4UDM6bb1Q.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
     mila: {
       nombre: "Mila",
       tema: "viajes",
+      especie: "humana",
       imagen: "",
-      emoji: "✈️",
-      color: "#C2410C",
-      decoracion: "🌍",
-      habilidades: [],
+      emoji: "📷",
+      color: "#0891B2",
+      decoracion: "🌎",
+
+      rol: "Fotógrafa y cronista viajera",
+      personalidad:
+        "Alegre, creativa, observadora y curiosa.",
+      apariencia:
+        "Joven viajera de cabello largo castaño rojizo, ojos azules y expresión entusiasta.",
+      accesorios:
+        "Cámara fotográfica, sombrero de viajera, mochila y cuaderno de viaje.",
+
+      habilidades: ["ojoViajero"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_00000000c1c4820e9fb45f244d02511d.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
-    /* =======================================================
-       NAVIDAD
-    ======================================================== */
+    kiro: {
+      nombre: "Kiro",
+      tema: "viajes",
+      especie: "mapache",
+      imagen: "",
+      emoji: "🦝",
+      color: "#6B7280",
+      decoracion: "🗺️",
+
+      rol: "Explorador urbano y buscador de rutas",
+      personalidad:
+        "Ingenioso, curioso, inquieto y divertido.",
+      apariencia:
+        "Mapache de pelaje gris plateado, máscara facial oscura y gran cola anillada.",
+      accesorios:
+        "Mochila amarilla de viajero, brújula y mapa.",
+
+      habilidades: ["rutaSecreta"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000004c8c820eaac3976538ca45c5-jb2BpmqiAKa8drfpEPJQmOgkF0QR8Q.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    ayla: {
+      nombre: "Ayla",
+      tema: "viajes",
+      especie: "golondrina",
+      imagen: "",
+      emoji: "🐦",
+      color: "#1D4ED8",
+      decoracion: "✈️",
+
+      rol: "Exploradora aérea y mensajera",
+      personalidad:
+        "Alegre, rápida, curiosa y aventurera.",
+      apariencia:
+        "Golondrina de plumaje azul intenso y blanco con detalles coral y cola bifurcada.",
+      accesorios:
+        "Gafas de aviadora, pañuelo amarillo, pequeña mochila y brújula.",
+
+      habilidades: ["rumboViento"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000002f88820eb4040941b57a66a5-zFbkK2NcFty25Qt5hXfn5zXLj774BL.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    tango: {
+      nombre: "Tango",
+      tema: "viajes",
+      especie: "camaleon",
+      imagen: "",
+      emoji: "🦎",
+      color: "#65A30D",
+      decoracion: "🧭",
+
+      rol: "Explorador adaptable y descubridor de lugares ocultos",
+      personalidad:
+        "Curioso, ingenioso, tranquilo y divertido.",
+      apariencia:
+        "Camaleón verde lima y turquesa con detalles naranjas, grandes ojos y cola en espiral.",
+      accesorios:
+        "Sombrero de explorador, mochila roja, mapa, brújula y binoculares.",
+
+      habilidades: ["camuflajeViajero"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_00000000d524820e99a5187835ea340e-An9XbRbphKstsxXVVW3z644xYzXvA3.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    // ============================================================
+    // NAVIDAD
+    // ============================================================
 
     nico: {
       nombre: "Nico",
       tema: "navidad",
+      especie: "humano",
       imagen: "",
       emoji: "🎅",
-      color: "#B91C1C",
-      decoracion: "❄️",
-      habilidades: [],
+      color: "#DC2626",
+      decoracion: "🎁",
+
+      rol: "Joven ayudante y organizador de las entregas navideñas",
+      personalidad:
+        "Alegre, responsable, aventurero y generoso.",
+      apariencia:
+        "Joven de cabello castaño, ojos verdes y expresión entusiasta, vestido con ropa navideña roja, verde y blanca.",
+      accesorios:
+        "Gorro navideño rojo, mochila verde con regalos, bufanda y campanita dorada.",
+
+      habilidades: ["espirituNavideno"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000d508820eac25ca0d4e893275-aaCmQmJKfyx0dXK4dto6Q6D8PXWGWC.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
     neva: {
       nombre: "Neva",
       tema: "navidad",
+      especie: "reno",
       imagen: "",
-      emoji: "⛄",
-      color: "#0369A1",
+      emoji: "🦌",
+      color: "#BFDBFE",
       decoracion: "❄️",
-      habilidades: [],
+
+      rol: "Guía de los caminos nevados",
+      personalidad:
+        "Dulce, valiente, rápida y protectora.",
+      apariencia:
+        "Reno hembra de pelaje blanco plateado con detalles celestes, ojos azules y grandes astas.",
+      accesorios:
+        "Collar rojo con cascabeles dorados, copo de nieve azul y pequeña carga de regalos.",
+
+      habilidades: ["senderoNieve"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000fd00820eb76cf8202e680085-vlN3d1Y4zFvs3V6ja1shx4u5rlXYpE.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
-    /* =======================================================
-       HALLOWEEN
-    ======================================================== */
+    tino: {
+      nombre: "Tino",
+      tema: "navidad",
+      especie: "pinguino",
+      imagen: "",
+      emoji: "🐧",
+      color: "#1E3A8A",
+      decoracion: "🎄",
+
+      rol: "Repartidor de regalos y explorador del hielo",
+      personalidad:
+        "Divertido, energético, simpático y algo torpe.",
+      apariencia:
+        "Pingüino joven de plumaje negro azulado, vientre blanco, pico naranja y expresión alegre.",
+      accesorios:
+        "Gorro verde navideño, bufanda roja y saco dorado lleno de regalos.",
+
+      habilidades: ["deslizamientoNevado"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000fffc820ea6f6b423e060fda1-6SfspkveWRYVgfzdRPZySK1KVdm8m4.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    holly: {
+      nombre: "Holly",
+      tema: "navidad",
+      especie: "elfa",
+      imagen: "",
+      emoji: "🧝‍♀️",
+      color: "#15803D",
+      decoracion: "🧸",
+
+      rol: "Inventora y creadora de juguetes",
+      personalidad:
+        "Creativa, ingeniosa, alegre y muy activa.",
+      apariencia:
+        "Joven elfa de cabello rojo cobrizo, ojos verdes, orejas puntiagudas y vestimenta navideña verde y roja.",
+      accesorios:
+        "Gorro de elfa con cascabeles, cinturón de herramientas y pequeño juguete de madera.",
+
+      habilidades: ["magiaJuguetes"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_0000000088bc820ebcd5f4e9bc8f0374-RSFdZ9iX8bCAxlDagI2TaDkI6uNOwA.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    copo: {
+      nombre: "Copo",
+      tema: "navidad",
+      especie: "muneco_nieve",
+      imagen: "",
+      emoji: "☃️",
+      color: "#E0F2FE",
+      decoracion: "❄️",
+
+      rol: "Guardián alegre de la aldea navideña",
+      personalidad:
+        "Divertido, bondadoso, optimista y un poco travieso.",
+      apariencia:
+        "Muñeco de nieve mágico formado por grandes bolas de nieve, ojos azules, nariz de zanahoria y sonrisa expresiva.",
+      accesorios:
+        "Sombrero de copa azul oscuro con acebo, bufanda turquesa, botones dorados y mitones rojos.",
+
+      habilidades: ["magiaNieve"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000c938820ebf3942ebfb7cd35e-vdHWqyomigvZvPQzTgXLADLQnqqPA1.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    // ============================================================
+    // HALLOWEEN
+    // ============================================================
 
     sombra: {
       nombre: "Sombra",
       tema: "halloween",
+      especie: "gato",
       imagen: "",
-      emoji: "👻",
-      color: "#6D28D9",
-      decoracion: "🎃",
-      habilidades: [],
+      emoji: "🐈‍⬛",
+      color: "#111827",
+      decoracion: "🌙",
+
+      rol: "Explorador nocturno y guardián de los secretos",
+      personalidad:
+        "Astuto, misterioso, valiente y algo travieso.",
+      apariencia:
+        "Gato negro de pelaje intenso con reflejos violetas, ojos dorados y cola larga.",
+      accesorios:
+        "Collar violeta con luna dorada, pequeña capa púrpura y marca de media luna en la frente.",
+
+      habilidades: ["pasoSombras"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000035f8820e86159902b138217b-omYWYlsQWxOD2RZ6V0xqbdhGC6HJ0a.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
     bruma: {
       nombre: "Bruma",
       tema: "halloween",
+      especie: "fantasma",
       imagen: "",
-      emoji: "🧙",
-      color: "#7E22CE",
-      decoracion: "✨",
-      habilidades: [],
+      emoji: "👻",
+      color: "#C4B5FD",
+      decoracion: "🏮",
+
+      rol: "Explorador de lugares encantados",
+      personalidad:
+        "Curioso, bromista, amigable y misterioso.",
+      apariencia:
+        "Fantasma blanco azulado y semitransparente, con grandes ojos violetas y cuerpo flotante en forma de remolino.",
+      accesorios:
+        "Sombrero violeta antiguo, pañuelo púrpura y farol naranja encantado.",
+
+      habilidades: ["pasoFantasmal"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000003a8820e91ace5cfdfbaafbc-FG3gJG7UtQA9SySwvWH8NQLzZN1xF7.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
-    /* =======================================================
-       FAMILIA
-    ======================================================== */
-
-    sol: {
-      nombre: "Sol",
-      tema: "familia",
+    mora: {
+      nombre: "Mora",
+      tema: "halloween",
+      especie: "humana",
       imagen: "",
-      emoji: "👧",
+      emoji: "🧙‍♀️",
+      color: "#581C87",
+      decoracion: "🧪",
+
+      rol: "Experta en pociones y hechizos",
+      personalidad:
+        "Inteligente, atrevida, curiosa y algo traviesa.",
+      apariencia:
+        "Joven bruja de cabello largo verde oscuro, ojos ámbar y expresión pícara.",
+      accesorios:
+        "Sombrero negro con cinta naranja, varita mágica, caldero y pociones.",
+
+      habilidades: ["pocionEncantada"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000082a0820ea9f1d2b4a0e376e7-mljilPDvRwdjnLpk1yEcug8OmpVqb7.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
+    },
+
+    krunk: {
+      nombre: "Krunk",
+      tema: "halloween",
+      especie: "golem_calabaza",
+      imagen: "",
+      emoji: "🎃",
       color: "#EA580C",
-      decoracion: "❤️",
-      habilidades: [],
+      decoracion: "🍂",
+
+      rol: "Guardián de los campos encantados",
+      personalidad:
+        "Fuerte, torpe, divertido y ligeramente intimidante.",
+      apariencia:
+        "Criatura robusta formada por raíces y madera oscura, con una gran calabaza como cabeza y ojos verdes luminosos.",
+      accesorios:
+        "Enredaderas verdes, capa violeta deteriorada, hojas secas y pequeñas calabazas.",
+
+      habilidades: ["fuerzaCalabaza"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_00000000d6c8820eb8586e04326b61ed-K5IEaDGmNhKCgbljearPuSBp2nfhRs.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
 
-    teo: {
-      nombre: "Teo",
-      tema: "familia",
+    vlad: {
+      nombre: "Vlad",
+      tema: "halloween",
+      especie: "murcielago_vampiro",
       imagen: "",
-      emoji: "👦",
-      color: "#0284C7",
-      decoracion: "❤️",
-      habilidades: [],
-      
+      emoji: "🦇",
+      color: "#7F1D1D",
+      decoracion: "🩸",
+
+      rol: "Explorador aéreo de la noche",
+      personalidad:
+        "Astuto, elegante, atrevido y algo presumido.",
+      apariencia:
+        "Murciélago vampiro de pelaje gris oscuro, grandes alas negras y rojas, ojos rojos y pequeños colmillos.",
+      accesorios:
+        "Capa vampírica negra con interior rojo y medallón dorado con gema roja.",
+
+      habilidades: ["vueloNocturno"],
+
+      assets: {
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000010a4820ebd7b2d129e0782c6-pvwxJZtO6c7hzuyVMYKw3IhMOH6uXf.png",
+        avatar: "",
+        movimiento: "",
+        habilidad: "",
+      },
     },
+
+// ============================================================
+// FAMILIA
+// ============================================================
+
+sol: {
+  nombre: "Sol",
+  tema: "familia",
+  especie: "humana",
+  imagen: "",
+  emoji: "👧",
+  color: "#FACC15",
+  decoracion: "☀️",
+
+  rol: "Hermana mayor y organizadora de las aventuras familiares",
+  personalidad:
+    "Alegre, responsable, curiosa y creativa.",
+  apariencia:
+    "Niña de cabello castaño oscuro y ondulado, ojos marrones y expresión entusiasta.",
+  accesorios:
+    "Vincha amarilla con sol, mochila turquesa y cámara instantánea.",
+
+  habilidades: ["ideaBrillante"],
+
+  assets: {
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000803c820e8c1ae1c2b3efee60-ViJXKRXm1jikFWY70YV0DlIgyyhKe4.png",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+teo: {
+  nombre: "Teo",
+  tema: "familia",
+  especie: "humano",
+  imagen: "",
+  emoji: "👦",
+  color: "#14B8A6",
+  decoracion: "🔭",
+
+  rol: "Hermano menor y pequeño aventurero de la familia",
+  personalidad:
+    "Divertido, inquieto, curioso y cariñoso.",
+  apariencia:
+    "Niño de cabello castaño claro y despeinado, ojos verdes y expresión alegre.",
+  accesorios:
+    "Gorra azul hacia atrás, mochila naranja y binoculares infantiles.",
+
+  habilidades: ["curiosidadInfinita"],
+
+  assets: {
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000734c820eaa114d42d3332683-NXY6FkVcW8QRfcDZlSk7oMsADbzVCu.png",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+clara: {
+  nombre: "Clara",
+  tema: "familia",
+  especie: "humana",
+  imagen: "",
+  emoji: "👩",
+  color: "#FB7185",
+  decoracion: "🎒",
+
+  rol: "Mamá y organizadora de la familia",
+  personalidad:
+    "Cariñosa, alegre, práctica y aventurera.",
+  apariencia:
+    "Mujer adulta de cabello castaño rojizo ondulado, ojos verdes y expresión cálida.",
+  accesorios:
+    "Mochila turquesa, botella reutilizable, botiquín de viaje y reloj deportivo.",
+
+  habilidades: ["siemprePreparada"],
+
+  assets: {
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000a904820eabd217deaf0d3b65-J9gAoLYDZsrXxMzItyNOOHMMtpndfC.png",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+leo: {
+  nombre: "Leo",
+  tema: "familia",
+  especie: "humano",
+  imagen: "",
+  emoji: "👨",
+  color: "#0369A1",
+  decoracion: "🏕️",
+
+  rol: "Papá y compañero de aventuras de la familia",
+  personalidad:
+    "Divertido, protector, optimista y aventurero.",
+  apariencia:
+    "Hombre adulto de cabello castaño oscuro corto, barba ligera y ojos marrones.",
+  accesorios:
+    "Mochila naranja de excursión, reloj deportivo y pequeña linterna.",
+
+  habilidades: ["espirituAventurero"],
+
+  assets: {
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_000000000ae4820ead68387ce1c0c669-tgJ5usIrex6AvTgetqgmTCD6wig9XP.png",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
+
+lola: {
+  nombre: "Lola",
+  tema: "familia",
+  especie: "humana",
+  imagen: "",
+  emoji: "👵",
+  color: "#8B5CF6",
+  decoracion: "📖",
+
+  rol: "Abuela, consejera y narradora de las aventuras familiares",
+  personalidad:
+    "Cariñosa, activa, divertida, sabia y curiosa.",
+  apariencia:
+    "Mujer mayor de cabello blanco plateado, corto y ondulado, ojos marrones y expresión alegre.",
+  accesorios:
+    "Anteojos redondos turquesa, mochila amarilla, cámara y cuaderno de aventuras.",
+
+  habilidades: ["sabiduriaViajera"],
+
+  assets: {
+    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_0000000025b8820e8ffb201c8878e8c0-cCcXEoguOmQb5E6AxONjIeXUslZUfA.png",
+    avatar: "",
+    movimiento: "",
+    habilidad: "",
+  },
+},
     };
 
 /* =========================================================
@@ -1055,33 +1744,51 @@ export const PERSONAJES_POR_TEMATICA = {
 ],
 
   castillos: [
-    "arthur",
-    "elara",
-  ],
+  "arthur",
+  "elara",
+  "cedric",
+  "lyra",
+  "drako",
+],
 
   dinosaurios: [
-    "rex",
-    "trika",
-  ],
+  "rex",
+  "trika",
+  "bronto",
+  "velo",
+  "tera",
+],
 
   viajes: [
-    "atlas",
-    "mila",
-  ],
+  "atlas",
+  "mila",
+  "kiro",
+  "ayla",
+  "tango",
+],
 
   navidad: [
-    "nico",
-    "neva",
-  ],
+  "nico",
+  "neva",
+  "tino",
+  "holly",
+  "copo",
+],
 
   halloween: [
-    "sombra",
-    "bruma",
-  ],
+  "sombra",
+  "bruma",
+  "mora",
+  "krunk",
+  "vlad",
+],
 
-  familia: [
-    "sol",
-    "teo",
+    familia: [
+      "sol",
+      "teo",
+      "clara",
+      "leo",
+      "lola",
   ],
 };
 
@@ -1173,250 +1880,547 @@ export const HABILIDADES_LABERINTOS = {
 ========================================================= */
 
 export const OBJETOS_LABERINTOS = {
-  /* =======================================================
-     MASCOTAS
-  ======================================================== */
-
-  pelota: {
-    nombre: "pelota",
-    articulo: "la",
-    emoji: "🏀",
-    imagen: "",
-  },
-
-  ovillo: {
-    nombre: "ovillo",
-    articulo: "el",
-    emoji: "🧶",
-    imagen: "",
-  },
+  // ============================================================
+  // OBJETOS — MASCOTAS
+  // ============================================================
 
   hueso: {
     nombre: "hueso",
     articulo: "el",
+    tema: "mascotas",
+    personaje: "toby",
     emoji: "🦴",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/hueso%201",
   },
 
-  comida: {
-    nombre: "comida",
+  pelota: {
+    nombre: "pelota",
     articulo: "la",
-    emoji: "🥣",
-    imagen: "",
+    tema: "mascotas",
+    personaje: "toby",
+    emoji: "⚽",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/pelota%201",
   },
 
-  frisbee: {
-    nombre: "frisbee",
+  ovillo: {
+    nombre: "ovillo de lana",
     articulo: "el",
-    emoji: "🥏",
-    imagen: "",
+    tema: "mascotas",
+    personaje: "luna",
+    emoji: "🧶",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/ovillo%201",
   },
 
-  pescado: {
-    nombre: "pescado",
+  ratonJuguete: {
+    nombre: "ratón de juguete",
     articulo: "el",
-    emoji: "🐟",
-    imagen: "",
+    tema: "mascotas",
+    personaje: "luna",
+    emoji: "🐭",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/raton%201",
+  },
+
+  zanahoria: {
+    nombre: "zanahoria",
+    articulo: "la",
+    tema: "mascotas",
+    personaje: "nube",
+    emoji: "🥕",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/zanahoria%201",
+  },
+
+  canastaVerduras: {
+    nombre: "canasta de verduras",
+    articulo: "la",
+    tema: "mascotas",
+    personaje: "nube",
+    emoji: "🥬",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/canasta%201",
+  },
+
+  semillas: {
+    nombre: "semillas",
+    articulo: "las",
+    tema: "mascotas",
+    personaje: "pipo",
+    emoji: "🌻",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/semillas%201",
+  },
+
+  frutaTropical: {
+    nombre: "fruta tropical",
+    articulo: "la",
+    tema: "mascotas",
+    personaje: "pipo",
+    emoji: "🍍",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/fruta%201",
+  },
+
+  hojasVerdes: {
+    nombre: "hojas verdes",
+    articulo: "las",
+    tema: "mascotas",
+    personaje: "tito",
+    emoji: "🥬",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/lechuga%201",
+  },
+
+  estanqueRefugio: {
+    nombre: "pequeño estanque",
+    articulo: "el",
+    tema: "mascotas",
+    personaje: "tito",
+    emoji: "🌿",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/estanque%201",
   },
 
   /* =======================================================
      PLAYA Y OCÉANO
-  ======================================================== */
-
-  sombrilla: {
-    nombre: "sombrilla",
-    articulo: "la",
-    emoji: "⛱️",
-    imagen: "",
-  },
+  ======================================================= */
 
   caracola: {
     nombre: "caracola",
     articulo: "la",
     emoji: "🐚",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/caracola",
   },
 
-  coral: {
-    nombre: "coral",
-    articulo: "el",
-    emoji: "🪸",
-    imagen: "",
-  },
-
-  isla: {
-    nombre: "isla",
+  perla: {
+    nombre: "perla",
     articulo: "la",
-    emoji: "🏝️",
-    imagen: "",
-  },
-
-  barco: {
-    nombre: "barco",
-    articulo: "el",
-    emoji: "⛵",
-    imagen: "",
+    emoji: "🦪",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/perla",
   },
 
   salvavidas: {
     nombre: "salvavidas",
     articulo: "el",
     emoji: "🛟",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/salvavidas",
+  },
+
+  tablaSurf: {
+    nombre: "tabla de surf",
+    articulo: "la",
+    emoji: "🏄",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/tablasurf",
+  },
+
+  coral: {
+    nombre: "coral",
+    articulo: "el",
+    emoji: "🪸",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/coral",
+  },
+
+  estrellaMar: {
+    nombre: "estrella de mar",
+    articulo: "la",
+    emoji: "⭐",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/estrella%20",
+  },
+
+  algasMarinas: {
+    nombre: "algas marinas",
+    articulo: "las",
+    emoji: "🌿",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/algas%20",
+  },
+
+  cofreSubmarino: {
+    nombre: "cofre submarino",
+    articulo: "el",
+    emoji: "🧰",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/cofre%20",
   },
 
   ancla: {
     nombre: "ancla",
     articulo: "el",
     emoji: "⚓",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/ancla%20",
+  },
+
+  barco: {
+    nombre: "barco",
+    articulo: "el",
+    emoji: "⛵",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/barco%20",
   },
 
   /* =======================================================
      ESPACIO
-  ======================================================== */
+  ======================================================= */
 
-  cohete: {
-    nombre: "cohete",
+  robotEspacial: {
+    nombre: "robot espacial",
     articulo: "el",
-    emoji: "🚀",
-    imagen: "",
+    emoji: "🤖",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/robot%201",
   },
 
-  planeta: {
-    nombre: "planeta",
-    articulo: "el",
-    emoji: "🪐",
-    imagen: "",
-  },
-
-  estrella: {
-    nombre: "estrella",
+  naveEspacial: {
+    nombre: "nave espacial",
     articulo: "la",
-    emoji: "⭐",
-    imagen: "",
+    emoji: "🛸",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/nave%20",
   },
 
-  satelite: {
-    nombre: "satélite",
-    articulo: "el",
-    emoji: "🛰️",
-    imagen: "",
+  luna: {
+    nombre: "luna",
+    articulo: "la",
+    emoji: "🌙",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/luna%20",
   },
 
   meteorito: {
     nombre: "meteorito",
     articulo: "el",
     emoji: "☄️",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/meteorito%201",
+  },
+
+  estrella: {
+    nombre: "estrella",
+    articulo: "la",
+    emoji: "⭐",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/estrella%201",
+  },
+
+  planetaTierra: {
+    nombre: "planeta Tierra",
+    articulo: "el",
+    emoji: "🌍",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/planeta%201",
+  },
+
+  satelite: {
+    nombre: "satélite",
+    articulo: "el",
+    emoji: "🛰️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/satelite",
+  },
+
+  estrellaFugaz: {
+    nombre: "estrella fugaz",
+    articulo: "la",
+    emoji: "🌠",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/estrellaf",
+  },
+
+  gema: {
+    nombre: "gema espacial",
+    articulo: "la",
+    emoji: "💎",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/gema",
+  },
+
+  cohete: {
+    nombre: "cohete",
+    articulo: "el",
+    emoji: "🚀",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/cohete",
   },
 
   /* =======================================================
      MONTAÑA Y NATURALEZA
-  ======================================================== */
+  ======================================================= */
 
   montana: {
     nombre: "montaña",
     articulo: "la",
     emoji: "🏔️",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/monta%C3%B1a",
   },
 
   bosque: {
     nombre: "bosque",
     articulo: "el",
     emoji: "🌲",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/bosque",
   },
 
-  tiendaCampana: {
-    nombre: "tienda de campaña",
-    articulo: "la",
-    emoji: "⛺",
-    imagen: "",
+  huellas: {
+    nombre: "huellas",
+    articulo: "las",
+    emoji: "🐾",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/huellas",
   },
 
-  mochila: {
-    nombre: "mochila",
+  floresSilvestres: {
+    nombre: "flores silvestres",
+    articulo: "las",
+    emoji: "🌼",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/flores",
+  },
+
+  colmena: {
+    nombre: "colmena",
     articulo: "la",
-    emoji: "🎒",
-    imagen: "",
+    emoji: "🍯",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/colmena",
+  },
+
+  frutosBosque: {
+    nombre: "frutos del bosque",
+    articulo: "los",
+    emoji: "🫐",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/frutos",
+  },
+
+  nido: {
+    nombre: "nido",
+    articulo: "el",
+    emoji: "🪺",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/nido",
+  },
+
+  pluma: {
+    nombre: "pluma",
+    articulo: "la",
+    emoji: "🪶",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/pluma",
+  },
+
+  madriguera: {
+    nombre: "madriguera",
+    articulo: "la",
+    emoji: "🕳️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/madriguera",
+  },
+
+  bellotas: {
+    nombre: "bellotas",
+    articulo: "las",
+    emoji: "🌰",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/bellotas",
+  },
+
+  /* =======================================================
+     PIRATAS
+  ======================================================= */
+
+  mapa: {
+    nombre: "mapa",
+    articulo: "el",
+    emoji: "🗺️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/mapa",
   },
 
   brujula: {
     nombre: "brújula",
     articulo: "la",
     emoji: "🧭",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/br%C3%BAjula",
   },
 
-  fogata: {
-    nombre: "fogata",
-    articulo: "la",
-    emoji: "🔥",
-    imagen: "",
-  },
-
-  /* =======================================================
-     PIRATAS
-  ======================================================== */
-
-  tesoro: {
-    nombre: "tesoro",
+  catalejo: {
+    nombre: "catalejo",
     articulo: "el",
-    emoji: "💰",
-    imagen: "",
+    emoji: "🔭",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/catalejo",
+  },
+
+  monedaOro: {
+    nombre: "moneda de oro",
+    articulo: "la",
+    emoji: "🪙",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/moneda",
   },
 
   cofre: {
     nombre: "cofre",
     articulo: "el",
     emoji: "🧰",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/cofre",
   },
 
-  mapa: {
-    nombre: "mapa",
+  espadaPirata: {
+    nombre: "espada pirata",
+    articulo: "la",
+    emoji: "⚔️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/espada%20pirata",
+  },
+
+  tesoro: {
+    nombre: "tesoro",
     articulo: "el",
-    emoji: "🗺️",
-    imagen: "",
+    emoji: "💰",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/tesoro",
+  },
+
+  barril: {
+    nombre: "barril",
+    articulo: "el",
+    emoji: "🛢️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/barril",
+  },
+
+  collarPerlas: {
+    nombre: "collar de perlas",
+    articulo: "el",
+    emoji: "📿",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/collar%20perlas",
+  },
+
+  llaveDorada: {
+    nombre: "llave dorada",
+    articulo: "la",
+    emoji: "🔑",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/llave%20dorada",
   },
 
   /* =======================================================
      CASTILLOS
-  ======================================================== */
+  ======================================================= */
+
+  espada: {
+    nombre: "espada",
+    articulo: "la",
+    emoji: "⚔️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/espada",
+  },
+
+  escudo: {
+    nombre: "escudo",
+    articulo: "el",
+    emoji: "🛡️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/escudo",
+  },
+
+  libroHechizos: {
+    nombre: "libro de hechizos",
+    articulo: "el",
+    emoji: "📖",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/libro%20hechizos",
+  },
+
+  varitaMagica: {
+    nombre: "varita mágica",
+    articulo: "la",
+    emoji: "🪄",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/varita",
+  },
 
   castillo: {
     nombre: "castillo",
     articulo: "el",
     emoji: "🏰",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/castillo",
+  },
+
+  gemaMagica: {
+    nombre: "gema mágica",
+    articulo: "la",
+    emoji: "💎",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/gemamagica",
   },
 
   corona: {
     nombre: "corona",
     articulo: "la",
     emoji: "👑",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/corona2",
+  },
+
+  cristalEncantado: {
+    nombre: "cristal encantado",
+    articulo: "el",
+    emoji: "🔮",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/cristal%20encantado",
   },
 
   llave: {
     nombre: "llave",
     articulo: "la",
     emoji: "🗝️",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/llave2",
+  },
+
+  orbeMagico: {
+    nombre: "orbe mágico",
+    articulo: "el",
+    emoji: "🔮",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/orbe%20m%C3%A1gico",
   },
 
   /* =======================================================
      DINOSAURIOS
   ======================================================== */
 
-  huevoDinosaurio: {
-    nombre: "huevo de dinosaurio",
-    articulo: "el",
-    emoji: "🥚",
-    imagen: "",
-  },
+  /* =======================================================
+   DINOSAURIOS
+======================================================= */
+
+huellasGigantes: {
+  nombre: "huellas gigantes",
+  articulo: "las",
+  emoji: "🐾",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/huella%20gigante",
+},
+
+huesoDinosaurio: {
+  nombre: "hueso de dinosaurio",
+  articulo: "el",
+  emoji: "🦴",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/hueso%20dinosaurio%20",
+},
+
+helechos: {
+  nombre: "helechos",
+  articulo: "los",
+  emoji: "🌿",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/helechos",
+},
+
+nidoHuevos: {
+  nombre: "nido de huevos",
+  articulo: "el",
+  emoji: "🪺",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/nido%20de%20huevos",
+},
+
+hojasArbol: {
+  nombre: "hojas de árbol",
+  articulo: "las",
+  emoji: "🍃",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/hojas%20de%20%C3%A1rbol",
+},
+
+arbolPrehistorico: {
+  nombre: "árbol prehistórico",
+  articulo: "el",
+  emoji: "🌳",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/%C3%A1rbol%20prehist%C3%B3rico",
+},
+
+huevoDinosaurio: {
+  nombre: "huevo de dinosaurio",
+  articulo: "el",
+  emoji: "🥚",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/huevo%20de%20dinosaurio",
+},
+
+fosil: {
+  nombre: "fósil",
+  articulo: "el",
+  emoji: "🦴",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/f%C3%B3sil",
+},
+
+lago: {
+  nombre: "lago",
+  articulo: "el",
+  emoji: "🏞️",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/lago",
+},
+
+pezPrehistorico: {
+  nombre: "pez prehistórico",
+  articulo: "el",
+  emoji: "🐟",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/pez%20prehist%C3%B3rico",
+},
 
   /* =======================================================
      VIAJES
@@ -1808,62 +2812,61 @@ export const TEMATICAS_LABERINTOS = {
 ========================================================= */
 
 export const OBJETOS_POR_TEMATICA = {
-  mascotas: [
-    "pelota",
-    "ovillo",
-    "hueso",
-    "comida",
-    "frisbee",
-    "pescado",
-  ],
+  mascotas: {
+    toby: ["hueso", "pelota"],
+    luna: ["ovillo", "ratonJuguete"],
+    nube: ["zanahoria", "canastaVerduras"],
+    pipo: ["semillas", "frutaTropical"],
+    tito: ["hojasVerdes", "estanqueRefugio"],
+  },
 
-  oceano: [
-    "sombrilla",
-    "caracola",
-    "coral",
-    "isla",
-    "barco",
-    "salvavidas",
-    "ancla",
-  ],
+  oceano: {
+    marina: ["caracola", "perla"],
+    finn: ["salvavidas", "tablaSurf"],
+    coral: ["coral", "estrellaMar"],
+    brisa: ["algasMarinas", "cofreSubmarino"],
+    rocco: ["ancla", "barco"],
+  },
 
-  espacio: [
-    "cohete",
-    "planeta",
-    "estrella",
-    "satelite",
-    "meteorito",
-  ],
+  espacio: {
+    astro: ["robotEspacial", "naveEspacial"],
+    orion: ["luna", "meteorito"],
+    nova: ["estrella", "planetaTierra"],
+    vega: ["satelite", "estrellaFugaz"],
+    cosmo: ["gema", "cohete"],
+  },
 
-  montana: [
-    "montana",
-    "bosque",
-    "tiendaCampana",
-    "mochila",
-    "brujula",
-    "fogata",
-  ],
+  montana: {
+  kai: ["bosque", "huellas"],
+  luma: ["montana", "floresSilvestres"],
+  boreal: ["colmena", "frutosBosque"],
+  kira: ["nido", "pluma"],
+  milo: ["madriguera", "bellotas"],
+},
 
-  piratas: [
-    "tesoro",
-    "cofre",
-    "mapa",
-    "barco",
-    "brujula",
-    "isla",
-  ],
+  piratas: {
+  capitanBronco: ["mapa", "brujula"],
+  marea: ["catalejo", "monedaOro"],
+  garfio: ["cofre", "espadaPirata"],
+  nilo: ["tesoro", "barril"],
+  perla: ["collarPerlas", "llaveDorada"],
+},
 
-  castillos: [
-    "castillo",
-    "corona",
-    "llave",
-  ],
+  castillos: {
+  arthur: ["espada", "escudo"],
+  elara: ["libroHechizos", "varitaMagica"],
+  cedric: ["castillo", "gemaMagica"],
+  lyra: ["corona", "cristalEncantado"],
+  drako: ["llave", "orbeMagico"],
+},
 
-  dinosaurios: [
-    "huevoDinosaurio",
-    "bosque",
-    "montana",
-  ],
+  dinosaurios: {
+  rex: ["huellasGigantes", "huesoDinosaurio"],
+  trika: ["helechos", "nidoHuevos"],
+  bronto: ["hojasArbol", "arbolPrehistorico"],
+  velo: ["huevoDinosaurio", "fosil"],
+  tera: ["lago", "pezPrehistorico"],
+},
 
   viajes: [
     "avion",
@@ -1891,6 +2894,20 @@ export const OBJETOS_POR_TEMATICA = {
     "regalo",
   ],
 };
+
+export function obtenerObjetosPorPersonaje(tema, personaje) {
+  const objetosTema = OBJETOS_POR_TEMATICA[tema];
+
+  if (!objetosTema) return [];
+
+  // Estructura antigua: lista general de objetos
+  if (Array.isArray(objetosTema)) {
+    return objetosTema;
+  }
+
+  // Nueva estructura: objetos asociados al personaje
+  return objetosTema[personaje] || [];
+}
 
 /* =========================================================
    AVENTURAS
@@ -2025,16 +3042,16 @@ export const AVENTURAS_LABERINTOS = [
       PERSONAJES_LABERINTOS.luna.decoracion,
 
     objeto:
-      "comida",
+  "ratonJuguete",
 
-    emojiObjeto:
-      OBJETOS_LABERINTOS.comida.emoji,
+emojiObjeto:
+  OBJETOS_LABERINTOS.ratonJuguete.emoji,
 
-    titulo:
-      "¡Luna tiene hambre!",
+titulo:
+  "¡Luna encontró un nuevo juego!",
 
-    instrucciones:
-      "Ayudá a Luna a encontrar el camino hasta su comida.",
+instrucciones:
+  "Ayudá a Luna a encontrar el camino hasta su ratón de juguete.",
   },
 
   {
@@ -2056,17 +3073,17 @@ export const AVENTURAS_LABERINTOS = [
     decoracion:
       PERSONAJES_LABERINTOS.toby.decoracion,
 
-    objeto:
-      "frisbee",
+  objeto:
+    "pelota",
 
-    emojiObjeto:
-      OBJETOS_LABERINTOS.frisbee.emoji,
+  emojiObjeto:
+    OBJETOS_LABERINTOS.pelota.emoji,
 
-    titulo:
-      "¡A buscar el frisbee!",
+  titulo:
+    "¡A buscar la pelota!",
 
-    instrucciones:
-      "Toby quiere recuperar su frisbee. ¿Podés mostrarle el camino?",
+  instrucciones:
+    "Toby quiere recuperar su pelota. ¿Podés mostrarle el camino?",
   },
 
   {
@@ -2089,17 +3106,17 @@ export const AVENTURAS_LABERINTOS = [
       PERSONAJES_LABERINTOS.luna.decoracion,
 
     objeto:
-      "pescado",
+  "ovillo",
 
-    emojiObjeto:
-      OBJETOS_LABERINTOS.pescado.emoji,
+emojiObjeto:
+  OBJETOS_LABERINTOS.ovillo.emoji,
 
-    titulo:
-      "¡Luna busca su pescado!",
+titulo:
+  "¡Luna busca su ovillo!",
 
-    instrucciones:
-      "Encontrá el camino correcto para que Luna llegue hasta su pescado.",
-  },
+instrucciones:
+  "Encontrá el camino correcto para que Luna llegue hasta su ovillo de lana.",
+},
 ];
 
 /* =========================================================
@@ -2342,36 +3359,70 @@ function seleccionarPersonajeLaberinto({
    SELECCIONAR OBJETIVO
 ========================================================= */
 
-  function seleccionarObjetivoLaberinto({
-    tema,
-    objetivoSeleccionado,
-    modoObjetivo,
-    indice,
-    semilla,
-  }) {
-    const objetosTema =
-      OBJETOS_POR_TEMATICA[
-        tema
-      ] ||
-      OBJETOS_POR_TEMATICA
-        .mascotas;
+function seleccionarObjetivoLaberinto({
+  tema,
+  personajeId,
+  objetivoSeleccionado,
+  modoObjetivo,
+  indice,
+  semilla,
+}) {
+  const configuracionObjetos =
+    OBJETOS_POR_TEMATICA[
+      tema
+    ] ||
+    OBJETOS_POR_TEMATICA
+      .mascotas;
 
-    if (
-      objetosTema.length === 0
-    ) {
-      return "pelota";
-    }
+  let objetosTema = [];
 
-    const indiceSeguro =
-      Math.abs(
-        Number.isFinite(indice)
-          ? Math.floor(indice)
-          : 0
-      );
+  /* =======================================================
+     OBTENER OBJETOS DISPONIBLES
+  ======================================================== */
 
-    /* =====================================================
+  // Estructura antigua:
+  // ["objeto1", "objeto2", ...]
+  if (
+    Array.isArray(
+      configuracionObjetos
+    )
+  ) {
+    objetosTema =
+      configuracionObjetos;
+  }
 
-  /* FIJO */
+  // Nueva estructura:
+  // {
+  //   toby: ["hueso", "pelota"],
+  //   luna: [...]
+  // }
+  else if (
+    configuracionObjetos &&
+    typeof configuracionObjetos ===
+      "object"
+  ) {
+    objetosTema =
+      configuracionObjetos[
+        personajeId
+      ] || [];
+  }
+
+  if (
+    objetosTema.length === 0
+  ) {
+    return "pelota";
+  }
+
+  const indiceSeguro =
+    Math.abs(
+      Number.isFinite(indice)
+        ? Math.floor(indice)
+        : 0
+    );
+
+  /* =======================================================
+     FIJO
+  ======================================================== */
 
   if (
     modoObjetivo ===
@@ -2390,7 +3441,9 @@ function seleccionarPersonajeLaberinto({
     return objetosTema[0];
   }
 
-  /* ALEATORIO DETERMINISTA */
+  /* =======================================================
+     ALEATORIO DETERMINISTA
+  ======================================================== */
 
   if (
     modoObjetivo ===
@@ -2425,7 +3478,9 @@ function seleccionarPersonajeLaberinto({
     ];
   }
 
-  /* ROTATIVO */
+  /* =======================================================
+     ROTATIVO
+  ======================================================== */
 
   let inicioRotacion = 0;
 
@@ -2509,6 +3564,8 @@ export function obtenerAventuraLaberinto(
   const idObjeto =
     seleccionarObjetivoLaberinto({
       tema,
+
+      personajeId,
 
       objetivoSeleccionado,
 
