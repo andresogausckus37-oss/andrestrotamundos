@@ -10,6 +10,8 @@ import { generarPdfLaminas } from "../utilidades/generarPdfLaminas";
 import PortadaLaberintos from "../generador/comerciales/PortadaLaberintos";
 import LaminaFinalLaberintos from "../generador/comerciales/LaminaFinalLaberintos";
 
+import BienvenidaLaberintos from "../generador/comerciales/BienvenidaLaberintos";
+
 import LaminaBase from "../generador/componentes/LaminaBase";
 import LaminaLaberinto from "../generador/componentes/LaminaLaberinto";
 
@@ -22,7 +24,7 @@ import {
   OBJETOS_POR_TEMATICA,
   TEMATICAS_LABERINTOS,
 } from "../generador/productos/aventurasLaberintos";
-import { LABERINTOS_50 } from "./generador/productos/laberintos50";
+import { LABERINTOS_50 } from "../generador/productos/laberintos50";
 
 /* =========================================================
    CONFIGURACIÓN GENERAL
@@ -1034,6 +1036,16 @@ const [
     setModoGeneracion,
   ] = useState("aleatorio");
 
+  const [imagenPortada, setImagenPortada] =
+  useState(
+    LABERINTOS_50.recursos.portada || ""
+  );
+
+  const [imagenFinal, setImagenFinal] =
+  useState(
+    LABERINTOS_50.recursos.laminaFinal || ""
+  );
+
   const [semilla, setSemilla] =
     useState(1);
 
@@ -1629,8 +1641,17 @@ modoObjetivo:
         nombre: "Portada",
         tipo: "portada",
       },
+
+      {
+        id: "bienvenida",
+        nombre: "Bienvenida",
+        tipo: "bienvenida",
+      },
+
       ...paginasJuegos,
+
       ...paginasSoluciones,
+
       {
         id: "lamina-final",
         nombre: "Lámina final",
@@ -2412,6 +2433,38 @@ modoObjetivo:
   </select>
 </div>
 
+              <div>
+  <label className="block text-center text-[10px] font-bold text-slate-600">
+    URL portada
+  </label>
+
+  <input
+    type="url"
+    value={imagenPortada}
+    onChange={(e) =>
+      setImagenPortada(e.target.value)
+    }
+    placeholder="https://..."
+    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+  />
+</div>
+
+              <div>
+  <label className="block text-center text-[10px] font-bold text-slate-600">
+    URL final
+  </label>
+
+  <input
+    type="url"
+    value={imagenFinal}
+    onChange={(e) =>
+      setImagenFinal(e.target.value)
+    }
+    placeholder="https://..."
+    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+  />
+</div>
+
             </div>
           
 
@@ -2736,20 +2789,38 @@ modoObjetivo:
                       height: ALTO_A4,
                     }}
                   >
-                    {pagina.tipo ===
-                    "portada" ? (
-                      <PortadaLaberintos
-                        imagenPortada={
-                          LABERINTOS_50.recursos.portada
-                        }
-                        nombreProducto={
-                          LABERINTOS_50.nombre
-                        }
-                      />
-                    ) : pagina.tipo ===
-                      "final" ? (
-                      <LaminaFinalLaberintos />
-                    ) : (
+                        {pagina.tipo === "portada" ? (
+                    <PortadaLaberintos
+                      imagenPortada={imagenPortada}
+                      nombreProducto={
+                        LABERINTOS_50.nombre
+                      }
+                    />
+                        ) : pagina.tipo === "bienvenida" ? (
+                          <BienvenidaLaberintos
+                            cantidad={
+                              cantidadActividades
+                            }
+                            faciles={
+                              cantidadFaciles
+                            }
+                            medios={
+                              cantidadMedios
+                            }
+                            dificiles={
+                              cantidadDificiles
+                            }
+                            expertos={
+                              cantidadExpertos
+                            }
+                            legendarios={
+                              cantidadLegendarios
+                            }
+                          />
+                        ) : pagina.tipo === "final" ? (
+                          <LaminaFinalLaberintos />
+                        ) : (
+                      
                       <LaminaBase
                         titulo=""
                         instrucciones=""
