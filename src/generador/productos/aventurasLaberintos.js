@@ -2345,10 +2345,6 @@ export const OBJETOS_LABERINTOS = {
   },
 
   /* =======================================================
-     DINOSAURIOS
-  ======================================================== */
-
-  /* =======================================================
    DINOSAURIOS
 ======================================================= */
 
@@ -2424,88 +2420,299 @@ pezPrehistorico: {
 
   /* =======================================================
      VIAJES
-  ======================================================== */
+  ======================================================= */
 
-  avion: {
-    nombre: "avión",
-    articulo: "el",
-    emoji: "✈️",
-    imagen: "",
+  valija: {
+    nombre: "valija",
+    articulo: "la",
+    emoji: "🧳",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/valija",
   },
 
-  auto: {
-    nombre: "auto",
-    articulo: "el",
-    emoji: "🚗",
-    imagen: "",
+  brujulaViaje: {
+    nombre: "brújula",
+    articulo: "la",
+    emoji: "🧭",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/br%C3%BAjula%20viajera%20",
   },
 
   tren: {
     nombre: "tren",
     articulo: "el",
-    emoji: "🚂",
-    imagen: "",
+    emoji: "🚆",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/tren",
+  },
+
+  camaraFotografica: {
+    nombre: "cámara fotográfica",
+    articulo: "la",
+    emoji: "📷",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/c%C3%A1mara%20fotogr%C3%A1fica",
   },
 
   autobus: {
     nombre: "autobús",
     articulo: "el",
     emoji: "🚌",
-    imagen: "",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/autob%C3%BAs%201",
   },
 
-  valija: {
-    nombre: "valija",
-    articulo: "la",
-    emoji: "🧳",
-    imagen: "",
+  mapaCiudad: {
+    nombre: "mapa de la ciudad",
+    articulo: "el",
+    emoji: "🗺️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/mapa%20ciudad",
   },
+
+  avion: {
+    nombre: "avión",
+    articulo: "el",
+    emoji: "✈️",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/avi%C3%B3n",
+  },
+
+  cartaPostal: {
+    nombre: "carta postal",
+    articulo: "la",
+    emoji: "💌",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/carta%20postal",
+  },
+
+  auto: {
+    nombre: "auto",
+    articulo: "el",
+    emoji: "🚗",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/auto",
+  },
+
+  pasaporte: {
+    nombre: "pasaporte",
+    articulo: "el",
+    emoji: "🛂",
+    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/pasaporte",
+  },
+
+/* =======================================================
+   NAVIDAD
+======================================================= */
+
+arbolNavidad: {
+  nombre: "árbol de Navidad",
+  articulo: "el",
+  emoji: "🎄",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/Navidad",
+},
+
+estrellaNavidena: {
+  nombre: "estrella navideña",
+  articulo: "la",
+  emoji: "⭐",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/estrella%20navide%C3%B1a",
+},
+
+campanas: {
+  nombre: "campanas",
+  articulo: "las",
+  emoji: "🔔",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/campanas",
+},
+
+trineo: {
+  nombre: "trineo",
+  articulo: "el",
+  emoji: "🛷",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/trineo",
+},
+
+regalo: {
+  nombre: "regalo",
+  articulo: "el",
+  emoji: "🎁",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/regalo1",
+},
+
+sacoRegalos: {
+  nombre: "saco de regalos",
+  articulo: "el",
+  emoji: "🎁",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/saco%20regalos",
+},
+
+juguete: {
+  nombre: "juguete",
+  articulo: "el",
+  emoji: "🧸",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/juguete",
+},
+
+herramientasElfa: {
+  nombre: "herramientas de elfa",
+  articulo: "las",
+  emoji: "🛠️",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/herramientas",
+},
+
+bufanda: {
+  nombre: "bufanda",
+  articulo: "la",
+  emoji: "🧣",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/bufanda",
+},
+
+sombreroInvierno: {
+  nombre: "sombrero de invierno",
+  articulo: "el",
+  emoji: "🎩",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/sombrero%20invierno",
+},
 
   /* =======================================================
-     CELEBRACIONES
-  ======================================================== */
+   HALLOWEEN
+======================================================= */
 
-  arbolNavidad: {
-    nombre: "árbol de Navidad",
-    articulo: "el",
-    emoji: "🎄",
-    imagen: "",
-  },
+lunaCreciente: {
+  nombre: "luna creciente",
+  articulo: "la",
+  emoji: "🌙",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/luna%20creciente",
+},
 
-  regalo: {
-    nombre: "regalo",
-    articulo: "el",
-    emoji: "🎁",
-    imagen: "",
-  },
+llaveMisteriosa: {
+  nombre: "llave misteriosa",
+  articulo: "la",
+  emoji: "🗝️",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/llave%20misteriosa",
+},
 
-  calabaza: {
-    nombre: "calabaza",
-    articulo: "la",
-    emoji: "🎃",
-    imagen: "",
-  },
+farolEncantado: {
+  nombre: "farol encantado",
+  articulo: "el",
+  emoji: "🏮",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/farol%20encantado",
+},
 
-  fantasma: {
-    nombre: "fantasma",
-    articulo: "el",
-    emoji: "👻",
-    imagen: "",
-  },
+cadenaFantasmal: {
+  nombre: "cadena fantasmal",
+  articulo: "la",
+  emoji: "⛓️",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/cadena%20fantasmal",
+},
 
-  corazon: {
-    nombre: "corazón",
-    articulo: "el",
-    emoji: "❤️",
-    imagen: "",
-  },
+calderoPociones: {
+  nombre: "caldero de pociones",
+  articulo: "el",
+  emoji: "🧪",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/caldero%20pociones",
+},
 
-  flores: {
-    nombre: "ramo de flores",
-    articulo: "el",
-    emoji: "💐",
-    imagen: "",
-  },
+libroHechizosHalloween: {
+  nombre: "libro de hechizos",
+  articulo: "el",
+  emoji: "📖",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/libro%20hechizos",
+},
+
+calabazaEncantada: {
+  nombre: "calabaza encantada",
+  articulo: "la",
+  emoji: "🎃",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/calabaza%20encantada",
+},
+
+espantapajaros: {
+  nombre: "espantapájaros",
+  articulo: "el",
+  emoji: "🌾",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/espantap%C3%A1jaros",
+},
+
+ataud: {
+  nombre: "ataúd",
+  articulo: "el",
+  emoji: "⚰️",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/ata%C3%BAd",
+},
+
+copaVampirica: {
+  nombre: "copa vampírica",
+  articulo: "la",
+  emoji: "🍷",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/copa%20vamp%C3%ADrica",
+},
+
+  /* =======================================================
+   FAMILIA
+======================================================= */
+
+auriculares: {
+  nombre: "auriculares",
+  articulo: "los",
+  emoji: "🎧",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/auriculares",
+},
+
+patines: {
+  nombre: "patines",
+  articulo: "los",
+  emoji: "🛼",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/patines",
+},
+
+cometa: {
+  nombre: "cometa",
+  articulo: "la",
+  emoji: "🪁",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/cometa",
+},
+
+yoyo: {
+  nombre: "yo-yo",
+  articulo: "el",
+  emoji: "🪀",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/yoyo1",
+},
+
+cestaPicnic: {
+  nombre: "cesta de picnic",
+  articulo: "la",
+  emoji: "🧺",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/cesta%20picnic",
+},
+
+termo: {
+  nombre: "termo",
+  articulo: "el",
+  emoji: "🧉",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/termo",
+},
+
+carpaCamping: {
+  nombre: "carpa de camping",
+  articulo: "la",
+  emoji: "⛺",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/carpa%20camping",
+},
+
+guitarra: {
+  nombre: "guitarra",
+  articulo: "la",
+  emoji: "🎸",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/guitarra",
+},
+
+tejido: {
+  nombre: "tejido con agujas",
+  articulo: "el",
+  emoji: "🧶",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/tejido%20agujas",
+},
+
+tetera: {
+  nombre: "tetera",
+  articulo: "la",
+  emoji: "🫖",
+  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/tetera",
+},
 };
 
 /* =========================================================
@@ -2868,31 +3075,37 @@ export const OBJETOS_POR_TEMATICA = {
   tera: ["lago", "pezPrehistorico"],
 },
 
-  viajes: [
-    "avion",
-    "auto",
-    "tren",
-    "autobus",
-    "valija",
-    "mapa",
-  ],
+  viajes: {
+  atlas: ["valija", "brujulaViaje"],
+  mila: ["tren", "camaraFotografica"],
+  kiro: ["autobus", "mapaCiudad"],
+  ayla: ["avion", "cartaPostal"],
+  tango: ["auto", "pasaporte"],
+},
 
-  navidad: [
-    "arbolNavidad",
-    "regalo",
-    "estrella",
-  ],
+  navidad: {
+  nico: ["arbolNavidad", "estrellaNavidena"],
+  neva: ["campanas", "trineo"],
+  tino: ["regalo", "sacoRegalos"],
+  holly: ["juguete", "herramientasElfa"],
+  copo: ["bufanda", "sombreroInvierno"],
+},
 
-  halloween: [
-    "calabaza",
-    "fantasma",
-  ],
+  halloween: {
+  sombra: ["lunaCreciente", "llaveMisteriosa"],
+  bruma: ["farolEncantado", "cadenaFantasmal"],
+  mora: ["calderoPociones", "libroHechizosHalloween"],
+  krunk: ["calabazaEncantada", "espantapajaros"],
+  vlad: ["ataud", "copaVampirica"],
+},
 
-  familia: [
-    "corazon",
-    "flores",
-    "regalo",
-  ],
+  familia: {
+  sol: ["auriculares", "patines"],
+  teo: ["cometa", "yoyo"],
+  clara: ["cestaPicnic", "termo"],
+  leo: ["carpaCamping", "guitarra"],
+  lola: ["tejido", "tetera"],
+},
 };
 
 export function obtenerObjetosPorPersonaje(tema, personaje) {

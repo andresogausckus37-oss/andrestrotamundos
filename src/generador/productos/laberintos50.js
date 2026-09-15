@@ -18,6 +18,9 @@ export const LABERINTOS_50 = {
   },
 
   recursos: {
+    portada:
+      "https://i.postimg.cc/kXTLQT2V/file-0000000018b0820eabdaf3280f65993c.png",
+
     laminaFinal:
       "https://i.postimg.cc/3rccWdVS/file-000000000610820e941c33defff600ed.png",
   },

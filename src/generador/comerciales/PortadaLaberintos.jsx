@@ -1,10 +1,10 @@
 import { ESTILOS_IMPRIMIBLES } from "../config/estilosImprimibles";
 
-export default function PortadaLaberintos() {
+export default function PortadaLaberintos({
+  imagenPortada,
+  nombreProducto = "Laberintos",
+}) {
   const { logo, pagina } = ESTILOS_IMPRIMIBLES;
-
-  const imagenPortada =
-    "https://i.postimg.cc/kXTLQT2V/file-0000000018b0820eabdaf3280f65993c.png";
 
   return (
     <div
@@ -17,24 +17,28 @@ export default function PortadaLaberintos() {
       }}
     >
       {/* IMAGEN DE PORTADA */}
-      <img
-        src={imagenPortada}
-        alt="Portada 50 Laberintos"
-        draggable="false"
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          zIndex: 1,
-        }}
-      />
+
+      {imagenPortada && (
+        <img
+          src={imagenPortada}
+          alt={`Portada ${nombreProducto}`}
+          draggable="false"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            zIndex: 1,
+          }}
+        />
+      )}
 
       {/* LOGO OFICIAL */}
+
       <img
         src={logo.url}
-        alt="Toby y Luna Imprimibles"
+        alt="Andrés Imprimibles"
         draggable="false"
         style={{
           position: "absolute",

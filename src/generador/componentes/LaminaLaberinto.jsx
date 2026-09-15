@@ -7,6 +7,8 @@ import {
   obtenerAventuraLaberinto,
 } from "../productos/aventurasLaberintos";
 
+import { ESTILOS_IMPRIMIBLES } from "../config/estilosImprimibles";
+
 /* =========================================================
    CONFIGURACIÓN VISUAL DE NIVELES
 ========================================================= */
@@ -71,19 +73,14 @@ export default function LaminaLaberinto({
      AVENTURA
   ======================================================== */
 
-  const aventura =
-  obtenerAventuraLaberinto(
+  const aventura = obtenerAventuraLaberinto(
     numero - 1,
     tematica,
     {
-      personajeSeleccionado:
-        personaje,
-
+      personajeSeleccionado: personaje,
       modoPersonaje,
 
-      objetivoSeleccionado:
-        objetivo,
-
+      objetivoSeleccionado: objetivo,
       modoObjetivo,
 
       semilla,
@@ -91,39 +88,20 @@ export default function LaminaLaberinto({
   );
 
   /* =======================================================
-   IDENTIDAD VISUAL DE LA TEMÁTICA
-======================================================= */
+     IDENTIDAD VISUAL DE LA TEMÁTICA
+  ======================================================== */
 
-const configuracionTematica =
-  TEMATICAS_LABERINTOS[
-    tematica
-  ] ||
-  TEMATICAS_LABERINTOS.mascotas;
+  const configuracionTematica =
+    TEMATICAS_LABERINTOS[tematica] ||
+    TEMATICAS_LABERINTOS.mascotas;
 
-const colorTematicaPrincipal =
-  configuracionTematica
-    .colorPrincipal ||
-  "#0F7490";
+  const colorTematicaPrincipal =
+    configuracionTematica.colorPrincipal ||
+    "#0F7490";
 
-const colorTematicaSecundario =
-  configuracionTematica
-    .colorSecundario ||
-  "#DB5685";
-
-const colorTematicaSuave =
-  configuracionTematica
-    .colorSuave ||
-  "#ECFEFF";
-
-const colorTematicaTexto =
-  configuracionTematica
-    .colorTexto ||
-  "#155E75";
-
-const decoracionTematica =
-  configuracionTematica
-    .decoracion ||
-  "🐾";
+  const colorTematicaTexto =
+    configuracionTematica.colorTexto ||
+    "#155E75";
 
   /* =======================================================
      NIVEL
@@ -133,62 +111,48 @@ const decoracionTematica =
     COLORES_NIVEL[nivel] ||
     COLORES_NIVEL.facil;
 
- /* =======================================================
-   PERSONAJE
-======================================================== */
+  /* =======================================================
+     PERSONAJE
+  ======================================================== */
 
-const configuracionPersonaje =
-  PERSONAJES_LABERINTOS[
-    aventura.personaje
-  ] || {
-    nombre:
-      aventura.nombrePersonaje ||
-      "Aventurero",
+  const configuracionPersonaje =
+    PERSONAJES_LABERINTOS[
+      aventura.personaje
+    ] || {
+      nombre:
+        aventura.nombrePersonaje ||
+        "Aventurero",
 
-    imagen: "",
+      imagen: "",
 
-    emoji:
-      aventura.emojiPersonaje ||
-      "🙂",
+      emoji:
+        aventura.emojiPersonaje ||
+        "🙂",
 
-    color:
-      aventura.colorPersonaje ||
-      "#0F7490",
+      color:
+        aventura.colorPersonaje ||
+        "#0F7490",
+    };
 
-    decoracion:
-      aventura.decoracion ||
-      "🐾",
-  };
+  const imagenPersonaje =
+    configuracionPersonaje.assets
+      ?.principal ||
+    configuracionPersonaje.imagen ||
+    IMAGENES_LABERINTOS.personajes[
+      aventura.personaje
+    ] ||
+    "";
 
-const imagenPersonaje =
-  configuracionPersonaje.assets
-    ?.principal ||
-  configuracionPersonaje.imagen ||
-  IMAGENES_LABERINTOS.personajes[
-    aventura.personaje
-  ] ||
-  "";
+  const nombrePersonaje =
+    aventura.nombrePersonaje ||
+    configuracionPersonaje.nombre;
 
-const nombrePersonaje =
-  aventura.nombrePersonaje ||
-  configuracionPersonaje.nombre;
+  const emojiPersonaje =
+    aventura.emojiPersonaje ||
+    configuracionPersonaje.emoji ||
+    "🙂";
 
-const emojiPersonaje =
-  aventura.emojiPersonaje ||
-  configuracionPersonaje.emoji ||
-  "🙂";
-
-const colorPersonaje =
-  aventura.colorPersonaje ||
-  configuracionPersonaje.color ||
-  "#0F7490";
-
-const decoracion =
-  aventura.decoracion ||
-  configuracionPersonaje.decoracion ||
-  "🐾";
-
-  /* /* =======================================================
+  /* =======================================================
      OBJETO
   ======================================================== */
 
@@ -197,18 +161,16 @@ const decoracion =
       aventura.objeto
     ] || "";
 
-  const emojiObjeto =
-    aventura.emojiObjeto ||
-    obtenerEmojiObjeto(
-      aventura.objeto
-    );
-
   return (
     <div
       style={{
         width: "100%",
         height: "100%",
         position: "relative",
+
+        fontFamily:
+          ESTILOS_IMPRIMIBLES.tipografia
+            .principal,
       }}
     >
       {/* =====================================================
@@ -226,87 +188,86 @@ const decoracion =
       >
         {/* DESAFÍO + NIVEL */}
 
-<div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    marginBottom: "5px",
-  }}
->
-  <div
-    style={{
-      fontSize: "18px",
-      fontWeight: 700,
-      color: "#64748B",
-    }}
-  >
-    DESAFÍO{" "}
-    {String(numero).padStart(
-      2,
-      "0"
-    )}
-  </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            marginBottom: "5px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "18px",
+              fontWeight: 700,
+              color: "#64748B",
+            }}
+          >
+            DESAFÍO{" "}
+            {String(numero).padStart(
+              2,
+              "0"
+            )}
+          </div>
 
-  <div
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
 
-      padding: "6px 12px",
+              padding: "6px 12px",
 
-      borderRadius: "999px",
+              borderRadius: "999px",
 
-      background:
-        configuracionNivel.fondo,
+              background:
+                configuracionNivel.fondo,
 
-      border:
-        `2px solid ${configuracionNivel.borde}`,
+              border: `2px solid ${configuracionNivel.borde}`,
 
-      color:
-        configuracionNivel.texto,
+              color:
+                configuracionNivel.texto,
 
-      fontSize: "16px",
-      fontWeight: 700,
-    }}
-  >
-    {configuracionNivel.etiqueta}
-  </div>
-</div>
+              fontSize: "16px",
+              fontWeight: 700,
+            }}
+          >
+            {configuracionNivel.etiqueta}
+          </div>
+        </div>
 
-{/* TÍTULO */}
+        {/* TÍTULO */}
 
-<div
-  style={{
-    fontSize: "36px",
-    fontWeight: 700,
-    lineHeight: 1.05,
+        <div
+          style={{
+            fontSize: "36px",
+            fontWeight: 700,
+            lineHeight: 1.05,
 
-    color:
-      colorTematicaPrincipal,
-  }}
->
-  {aventura.titulo}
-</div>
+            color:
+              colorTematicaPrincipal,
+          }}
+        >
+          {aventura.titulo}
+        </div>
 
-{/* INSTRUCCIONES */}
+        {/* INSTRUCCIONES */}
 
-<div
-  style={{
-    marginTop: "6px",
+        <div
+          style={{
+            marginTop: "6px",
 
-    fontSize: "19px",
-    fontWeight: 400,
-    lineHeight: 1.2,
+            fontSize: "19px",
+            fontWeight: 400,
+            lineHeight: 1.2,
 
-    color:
-      colorTematicaTexto,
-  }}
->
-  {mostrarSolucion
-    ? "Seguí el camino marcado para comprobar la solución."
-    : aventura.instrucciones}
-</div>
+            color:
+              colorTematicaTexto,
+          }}
+        >
+          {mostrarSolucion
+            ? "Seguí el camino marcado para comprobar la solución."
+            : aventura.instrucciones}
+        </div>
       </div>
 
       {/* =====================================================
@@ -327,8 +288,8 @@ const decoracion =
           style={{
             position: "absolute",
 
-            left: "-40px",
-            top: "28px",
+            left: "-50px",
+            top: "40px",
 
             width: "105px",
             height: "120px",
@@ -368,7 +329,7 @@ const decoracion =
               position: "absolute",
 
               right: "-28px",
-              top: "48px",
+              top: "38px",
 
               fontSize: "34px",
               color: "#22C55E",
@@ -411,11 +372,11 @@ const decoracion =
           style={{
             position: "absolute",
 
-            right: "-25px",
-            bottom: "35px",
+            right: "-45px",
+            bottom: "45px",
 
             width: "105px",
-            height: "110px",
+            height: "210px",
 
             zIndex: 20,
 
@@ -431,7 +392,7 @@ const decoracion =
               position: "absolute",
 
               left: "-30px",
-              top: "35px",
+              top: "85px",
 
               fontSize: "34px",
               color: "#22C55E",
@@ -441,31 +402,23 @@ const decoracion =
             →
           </div>
 
-          {imagenObjeto ? (
+          {imagenObjeto && (
             <img
               src={imagenObjeto}
               alt={aventura.objeto}
               draggable="false"
               style={{
-                width: "100%",
-                height: "100%",
+                width: "70%",
+                height: "70%",
                 objectFit: "contain",
               }}
             />
-          ) : (
-            <div
-              style={{
-                fontSize: "62px",
-              }}
-            >
-              {emojiObjeto}
-            </div>
           )}
         </div>
       </div>
 
       {/* =====================================================
-          DECORACIÓN INFERIOR
+          TEXTO INFERIOR
       ====================================================== */}
 
       <div
@@ -477,153 +430,22 @@ const decoracion =
           bottom: "-18px",
 
           display: "flex",
-
-          justifyContent:
-            "space-between",
-
+          justifyContent: "center",
           alignItems: "center",
 
           fontFamily:
-            '"Patrick Hand", cursive',
+            ESTILOS_IMPRIMIBLES.tipografia
+              .principal,
 
           fontSize: "17px",
+          fontWeight: 400,
+
           color:
-  colorTematicaTexto,
+            colorTematicaTexto,
         }}
       >
-        <span
-          style={{
-            fontSize: "27px",
-            opacity: 0.7,
-
-            letterSpacing: "6px",
-
-            transform:
-              "rotate(-8deg)",
-          }}
-        >
-          
-          {decoracionTematica}{" "}
-{decoracionTematica}{" "}
-{decoracionTematica}
-        </span>
-
-        <span>
-          Pequeños desafíos · Grandes aventuras
-        </span>
-
-        <span
-          style={{
-            fontSize: "27px",
-            opacity: 0.7,
-
-            letterSpacing: "6px",
-
-            transform:
-              "rotate(8deg)",
-          }}
-        >
-          {decoracion}{" "}
-{decoracion}{" "}
-{decoracion}
-        </span>
+        Pequeños desafíos · Grandes aventuras
       </div>
     </div>
   );
-}
-
-/* =========================================================
-   FALLBACK DE OBJETOS
-========================================================= */
-
-function obtenerEmojiObjeto(objeto) {
-  const emojis = {
-    /* MASCOTAS */
-
-    pelota: "🏀",
-    ovillo: "🧶",
-    hueso: "🦴",
-    comida: "🥣",
-    frisbee: "🥏",
-    pescado: "🐟",
-
-    /* PLAYA Y OCÉANO */
-
-    playa: "🏖️",
-    sombrilla: "⛱️",
-    caracola: "🐚",
-    coral: "🪸",
-    isla: "🏝️",
-    barco: "⛵",
-    salvavidas: "🛟",
-    ancla: "⚓",
-    delfin: "🐬",
-    ballena: "🐋",
-    pulpo: "🐙",
-    cangrejo: "🦀",
-    tortuga: "🐢",
-
-    /* ESPACIO */
-
-    cohete: "🚀",
-    planeta: "🪐",
-    estrella: "⭐",
-    luna: "🌙",
-    astronauta: "🧑‍🚀",
-    satelite: "🛰️",
-    alien: "👽",
-    meteorito: "☄️",
-
-    /* MONTAÑA Y NATURALEZA */
-
-    montana: "🏔️",
-    bosque: "🌲",
-    arbol: "🌳",
-    tienda: "⛺",
-    mochila: "🎒",
-    brujula: "🧭",
-    fuego: "🔥",
-    cascada: "💧",
-
-    /* PIRATAS */
-
-    tesoro: "💰",
-    cofre: "🧰",
-    mapa: "🗺️",
-    pirata: "🏴‍☠️",
-
-    /* CASTILLOS */
-
-    castillo: "🏰",
-    corona: "👑",
-    llave: "🗝️",
-    espada: "⚔️",
-
-    /* DINOSAURIOS */
-
-    dinosaurio: "🦖",
-    dinosaurio2: "🦕",
-    huevo: "🥚",
-
-    /* VIAJES */
-
-    avion: "✈️",
-    auto: "🚗",
-    tren: "🚂",
-    autobus: "🚌",
-    valija: "🧳",
-
-    /* CELEBRACIONES */
-
-    navidad: "🎄",
-    regalo: "🎁",
-    papaNoel: "🎅",
-    halloween: "🎃",
-    fantasma: "👻",
-    murcielago: "🦇",
-    corazon: "❤️",
-    flores: "💐",
-  };
-
-  return emojis[objeto] || "⭐";
 }

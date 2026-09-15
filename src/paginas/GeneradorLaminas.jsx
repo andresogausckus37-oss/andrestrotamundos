@@ -22,6 +22,7 @@ import {
   OBJETOS_POR_TEMATICA,
   TEMATICAS_LABERINTOS,
 } from "../generador/productos/aventurasLaberintos";
+import { LABERINTOS_50 } from "./generador/productos/laberintos50";
 
 /* =========================================================
    CONFIGURACIÓN GENERAL
@@ -2738,30 +2739,11 @@ modoObjetivo:
                     {pagina.tipo ===
                     "portada" ? (
                       <PortadaLaberintos
-                        cantidad={
-                          cantidadActividades
+                        imagenPortada={
+                          LABERINTOS_50.recursos.portada
                         }
-                        faciles={
-                          cantidadFaciles
-                        }
-                        medios={
-                          cantidadMedios
-                        }
-                        dificiles={
-                          cantidadDificiles
-                        }
-                        expertos={
-                          cantidadExpertos
-                        }
-                        legendarios={
-                          cantidadLegendarios
-                        }
-                        publico={
-                          publico
-                        }
-                        edad={edad}
-                        tematica={
-                          tematica
+                        nombreProducto={
+                          LABERINTOS_50.nombre
                         }
                       />
                     ) : pagina.tipo ===
