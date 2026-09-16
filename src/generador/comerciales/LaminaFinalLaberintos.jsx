@@ -1,18 +1,16 @@
 import { ESTILOS_IMPRIMIBLES } from "../config/estilosImprimibles";
-import { LABERINTOS_50 } from "../productos/laberintos50";
 
 /* =========================================================
    LÁMINA FINAL
 ========================================================= */
 
-export default function LaminaFinalLaberintos() {
+export default function LaminaFinalLaberintos({
+  imagenFinal,
+}) {
   const {
     logo,
     pagina,
   } = ESTILOS_IMPRIMIBLES;
-
-  const imagenFinal =
-    LABERINTOS_50.recursos.laminaFinal;
 
   return (
     <div

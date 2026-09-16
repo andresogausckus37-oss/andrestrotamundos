@@ -2817,8 +2817,10 @@ modoObjetivo:
                               cantidadLegendarios
                             }
                           />
-                        ) : pagina.tipo === "final" ? (
-                          <LaminaFinalLaberintos />
+                        ) :  pagina.tipo === "final" ? (
+  <LaminaFinalLaberintos
+    imagenFinal={imagenFinal}
+  />
                         ) : (
                       
                       <LaminaBase

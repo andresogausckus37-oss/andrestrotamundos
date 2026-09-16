@@ -152,8 +152,8 @@ async function esperarFuentes() {
 async function capturarLamina(
   elemento,
   {
-    calidad = 0.92,
-    pixelRatio = 1.5,
+    calidad = 0.88,
+pixelRatio = 1,
   } = {}
 ) {
   if (!elemento) {
@@ -187,8 +187,7 @@ async function capturarLamina(
       backgroundColor:
         "#ffffff",
 
-      cacheBust:
-        true,
+      cacheBust: false,
 
       style: {
         width:
@@ -334,10 +333,6 @@ export async function generarPdfLaminas({
         Esperamos nuevamente las imágenes
         por seguridad antes de capturar.
       */
-
-      await esperarImagenes(
-        elemento
-      );
 
       /*
         Convertimos la lámina a imagen.
