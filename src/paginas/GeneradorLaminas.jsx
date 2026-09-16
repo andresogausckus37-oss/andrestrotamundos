@@ -17,6 +17,8 @@ import LaminaLaberinto from "../generador/componentes/LaminaLaberinto";
 
 import { validarLaberinto } from "../generador/juegos/Laberinto";
 
+import { ESTILOS_IMPRIMIBLES } from "../generador/config/estilosImprimibles";
+
 import {
   PERSONAJES_LABERINTOS,
   PERSONAJES_POR_TEMATICA,
@@ -960,6 +962,88 @@ function calcularPercentiles(
 }
 
 /* =========================================================
+   MEDIR RECURSOS DE IMAGEN
+========================================================= */
+
+async function medirRecursoImagen(url) {
+  if (!url) return null;
+
+  try {
+    const respuesta = await fetch(url);
+
+    if (!respuesta.ok) {
+      throw new Error("No se pudo descargar");
+    }
+
+    const blob = await respuesta.blob();
+
+    const dimensiones = await new Promise(
+      (resolve) => {
+        const imagen = new Image();
+        const objectUrl =
+          URL.createObjectURL(blob);
+
+        imagen.onload = () => {
+          resolve({
+            ancho: imagen.naturalWidth,
+            alto: imagen.naturalHeight,
+          });
+
+          URL.revokeObjectURL(
+            objectUrl
+          );
+        };
+
+        imagen.onerror = () => {
+          resolve({
+            ancho: 0,
+            alto: 0,
+          });
+
+          URL.revokeObjectURL(
+            objectUrl
+          );
+        };
+
+        imagen.src = objectUrl;
+      }
+    );
+
+    return {
+      url,
+      bytes: blob.size,
+      ancho: dimensiones.ancho,
+      alto: dimensiones.alto,
+    };
+  } catch (error) {
+    console.warn(
+      "No se pudo medir recurso:",
+      url,
+      error
+    );
+
+    return null;
+  }
+}
+
+function formatearBytes(bytes = 0) {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(
+      bytes / 1024
+    ).toFixed(1)} KB`;
+  }
+
+  return `${(
+    bytes /
+    (1024 * 1024)
+  ).toFixed(2)} MB`;
+}
+
+/* =========================================================
    COMPONENTE
 ========================================================= */
 export default function GeneradorLaminas() {
@@ -1045,6 +1129,16 @@ const [
   useState(
     LABERINTOS_50.recursos.laminaFinal || ""
   );
+
+  const [
+  recursosMedidos,
+  setRecursosMedidos,
+] = useState([]);
+
+const [
+  midiendoRecursos,
+  setMidiendoRecursos,
+] = useState(false);
 
   const [semilla, setSemilla] =
     useState(1);
@@ -1167,6 +1261,111 @@ const [
       ]
     );
 
+  /* =========================================================
+   RECURSOS PARA PRECARGAR PDF
+========================================================= */
+
+const recursosPdf = useMemo(() => {
+  const urls = new Set();
+
+  // Portada y lámina final
+  if (imagenPortada) {
+    urls.add(imagenPortada);
+  }
+
+  if (imagenFinal) {
+    urls.add(imagenFinal);
+  }
+
+  // Logo
+  if (ESTILOS_IMPRIMIBLES.logo?.url) {
+    urls.add(
+      ESTILOS_IMPRIMIBLES.logo.url
+    );
+  }
+
+  // Personajes de la temática seleccionada
+  personajesDisponibles.forEach(
+    (personaje) => {
+      const url =
+        personaje.assets?.principal ||
+        personaje.imagen;
+
+      if (url) {
+        urls.add(url);
+      }
+    }
+  );
+
+  // Objetivos de la temática seleccionada
+  objetivosDisponibles.forEach(
+    (objetivo) => {
+      const url =
+        objetivo.imagen ||
+        objetivo.assets?.principal;
+
+      if (url) {
+        urls.add(url);
+      }
+    }
+  );
+
+  return [...urls];
+}, [
+  imagenPortada,
+  imagenFinal,
+  personajesDisponibles,
+  objetivosDisponibles,
+]);
+
+const medirRecursosPdf =
+  async () => {
+    if (
+      recursosPdf.length === 0 ||
+      midiendoRecursos
+    ) {
+      return;
+    }
+
+    setMidiendoRecursos(true);
+
+    try {
+      const resultados = [];
+
+      /*
+       * Lo hacemos secuencialmente para
+       * no golpear la memoria del celular.
+       */
+      for (const url of recursosPdf) {
+        const resultado =
+          await medirRecursoImagen(url);
+
+        if (resultado) {
+          resultados.push(
+            resultado
+          );
+        }
+      }
+
+      setRecursosMedidos(
+        resultados
+      );
+    } finally {
+      setMidiendoRecursos(false);
+    }
+  };
+
+  const pesoTotalRecursos =
+  useMemo(
+    () =>
+      recursosMedidos.reduce(
+        (total, recurso) =>
+          total + recurso.bytes,
+        0
+      ),
+    [recursosMedidos]
+  );
+  
   /*
     Separar las cantidades del resto de la configuración
     evita recalcular miles de laberintos cuando solamente
@@ -1256,13 +1455,14 @@ const [
   ] = useState(false);
 
   const [
-    progresoPdf,
-    setProgresoPdf,
-  ] = useState({
-    actual: 0,
-    total: 0,
-    porcentaje: 0,
-  });
+  progresoPdf,
+  setProgresoPdf,
+] = useState({
+  fase: "pdf",
+  actual: 0,
+  total: 0,
+  porcentaje: 0,
+});
 
   /* =======================================================
      CANTIDAD TOTAL
@@ -2129,6 +2329,9 @@ modoObjetivo:
         totalPaginas:
           paginas.length,
 
+        recursosPrecargar:
+  recursosPdf,
+
         cambiarPagina:
           async (indice) => {
             setPaginaActual(
@@ -2159,17 +2362,19 @@ modoObjetivo:
         pixelRatio: 1.5,
 
         alActualizarProgreso:
-          ({
+        ({
+          fase,
+          actual,
+          total,
+          porcentaje,
+        }) => {
+          setProgresoPdf({
+            fase,
             actual,
             total,
             porcentaje,
-          }) => {
-            setProgresoPdf({
-              actual,
-              total,
-              porcentaje,
-            });
-          },
+          });
+        },
       });
     } catch (error) {
       console.error(error);
@@ -2960,6 +3165,78 @@ modoObjetivo={
             </div>
           )}
         </section>
+
+        <div
+          style={{
+            marginTop: "12px",
+            padding: "12px",
+            border: "1px solid #E2E8F0",
+            borderRadius: "10px",
+            background: "#F8FAFC",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 700,
+              marginBottom: "8px",
+            }}
+          >
+            Recursos del PDF
+          </div>
+
+          <button
+            type="button"
+            onClick={medirRecursosPdf}
+            disabled={midiendoRecursos}
+          >
+            {midiendoRecursos
+              ? "Analizando recursos..."
+              : "Analizar peso y resolución"}
+          </button>
+
+          {recursosMedidos.length >
+            0 && (
+            <>
+              <div
+                style={{
+                  marginTop: "10px",
+                  fontWeight: 700,
+                }}
+              >
+                Total:{" "}
+                {formatearBytes(
+                  pesoTotalRecursos
+                )}
+              </div>
+
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "13px",
+                }}
+              >
+                {recursosMedidos.map(
+                  (recurso, indice) => (
+                    <div
+                      key={recurso.url}
+                      style={{
+                        marginBottom:
+                          "5px",
+                      }}
+                    >
+                      {indice + 1}.{" "}
+                      {recurso.ancho} ×{" "}
+                      {recurso.alto} px ·{" "}
+                      {formatearBytes(
+                        recurso.bytes
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
                 {/* ===================================================
             VALIDACIÓN

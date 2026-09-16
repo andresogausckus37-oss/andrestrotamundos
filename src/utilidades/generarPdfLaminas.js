@@ -142,6 +142,95 @@ async function esperarFuentes() {
 }
 
 /* =========================================================
+   PRECARGAR RECURSOS
+========================================================= */
+
+/**
+ * Precarga imágenes antes de comenzar la exportación.
+ *
+ * Esto evita que cada página tenga que descargar
+ * personajes, objetos y recursos gráficos al momento
+ * de ser capturada.
+ */
+async function precargarRecursos(
+  recursos = [],
+  alActualizarProgreso
+) {
+  const urls = [
+    ...new Set(
+      recursos.filter(
+        (url) =>
+          typeof url === "string" &&
+          url.trim() !== ""
+      )
+    ),
+  ];
+
+  if (urls.length === 0) {
+    return;
+  }
+
+  let cargados = 0;
+
+  for (const url of urls) {
+    await new Promise((resolve) => {
+      const imagen = new Image();
+
+      let terminado = false;
+
+      function terminar() {
+        if (terminado) {
+          return;
+        }
+
+        terminado = true;
+
+        imagen.onload = null;
+        imagen.onerror = null;
+
+        cargados += 1;
+
+        if (
+          typeof alActualizarProgreso ===
+          "function"
+        ) {
+          alActualizarProgreso({
+            fase: "recursos",
+            actual: cargados,
+            total: urls.length,
+            porcentaje: Math.round(
+              (cargados / urls.length) * 100
+            ),
+          });
+        }
+
+        resolve();
+      }
+
+      imagen.onload = terminar;
+      imagen.onerror = terminar;
+
+      imagen.src = url;
+
+      /*
+        Evita que un servidor lento bloquee
+        indefinidamente la exportación.
+      */
+      setTimeout(
+        terminar,
+        10000
+      );
+    });
+
+    /*
+      Dejamos respirar al navegador,
+      especialmente en celulares.
+    */
+    await esperarFrames(1);
+  }
+}
+
+/* =========================================================
    CAPTURAR LÁMINA
 ========================================================= */
 
@@ -162,13 +251,11 @@ pixelRatio = 1,
     );
   }
 
-  await esperarFuentes();
-
   await esperarImagenes(
-    elemento
-  );
+  elemento
+);
 
-  await esperarFrames(2);
+await esperarFrames(1);
 
   return toJpeg(
     elemento,
@@ -224,19 +311,21 @@ pixelRatio = 1,
  * - diferencias
  * - futuros productos imprimibles
  */
-export async function generarPdfLaminas({
-  totalPaginas,
+    export async function generarPdfLaminas({
+      totalPaginas,
 
-  cambiarPagina,
+      cambiarPagina,
 
-  obtenerElemento,
+      obtenerElemento,
+
+      recursosPrecargar = [],
 
   nombreArchivo =
     "Toby-y-Luna-Imprimibles.pdf",
 
-  calidad = 0.92,
+  calidad = 0.90,
 
-  pixelRatio = 1.5,
+  pixelRatio = 1.25,
 
   paginaOriginal = 0,
 
@@ -293,12 +382,25 @@ export async function generarPdfLaminas({
       true,
   });
 
-  try {
-    /* =====================================================
-       RECORRER PÁGINAS
-    ===================================================== */
+      try {
+        /* =====================================================
+           PRECARGAR RECURSOS
+        ===================================================== */
 
-    for (
+        await esperarFuentes();
+
+        await precargarRecursos(
+          recursosPrecargar,
+          alActualizarProgreso
+        );
+
+        await esperarFrames(2);
+
+        /* =====================================================
+           RECORRER PÁGINAS
+        ===================================================== */
+
+        for (
       let indice = 0;
       indice < totalPaginas;
       indice += 1
@@ -316,7 +418,7 @@ export async function generarPdfLaminas({
         completamente el DOM.
       */
 
-      await esperarFrames(3);
+      await esperarFrames(1);
 
       const elemento =
         obtenerElemento();
@@ -402,13 +504,15 @@ export async function generarPdfLaminas({
           );
 
         alActualizarProgreso({
-          actual,
+  fase: "pdf",
 
-          total:
-            totalPaginas,
+  actual,
 
-          porcentaje,
-        });
+  total:
+    totalPaginas,
+
+  porcentaje,
+});
       }
 
       /*
