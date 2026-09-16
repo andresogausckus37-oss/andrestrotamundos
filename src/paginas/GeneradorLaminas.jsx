@@ -546,7 +546,7 @@ function seleccionarProgresivo({
 
   NOMBRES_BANDAS.forEach(
     (banda) => {
-      const cantidadBanda =
+            const cantidadBanda =
         cantidadBase +
         (sobrantes > 0
           ? 1
@@ -1095,6 +1095,7 @@ const [
     setCantidadFaciles,
   ] = useState(5);
 
+  
   const [
     cantidadMedios,
     setCantidadMedios,
@@ -1642,7 +1643,8 @@ const medirRecursosPdf =
 
           resultadoFinal =
             resultado.seleccion;
-        }
+
+                  }
 
         return resultadoFinal.map(
           (item, index) => ({
@@ -2190,7 +2192,8 @@ modoObjetivo:
               promedioRecorrido:
                 Math.round(
                   sumar(recorridos) /
-                    itemsNivel.length
+
+                                      itemsNivel.length
                 ),
 
               promedioDensidadGiros:
@@ -2738,7 +2741,7 @@ pixelRatio: 1.25,
               />
 
               <Cantidad
-                titulo="Legendario"
+                                titulo="Legendario"
                 valor={
                   cantidadLegendarios
                 }
@@ -3196,8 +3199,12 @@ modoObjetivo={
                   </div>
 
                   <div>
-                    toJpeg: {item.toJpeg} ms
-                  </div>
+  toCanvas: {item.toCanvas} ms
+</div>
+
+<div>
+  Canvas → Blob: {item.blob} ms
+</div>
 
                   <div>
                     Conversión: {item.conversion} ms
@@ -3208,8 +3215,12 @@ modoObjetivo={
                   </div>
 
                   <div>
-                    Total: {item.total} ms
-                  </div>
+  Render: {item.render} ms
+</div>
+
+<div>
+  Total real: {item.totalReal} ms
+</div>
                 </div>
               ))}
             </div>
@@ -3270,10 +3281,11 @@ modoObjetivo={
               </div>
             )}
           </div>
+        </section>
 
-          {/* ===================================================
-              VALIDACIÓN
-          ==================================================== */}
+        {/* ===================================================
+            VALIDACIÓN
+        ==================================================== */}
 
         <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm sm:p-4">
           <div className="flex items-center justify-between gap-3">
@@ -3284,7 +3296,8 @@ modoObjetivo={
 
               <p className="text-[11px] text-slate-500">
                 Entrada, salida, solución y métricas del producto final.
-              </p>
+
+                              </p>
             </div>
 
             <span
