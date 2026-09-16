@@ -15,12 +15,6 @@ const ALTO_A4_MM = 297;
    ESPERAR FRAMES
 ========================================================= */
 
-/**
- * Espera uno o varios frames del navegador.
- *
- * Sirve para darle tiempo a React a actualizar
- * correctamente el DOM antes de capturar una página.
- */
 function esperarFrames(cantidad = 2) {
   return new Promise((resolve) => {
     let frameActual = 0;
@@ -33,14 +27,10 @@ function esperarFrames(cantidad = 2) {
         return;
       }
 
-      requestAnimationFrame(
-        siguienteFrame
-      );
+      requestAnimationFrame(siguienteFrame);
     }
 
-    requestAnimationFrame(
-      siguienteFrame
-    );
+    requestAnimationFrame(siguienteFrame);
   });
 }
 
@@ -48,10 +38,6 @@ function esperarFrames(cantidad = 2) {
    ESPERAR IMÁGENES
 ========================================================= */
 
-/**
- * Espera que todas las imágenes de la lámina
- * hayan terminado de cargar.
- */
 async function esperarImagenes(elemento) {
   if (!elemento) {
     return;
@@ -107,11 +93,6 @@ async function esperarImagenes(elemento) {
           terminar
         );
 
-        /*
-          Evita que una imagen rota o lenta
-          bloquee indefinidamente el PDF.
-        */
-
         setTimeout(
           terminar,
           5000
@@ -125,9 +106,6 @@ async function esperarImagenes(elemento) {
    ESPERAR FUENTES
 ========================================================= */
 
-/**
- * Espera que las fuentes web estén disponibles.
- */
 async function esperarFuentes() {
   try {
     if (document.fonts?.ready) {
@@ -145,13 +123,6 @@ async function esperarFuentes() {
    PRECARGAR RECURSOS
 ========================================================= */
 
-/**
- * Precarga imágenes antes de comenzar la exportación.
- *
- * Esto evita que cada página tenga que descargar
- * personajes, objetos y recursos gráficos al momento
- * de ser capturada.
- */
 async function precargarRecursos(
   recursos = [],
   alActualizarProgreso
@@ -212,37 +183,51 @@ async function precargarRecursos(
 
       imagen.src = url;
 
-      /*
-        Evita que un servidor lento bloquee
-        indefinidamente la exportación.
-      */
       setTimeout(
         terminar,
         10000
       );
     });
-
-    /*
-      Dejamos respirar al navegador,
-      especialmente en celulares.
-    */
-    await esperarFrames(1);
   }
+}
+
+/* =========================================================
+   DATA URL → UINT8ARRAY
+========================================================= */
+
+function dataUrlAUint8Array(dataUrl) {
+  const base64 =
+    dataUrl.split(",")[1];
+
+  const binario =
+    atob(base64);
+
+  const bytes =
+    new Uint8Array(
+      binario.length
+    );
+
+  for (
+    let i = 0;
+    i < binario.length;
+    i += 1
+  ) {
+    bytes[i] =
+      binario.charCodeAt(i);
+  }
+
+  return bytes;
 }
 
 /* =========================================================
    CAPTURAR LÁMINA
 ========================================================= */
 
-/**
- * Convierte un elemento A4 del DOM
- * en una imagen JPEG.
- */
 async function capturarLamina(
   elemento,
   {
     calidad = 0.88,
-pixelRatio = 1,
+    pixelRatio = 1,
   } = {}
 ) {
   if (!elemento) {
@@ -251,74 +236,101 @@ pixelRatio = 1,
     );
   }
 
+  /* -------------------------
+     Medir imágenes
+  ------------------------- */
+
+  const inicioImagenes =
+    performance.now();
+
   await esperarImagenes(
-  elemento
-);
+    elemento
+  );
 
-await esperarFrames(1);
+  const finImagenes =
+    performance.now();
 
-  return toJpeg(
-    elemento,
-    {
-      quality:
-        calidad,
+  /* -------------------------
+     Esperar render
+  ------------------------- */
 
-      pixelRatio,
+  await esperarFrames(1);
 
-      width:
-        ANCHO_A4_PX,
+  /* -------------------------
+     Medir html-to-image
+  ------------------------- */
 
-      height:
-        ALTO_A4_PX,
+  const inicioToJpeg =
+    performance.now();
 
-      backgroundColor:
-        "#ffffff",
+  const resultado =
+    await toJpeg(
+      elemento,
+      {
+        quality:
+          calidad,
 
-      cacheBust: false,
+        pixelRatio,
 
-      style: {
         width:
-          `${ANCHO_A4_PX}px`,
+          ANCHO_A4_PX,
 
         height:
-          `${ALTO_A4_PX}px`,
+          ALTO_A4_PX,
 
-        transform:
-          "none",
+        backgroundColor:
+          "#ffffff",
 
-        transformOrigin:
-          "top left",
-      },
-    }
-  );
+        cacheBust:
+          false,
+
+        style: {
+          width:
+            `${ANCHO_A4_PX}px`,
+
+          height:
+            `${ALTO_A4_PX}px`,
+
+          transform:
+            "none",
+
+          transformOrigin:
+            "top left",
+        },
+      }
+    );
+
+  const finToJpeg =
+    performance.now();
+
+  return {
+    dataUrl:
+      resultado,
+
+    tiempos: {
+      imagenes:
+        finImagenes -
+        inicioImagenes,
+
+      toJpeg:
+        finToJpeg -
+        inicioToJpeg,
+    },
+  };
 }
 
 /* =========================================================
    GENERAR PDF
 ========================================================= */
 
-/**
- * Genera un PDF recorriendo todas las páginas
- * renderizadas por el editor.
- *
- * No contiene lógica específica de ningún juego.
- *
- * Puede utilizarse para:
- *
- * - laberintos
- * - secuencias
- * - buscá objetos
- * - diferencias
- * - futuros productos imprimibles
- */
-    export async function generarPdfLaminas({
-      totalPaginas,
+export async function generarPdfLaminas({
+  totalPaginas,
 
-      cambiarPagina,
+  cambiarPagina,
 
-      obtenerElemento,
+  obtenerElemento,
 
-      recursosPrecargar = [],
+  recursosPrecargar = [],
 
   nombreArchivo =
     "Toby-y-Luna-Imprimibles.pdf",
@@ -330,6 +342,8 @@ await esperarFrames(1);
   paginaOriginal = 0,
 
   alActualizarProgreso,
+
+  alActualizarDiagnostico,
 }) {
   /* =======================================================
      VALIDACIONES
@@ -368,55 +382,53 @@ await esperarFrames(1);
      CREAR PDF
   ======================================================= */
 
-  const pdf = new jsPDF({
-    orientation:
-      "portrait",
+  const pdf =
+    new jsPDF({
+      orientation:
+        "portrait",
 
-    unit:
-      "mm",
+      unit:
+        "mm",
 
-    format:
-      "a4",
+      format:
+        "a4",
 
-    compress:
-      true,
-  });
+      compress:
+        true,
+    });
 
-      try {
-        /* =====================================================
-           PRECARGAR RECURSOS
-        ===================================================== */
+  const diagnostico = [];
 
-        await esperarFuentes();
+  try {
+    /* =====================================================
+       PRECARGAR RECURSOS
+    ===================================================== */
 
-        await precargarRecursos(
-          recursosPrecargar,
-          alActualizarProgreso
-        );
+    await esperarFuentes();
 
-        await esperarFrames(2);
+    await precargarRecursos(
+      recursosPrecargar,
+      alActualizarProgreso
+    );
 
-        /* =====================================================
-           RECORRER PÁGINAS
-        ===================================================== */
+    await esperarFrames(2);
 
-        for (
+    /* =====================================================
+       RECORRER PÁGINAS
+    ===================================================== */
+
+    for (
       let indice = 0;
       indice < totalPaginas;
       indice += 1
     ) {
-      /*
-        Cambiamos la página del editor.
-      */
+      /* -------------------------
+         Cambiar página
+      ------------------------- */
 
       await cambiarPagina(
         indice
       );
-
-      /*
-        Esperamos que React actualice
-        completamente el DOM.
-      */
 
       await esperarFrames(1);
 
@@ -431,16 +443,18 @@ await esperarFrames(1);
         );
       }
 
-      /*
-        Esperamos nuevamente las imágenes
-        por seguridad antes de capturar.
-      */
+      /* -------------------------
+         Inicio diagnóstico
+      ------------------------- */
 
-      /*
-        Convertimos la lámina a imagen.
-      */
+      const inicioPagina =
+        performance.now();
 
-      const imagen =
+      /* -------------------------
+         Capturar página
+      ------------------------- */
+
+      const captura =
         await capturarLamina(
           elemento,
           {
@@ -449,13 +463,24 @@ await esperarFrames(1);
           }
         );
 
-      /*
-        jsPDF crea automáticamente
-        la primera página.
+      /* -------------------------
+         Data URL → Uint8Array
+      ------------------------- */
 
-        Desde la segunda agregamos
-        páginas nuevas.
-      */
+      const inicioConversion =
+        performance.now();
+
+      const imagenBytes =
+        dataUrlAUint8Array(
+          captura.dataUrl
+        );
+
+      const finConversion =
+        performance.now();
+
+      /* -------------------------
+         Nueva página PDF
+      ------------------------- */
 
       if (indice > 0) {
         pdf.addPage(
@@ -464,13 +489,15 @@ await esperarFrames(1);
         );
       }
 
-      /*
-        Insertamos la captura ocupando
-        exactamente toda la página A4.
-      */
+      /* -------------------------
+         Agregar imagen a jsPDF
+      ------------------------- */
+
+      const inicioAddImage =
+        performance.now();
 
       pdf.addImage(
-        imagen,
+        imagenBytes,
         "JPEG",
 
         0,
@@ -483,6 +510,62 @@ await esperarFrames(1);
 
         "FAST"
       );
+
+      const finAddImage =
+        performance.now();
+
+      const finPagina =
+        performance.now();
+
+      /* ===================================================
+         DIAGNÓSTICO
+      =================================================== */
+
+      const medicion = {
+        pagina:
+          indice + 1,
+
+        imagenes:
+          Math.round(
+            captura.tiempos.imagenes
+          ),
+
+        toJpeg:
+          Math.round(
+            captura.tiempos.toJpeg
+          ),
+
+        conversion:
+          Math.round(
+            finConversion -
+            inicioConversion
+          ),
+
+        addImage:
+          Math.round(
+            finAddImage -
+            inicioAddImage
+          ),
+
+        total:
+          Math.round(
+            finPagina -
+            inicioPagina
+          ),
+      };
+
+      diagnostico.push(
+        medicion
+      );
+
+      if (
+        typeof alActualizarDiagnostico ===
+        "function"
+      ) {
+        alActualizarDiagnostico(
+          [...diagnostico]
+        );
+      }
 
       /* ===================================================
          PROGRESO
@@ -504,30 +587,21 @@ await esperarFrames(1);
           );
 
         alActualizarProgreso({
-  fase: "pdf",
+          fase:
+            "pdf",
 
-  actual,
+          actual,
 
-  total:
-    totalPaginas,
+          total:
+            totalPaginas,
 
-  porcentaje,
-});
+          porcentaje,
+        });
       }
-
-      /*
-        Dejamos respirar al navegador
-        antes de procesar la siguiente página.
-
-        Es especialmente útil en celulares
-        y PDFs grandes.
-      */
-
-      await esperarFrames(1);
     }
 
     /* =====================================================
-       DESCARGAR
+       DESCARGAR PDF
     ===================================================== */
 
     pdf.save(
@@ -550,10 +624,8 @@ await esperarFrames(1);
         paginaOriginal
       );
     } catch {
-      /*
-        No bloqueamos el proceso
-        si falla la restauración.
-      */
+      // No bloqueamos la exportación
+      // si falla la restauración.
     }
   }
 }

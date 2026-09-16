@@ -1,0 +1,1817 @@
+{
+  "https://i.postimg.cc/fTwWBqBM/file-000000000204820e8213b33f08a90324.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-001.webp",
+    "original": {
+      "ancho": 1280,
+      "alto": 1067,
+      "bytes": 2285355
+    },
+    "optimizado": {
+      "bytes": 59844
+    }
+  },
+  "https://i.postimg.cc/7hPvMdwk/file-00000000e68c820ead57a74bfc91b08f.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-002.webp",
+    "original": {
+      "ancho": 1280,
+      "alto": 1170,
+      "bytes": 2510379
+    },
+    "optimizado": {
+      "bytes": 70238
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Nube%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-003.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1017356
+    },
+    "optimizado": {
+      "bytes": 37652
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Pipo%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-004.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1293801
+    },
+    "optimizado": {
+      "bytes": 51264
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Tito%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-005.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1170087
+    },
+    "optimizado": {
+      "bytes": 41812
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/marina%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-006.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2429286
+    },
+    "optimizado": {
+      "bytes": 35948
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/finn%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-007.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1570850
+    },
+    "optimizado": {
+      "bytes": 39766
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/coral%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-008.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1712298
+    },
+    "optimizado": {
+      "bytes": 43428
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/brisa%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-009.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1670727
+    },
+    "optimizado": {
+      "bytes": 51296
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/rocco%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-010.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1909297
+    },
+    "optimizado": {
+      "bytes": 53682
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Nova%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-011.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1417407
+    },
+    "optimizado": {
+      "bytes": 51158
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Astro%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-012.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1137758
+    },
+    "optimizado": {
+      "bytes": 43092
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Orion%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-013.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1310888
+    },
+    "optimizado": {
+      "bytes": 52060
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Vega%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-014.webp",
+    "original": {
+      "ancho": 1664,
+      "alto": 1536,
+      "bytes": 451253
+    },
+    "optimizado": {
+      "bytes": 48794
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Cosmo%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-015.webp",
+    "original": {
+      "ancho": 1664,
+      "alto": 1536,
+      "bytes": 548486
+    },
+    "optimizado": {
+      "bytes": 59094
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/kai%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-016.webp",
+    "original": {
+      "ancho": 1247,
+      "alto": 1261,
+      "bytes": 1365476
+    },
+    "optimizado": {
+      "bytes": 51208
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/luma%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-017.webp",
+    "original": {
+      "ancho": 1199,
+      "alto": 1312,
+      "bytes": 1260073
+    },
+    "optimizado": {
+      "bytes": 49574
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/boreal%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-018.webp",
+    "original": {
+      "ancho": 1205,
+      "alto": 1305,
+      "bytes": 1440849
+    },
+    "optimizado": {
+      "bytes": 50142
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/kira%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-019.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1539231
+    },
+    "optimizado": {
+      "bytes": 57612
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/milo%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-020.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 400645
+    },
+    "optimizado": {
+      "bytes": 65164
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/capitan%20bronco%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-021.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2107938
+    },
+    "optimizado": {
+      "bytes": 50662
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/marea%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-022.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 418249
+    },
+    "optimizado": {
+      "bytes": 76518
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/garfio%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-023.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2274013
+    },
+    "optimizado": {
+      "bytes": 53900
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/nilo%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-024.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2673949
+    },
+    "optimizado": {
+      "bytes": 50712
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/perla%20principal%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-025.webp",
+    "original": {
+      "ancho": 1146,
+      "alto": 1373,
+      "bytes": 520947
+    },
+    "optimizado": {
+      "bytes": 83138
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/arthur%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-026.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2487984
+    },
+    "optimizado": {
+      "bytes": 55882
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/elara%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-027.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2650109
+    },
+    "optimizado": {
+      "bytes": 67312
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/cedric%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-028.webp",
+    "original": {
+      "ancho": 1314,
+      "alto": 1197,
+      "bytes": 1956075
+    },
+    "optimizado": {
+      "bytes": 77942
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/lyra%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-029.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 2002993
+    },
+    "optimizado": {
+      "bytes": 71890
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/drako%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-030.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 546343
+    },
+    "optimizado": {
+      "bytes": 67666
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/rex%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-031.webp",
+    "original": {
+      "ancho": 1224,
+      "alto": 1285,
+      "bytes": 1795036
+    },
+    "optimizado": {
+      "bytes": 61500
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/trika%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-032.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1954050
+    },
+    "optimizado": {
+      "bytes": 60070
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/bronto%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-033.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1381437
+    },
+    "optimizado": {
+      "bytes": 49700
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/velo%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-034.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1381437
+    },
+    "optimizado": {
+      "bytes": 49700
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/tera%20principal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-035.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 2121165
+    },
+    "optimizado": {
+      "bytes": 39034
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000000048820e8ca7580a6d758f0d-Wyu1as6yXodsPTNqj1X9d4UDM6bb1Q.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-036.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2239505
+    },
+    "optimizado": {
+      "bytes": 42994
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_00000000c1c4820e9fb45f244d02511d.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-037.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2239049
+    },
+    "optimizado": {
+      "bytes": 44868
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000004c8c820eaac3976538ca45c5-jb2BpmqiAKa8drfpEPJQmOgkF0QR8Q.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-038.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 2042441
+    },
+    "optimizado": {
+      "bytes": 62376
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000002f88820eb4040941b57a66a5-zFbkK2NcFty25Qt5hXfn5zXLj774BL.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-039.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1393878
+    },
+    "optimizado": {
+      "bytes": 46048
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_00000000d524820e99a5187835ea340e-An9XbRbphKstsxXVVW3z644xYzXvA3.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-040.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 2095045
+    },
+    "optimizado": {
+      "bytes": 69572
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000d508820eac25ca0d4e893275-aaCmQmJKfyx0dXK4dto6Q6D8PXWGWC.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-041.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1724598
+    },
+    "optimizado": {
+      "bytes": 56172
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000fd00820eb76cf8202e680085-vlN3d1Y4zFvs3V6ja1shx4u5rlXYpE.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-042.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1507856
+    },
+    "optimizado": {
+      "bytes": 57358
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000fffc820ea6f6b423e060fda1-6SfspkveWRYVgfzdRPZySK1KVdm8m4.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-043.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1976273
+    },
+    "optimizado": {
+      "bytes": 55760
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_0000000088bc820ebcd5f4e9bc8f0374-RSFdZ9iX8bCAxlDagI2TaDkI6uNOwA.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-044.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1716659
+    },
+    "optimizado": {
+      "bytes": 60510
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000c938820ebf3942ebfb7cd35e-vdHWqyomigvZvPQzTgXLADLQnqqPA1.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-045.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1733625
+    },
+    "optimizado": {
+      "bytes": 53872
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000035f8820e86159902b138217b-omYWYlsQWxOD2RZ6V0xqbdhGC6HJ0a.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-046.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1805868
+    },
+    "optimizado": {
+      "bytes": 60054
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000003a8820e91ace5cfdfbaafbc-FG3gJG7UtQA9SySwvWH8NQLzZN1xF7.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-047.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1672682
+    },
+    "optimizado": {
+      "bytes": 54572
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000082a0820ea9f1d2b4a0e376e7-mljilPDvRwdjnLpk1yEcug8OmpVqb7.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-048.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1752918
+    },
+    "optimizado": {
+      "bytes": 69054
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_00000000d6c8820eb8586e04326b61ed-K5IEaDGmNhKCgbljearPuSBp2nfhRs.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-049.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 2435511
+    },
+    "optimizado": {
+      "bytes": 78710
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000010a4820ebd7b2d129e0782c6-pvwxJZtO6c7hzuyVMYKw3IhMOH6uXf.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-050.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 2336876
+    },
+    "optimizado": {
+      "bytes": 42204
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000803c820e8c1ae1c2b3efee60-ViJXKRXm1jikFWY70YV0DlIgyyhKe4.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-051.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2309132
+    },
+    "optimizado": {
+      "bytes": 48940
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000734c820eaa114d42d3332683-NXY6FkVcW8QRfcDZlSk7oMsADbzVCu.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-052.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2300768
+    },
+    "optimizado": {
+      "bytes": 44852
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000a904820eabd217deaf0d3b65-J9gAoLYDZsrXxMzItyNOOHMMtpndfC.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-053.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2080168
+    },
+    "optimizado": {
+      "bytes": 40794
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_000000000ae4820ead68387ce1c0c669-tgJ5usIrex6AvTgetqgmTCD6wig9XP.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-054.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2064474
+    },
+    "optimizado": {
+      "bytes": 37870
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_0000000025b8820e8ffb201c8878e8c0-cCcXEoguOmQb5E6AxONjIeXUslZUfA.png": {
+    "archivo": "imagenes-optimizadas/todas/recurso-055.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2193511
+    },
+    "optimizado": {
+      "bytes": 40894
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/hueso%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-056.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 1417563
+    },
+    "optimizado": {
+      "bytes": 19808
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/pelota%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-057.webp",
+    "original": {
+      "ancho": 1292,
+      "alto": 1218,
+      "bytes": 1542764
+    },
+    "optimizado": {
+      "bytes": 40650
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/ovillo%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-058.webp",
+    "original": {
+      "ancho": 1278,
+      "alto": 1230,
+      "bytes": 1913427
+    },
+    "optimizado": {
+      "bytes": 63030
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/raton%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-059.webp",
+    "original": {
+      "ancho": 1346,
+      "alto": 1168,
+      "bytes": 1570103
+    },
+    "optimizado": {
+      "bytes": 45772
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/zanahoria%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-060.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1288184
+    },
+    "optimizado": {
+      "bytes": 43026
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/canasta%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-061.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 477875
+    },
+    "optimizado": {
+      "bytes": 59938
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/semillas%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-062.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1865448
+    },
+    "optimizado": {
+      "bytes": 59698
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/fruta%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-063.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 397547
+    },
+    "optimizado": {
+      "bytes": 61454
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/lechuga%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-064.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 485063
+    },
+    "optimizado": {
+      "bytes": 52148
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/estanque%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-065.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 451893
+    },
+    "optimizado": {
+      "bytes": 58038
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/caracola": {
+    "archivo": "imagenes-optimizadas/todas/recurso-066.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1103564
+    },
+    "optimizado": {
+      "bytes": 40040
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/perla": {
+    "archivo": "imagenes-optimizadas/todas/recurso-067.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1295572
+    },
+    "optimizado": {
+      "bytes": 41170
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/salvavidas": {
+    "archivo": "imagenes-optimizadas/todas/recurso-068.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1363922
+    },
+    "optimizado": {
+      "bytes": 56402
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/tablasurf": {
+    "archivo": "imagenes-optimizadas/todas/recurso-069.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1568849
+    },
+    "optimizado": {
+      "bytes": 30570
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/coral": {
+    "archivo": "imagenes-optimizadas/todas/recurso-070.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1552869
+    },
+    "optimizado": {
+      "bytes": 74286
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/estrella%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-071.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1104171
+    },
+    "optimizado": {
+      "bytes": 41560
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/algas%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-072.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1582278
+    },
+    "optimizado": {
+      "bytes": 77500
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/cofre%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-073.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 2165807
+    },
+    "optimizado": {
+      "bytes": 96320
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/ancla%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-074.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1739199
+    },
+    "optimizado": {
+      "bytes": 82502
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/barco%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-075.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1625187
+    },
+    "optimizado": {
+      "bytes": 85994
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/robot%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-076.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 387172
+    },
+    "optimizado": {
+      "bytes": 63854
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/nave%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-077.webp",
+    "original": {
+      "ancho": 1422,
+      "alto": 1106,
+      "bytes": 1485280
+    },
+    "optimizado": {
+      "bytes": 53786
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/luna%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-078.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 2039516
+    },
+    "optimizado": {
+      "bytes": 71174
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/meteorito%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-079.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 384888
+    },
+    "optimizado": {
+      "bytes": 57772
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/estrella%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-080.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 250987
+    },
+    "optimizado": {
+      "bytes": 27716
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/planeta%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-081.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 351283
+    },
+    "optimizado": {
+      "bytes": 56642
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/satelite": {
+    "archivo": "imagenes-optimizadas/todas/recurso-082.webp",
+    "original": {
+      "ancho": 1355,
+      "alto": 1161,
+      "bytes": 342366
+    },
+    "optimizado": {
+      "bytes": 57728
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/estrellaf": {
+    "archivo": "imagenes-optimizadas/todas/recurso-083.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 1582249
+    },
+    "optimizado": {
+      "bytes": 30788
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/gema": {
+    "archivo": "imagenes-optimizadas/todas/recurso-084.webp",
+    "original": {
+      "ancho": 1278,
+      "alto": 1230,
+      "bytes": 1378552
+    },
+    "optimizado": {
+      "bytes": 48500
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/cohete": {
+    "archivo": "imagenes-optimizadas/todas/recurso-085.webp",
+    "original": {
+      "ancho": 1283,
+      "alto": 1226,
+      "bytes": 1242963
+    },
+    "optimizado": {
+      "bytes": 45832
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/monta%C3%B1a": {
+    "archivo": "imagenes-optimizadas/todas/recurso-086.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 421639
+    },
+    "optimizado": {
+      "bytes": 51752
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/bosque": {
+    "archivo": "imagenes-optimizadas/todas/recurso-087.webp",
+    "original": {
+      "ancho": 1302,
+      "alto": 1208,
+      "bytes": 1669995
+    },
+    "optimizado": {
+      "bytes": 68406
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/huellas": {
+    "archivo": "imagenes-optimizadas/todas/recurso-088.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1039304
+    },
+    "optimizado": {
+      "bytes": 41750
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/flores": {
+    "archivo": "imagenes-optimizadas/todas/recurso-089.webp",
+    "original": {
+      "ancho": 1279,
+      "alto": 1230,
+      "bytes": 2040591
+    },
+    "optimizado": {
+      "bytes": 95692
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/colmena": {
+    "archivo": "imagenes-optimizadas/todas/recurso-090.webp",
+    "original": {
+      "ancho": 1279,
+      "alto": 1230,
+      "bytes": 1624782
+    },
+    "optimizado": {
+      "bytes": 74456
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/frutos": {
+    "archivo": "imagenes-optimizadas/todas/recurso-091.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1960471
+    },
+    "optimizado": {
+      "bytes": 65558
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/nido": {
+    "archivo": "imagenes-optimizadas/todas/recurso-092.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1954333
+    },
+    "optimizado": {
+      "bytes": 71806
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/pluma": {
+    "archivo": "imagenes-optimizadas/todas/recurso-093.webp",
+    "original": {
+      "ancho": 1145,
+      "alto": 1374,
+      "bytes": 1363699
+    },
+    "optimizado": {
+      "bytes": 45310
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/madriguera": {
+    "archivo": "imagenes-optimizadas/todas/recurso-094.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 2258025
+    },
+    "optimizado": {
+      "bytes": 79108
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/bellotas": {
+    "archivo": "imagenes-optimizadas/todas/recurso-095.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1767233
+    },
+    "optimizado": {
+      "bytes": 61290
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/mapa": {
+    "archivo": "imagenes-optimizadas/todas/recurso-096.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 2275812
+    },
+    "optimizado": {
+      "bytes": 76056
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/br%C3%BAjula": {
+    "archivo": "imagenes-optimizadas/todas/recurso-097.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 2185153
+    },
+    "optimizado": {
+      "bytes": 74126
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/catalejo": {
+    "archivo": "imagenes-optimizadas/todas/recurso-098.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 1690053
+    },
+    "optimizado": {
+      "bytes": 29372
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/moneda": {
+    "archivo": "imagenes-optimizadas/todas/recurso-099.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 2163950
+    },
+    "optimizado": {
+      "bytes": 67290
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/cofre": {
+    "archivo": "imagenes-optimizadas/todas/recurso-100.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 2293848
+    },
+    "optimizado": {
+      "bytes": 76166
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/espada%20pirata": {
+    "archivo": "imagenes-optimizadas/todas/recurso-101.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 1629057
+    },
+    "optimizado": {
+      "bytes": 28174
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/tesoro": {
+    "archivo": "imagenes-optimizadas/todas/recurso-102.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1992520
+    },
+    "optimizado": {
+      "bytes": 71970
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/barril": {
+    "archivo": "imagenes-optimizadas/todas/recurso-103.webp",
+    "original": {
+      "ancho": 1225,
+      "alto": 1284,
+      "bytes": 572273
+    },
+    "optimizado": {
+      "bytes": 68226
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/collar%20perlas": {
+    "archivo": "imagenes-optimizadas/todas/recurso-104.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1012614
+    },
+    "optimizado": {
+      "bytes": 46834
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/llave%20dorada": {
+    "archivo": "imagenes-optimizadas/todas/recurso-105.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1672633
+    },
+    "optimizado": {
+      "bytes": 35118
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/espada": {
+    "archivo": "imagenes-optimizadas/todas/recurso-106.webp",
+    "original": {
+      "ancho": 1225,
+      "alto": 1284,
+      "bytes": 1012246
+    },
+    "optimizado": {
+      "bytes": 44174
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/escudo": {
+    "archivo": "imagenes-optimizadas/todas/recurso-107.webp",
+    "original": {
+      "ancho": 1199,
+      "alto": 1312,
+      "bytes": 1992920
+    },
+    "optimizado": {
+      "bytes": 58728
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/libro%20hechizos": {
+    "archivo": "imagenes-optimizadas/todas/recurso-108.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 2230268
+    },
+    "optimizado": {
+      "bytes": 69118
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/varita": {
+    "archivo": "imagenes-optimizadas/todas/recurso-109.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1841167
+    },
+    "optimizado": {
+      "bytes": 55816
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/castillo": {
+    "archivo": "imagenes-optimizadas/todas/recurso-110.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1766349
+    },
+    "optimizado": {
+      "bytes": 72032
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/gemamagica": {
+    "archivo": "imagenes-optimizadas/todas/recurso-111.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1363117
+    },
+    "optimizado": {
+      "bytes": 51002
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/corona2": {
+    "archivo": "imagenes-optimizadas/todas/recurso-112.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 2267278
+    },
+    "optimizado": {
+      "bytes": 50838
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/cristal%20encantado": {
+    "archivo": "imagenes-optimizadas/todas/recurso-113.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2204611
+    },
+    "optimizado": {
+      "bytes": 60642
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/llave2": {
+    "archivo": "imagenes-optimizadas/todas/recurso-114.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1668329
+    },
+    "optimizado": {
+      "bytes": 36780
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/orbe%20m%C3%A1gico": {
+    "archivo": "imagenes-optimizadas/todas/recurso-115.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1912590
+    },
+    "optimizado": {
+      "bytes": 80206
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/huella%20gigante": {
+    "archivo": "imagenes-optimizadas/todas/recurso-116.webp",
+    "original": {
+      "ancho": 1146,
+      "alto": 1373,
+      "bytes": 1797201
+    },
+    "optimizado": {
+      "bytes": 51106
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/hueso%20dinosaurio%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-117.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 1723944
+    },
+    "optimizado": {
+      "bytes": 27756
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/helechos": {
+    "archivo": "imagenes-optimizadas/todas/recurso-118.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 2033331
+    },
+    "optimizado": {
+      "bytes": 88694
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/nido%20de%20huevos": {
+    "archivo": "imagenes-optimizadas/todas/recurso-119.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 2435982
+    },
+    "optimizado": {
+      "bytes": 91756
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/hojas%20de%20%C3%A1rbol": {
+    "archivo": "imagenes-optimizadas/todas/recurso-120.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 505367
+    },
+    "optimizado": {
+      "bytes": 60598
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/%C3%A1rbol%20prehist%C3%B3rico": {
+    "archivo": "imagenes-optimizadas/todas/recurso-121.webp",
+    "original": {
+      "ancho": 1146,
+      "alto": 1372,
+      "bytes": 2387569
+    },
+    "optimizado": {
+      "bytes": 101136
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/huevo%20de%20dinosaurio": {
+    "archivo": "imagenes-optimizadas/todas/recurso-122.webp",
+    "original": {
+      "ancho": 1225,
+      "alto": 1284,
+      "bytes": 2071061
+    },
+    "optimizado": {
+      "bytes": 65762
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/f%C3%B3sil": {
+    "archivo": "imagenes-optimizadas/todas/recurso-123.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 703935
+    },
+    "optimizado": {
+      "bytes": 64440
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/lago": {
+    "archivo": "imagenes-optimizadas/todas/recurso-124.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 2880318
+    },
+    "optimizado": {
+      "bytes": 78034
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/pez%20prehist%C3%B3rico": {
+    "archivo": "imagenes-optimizadas/todas/recurso-125.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 2279207
+    },
+    "optimizado": {
+      "bytes": 50568
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/valija": {
+    "archivo": "imagenes-optimizadas/todas/recurso-126.webp",
+    "original": {
+      "ancho": 1209,
+      "alto": 1301,
+      "bytes": 1554100
+    },
+    "optimizado": {
+      "bytes": 54284
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/br%C3%BAjula%20viajera%20": {
+    "archivo": "imagenes-optimizadas/todas/recurso-127.webp",
+    "original": {
+      "ancho": 1230,
+      "alto": 1278,
+      "bytes": 1620192
+    },
+    "optimizado": {
+      "bytes": 57344
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/tren": {
+    "archivo": "imagenes-optimizadas/todas/recurso-128.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 397585
+    },
+    "optimizado": {
+      "bytes": 40752
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/c%C3%A1mara%20fotogr%C3%A1fica": {
+    "archivo": "imagenes-optimizadas/todas/recurso-129.webp",
+    "original": {
+      "ancho": 1402,
+      "alto": 1122,
+      "bytes": 1740478
+    },
+    "optimizado": {
+      "bytes": 45802
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/autob%C3%BAs%201": {
+    "archivo": "imagenes-optimizadas/todas/recurso-130.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 423093
+    },
+    "optimizado": {
+      "bytes": 44282
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/mapa%20ciudad": {
+    "archivo": "imagenes-optimizadas/todas/recurso-131.webp",
+    "original": {
+      "ancho": 1402,
+      "alto": 1122,
+      "bytes": 375890
+    },
+    "optimizado": {
+      "bytes": 47896
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/avi%C3%B3n": {
+    "archivo": "imagenes-optimizadas/todas/recurso-132.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 1618323
+    },
+    "optimizado": {
+      "bytes": 34982
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/carta%20postal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-133.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 1693154
+    },
+    "optimizado": {
+      "bytes": 42514
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/auto": {
+    "archivo": "imagenes-optimizadas/todas/recurso-134.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 1829583
+    },
+    "optimizado": {
+      "bytes": 45300
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/pasaporte": {
+    "archivo": "imagenes-optimizadas/todas/recurso-135.webp",
+    "original": {
+      "ancho": 1350,
+      "alto": 1165,
+      "bytes": 1373398
+    },
+    "optimizado": {
+      "bytes": 47286
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/Navidad": {
+    "archivo": "imagenes-optimizadas/todas/recurso-136.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2166119
+    },
+    "optimizado": {
+      "bytes": 49740
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/estrella%20navide%C3%B1a": {
+    "archivo": "imagenes-optimizadas/todas/recurso-137.webp",
+    "original": {
+      "ancho": 1296,
+      "alto": 1213,
+      "bytes": 1314181
+    },
+    "optimizado": {
+      "bytes": 46224
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/campanas": {
+    "archivo": "imagenes-optimizadas/todas/recurso-138.webp",
+    "original": {
+      "ancho": 1351,
+      "alto": 1164,
+      "bytes": 437859
+    },
+    "optimizado": {
+      "bytes": 65296
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/trineo": {
+    "archivo": "imagenes-optimizadas/todas/recurso-139.webp",
+    "original": {
+      "ancho": 1536,
+      "alto": 1024,
+      "bytes": 2040945
+    },
+    "optimizado": {
+      "bytes": 54308
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/regalo1": {
+    "archivo": "imagenes-optimizadas/todas/recurso-140.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 1655560
+    },
+    "optimizado": {
+      "bytes": 63596
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/saco%20regalos": {
+    "archivo": "imagenes-optimizadas/todas/recurso-141.webp",
+    "original": {
+      "ancho": 1199,
+      "alto": 1312,
+      "bytes": 1852618
+    },
+    "optimizado": {
+      "bytes": 69374
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/juguete": {
+    "archivo": "imagenes-optimizadas/todas/recurso-142.webp",
+    "original": {
+      "ancho": 1278,
+      "alto": 1230,
+      "bytes": 1630172
+    },
+    "optimizado": {
+      "bytes": 56928
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/herramientas": {
+    "archivo": "imagenes-optimizadas/todas/recurso-143.webp",
+    "original": {
+      "ancho": 1402,
+      "alto": 1122,
+      "bytes": 2052028
+    },
+    "optimizado": {
+      "bytes": 77266
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/bufanda": {
+    "archivo": "imagenes-optimizadas/todas/recurso-144.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2110361
+    },
+    "optimizado": {
+      "bytes": 45776
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/sombrero%20invierno": {
+    "archivo": "imagenes-optimizadas/todas/recurso-145.webp",
+    "original": {
+      "ancho": 1374,
+      "alto": 1145,
+      "bytes": 1823546
+    },
+    "optimizado": {
+      "bytes": 58384
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/luna%20creciente": {
+    "archivo": "imagenes-optimizadas/todas/recurso-146.webp",
+    "original": {
+      "ancho": 1334,
+      "alto": 1179,
+      "bytes": 974385
+    },
+    "optimizado": {
+      "bytes": 33228
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/llave%20misteriosa": {
+    "archivo": "imagenes-optimizadas/todas/recurso-147.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1946676
+    },
+    "optimizado": {
+      "bytes": 40370
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/farol%20encantado": {
+    "archivo": "imagenes-optimizadas/todas/recurso-148.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1942970
+    },
+    "optimizado": {
+      "bytes": 37962
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/cadena%20fantasmal": {
+    "archivo": "imagenes-optimizadas/todas/recurso-149.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 399504
+    },
+    "optimizado": {
+      "bytes": 63328
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/caldero%20pociones": {
+    "archivo": "imagenes-optimizadas/todas/recurso-150.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1709772
+    },
+    "optimizado": {
+      "bytes": 66240
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/libro%20hechizos": {
+    "archivo": "imagenes-optimizadas/todas/recurso-151.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 2529219
+    },
+    "optimizado": {
+      "bytes": 95234
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/calabaza%20encantada": {
+    "archivo": "imagenes-optimizadas/todas/recurso-152.webp",
+    "original": {
+      "ancho": 1254,
+      "alto": 1254,
+      "bytes": 497834
+    },
+    "optimizado": {
+      "bytes": 82286
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/espantap%C3%A1jaros": {
+    "archivo": "imagenes-optimizadas/todas/recurso-153.webp",
+    "original": {
+      "ancho": 1199,
+      "alto": 1312,
+      "bytes": 407290
+    },
+    "optimizado": {
+      "bytes": 76078
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/ata%C3%BAd": {
+    "archivo": "imagenes-optimizadas/todas/recurso-154.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1926399
+    },
+    "optimizado": {
+      "bytes": 53532
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/copa%20vamp%C3%ADrica": {
+    "archivo": "imagenes-optimizadas/todas/recurso-155.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 2225578
+    },
+    "optimizado": {
+      "bytes": 45070
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/auriculares": {
+    "archivo": "imagenes-optimizadas/todas/recurso-156.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1621132
+    },
+    "optimizado": {
+      "bytes": 52138
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/patines": {
+    "archivo": "imagenes-optimizadas/todas/recurso-157.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1922415
+    },
+    "optimizado": {
+      "bytes": 62678
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/cometa": {
+    "archivo": "imagenes-optimizadas/todas/recurso-158.webp",
+    "original": {
+      "ancho": 1199,
+      "alto": 1312,
+      "bytes": 234131
+    },
+    "optimizado": {
+      "bytes": 52640
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/yoyo1": {
+    "archivo": "imagenes-optimizadas/todas/recurso-159.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 327661
+    },
+    "optimizado": {
+      "bytes": 56444
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/cesta%20picnic": {
+    "archivo": "imagenes-optimizadas/todas/recurso-160.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 532845
+    },
+    "optimizado": {
+      "bytes": 73344
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/termo": {
+    "archivo": "imagenes-optimizadas/todas/recurso-161.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 1817949
+    },
+    "optimizado": {
+      "bytes": 40836
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/carpa%20camping": {
+    "archivo": "imagenes-optimizadas/todas/recurso-162.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 395888
+    },
+    "optimizado": {
+      "bytes": 56400
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/guitarra": {
+    "archivo": "imagenes-optimizadas/todas/recurso-163.webp",
+    "original": {
+      "ancho": 1024,
+      "alto": 1536,
+      "bytes": 338149
+    },
+    "optimizado": {
+      "bytes": 34602
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/tejido%20agujas": {
+    "archivo": "imagenes-optimizadas/todas/recurso-164.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1888463
+    },
+    "optimizado": {
+      "bytes": 59032
+    }
+  },
+  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/tetera": {
+    "archivo": "imagenes-optimizadas/todas/recurso-165.webp",
+    "original": {
+      "ancho": 1312,
+      "alto": 1199,
+      "bytes": 1441186
+    },
+    "optimizado": {
+      "bytes": 53858
+    }
+  }
+}

@@ -18,7 +18,7 @@
       especie: "perro",
 
       imagen:
-        "https://i.postimg.cc/fTwWBqBM/file-000000000204820e8213b33f08a90324.png",
+        "/assets-opt/recurso-001.webp",
 
       emoji: "🐶",
       color: "#0F7490",
@@ -41,7 +41,7 @@
 
       assets: {
         principal:
-          "https://i.postimg.cc/fTwWBqBM/file-000000000204820e8213b33f08a90324.png",
+          "/assets-opt/recurso-001.webp",
 
         avatar: "",
         movimiento: "",
@@ -56,7 +56,7 @@
       especie: "gata",
 
       imagen:
-        "https://i.postimg.cc/7hPvMdwk/file-00000000e68c820ead57a74bfc91b08f.png",
+        "/assets-opt/recurso-002.webp",
 
       emoji: "🐱",
       color: "#DB5685",
@@ -79,7 +79,7 @@
 
       assets: {
         principal:
-          "https://i.postimg.cc/7hPvMdwk/file-00000000e68c820ead57a74bfc91b08f.png",
+          "/assets-opt/recurso-002.webp",
 
         avatar: "",
         movimiento: "",
@@ -93,7 +93,7 @@
 
       especie: "coneja",
 
-      imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Nube%20principal",
+      imagen: "/assets-opt/recurso-003.webp",
 
       emoji: "🐰",
       color: "#E879A9",
@@ -115,7 +115,7 @@
       ],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Nube%20principal",
+        principal: "/assets-opt/recurso-003.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -128,7 +128,7 @@
 
       especie: "loro",
 
-      imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Pipo%20principal",
+      imagen: "/assets-opt/recurso-004.webp",
 
       emoji: "🦜",
       color: "#16A34A",
@@ -150,7 +150,7 @@
       ],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Pipo%20principal",
+        principal: "/assets-opt/recurso-004.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -163,7 +163,7 @@
 
       especie: "tortuga",
 
-      imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Tito%20principal",
+      imagen: "/assets-opt/recurso-005.webp",
 
       emoji: "🐢",
       color: "#0F766E",
@@ -185,7 +185,7 @@
       ],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20mascotas/Tito%20principal",
+        principal: "/assets-opt/recurso-005.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -224,7 +224,7 @@ marina: {
   ],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/marina%20principal%20",
+    principal: "/assets-opt/recurso-006.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -259,7 +259,7 @@ finn: {
   ],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/finn%20principal%20",
+    principal: "/assets-opt/recurso-007.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -294,7 +294,7 @@ finn: {
   ],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/coral%20principal%20",
+    principal: "/assets-opt/recurso-008.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -329,7 +329,7 @@ brisa: {
   ],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/brisa%20principal%20",
+    principal: "/assets-opt/recurso-009.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -364,7 +364,7 @@ rocco: {
   ],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20oceano/rocco%20principal%20",
+    principal: "/assets-opt/recurso-010.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -403,7 +403,7 @@ rocco: {
       ],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Nova%20principal",
+        principal: "/assets-opt/recurso-011.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -438,7 +438,7 @@ rocco: {
       ],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Astro%20principal",
+        principal: "/assets-opt/recurso-012.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -473,7 +473,7 @@ rocco: {
       ],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Orion%20principal",
+        principal: "/assets-opt/recurso-013.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -508,7 +508,7 @@ rocco: {
       ],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Vega%20principal",
+        principal: "/assets-opt/recurso-014.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -543,7 +543,7 @@ rocco: {
       ],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20espacio/Cosmo%20principal",
+        principal: "/assets-opt/recurso-015.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -572,7 +572,7 @@ rocco: {
       habilidades: ["instintoSendero"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/kai%20principal%20",
+        principal: "/assets-opt/recurso-016.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -597,7 +597,7 @@ rocco: {
       habilidades: ["saltoCumbre"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/luma%20principal%20",
+        principal: "/assets-opt/recurso-017.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -622,7 +622,7 @@ rocco: {
       habilidades: ["fuerzaMontana"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/boreal%20principal%20",
+        principal: "/assets-opt/recurso-018.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -647,7 +647,7 @@ rocco: {
       habilidades: ["vistaCumbre"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/kira%20principal%20",
+        principal: "/assets-opt/recurso-019.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -672,7 +672,7 @@ rocco: {
       habilidades: ["rastroMontana"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20monta%C3%B1a/milo%20principal%20",
+        principal: "/assets-opt/recurso-020.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -704,7 +704,7 @@ rocco: {
       habilidades: ["liderazgoPirata"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/capitan%20bronco%20principal%20",
+        principal: "/assets-opt/recurso-021.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -732,7 +732,7 @@ rocco: {
       habilidades: ["vistaVigia"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/marea%20principal%20",
+        principal: "/assets-opt/recurso-022.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -760,7 +760,7 @@ rocco: {
       habilidades: ["instintoTesoro"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/garfio%20principal%20",
+        principal: "/assets-opt/recurso-023.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -788,7 +788,7 @@ rocco: {
       habilidades: ["manosRapidas"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/nilo%20principal%20",
+        principal: "/assets-opt/recurso-024.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -816,7 +816,7 @@ rocco: {
       habilidades: ["pasoSilencioso"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20pirata/perla%20principal%20",
+        principal: "/assets-opt/recurso-025.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -848,7 +848,7 @@ rocco: {
       habilidades: ["valorReino"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/arthur%20principal",
+        principal: "/assets-opt/recurso-026.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -876,7 +876,7 @@ rocco: {
       habilidades: ["luzEncantada"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/elara%20principal",
+        principal: "/assets-opt/recurso-027.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -904,7 +904,7 @@ rocco: {
       habilidades: ["fuegoReal"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/cedric%20principal",
+        principal: "/assets-opt/recurso-028.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -932,7 +932,7 @@ rocco: {
       habilidades: ["luzReal"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/lyra%20principal",
+        principal: "/assets-opt/recurso-029.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -960,7 +960,7 @@ rocco: {
       habilidades: ["fuegoOscuro"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20castillo/drako%20principal",
+        principal: "/assets-opt/recurso-030.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -990,7 +990,7 @@ rocco: {
       habilidades: ["rugidoJurasico"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/rex%20principal",
+        principal: "/assets-opt/recurso-031.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1016,7 +1016,7 @@ rocco: {
       habilidades: ["escudoJurasico"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/trika%20principal",
+        principal: "/assets-opt/recurso-032.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1042,7 +1042,7 @@ rocco: {
       habilidades: ["vistaAlturas"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/bronto%20principal",
+        principal: "/assets-opt/recurso-033.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1068,7 +1068,7 @@ rocco: {
       habilidades: ["velocidadJurasica"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/velo%20principal",
+        principal: "/assets-opt/recurso-034.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1094,7 +1094,7 @@ rocco: {
       habilidades: ["vueloJurasico"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20dinosaurios/tera%20principal",
+        principal: "/assets-opt/recurso-035.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1125,7 +1125,7 @@ rocco: {
       habilidades: ["rumboAventurero"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000000048820e8ca7580a6d758f0d-Wyu1as6yXodsPTNqj1X9d4UDM6bb1Q.png",
+        principal: "/assets-opt/recurso-036.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1152,7 +1152,7 @@ rocco: {
       habilidades: ["ojoViajero"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_00000000c1c4820e9fb45f244d02511d.png",
+        principal: "/assets-opt/recurso-037.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1179,7 +1179,7 @@ rocco: {
       habilidades: ["rutaSecreta"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000004c8c820eaac3976538ca45c5-jb2BpmqiAKa8drfpEPJQmOgkF0QR8Q.png",
+        principal: "/assets-opt/recurso-038.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1206,7 +1206,7 @@ rocco: {
       habilidades: ["rumboViento"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_000000002f88820eb4040941b57a66a5-zFbkK2NcFty25Qt5hXfn5zXLj774BL.png",
+        principal: "/assets-opt/recurso-039.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1233,7 +1233,7 @@ rocco: {
       habilidades: ["camuflajeViajero"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20viajes/file_00000000d524820e99a5187835ea340e-An9XbRbphKstsxXVVW3z644xYzXvA3.png",
+        principal: "/assets-opt/recurso-040.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1264,7 +1264,7 @@ rocco: {
       habilidades: ["espirituNavideno"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000d508820eac25ca0d4e893275-aaCmQmJKfyx0dXK4dto6Q6D8PXWGWC.png",
+        principal: "/assets-opt/recurso-041.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1291,7 +1291,7 @@ rocco: {
       habilidades: ["senderoNieve"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000fd00820eb76cf8202e680085-vlN3d1Y4zFvs3V6ja1shx4u5rlXYpE.png",
+        principal: "/assets-opt/recurso-042.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1318,7 +1318,7 @@ rocco: {
       habilidades: ["deslizamientoNevado"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000fffc820ea6f6b423e060fda1-6SfspkveWRYVgfzdRPZySK1KVdm8m4.png",
+        principal: "/assets-opt/recurso-043.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1345,7 +1345,7 @@ rocco: {
       habilidades: ["magiaJuguetes"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_0000000088bc820ebcd5f4e9bc8f0374-RSFdZ9iX8bCAxlDagI2TaDkI6uNOwA.png",
+        principal: "/assets-opt/recurso-044.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1372,7 +1372,7 @@ rocco: {
       habilidades: ["magiaNieve"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20navidad/file_00000000c938820ebf3942ebfb7cd35e-vdHWqyomigvZvPQzTgXLADLQnqqPA1.png",
+        principal: "/assets-opt/recurso-045.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1403,7 +1403,7 @@ rocco: {
       habilidades: ["pasoSombras"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000035f8820e86159902b138217b-omYWYlsQWxOD2RZ6V0xqbdhGC6HJ0a.png",
+        principal: "/assets-opt/recurso-046.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1430,7 +1430,7 @@ rocco: {
       habilidades: ["pasoFantasmal"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000003a8820e91ace5cfdfbaafbc-FG3gJG7UtQA9SySwvWH8NQLzZN1xF7.png",
+        principal: "/assets-opt/recurso-047.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1457,7 +1457,7 @@ rocco: {
       habilidades: ["pocionEncantada"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000082a0820ea9f1d2b4a0e376e7-mljilPDvRwdjnLpk1yEcug8OmpVqb7.png",
+        principal: "/assets-opt/recurso-048.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1484,7 +1484,7 @@ rocco: {
       habilidades: ["fuerzaCalabaza"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_00000000d6c8820eb8586e04326b61ed-K5IEaDGmNhKCgbljearPuSBp2nfhRs.png",
+        principal: "/assets-opt/recurso-049.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1511,7 +1511,7 @@ rocco: {
       habilidades: ["vueloNocturno"],
 
       assets: {
-        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20halloween/file_0000000010a4820ebd7b2d129e0782c6-pvwxJZtO6c7hzuyVMYKw3IhMOH6uXf.png",
+        principal: "/assets-opt/recurso-050.webp",
         avatar: "",
         movimiento: "",
         habilidad: "",
@@ -1542,7 +1542,7 @@ sol: {
   habilidades: ["ideaBrillante"],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000803c820e8c1ae1c2b3efee60-ViJXKRXm1jikFWY70YV0DlIgyyhKe4.png",
+    principal: "/assets-opt/recurso-051.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -1569,7 +1569,7 @@ teo: {
   habilidades: ["curiosidadInfinita"],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000734c820eaa114d42d3332683-NXY6FkVcW8QRfcDZlSk7oMsADbzVCu.png",
+    principal: "/assets-opt/recurso-052.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -1596,7 +1596,7 @@ clara: {
   habilidades: ["siemprePreparada"],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_00000000a904820eabd217deaf0d3b65-J9gAoLYDZsrXxMzItyNOOHMMtpndfC.png",
+    principal: "/assets-opt/recurso-053.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -1623,7 +1623,7 @@ leo: {
   habilidades: ["espirituAventurero"],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_000000000ae4820ead68387ce1c0c669-tgJ5usIrex6AvTgetqgmTCD6wig9XP.png",
+    principal: "/assets-opt/recurso-054.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -1650,7 +1650,7 @@ lola: {
   habilidades: ["sabiduriaViajera"],
 
   assets: {
-    principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/assets%20familia/file_0000000025b8820e8ffb201c8878e8c0-cCcXEoguOmQb5E6AxONjIeXUslZUfA.png",
+    principal: "/assets-opt/recurso-055.webp",
     avatar: "",
     movimiento: "",
     habilidad: "",
@@ -1890,7 +1890,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "toby",
     emoji: "🦴",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/hueso%201",
+    imagen: "/assets-opt/recurso-056.webp",
   },
 
   pelota: {
@@ -1899,7 +1899,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "toby",
     emoji: "⚽",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/pelota%201",
+    imagen: "/assets-opt/recurso-057.webp",
   },
 
   ovillo: {
@@ -1908,7 +1908,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "luna",
     emoji: "🧶",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/ovillo%201",
+    imagen: "/assets-opt/recurso-058.webp",
   },
 
   ratonJuguete: {
@@ -1917,7 +1917,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "luna",
     emoji: "🐭",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/raton%201",
+    imagen: "/assets-opt/recurso-059.webp",
   },
 
   zanahoria: {
@@ -1926,7 +1926,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "nube",
     emoji: "🥕",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/zanahoria%201",
+    imagen: "/assets-opt/recurso-060.webp",
   },
 
   canastaVerduras: {
@@ -1935,7 +1935,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "nube",
     emoji: "🥬",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/canasta%201",
+    imagen: "/assets-opt/recurso-061.webp",
   },
 
   semillas: {
@@ -1944,7 +1944,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "pipo",
     emoji: "🌻",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/semillas%201",
+    imagen: "/assets-opt/recurso-062.webp",
   },
 
   frutaTropical: {
@@ -1953,7 +1953,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "pipo",
     emoji: "🍍",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/fruta%201",
+    imagen: "/assets-opt/recurso-063.webp",
   },
 
   hojasVerdes: {
@@ -1962,7 +1962,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "tito",
     emoji: "🥬",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/lechuga%201",
+    imagen: "/assets-opt/recurso-064.webp",
   },
 
   estanqueRefugio: {
@@ -1971,7 +1971,7 @@ export const OBJETOS_LABERINTOS = {
     tema: "mascotas",
     personaje: "tito",
     emoji: "🌿",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/mascotas/estanque%201",
+    imagen: "/assets-opt/recurso-065.webp",
   },
 
   /* =======================================================
@@ -1982,70 +1982,70 @@ export const OBJETOS_LABERINTOS = {
     nombre: "caracola",
     articulo: "la",
     emoji: "🐚",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/caracola",
+    imagen: "/assets-opt/recurso-066.webp",
   },
 
   perla: {
     nombre: "perla",
     articulo: "la",
     emoji: "🦪",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/perla",
+    imagen: "/assets-opt/recurso-067.webp",
   },
 
   salvavidas: {
     nombre: "salvavidas",
     articulo: "el",
     emoji: "🛟",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/salvavidas",
+    imagen: "/assets-opt/recurso-068.webp",
   },
 
   tablaSurf: {
     nombre: "tabla de surf",
     articulo: "la",
     emoji: "🏄",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/tablasurf",
+    imagen: "/assets-opt/recurso-069.webp",
   },
 
   coral: {
     nombre: "coral",
     articulo: "el",
     emoji: "🪸",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/coral",
+    imagen: "/assets-opt/recurso-070.webp",
   },
 
   estrellaMar: {
     nombre: "estrella de mar",
     articulo: "la",
     emoji: "⭐",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/estrella%20",
+    imagen: "/assets-opt/recurso-071.webp",
   },
 
   algasMarinas: {
     nombre: "algas marinas",
     articulo: "las",
     emoji: "🌿",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/algas%20",
+    imagen: "/assets-opt/recurso-072.webp",
   },
 
   cofreSubmarino: {
     nombre: "cofre submarino",
     articulo: "el",
     emoji: "🧰",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/cofre%20",
+    imagen: "/assets-opt/recurso-073.webp",
   },
 
   ancla: {
     nombre: "ancla",
     articulo: "el",
     emoji: "⚓",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/ancla%20",
+    imagen: "/assets-opt/recurso-074.webp",
   },
 
   barco: {
     nombre: "barco",
     articulo: "el",
     emoji: "⛵",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/oceano/barco%20",
+    imagen: "/assets-opt/recurso-075.webp",
   },
 
   /* =======================================================
@@ -2056,70 +2056,70 @@ export const OBJETOS_LABERINTOS = {
     nombre: "robot espacial",
     articulo: "el",
     emoji: "🤖",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/robot%201",
+    imagen: "/assets-opt/recurso-076.webp",
   },
 
   naveEspacial: {
     nombre: "nave espacial",
     articulo: "la",
     emoji: "🛸",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/nave%20",
+    imagen: "/assets-opt/recurso-077.webp",
   },
 
   luna: {
     nombre: "luna",
     articulo: "la",
     emoji: "🌙",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/luna%20",
+    imagen: "/assets-opt/recurso-078.webp",
   },
 
   meteorito: {
     nombre: "meteorito",
     articulo: "el",
     emoji: "☄️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/meteorito%201",
+    imagen: "/assets-opt/recurso-079.webp",
   },
 
   estrella: {
     nombre: "estrella",
     articulo: "la",
     emoji: "⭐",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/estrella%201",
+    imagen: "/assets-opt/recurso-080.webp",
   },
 
   planetaTierra: {
     nombre: "planeta Tierra",
     articulo: "el",
     emoji: "🌍",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/planeta%201",
+    imagen: "/assets-opt/recurso-081.webp",
   },
 
   satelite: {
     nombre: "satélite",
     articulo: "el",
     emoji: "🛰️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/satelite",
+    imagen: "/assets-opt/recurso-082.webp",
   },
 
   estrellaFugaz: {
     nombre: "estrella fugaz",
     articulo: "la",
     emoji: "🌠",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/estrellaf",
+    imagen: "/assets-opt/recurso-083.webp",
   },
 
   gema: {
     nombre: "gema espacial",
     articulo: "la",
     emoji: "💎",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/gema",
+    imagen: "/assets-opt/recurso-084.webp",
   },
 
   cohete: {
     nombre: "cohete",
     articulo: "el",
     emoji: "🚀",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/espacio%20/cohete",
+    imagen: "/assets-opt/recurso-085.webp",
   },
 
   /* =======================================================
@@ -2130,70 +2130,70 @@ export const OBJETOS_LABERINTOS = {
     nombre: "montaña",
     articulo: "la",
     emoji: "🏔️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/monta%C3%B1a",
+    imagen: "/assets-opt/recurso-086.webp",
   },
 
   bosque: {
     nombre: "bosque",
     articulo: "el",
     emoji: "🌲",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/bosque",
+    imagen: "/assets-opt/recurso-087.webp",
   },
 
   huellas: {
     nombre: "huellas",
     articulo: "las",
     emoji: "🐾",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/huellas",
+    imagen: "/assets-opt/recurso-088.webp",
   },
 
   floresSilvestres: {
     nombre: "flores silvestres",
     articulo: "las",
     emoji: "🌼",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/flores",
+    imagen: "/assets-opt/recurso-089.webp",
   },
 
   colmena: {
     nombre: "colmena",
     articulo: "la",
     emoji: "🍯",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/colmena",
+    imagen: "/assets-opt/recurso-090.webp",
   },
 
   frutosBosque: {
     nombre: "frutos del bosque",
     articulo: "los",
     emoji: "🫐",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/frutos",
+    imagen: "/assets-opt/recurso-091.webp",
   },
 
   nido: {
     nombre: "nido",
     articulo: "el",
     emoji: "🪺",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/nido",
+    imagen: "/assets-opt/recurso-092.webp",
   },
 
   pluma: {
     nombre: "pluma",
     articulo: "la",
     emoji: "🪶",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/pluma",
+    imagen: "/assets-opt/recurso-093.webp",
   },
 
   madriguera: {
     nombre: "madriguera",
     articulo: "la",
     emoji: "🕳️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/madriguera",
+    imagen: "/assets-opt/recurso-094.webp",
   },
 
   bellotas: {
     nombre: "bellotas",
     articulo: "las",
     emoji: "🌰",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/monta%C3%B1a/bellotas",
+    imagen: "/assets-opt/recurso-095.webp",
   },
 
   /* =======================================================
@@ -2204,70 +2204,70 @@ export const OBJETOS_LABERINTOS = {
     nombre: "mapa",
     articulo: "el",
     emoji: "🗺️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/mapa",
+    imagen: "/assets-opt/recurso-096.webp",
   },
 
   brujula: {
     nombre: "brújula",
     articulo: "la",
     emoji: "🧭",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/br%C3%BAjula",
+    imagen: "/assets-opt/recurso-097.webp",
   },
 
   catalejo: {
     nombre: "catalejo",
     articulo: "el",
     emoji: "🔭",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/catalejo",
+    imagen: "/assets-opt/recurso-098.webp",
   },
 
   monedaOro: {
     nombre: "moneda de oro",
     articulo: "la",
     emoji: "🪙",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/moneda",
+    imagen: "/assets-opt/recurso-099.webp",
   },
 
   cofre: {
     nombre: "cofre",
     articulo: "el",
     emoji: "🧰",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/cofre",
+    imagen: "/assets-opt/recurso-100.webp",
   },
 
   espadaPirata: {
     nombre: "espada pirata",
     articulo: "la",
     emoji: "⚔️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/espada%20pirata",
+    imagen: "/assets-opt/recurso-101.webp",
   },
 
   tesoro: {
     nombre: "tesoro",
     articulo: "el",
     emoji: "💰",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/tesoro",
+    imagen: "/assets-opt/recurso-102.webp",
   },
 
   barril: {
     nombre: "barril",
     articulo: "el",
     emoji: "🛢️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/barril",
+    imagen: "/assets-opt/recurso-103.webp",
   },
 
   collarPerlas: {
     nombre: "collar de perlas",
     articulo: "el",
     emoji: "📿",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/collar%20perlas",
+    imagen: "/assets-opt/recurso-104.webp",
   },
 
   llaveDorada: {
     nombre: "llave dorada",
     articulo: "la",
     emoji: "🔑",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/piratas/llave%20dorada",
+    imagen: "/assets-opt/recurso-105.webp",
   },
 
   /* =======================================================
@@ -2278,70 +2278,70 @@ export const OBJETOS_LABERINTOS = {
     nombre: "espada",
     articulo: "la",
     emoji: "⚔️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/espada",
+    imagen: "/assets-opt/recurso-106.webp",
   },
 
   escudo: {
     nombre: "escudo",
     articulo: "el",
     emoji: "🛡️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/escudo",
+    imagen: "/assets-opt/recurso-107.webp",
   },
 
   libroHechizos: {
     nombre: "libro de hechizos",
     articulo: "el",
     emoji: "📖",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/libro%20hechizos",
+    imagen: "/assets-opt/recurso-108.webp",
   },
 
   varitaMagica: {
     nombre: "varita mágica",
     articulo: "la",
     emoji: "🪄",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/varita",
+    imagen: "/assets-opt/recurso-109.webp",
   },
 
   castillo: {
     nombre: "castillo",
     articulo: "el",
     emoji: "🏰",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/castillo",
+    imagen: "/assets-opt/recurso-110.webp",
   },
 
   gemaMagica: {
     nombre: "gema mágica",
     articulo: "la",
     emoji: "💎",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/gemamagica",
+    imagen: "/assets-opt/recurso-111.webp",
   },
 
   corona: {
     nombre: "corona",
     articulo: "la",
     emoji: "👑",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/corona2",
+    imagen: "/assets-opt/recurso-112.webp",
   },
 
   cristalEncantado: {
     nombre: "cristal encantado",
     articulo: "el",
     emoji: "🔮",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/cristal%20encantado",
+    imagen: "/assets-opt/recurso-113.webp",
   },
 
   llave: {
     nombre: "llave",
     articulo: "la",
     emoji: "🗝️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/llave2",
+    imagen: "/assets-opt/recurso-114.webp",
   },
 
   orbeMagico: {
     nombre: "orbe mágico",
     articulo: "el",
     emoji: "🔮",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/castillo/orbe%20m%C3%A1gico",
+    imagen: "/assets-opt/recurso-115.webp",
   },
 
   /* =======================================================
@@ -2352,70 +2352,70 @@ huellasGigantes: {
   nombre: "huellas gigantes",
   articulo: "las",
   emoji: "🐾",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/huella%20gigante",
+  imagen: "/assets-opt/recurso-116.webp",
 },
 
 huesoDinosaurio: {
   nombre: "hueso de dinosaurio",
   articulo: "el",
   emoji: "🦴",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/hueso%20dinosaurio%20",
+  imagen: "/assets-opt/recurso-117.webp",
 },
 
 helechos: {
   nombre: "helechos",
   articulo: "los",
   emoji: "🌿",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/helechos",
+  imagen: "/assets-opt/recurso-118.webp",
 },
 
 nidoHuevos: {
   nombre: "nido de huevos",
   articulo: "el",
   emoji: "🪺",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/nido%20de%20huevos",
+  imagen: "/assets-opt/recurso-119.webp",
 },
 
 hojasArbol: {
   nombre: "hojas de árbol",
   articulo: "las",
   emoji: "🍃",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/hojas%20de%20%C3%A1rbol",
+  imagen: "/assets-opt/recurso-120.webp",
 },
 
 arbolPrehistorico: {
   nombre: "árbol prehistórico",
   articulo: "el",
   emoji: "🌳",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/%C3%A1rbol%20prehist%C3%B3rico",
+  imagen: "/assets-opt/recurso-121.webp",
 },
 
 huevoDinosaurio: {
   nombre: "huevo de dinosaurio",
   articulo: "el",
   emoji: "🥚",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/huevo%20de%20dinosaurio",
+  imagen: "/assets-opt/recurso-122.webp",
 },
 
 fosil: {
   nombre: "fósil",
   articulo: "el",
   emoji: "🦴",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/f%C3%B3sil",
+  imagen: "/assets-opt/recurso-123.webp",
 },
 
 lago: {
   nombre: "lago",
   articulo: "el",
   emoji: "🏞️",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/lago",
+  imagen: "/assets-opt/recurso-124.webp",
 },
 
 pezPrehistorico: {
   nombre: "pez prehistórico",
   articulo: "el",
   emoji: "🐟",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/dinosaurio/pez%20prehist%C3%B3rico",
+  imagen: "/assets-opt/recurso-125.webp",
 },
 
   /* =======================================================
@@ -2426,70 +2426,70 @@ pezPrehistorico: {
     nombre: "valija",
     articulo: "la",
     emoji: "🧳",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/valija",
+    imagen: "/assets-opt/recurso-126.webp",
   },
 
   brujulaViaje: {
     nombre: "brújula",
     articulo: "la",
     emoji: "🧭",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/br%C3%BAjula%20viajera%20",
+    imagen: "/assets-opt/recurso-127.webp",
   },
 
   tren: {
     nombre: "tren",
     articulo: "el",
     emoji: "🚆",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/tren",
+    imagen: "/assets-opt/recurso-128.webp",
   },
 
   camaraFotografica: {
     nombre: "cámara fotográfica",
     articulo: "la",
     emoji: "📷",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/c%C3%A1mara%20fotogr%C3%A1fica",
+    imagen: "/assets-opt/recurso-129.webp",
   },
 
   autobus: {
     nombre: "autobús",
     articulo: "el",
     emoji: "🚌",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/autob%C3%BAs%201",
+    imagen: "/assets-opt/recurso-130.webp",
   },
 
   mapaCiudad: {
     nombre: "mapa de la ciudad",
     articulo: "el",
     emoji: "🗺️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/mapa%20ciudad",
+    imagen: "/assets-opt/recurso-131.webp",
   },
 
   avion: {
     nombre: "avión",
     articulo: "el",
     emoji: "✈️",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/avi%C3%B3n",
+    imagen: "/assets-opt/recurso-132.webp",
   },
 
   cartaPostal: {
     nombre: "carta postal",
     articulo: "la",
     emoji: "💌",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/carta%20postal",
+    imagen: "/assets-opt/recurso-133.webp",
   },
 
   auto: {
     nombre: "auto",
     articulo: "el",
     emoji: "🚗",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/auto",
+    imagen: "/assets-opt/recurso-134.webp",
   },
 
   pasaporte: {
     nombre: "pasaporte",
     articulo: "el",
     emoji: "🛂",
-    imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/viajes/pasaporte",
+    imagen: "/assets-opt/recurso-135.webp",
   },
 
 /* =======================================================
@@ -2500,70 +2500,70 @@ arbolNavidad: {
   nombre: "árbol de Navidad",
   articulo: "el",
   emoji: "🎄",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/Navidad",
+  imagen: "/assets-opt/recurso-136.webp",
 },
 
 estrellaNavidena: {
   nombre: "estrella navideña",
   articulo: "la",
   emoji: "⭐",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/estrella%20navide%C3%B1a",
+  imagen: "/assets-opt/recurso-137.webp",
 },
 
 campanas: {
   nombre: "campanas",
   articulo: "las",
   emoji: "🔔",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/campanas",
+  imagen: "/assets-opt/recurso-138.webp",
 },
 
 trineo: {
   nombre: "trineo",
   articulo: "el",
   emoji: "🛷",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/trineo",
+  imagen: "/assets-opt/recurso-139.webp",
 },
 
 regalo: {
   nombre: "regalo",
   articulo: "el",
   emoji: "🎁",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/regalo1",
+  imagen: "/assets-opt/recurso-140.webp",
 },
 
 sacoRegalos: {
   nombre: "saco de regalos",
   articulo: "el",
   emoji: "🎁",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/saco%20regalos",
+  imagen: "/assets-opt/recurso-141.webp",
 },
 
 juguete: {
   nombre: "juguete",
   articulo: "el",
   emoji: "🧸",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/juguete",
+  imagen: "/assets-opt/recurso-142.webp",
 },
 
 herramientasElfa: {
   nombre: "herramientas de elfa",
   articulo: "las",
   emoji: "🛠️",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/herramientas",
+  imagen: "/assets-opt/recurso-143.webp",
 },
 
 bufanda: {
   nombre: "bufanda",
   articulo: "la",
   emoji: "🧣",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/bufanda",
+  imagen: "/assets-opt/recurso-144.webp",
 },
 
 sombreroInvierno: {
   nombre: "sombrero de invierno",
   articulo: "el",
   emoji: "🎩",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/navidad/sombrero%20invierno",
+  imagen: "/assets-opt/recurso-145.webp",
 },
 
   /* =======================================================
@@ -2574,70 +2574,70 @@ lunaCreciente: {
   nombre: "luna creciente",
   articulo: "la",
   emoji: "🌙",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/luna%20creciente",
+  imagen: "/assets-opt/recurso-146.webp",
 },
 
 llaveMisteriosa: {
   nombre: "llave misteriosa",
   articulo: "la",
   emoji: "🗝️",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/llave%20misteriosa",
+  imagen: "/assets-opt/recurso-147.webp",
 },
 
 farolEncantado: {
   nombre: "farol encantado",
   articulo: "el",
   emoji: "🏮",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/farol%20encantado",
+  imagen: "/assets-opt/recurso-148.webp",
 },
 
 cadenaFantasmal: {
   nombre: "cadena fantasmal",
   articulo: "la",
   emoji: "⛓️",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/cadena%20fantasmal",
+  imagen: "/assets-opt/recurso-149.webp",
 },
 
 calderoPociones: {
   nombre: "caldero de pociones",
   articulo: "el",
   emoji: "🧪",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/caldero%20pociones",
+  imagen: "/assets-opt/recurso-150.webp",
 },
 
 libroHechizosHalloween: {
   nombre: "libro de hechizos",
   articulo: "el",
   emoji: "📖",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/libro%20hechizos",
+  imagen: "/assets-opt/recurso-151.webp",
 },
 
 calabazaEncantada: {
   nombre: "calabaza encantada",
   articulo: "la",
   emoji: "🎃",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/calabaza%20encantada",
+  imagen: "/assets-opt/recurso-152.webp",
 },
 
 espantapajaros: {
   nombre: "espantapájaros",
   articulo: "el",
   emoji: "🌾",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/espantap%C3%A1jaros",
+  imagen: "/assets-opt/recurso-153.webp",
 },
 
 ataud: {
   nombre: "ataúd",
   articulo: "el",
   emoji: "⚰️",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/ata%C3%BAd",
+  imagen: "/assets-opt/recurso-154.webp",
 },
 
 copaVampirica: {
   nombre: "copa vampírica",
   articulo: "la",
   emoji: "🍷",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/halloween/copa%20vamp%C3%ADrica",
+  imagen: "/assets-opt/recurso-155.webp",
 },
 
   /* =======================================================
@@ -2648,70 +2648,70 @@ auriculares: {
   nombre: "auriculares",
   articulo: "los",
   emoji: "🎧",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/auriculares",
+  imagen: "/assets-opt/recurso-156.webp",
 },
 
 patines: {
   nombre: "patines",
   articulo: "los",
   emoji: "🛼",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/patines",
+  imagen: "/assets-opt/recurso-157.webp",
 },
 
 cometa: {
   nombre: "cometa",
   articulo: "la",
   emoji: "🪁",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/cometa",
+  imagen: "/assets-opt/recurso-158.webp",
 },
 
 yoyo: {
   nombre: "yo-yo",
   articulo: "el",
   emoji: "🪀",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/yoyo1",
+  imagen: "/assets-opt/recurso-159.webp",
 },
 
 cestaPicnic: {
   nombre: "cesta de picnic",
   articulo: "la",
   emoji: "🧺",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/cesta%20picnic",
+  imagen: "/assets-opt/recurso-160.webp",
 },
 
 termo: {
   nombre: "termo",
   articulo: "el",
   emoji: "🧉",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/termo",
+  imagen: "/assets-opt/recurso-161.webp",
 },
 
 carpaCamping: {
   nombre: "carpa de camping",
   articulo: "la",
   emoji: "⛺",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/carpa%20camping",
+  imagen: "/assets-opt/recurso-162.webp",
 },
 
 guitarra: {
   nombre: "guitarra",
   articulo: "la",
   emoji: "🎸",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/guitarra",
+  imagen: "/assets-opt/recurso-163.webp",
 },
 
 tejido: {
   nombre: "tejido con agujas",
   articulo: "el",
   emoji: "🧶",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/tejido%20agujas",
+  imagen: "/assets-opt/recurso-164.webp",
 },
 
 tetera: {
   nombre: "tetera",
   articulo: "la",
   emoji: "🫖",
-  imagen: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/objetos%20tematicas/familia/tetera",
+  imagen: "/assets-opt/recurso-165.webp",
 },
 };
 

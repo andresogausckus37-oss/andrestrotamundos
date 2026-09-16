@@ -3144,27 +3144,70 @@ modoObjetivo={
             </button>
           </div>
 
-          {exportandoPdf && (
-            <div className="mt-3">
-              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className="h-full bg-slate-900 transition-all"
-                  style={{
-                    width:
-                      `${progresoPdf.porcentaje}%`,
-                  }}
-                />
-              </div>
-
-              <p className="mt-1 text-center text-[11px] font-semibold text-slate-500">
-                {progresoPdf.actual}
-                {" de "}
-                {progresoPdf.total}
-                {" páginas"}
-              </p>
+        {exportandoPdf && (
+          <div className="mt-3">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full bg-slate-900 transition-all"
+                style={{
+                  width:
+                    `${progresoPdf.porcentaje}%`,
+                }}
+              />
             </div>
-          )}
+
+            <p className="mt-1 text-center text-[11px] font-semibold text-slate-500">
+              {progresoPdf.actual}
+              {" de "}
+              {progresoPdf.total}
+              {" páginas"}
+            </p>
+          </div>
+        )}
+
+        {/* DIAGNÓSTICO PDF */}
+
+        {diagnosticoPdf.length > 0 && (
+          <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
+            <div className="mb-3 font-bold">
+              Diagnóstico PDF
+            </div>
+
+            {diagnosticoPdf.map((item) => (
+              <div
+                key={item.pagina}
+                className="border-b py-2"
+              >
+                <div className="font-semibold">
+                  Página {item.pagina}
+                </div>
+
+                <div>
+                  Imágenes: {item.imagenes} ms
+                </div>
+
+                <div>
+                  toJpeg: {item.toJpeg} ms
+                </div>
+
+                <div>
+                  Conversión: {item.conversion} ms
+                </div>
+
+                <div>
+                  jsPDF: {item.addImage} ms
+                </div>
+
+                <div>
+                  Total: {item.total} ms
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         </section>
+
+        
 
         <div
           style={{
@@ -3236,7 +3279,15 @@ modoObjetivo={
               </div>
             </>
           )}
-        </div>
+        </div>      
+
+        {diagnosticoPdf.length > 0 && (
+  <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
+    <div className="font-bold mb-3">
+      Diagnóstico PDF
+    </div>
+
+    
 
                 {/* ===================================================
             VALIDACIÓN
