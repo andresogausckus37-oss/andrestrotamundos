@@ -1464,6 +1464,11 @@ const medirRecursosPdf =
   porcentaje: 0,
 });
 
+  const [
+  diagnosticoPdf,
+  setDiagnosticoPdf,
+] = useState([]);
+
   /* =======================================================
      CANTIDAD TOTAL
   ======================================================= */
@@ -2316,6 +2321,7 @@ modoObjetivo:
       return;
     }
 
+    setDiagnosticoPdf([]);
     setExportandoPdf(true);
 
     setProgresoPdf({
@@ -2358,23 +2364,26 @@ modoObjetivo:
         nombreArchivo:
           "Laberintos-Toby-y-Luna.pdf",
 
-        calidad: 0.92,
-        pixelRatio: 1.5,
+        calidad: 0.90,
+pixelRatio: 1.25,
 
-        alActualizarProgreso:
-        ({
+      alActualizarProgreso:
+      ({
+        fase,
+        actual,
+        total,
+        porcentaje,
+      }) => {
+        setProgresoPdf({
           fase,
           actual,
           total,
           porcentaje,
-        }) => {
-          setProgresoPdf({
-            fase,
-            actual,
-            total,
-            porcentaje,
-          });
-        },
+        });
+      },
+
+      alActualizarDiagnostico:
+        setDiagnosticoPdf,
       });
     } catch (error) {
       console.error(error);
@@ -3165,133 +3174,106 @@ modoObjetivo={
           </div>
         )}
 
-        {/* DIAGNÓSTICO PDF */}
+                  {/* DIAGNÓSTICO PDF */}
 
-        {diagnosticoPdf.length > 0 && (
-          <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
-            <div className="mb-3 font-bold">
-              Diagnóstico PDF
+          {diagnosticoPdf.length > 0 && (
+            <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
+              <div className="mb-3 font-bold">
+                Diagnóstico PDF
+              </div>
+
+              {diagnosticoPdf.map((item) => (
+                <div
+                  key={item.pagina}
+                  className="border-b py-2"
+                >
+                  <div className="font-semibold">
+                    Página {item.pagina}
+                  </div>
+
+                  <div>
+                    Imágenes: {item.imagenes} ms
+                  </div>
+
+                  <div>
+                    toJpeg: {item.toJpeg} ms
+                  </div>
+
+                  <div>
+                    Conversión: {item.conversion} ms
+                  </div>
+
+                  <div>
+                    jsPDF: {item.addImage} ms
+                  </div>
+
+                  <div>
+                    Total: {item.total} ms
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* =================================================
+              RECURSOS DEL PDF
+          ================================================== */}
+
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-700">
+                  Recursos del PDF
+                </p>
+
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {recursosPdf.length} imágenes únicas
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={medirRecursosPdf}
+                disabled={midiendoRecursos}
+                className={`rounded-lg px-3 py-2 text-xs font-bold ${
+                  midiendoRecursos
+                    ? "bg-slate-200 text-slate-500"
+                    : "bg-slate-900 text-white"
+                }`}
+              >
+                {midiendoRecursos
+                  ? "Analizando..."
+                  : "Analizar peso y resolución"}
+              </button>
             </div>
 
-            {diagnosticoPdf.map((item) => (
-              <div
-                key={item.pagina}
-                className="border-b py-2"
-              >
-                <div className="font-semibold">
-                  Página {item.pagina}
-                </div>
+            {recursosMedidos.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-black text-slate-900">
+                  Total: {formatearBytes(pesoTotalRecursos)}
+                </p>
 
-                <div>
-                  Imágenes: {item.imagenes} ms
-                </div>
-
-                <div>
-                  toJpeg: {item.toJpeg} ms
-                </div>
-
-                <div>
-                  Conversión: {item.conversion} ms
-                </div>
-
-                <div>
-                  jsPDF: {item.addImage} ms
-                </div>
-
-                <div>
-                  Total: {item.total} ms
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        </section>
-
-        
-
-        <div
-          style={{
-            marginTop: "12px",
-            padding: "12px",
-            border: "1px solid #E2E8F0",
-            borderRadius: "10px",
-            background: "#F8FAFC",
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 700,
-              marginBottom: "8px",
-            }}
-          >
-            Recursos del PDF
-          </div>
-
-          <button
-            type="button"
-            onClick={medirRecursosPdf}
-            disabled={midiendoRecursos}
-          >
-            {midiendoRecursos
-              ? "Analizando recursos..."
-              : "Analizar peso y resolución"}
-          </button>
-
-          {recursosMedidos.length >
-            0 && (
-            <>
-              <div
-                style={{
-                  marginTop: "10px",
-                  fontWeight: 700,
-                }}
-              >
-                Total:{" "}
-                {formatearBytes(
-                  pesoTotalRecursos
-                )}
-              </div>
-
-              <div
-                style={{
-                  marginTop: "8px",
-                  fontSize: "13px",
-                }}
-              >
-                {recursosMedidos.map(
-                  (recurso, indice) => (
+                <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                  {recursosMedidos.map((recurso, index) => (
                     <div
                       key={recurso.url}
-                      style={{
-                        marginBottom:
-                          "5px",
-                      }}
+                      className="rounded-lg bg-white px-2 py-1.5 text-[11px] text-slate-600"
                     >
-                      {indice + 1}.{" "}
-                      {recurso.ancho} ×{" "}
-                      {recurso.alto} px ·{" "}
-                      {formatearBytes(
-                        recurso.bytes
-                      )}
+                      <span className="font-bold">
+                        {index + 1}.
+                      </span>{" "}
+                      {recurso.ancho} × {recurso.alto} px ·{" "}
+                      {formatearBytes(recurso.bytes)}
                     </div>
-                  )
-                )}
+                  ))}
+                </div>
               </div>
-            </>
-          )}
-        </div>      
+            )}
+          </div>
 
-        {diagnosticoPdf.length > 0 && (
-  <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
-    <div className="font-bold mb-3">
-      Diagnóstico PDF
-    </div>
-
-    
-
-                {/* ===================================================
-            VALIDACIÓN
-        ==================================================== */}
+          {/* ===================================================
+              VALIDACIÓN
+          ==================================================== */}
 
         <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm sm:p-4">
           <div className="flex items-center justify-between gap-3">
