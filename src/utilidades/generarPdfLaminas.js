@@ -243,9 +243,11 @@ async function capturarLamina(
   const inicioImagenes =
     performance.now();
 
-  await esperarImagenes(
-    elemento
-  );
+  /*
+await esperarImagenes(
+  elemento
+);
+*/
 
   const finImagenes =
     performance.now();
@@ -254,7 +256,9 @@ async function capturarLamina(
      Esperar render
   ------------------------- */
 
-  await esperarFrames(1);
+  
+await esperarFrames(1);
+
 
   /* -------------------------
      DOM → JPEG
@@ -285,6 +289,8 @@ async function capturarLamina(
           false,
 
         skipFonts: true,
+
+    
 
         style: {
           width:
@@ -470,6 +476,7 @@ export async function generarPdfLaminas({
             pixelRatio,
           }
         );
+    
 
       /* -------------------------
          Data URL → Uint8Array
@@ -625,6 +632,7 @@ export async function generarPdfLaminas({
     pdf.save(
       nombreArchivo
     );
+    
   } catch (error) {
     console.error(
       "Error generando el PDF:",
