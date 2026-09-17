@@ -3199,11 +3199,7 @@ modoObjetivo={
                   </div>
 
                   <div>
-  toCanvas: {item.toCanvas} ms
-</div>
-
-<div>
-  Canvas → Blob: {item.blob} ms
+  toJpeg: {item.toJpeg} ms
 </div>
 
                   <div>

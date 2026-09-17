@@ -97,13 +97,13 @@ export const productosDigitales = [
     categoria: "colorear",
 linea: "juegos",
     
-    precioARS: 3000,
+    precioARS: 2999,
 
     descuento: 0,
 
     oferta: {
       activa: true,
-      precioARS: 2500,
+      precioARS: 2499,
       etiqueta: "",
     },
 
@@ -174,13 +174,13 @@ linea: "juegos",
     categoria: "colorear",
     linea: "juegos",
 
-    precioARS: 8000,
+    precioARS: 6999,
 
     descuento: 0,
 
     oferta: {
       activa: true,
-      precioARS: 5000,
+      precioARS: 2999,
       etiqueta: "Oferta lanzamiento",
     },
 
@@ -251,13 +251,13 @@ linea: "juegos",
     categoria: "laberintos",
     linea: "juegos",
 
-    precioARS: 5000,
+    precioARS: 4999,
 
     descuento: 0,
 
     oferta: {
       activa: true,
-      precioARS: 3000,
+      precioARS: 2499,
       etiqueta: "Oferta lanzamiento",
     },
 
@@ -308,4 +308,557 @@ linea: "juegos",
 
     destacado: true,
   },
+
+  // =========================================================
+// PRODUCTO 5
+// =========================================================
+
+  {
+    id: "50-laberintos-mascotas",
+    nombre: "50 Laberintos de Mascotas",
+    ventaCruzadaId: "50-laberintos-toby-luna",
+
+    descripcion: "50 laberintos imprimibles de mascotas para niños de 3 a 5 años, con dificultad progresiva.",
+    descripcionLarga: "Una colección de 50 laberintos de mascotas de nivel Fácil, diseñados para niños de 3 a 5 años. Los desafíos avanzan gradualmente de menor a mayor complejidad e incluyen diferentes personajes y objetivos. Ideal para estimular la concentración y desarrollar el razonamiento mientras se divierten.",
+
+    tipo: "digital",
+    categoria: "Laberintos",
+    linea: "Mascotas",
+
+    precioARS: 1999,
+    descuento: 0,
+
+    oferta: {
+      activa: false,
+      precioARS: 0,
+      etiqueta: "",
+    },
+
+    imagenes: {
+      portada: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50%20laberintos%20mascotas%20/portada2",
+      preview: "",
+      previewsIndividuales: ["https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50%20laberintos%20mascotas%20/preview1", "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50%20laberintos%20mascotas%20/preview2"],
+    },
+
+    formato: "PDF",
+    tamano: "A4",
+
+    paginas: 103,
+    laminas: 50,
+
+    incluye: [
+      "50 laberintos de nivel Fácil",
+      "Dificultad progresiva",
+      "50 soluciones",
+      "Temática mascotas",
+      
+    ],
+
+    beneficios: [
+      "Estimula la concentración",
+      "Desarrolla el razonamiento",
+      "Favorece la resolución de problemas",
+      "Aprendizaje a través del juego",
+    ],
+
+    edadRecomendada: "3 a 5 años",
+    nivel: "Fácil",
+    entrega: "Descarga digital",
+    destacado: true,
+  },
+
+// =========================================================
+// PRODUCTO 6
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 7
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 8
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 9
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 10
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 11
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 12
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 13
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 14
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 15
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 16
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 17
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 18
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 19
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
+
+// =========================================================
+// PRODUCTO 20
+// =========================================================
+
+{
+  id: "",
+  nombre: "",
+  ventaCruzadaId: "",
+  descripcion: "",
+  descripcionLarga: "",
+  tipo: "digital",
+  categoria: "",
+  linea: "",
+  precioARS: 0,
+  descuento: 0,
+  oferta: { activa: false, precioARS: 0, etiqueta: "" },
+  imagenes: {
+    portada: "",
+    preview: "",
+    previewsIndividuales: ["", ""],
+  },
+  formato: "PDF",
+  tamano: "A4",
+  paginas: 0,
+  laminas: 0,
+  incluye: [],
+  beneficios: [],
+  edadRecomendada: "",
+  nivel: "",
+  entrega: "Descarga digital",
+  destacado: false,
+},
 ];

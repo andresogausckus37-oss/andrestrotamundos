@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { toCanvas } from "html-to-image";
+import { toJpeg } from "html-to-image";
 
 /* =========================================================
    CONFIGURACIÓN A4
@@ -192,48 +192,31 @@ async function precargarRecursos(
 }
 
 /* =========================================================
-   CANVAS → BLOB
+   DATA URL → UINT8ARRAY
 ========================================================= */
 
-function canvasABlob(
-  canvas,
-  calidad = 0.90
-) {
-  return new Promise(
-    (resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(
-              new Error(
-                "No se pudo convertir el canvas a JPEG."
-              )
-            );
+function dataUrlAUint8Array(dataUrl) {
+  const base64 =
+    dataUrl.split(",")[1];
 
-            return;
-          }
+  const binario =
+    atob(base64);
 
-          resolve(blob);
-        },
+  const bytes =
+    new Uint8Array(
+      binario.length
+    );
 
-        "image/jpeg",
-        calidad
-      );
-    }
-  );
-}
+  for (
+    let i = 0;
+    i < binario.length;
+    i += 1
+  ) {
+    bytes[i] =
+      binario.charCodeAt(i);
+  }
 
-/* =========================================================
-   BLOB → UINT8ARRAY
-========================================================= */
-
-async function blobAUint8Array(blob) {
-  const buffer =
-    await blob.arrayBuffer();
-
-  return new Uint8Array(
-    buffer
-  );
+  return bytes;
 }
 
 /* =========================================================
@@ -274,16 +257,19 @@ async function capturarLamina(
   await esperarFrames(1);
 
   /* -------------------------
-     DOM → Canvas
+     DOM → JPEG
   ------------------------- */
 
-  const inicioToCanvas =
+  const inicioToJpeg =
     performance.now();
 
-  const canvas =
-    await toCanvas(
+  const resultado =
+    await toJpeg(
       elemento,
       {
+        quality:
+          calidad,
+
         pixelRatio,
 
         width:
@@ -314,40 +300,21 @@ async function capturarLamina(
       }
     );
 
-  const finToCanvas =
-    performance.now();
-
-  /* -------------------------
-     Canvas → JPEG Blob
-  ------------------------- */
-
-  const inicioBlob =
-    performance.now();
-
-  const blob =
-    await canvasABlob(
-      canvas,
-      calidad
-    );
-
-  const finBlob =
+  const finToJpeg =
     performance.now();
 
   return {
-    blob,
+    dataUrl:
+      resultado,
 
     tiempos: {
       imagenes:
         finImagenes -
         inicioImagenes,
 
-      toCanvas:
-        finToCanvas -
-        inicioToCanvas,
-
-      blob:
-        finBlob -
-        inicioBlob,
+      toJpeg:
+        finToJpeg -
+        inicioToJpeg,
     },
   };
 }
@@ -455,11 +422,15 @@ export async function generarPdfLaminas({
       indice < totalPaginas;
       indice += 1
     ) {
+      /* -------------------------
+         Inicio tiempo real
+      ------------------------- */
+
       const inicioTotalReal =
         performance.now();
 
       /* -------------------------
-         Cambiar/renderizar
+         Cambiar/renderizar página
       ------------------------- */
 
       const inicioRender =
@@ -486,7 +457,7 @@ export async function generarPdfLaminas({
       }
 
       /* -------------------------
-         Capturar
+         Capturar página
       ------------------------- */
 
       const captura =
@@ -499,22 +470,22 @@ export async function generarPdfLaminas({
         );
 
       /* -------------------------
-         Blob → Uint8Array
+         Data URL → Uint8Array
       ------------------------- */
 
       const inicioConversion =
         performance.now();
 
       const imagenBytes =
-        await blobAUint8Array(
-          captura.blob
+        dataUrlAUint8Array(
+          captura.dataUrl
         );
 
       const finConversion =
         performance.now();
 
       /* -------------------------
-         Nueva página
+         Nueva página PDF
       ------------------------- */
 
       if (indice > 0) {
@@ -525,7 +496,7 @@ export async function generarPdfLaminas({
       }
 
       /* -------------------------
-         Agregar a jsPDF
+         Agregar imagen a jsPDF
       ------------------------- */
 
       const inicioAddImage =
@@ -549,6 +520,10 @@ export async function generarPdfLaminas({
       const finAddImage =
         performance.now();
 
+      /* -------------------------
+         Fin tiempo real
+      ------------------------- */
+
       const finTotalReal =
         performance.now();
 
@@ -571,14 +546,9 @@ export async function generarPdfLaminas({
             captura.tiempos.imagenes
           ),
 
-        toCanvas:
+        toJpeg:
           Math.round(
-            captura.tiempos.toCanvas
-          ),
-
-        blob:
-          Math.round(
-            captura.tiempos.blob
+            captura.tiempos.toJpeg
           ),
 
         conversion:
@@ -647,7 +617,7 @@ export async function generarPdfLaminas({
     }
 
     /* =====================================================
-       DESCARGAR
+       DESCARGAR PDF
     ===================================================== */
 
     pdf.save(
