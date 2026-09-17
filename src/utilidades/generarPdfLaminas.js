@@ -284,6 +284,8 @@ async function capturarLamina(
         cacheBust:
           false,
 
+        skipFonts: true,
+
         style: {
           width:
             `${ANCHO_A4_PX}px`,

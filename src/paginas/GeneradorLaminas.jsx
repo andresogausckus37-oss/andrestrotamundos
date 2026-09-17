@@ -2386,7 +2386,7 @@ pixelRatio: 1.25,
       },
 
       alActualizarDiagnostico:
-        setDiagnosticoPdf,
+  undefined,
       });
     } catch (error) {
       console.error(error);
