@@ -10,7 +10,6 @@ import {
 import Navbar from "./componentes/Navbar";
 import Hero from "./componentes/Hero";
 import Servicios from "./componentes/Servicios";
-import TiendaDestacada from "./componentes/TiendaDestacada";
 import ComoFunciona from "./componentes/ComoFunciona";
 import Galeria from "./componentes/Galeria";
 import Resenas from "./componentes/Resenas";
@@ -85,10 +84,6 @@ const Home = () => {
       <Hero scrollTo={scrollTo} />
 
       <Servicios />
-
-      <TiendaDestacada
-        verProducto={(id) => navigate(`/tienda/${id}`)}
-      />
 
       <ComoFunciona />
 

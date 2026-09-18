@@ -10,18 +10,6 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const menuItems = [
-    ["Inicio", "inicio"],
-    ["Servicios", "servicios"],
-    ["Tienda", "tienda"],
-    ["Cómo funciona", "mi-proceso"],
-    ["Experiencias", "galeria"],
-    ["Reseñas", "resenas"],
-    ["Disponibilidad", "disponibilidad"],
-    ["Sobre mí", "sobre-mi"],
-    ["Contacto", "contacto"],
-  ];
-
   /* DETECTAR SCROLL */
   useEffect(() => {
     const handleScroll = () => {
@@ -42,26 +30,64 @@ const Navbar = () => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  /* IR A UNA SECCIÓN DEL HOME */
-  const irASeccion = (id) => {
+  /* IR AL INICIO */
+  const irAInicio = () => {
     setIsMenuOpen(false);
 
-    /* Si ya estamos en Home */
     if (location.pathname === "/") {
-      document.getElementById(id)?.scrollIntoView({
+      document.getElementById("inicio")?.scrollIntoView({
         behavior: "smooth",
       });
 
       return;
     }
 
-    /* Si estamos en Tienda o Detalle */
     navigate("/", {
       state: {
-        scrollTo: id,
+        scrollTo: "inicio",
       },
     });
   };
+
+  /* IR A MI TIENDA */
+  const irAMiTienda = () => {
+    setIsMenuOpen(false);
+    navigate("/tienda");
+  };
+
+  /* IR A CONTACTO */
+  const irAContacto = () => {
+    setIsMenuOpen(false);
+
+    if (location.pathname === "/") {
+      document.getElementById("contacto")?.scrollIntoView({
+        behavior: "smooth",
+      });
+
+      return;
+    }
+
+    navigate("/", {
+      state: {
+        scrollTo: "contacto",
+      },
+    });
+  };
+
+  const enlaces = [
+    {
+      label: "Inicio",
+      onClick: irAInicio,
+    },
+    {
+      label: "Produtos Imprimibles",
+      onClick: irAMiTienda,
+    },
+    {
+      label: "Contacto",
+      onClick: irAContacto,
+    },
+  ];
 
   return (
     <header
@@ -72,11 +98,11 @@ const Navbar = () => {
       }`}
     >
       {/* BARRA PRINCIPAL */}
-      <div className="contenedor flex items-center justify-between px-5 py-3">
+      <div className="contenedor relative flex items-center justify-between px-5 py-3">
         {/* MARCA */}
         <button
           type="button"
-          onClick={() => irASeccion("inicio")}
+          onClick={irAInicio}
           className="flex items-center gap-3"
         >
           <img
@@ -97,15 +123,15 @@ const Navbar = () => {
         </button>
 
         {/* NAVEGACIÓN ESCRITORIO */}
-        <nav className="hidden items-center gap-6 text-xs font-medium md:flex">
-          {menuItems.slice(0, 7).map(([label, id]) => (
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1 md:flex">
+          {enlaces.map((enlace) => (
             <button
-              key={id}
+              key={enlace.label}
               type="button"
-              onClick={() => irASeccion(id)}
-              className="text-slate-600 transition hover:text-sky-600"
+              onClick={enlace.onClick}
+              className="px-4 py-1 text-center text-xs font-medium text-slate-600 transition hover:text-sky-600"
             >
-              {label}
+              {enlace.label}
             </button>
           ))}
         </nav>
@@ -113,26 +139,34 @@ const Navbar = () => {
         {/* MENÚ HAMBURGUESA */}
         <button
           type="button"
-          onClick={() => setIsMenuOpen((actual) => !actual)}
+          onClick={() =>
+            setIsMenuOpen((actual) => !actual)
+          }
           className="shrink-0 rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 md:hidden"
-          aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-label={
+            isMenuOpen ? "Cerrar menú" : "Abrir menú"
+          }
         >
-          {isMenuOpen ? <X size={23} /> : <Menu size={23} />}
+          {isMenuOpen ? (
+            <X size={23} />
+          ) : (
+            <Menu size={23} />
+          )}
         </button>
       </div>
 
       {/* MENÚ MÓVIL */}
       {isMenuOpen && (
         <div className="border-t border-slate-200 bg-white shadow-xl md:hidden">
-          <nav className="contenedor grid grid-cols-3 gap-2 px-5 py-4">
-            {menuItems.map(([label, id]) => (
+          <nav className="contenedor flex flex-col items-center px-5 py-5">
+            {enlaces.map((enlace) => (
               <button
-                key={id}
+                key={enlace.label}
                 type="button"
-                onClick={() => irASeccion(id)}
-                className="flex min-h-[48px] items-center justify-center rounded-xl bg-slate-50 px-2 py-2.5 text-center text-xs font-medium leading-4 text-slate-600 transition hover:bg-sky-50 hover:text-sky-700"
+                onClick={enlace.onClick}
+                className="w-full max-w-[240px] rounded-xl px-4 py-3 text-center text-sm font-medium text-slate-600 transition hover:bg-sky-50 hover:text-sky-700"
               >
-                {label}
+                {enlace.label}
               </button>
             ))}
           </nav>
