@@ -193,7 +193,7 @@ export default function LaminaLaberinto({
             display: "flex",
             alignItems: "center",
             gap: "12px",
-            marginBottom: "5px",
+            marginBottom: "25px",
           }}
         >
           <div
@@ -288,11 +288,11 @@ export default function LaminaLaberinto({
           style={{
             position: "absolute",
 
-            left: "-50px",
+            left: "-40px",
             top: "40px",
 
-            width: "105px",
-            height: "120px",
+            width: "80px",
+            height: "130px",
 
             zIndex: 20,
 

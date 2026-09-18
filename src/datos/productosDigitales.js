@@ -335,8 +335,8 @@ linea: "juegos",
     },
 
     imagenes: {
-      portada: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50%20laberintos%20mascotas%20/portada2",
-      preview: "",
+      portada: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50%20laberintos%20mascotas%20/portada.webp",
+      preview: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50%20laberintos%20mascotas%20/preview-general.webp",
       previewsIndividuales: ["https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50%20laberintos%20mascotas%20/preview1", "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/laberintos/50%20laberintos%20mascotas%20/preview2"],
     },
 

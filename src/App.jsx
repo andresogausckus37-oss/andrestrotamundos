@@ -26,6 +26,7 @@ import Recomendados from "./paginas/Recomendados";
 import GeneradorPdf from "./paginas/GeneradorPdf";
 import Digitales from "./paginas/Digitales";
 import GeneradorLaminas from "./paginas/GeneradorLaminas";
+import OptimizadorImagenes from "./paginas/OptimizadorImagenes";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
@@ -120,7 +121,7 @@ const ContenidoApp = () => {
       {/* SCROLL AUTOMÁTICO */}
       <ScrollToTop />
 
-      {/* 
+      {/*
         En Home no agregamos espacio superior porque el Navbar
         queda sobre el Hero.
 
@@ -129,29 +130,49 @@ const ContenidoApp = () => {
       */}
       <div className={esHome ? "" : "pt-20"}>
         <Routes>
-          <Route path="/" element={<Home />} />
-
-          <Route path="/tienda" element={<Tienda />} />
-          <Route path="/recomendados" element={<Recomendados />} />
           <Route
-  path="/generador-pdf"
-  element={<GeneradorPdf />}
-/>
-          <Route path="/tienda/digitales" element={<Digitales />} />
+            path="/"
+            element={<Home />}
+          />
+
+          <Route
+            path="/tienda"
+            element={<Tienda />}
+          />
+
+          <Route
+            path="/recomendados"
+            element={<Recomendados />}
+          />
+
+          <Route
+            path="/generador-pdf"
+            element={<GeneradorPdf />}
+          />
+
+          <Route
+            path="/tienda/digitales"
+            element={<Digitales />}
+          />
 
           <Route
             path="/tienda/:id"
             element={<DetalleProducto />}
           />
+
           <Route
-  path="/generador-laminas"
-  element={<GeneradorLaminas />}
-/>
+            path="/generador-laminas"
+            element={<GeneradorLaminas />}
+          />
+
+          <Route
+            path="/optimizador-imagenes"
+            element={<OptimizadorImagenes />}
+          />
         </Routes>
 
         {/* GLOBAL */}
-      <Footer />
-        
+        <Footer />
       </div>
     </>
   );

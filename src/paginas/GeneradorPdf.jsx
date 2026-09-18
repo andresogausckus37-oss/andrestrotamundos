@@ -430,7 +430,7 @@ const EstadoA4 = ({
         </button>
       )}
     </div>
-    
+
   );
 };
 
