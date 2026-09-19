@@ -3,12 +3,17 @@ import { useState } from "react";
 import {
   Users,
   Shield,
-  Heart,
   X,
   Info,
 } from "lucide-react";
 
+import { useIdioma } from "../contextos/IdiomaContext";
+import { traducciones } from "../datos/traducciones";
+
 const SobreMi = () => {
+  const { idioma } = useIdioma();
+  const t = traducciones[idioma].sobreMi;
+
   const [modalVerificacionAbierto, setModalVerificacionAbierto] =
     useState(false);
 
@@ -18,16 +23,15 @@ const SobreMi = () => {
         <div className="mx-auto max-w-5xl">
           <div className="mx-auto mb-12 max-w-2xl text-center">
             <p className="eyebrow">
-              Sobre mí
+              {t.etiqueta}
             </p>
 
             <h2 className="titulo-seccion">
-              Confianza antes que cualquier acuerdo
+              {t.titulo}
             </h2>
 
             <p className="subtitulo-seccion">
-              La tranquilidad de quien deja su hogar y sus mascotas es una parte
-              esencial de mi forma de trabajar.
+              {t.descripcion}
             </p>
           </div>
 
@@ -36,11 +40,11 @@ const SobreMi = () => {
               {/* Foto */}
 
               <div className="flex items-center justify-center from-sky-100 via-white to-orange-100 p-8">
-  {CONFIG.imagenes.perfil ? (
-    <img
-      src={CONFIG.imagenes.perfil}
-      alt="Andrés"
-      className="h-48 w-48 rounded-full border-4 border-white object-cover shadow-xl sm:h-56 sm:w-56"
+                {CONFIG.imagenes.perfil ? (
+                  <img
+                    src={CONFIG.imagenes.perfil}
+                    alt="Andrés"
+                    className="h-48 w-48 rounded-full border-4 border-white object-cover shadow-xl sm:h-56 sm:w-56"
                   />
                 ) : (
                   <div className="flex h-44 w-44 items-center justify-center rounded-full border-8 border-white bg-sky-100 text-sky-700 shadow-xl">
@@ -55,23 +59,16 @@ const SobreMi = () => {
               {/* Contenido */}
 
               <div className="p-6 sm:p-8 md:p-10">
-                
-
                 <h3 className="text-2xl font-semibold text-slate-900">
-                  Soy Andrés
+                  {t.nombre}
                 </h3>
 
                 <p className="mt-4 text-sm leading-7 text-slate-600 md:text-base">
-                  Soy viajero y amante de los animales. Mi propuesta se basa en
-                  la responsabilidad, la confianza mutua y los acuerdos claros.
-                  Cuido cada hogar respetando sus rutinas, sus espacios y las
-                  necesidades de cada mascota.
+                  {t.presentacion}
                 </p>
 
                 <p className="mt-4 text-sm leading-7 text-slate-600 md:text-base">
-                  Antes de confirmar una estancia prefiero que podamos
-                  conocernos, conversar y revisar todos los detalles necesarios.
-                  La idea es que ambas partes se sientan cómodas con el acuerdo.
+                  {t.presentacion2}
                 </p>
 
                 {/* Verificación privada */}
@@ -85,22 +82,22 @@ const SobreMi = () => {
 
                     <div className="flex-1">
                       <h4 className="font-semibold text-slate-900">
-                        Verificación privada
+                        {t.verificacionTitulo}
                       </h4>
 
                       <p className="mt-2 text-sm leading-6 text-slate-600">
-                        La documentación necesaria para verificar mi identidad y
-                        antecedentes puede presentarse de forma privada antes de
-                        confirmar una estancia.
+                        {t.verificacionDescripcion}
                       </p>
 
                       <button
                         type="button"
-                        onClick={() => setModalVerificacionAbierto(true)}
+                        onClick={() =>
+                          setModalVerificacionAbierto(true)
+                        }
                         className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 transition hover:text-emerald-800"
                       >
                         <Info size={15} />
-                        Ver cómo funciona la verificación
+                        {t.verComoFunciona}
                       </button>
                     </div>
                   </div>
@@ -116,7 +113,9 @@ const SobreMi = () => {
       {modalVerificacionAbierto && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-5 backdrop-blur-sm"
-          onClick={() => setModalVerificacionAbierto(false)}
+          onClick={() =>
+            setModalVerificacionAbierto(false)
+          }
         >
           <div
             className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl sm:p-7"
@@ -126,9 +125,11 @@ const SobreMi = () => {
 
             <button
               type="button"
-              onClick={() => setModalVerificacionAbierto(false)}
+              onClick={() =>
+                setModalVerificacionAbierto(false)
+              }
               className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
-              aria-label="Cerrar"
+              aria-label={t.cerrar}
             >
               <X size={18} />
             </button>
@@ -136,15 +137,12 @@ const SobreMi = () => {
             {/* Encabezado */}
 
             <div className="pr-10">
-              
-
               <h3 className="text-xl font-semibold text-slate-900">
-                Verificación privada
+                {t.verificacionTitulo}
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                La confianza es una parte fundamental antes de confirmar
-                cualquier estancia.
+                {t.modalDescripcion}
               </p>
             </div>
 
@@ -155,9 +153,7 @@ const SobreMi = () => {
                 <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-emerald-500" />
 
                 <p>
-                  Cuando exista una conversación previa y ambas partes quieran
-                  avanzar, puedo presentar documentación de identidad de forma
-                  privada.
+                  {t.punto1}
                 </p>
               </div>
 
@@ -165,9 +161,7 @@ const SobreMi = () => {
                 <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-emerald-500" />
 
                 <p>
-                  También puedo presentar certificados oficiales vigentes que
-                  permitan verificar antecedentes cuando resulte necesario para
-                  el acuerdo.
+                  {t.punto2}
                 </p>
               </div>
 
@@ -175,8 +169,7 @@ const SobreMi = () => {
                 <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-emerald-500" />
 
                 <p>
-                  Por seguridad y privacidad, estos documentos no se publican
-                  directamente en la web ni quedan disponibles públicamente.
+                  {t.punto3}
                 </p>
               </div>
 
@@ -184,18 +177,13 @@ const SobreMi = () => {
                 <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-emerald-500" />
 
                 <p>
-                  La documentación se comparte únicamente cuando existe un
-                  motivo legítimo de verificación relacionado con una posible
-                  estancia.
+                  {t.punto4}
                 </p>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs leading-5 text-slate-500">
-                  La verificación de identidad forma parte del proceso de
-                  confianza entre ambas partes y no sustituye la conversación
-                  previa, el conocimiento del hogar y las condiciones acordadas
-                  para la estancia.
+                  {t.aviso}
                 </p>
               </div>
             </div>
@@ -204,10 +192,12 @@ const SobreMi = () => {
 
             <button
               type="button"
-              onClick={() => setModalVerificacionAbierto(false)}
+              onClick={() =>
+                setModalVerificacionAbierto(false)
+              }
               className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Entendido
+              {t.entendido}
             </button>
           </div>
         </div>

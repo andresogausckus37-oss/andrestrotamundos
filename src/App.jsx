@@ -7,6 +7,8 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import { IdiomaProvider } from "./contextos/IdiomaContext";
+
 import Navbar from "./componentes/Navbar";
 import Hero from "./componentes/Hero";
 import Servicios from "./componentes/Servicios";
@@ -15,7 +17,6 @@ import Galeria from "./componentes/Galeria";
 import Resenas from "./componentes/Resenas";
 import Disponibilidad from "./componentes/Disponibilidad";
 import SobreMi from "./componentes/SobreMi";
-import Contacto from "./componentes/Contacto";
 import Footer from "./componentes/Footer";
 import WhatsAppFlotante from "./componentes/WhatsAppFlotante";
 
@@ -95,8 +96,6 @@ const Home = () => {
 
       <SobreMi />
 
-      <Contacto />
-
       <WhatsAppFlotante />
     </div>
   );
@@ -125,35 +124,17 @@ const ContenidoApp = () => {
       */}
       <div className={esHome ? "" : "pt-20"}>
         <Routes>
-          <Route
-            path="/"
-            element={<Home />}
-          />
+          <Route path="/" element={<Home />} />
 
-          <Route
-            path="/tienda"
-            element={<Tienda />}
-          />
+          <Route path="/tienda" element={<Tienda />} />
 
-          <Route
-            path="/recomendados"
-            element={<Recomendados />}
-          />
+          <Route path="/recomendados" element={<Recomendados />} />
 
-          <Route
-            path="/generador-pdf"
-            element={<GeneradorPdf />}
-          />
+          <Route path="/generador-pdf" element={<GeneradorPdf />} />
 
-          <Route
-            path="/tienda/digitales"
-            element={<Digitales />}
-          />
+          <Route path="/tienda/digitales" element={<Digitales />} />
 
-          <Route
-            path="/tienda/:id"
-            element={<DetalleProducto />}
-          />
+          <Route path="/tienda/:id" element={<DetalleProducto />} />
 
           <Route
             path="/generador-laminas"
@@ -175,9 +156,11 @@ const ContenidoApp = () => {
 
 const App = () => {
   return (
-    <BrowserRouter>
-      <ContenidoApp />
-    </BrowserRouter>
+    <IdiomaProvider>
+      <BrowserRouter>
+        <ContenidoApp />
+      </BrowserRouter>
+    </IdiomaProvider>
   );
 };
 

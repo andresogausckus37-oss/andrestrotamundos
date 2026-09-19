@@ -8,8 +8,13 @@ import {
 } from "lucide-react";
 
 import { resenas } from "../datos/resenas";
+import { useIdioma } from "../contextos/IdiomaContext";
+import { traducciones } from "../datos/traducciones";
 
 const Resenas = () => {
+  const { idioma } = useIdioma();
+  const t = traducciones[idioma].resenas;
+
   const [indiceActual, setIndiceActual] = useState(0);
 
   const estilosAvatar = [
@@ -47,16 +52,15 @@ const Resenas = () => {
 
         <div className="mx-auto mb-10 max-w-2xl text-center">
           <p className="eyebrow">
-            Reseñas
+            {t.etiqueta}
           </p>
 
           <h2 className="titulo-seccion">
-            Experiencias de quienes ya confiaron
+            {t.titulo}
           </h2>
 
           <p className="subtitulo-seccion">
-            La confianza se construye con experiencias, comunicación clara y
-            responsabilidad.
+            {t.descripcion}
           </p>
         </div>
 
@@ -99,7 +103,7 @@ const Resenas = () => {
                         ))}
                       </div>
 
-                      {/* Reseña */}
+                      {/* Reseña original */}
 
                       <p className="mx-auto max-w-2xl text-center text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
                         “{resena.texto}”
@@ -139,7 +143,7 @@ const Resenas = () => {
           <button
             type="button"
             onClick={anterior}
-            aria-label="Reseña anterior"
+            aria-label={t.anterior}
             className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 sm:-left-5 sm:h-10 sm:w-10"
           >
             <ChevronLeft size={19} />
@@ -150,7 +154,7 @@ const Resenas = () => {
           <button
             type="button"
             onClick={siguiente}
-            aria-label="Siguiente reseña"
+            aria-label={t.siguiente}
             className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 sm:-right-5 sm:h-10 sm:w-10"
           >
             <ChevronRight size={19} />
@@ -165,7 +169,7 @@ const Resenas = () => {
               key={`${resena.nombre}-indicador`}
               type="button"
               onClick={() => setIndiceActual(index)}
-              aria-label={`Ver reseña ${index + 1}`}
+              aria-label={`${t.verResena} ${index + 1}`}
               className={`h-2 rounded-full transition-all duration-300 ${
                 indiceActual === index
                   ? "w-7 bg-sky-600"
@@ -178,7 +182,6 @@ const Resenas = () => {
         {/* Referencias */}
 
         <div className="mt-8 flex justify-center">
-          
         </div>
       </div>
     </section>

@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 
 import { servicios } from "../datos/servicios";
+import { useIdioma } from "../contextos/IdiomaContext";
+import { traducciones } from "../datos/traducciones";
 
 const iconos = {
   dog: Dog,
@@ -37,6 +39,9 @@ const colores = {
 const Servicios = () => {
   const [activeService, setActiveService] = useState(null);
 
+  const { idioma } = useIdioma();
+  const t = traducciones[idioma].servicios;
+
   const irADisponibilidad = () => {
     document.getElementById("disponibilidad")?.scrollIntoView({
       behavior: "smooth",
@@ -47,22 +52,15 @@ const Servicios = () => {
     <section id="servicios" className="seccion bg-white">
       <div className="contenedor">
         {/* Encabezado */}
-
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <p className="eyebrow">Servicios</p>
+          <p className="eyebrow">{t.etiqueta}</p>
 
-          <h2 className="titulo-seccion">
-            Cuidado, intercambio y servicios según tu necesidad
-          </h2>
+          <h2 className="titulo-seccion">{t.titulo}</h2>
 
-          <p className="subtitulo-seccion">
-            Algunos servicios pueden realizarse mediante intercambio y otros
-            tienen un costo previamente acordado.
-          </p>
+          <p className="subtitulo-seccion">{t.descripcion}</p>
         </div>
 
         {/* Cards */}
-
         <div className="grid gap-4 md:grid-cols-2">
           {servicios
             .filter((servicio) => servicio.id !== "paseador")
@@ -76,7 +74,6 @@ const Servicios = () => {
                   className="card overflow-hidden transition hover:-translate-y-0.5 hover:shadow-suave"
                 >
                   {/* Parte visible */}
-
                   <button
                     type="button"
                     onClick={() =>
@@ -95,20 +92,20 @@ const Servicios = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
-                          {servicio.titulo}
+                          {servicio.titulo[idioma]}
                         </h3>
 
                         <span
                           className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${color.badge}`}
                         >
                           {servicio.modalidad === "intercambio"
-                            ? "Intercambio"
-                            : "Servicio pago"}
+                            ? t.intercambio
+                            : t.servicioPago}
                         </span>
                       </div>
 
                       <p className="mt-1.5 text-sm leading-5 text-slate-600">
-                        {servicio.descripcion}
+                        {servicio.descripcion[idioma]}
                       </p>
                     </div>
 
@@ -126,21 +123,19 @@ const Servicios = () => {
                   </button>
 
                   {/* Detalle */}
-
                   {activeService === servicio.id && (
                     <div className="border-t border-slate-200 px-4 pb-5 pt-4 sm:px-5">
                       <div className="grid gap-5 sm:grid-cols-2">
                         {/* Incluido */}
-
                         <div>
                           <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
                             {servicio.modalidad === "intercambio"
-                              ? "Incluido en el intercambio"
-                              : "Servicio base"}
+                              ? t.incluidoIntercambio
+                              : t.servicioBase}
                           </p>
 
                           <ul className="space-y-2">
-                            {servicio.incluye.map((item) => (
+                            {servicio.incluye[idioma].map((item) => (
                               <li
                                 key={item}
                                 className="flex items-start gap-2 text-sm leading-6 text-slate-600"
@@ -157,14 +152,13 @@ const Servicios = () => {
                         </div>
 
                         {/* Adicionales */}
-
                         <div>
                           <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-orange-700">
-                            Servicios adicionales con costo
+                            {t.adicionales}
                           </p>
 
                           <ul className="space-y-2">
-                            {servicio.adicionales.map((item) => (
+                            {servicio.adicionales[idioma].map((item) => (
                               <li
                                 key={item}
                                 className="flex items-start gap-2 text-sm leading-6 text-slate-600"
@@ -179,14 +173,13 @@ const Servicios = () => {
                       </div>
 
                       {/* CTA */}
-
                       <button
                         type="button"
                         onClick={irADisponibilidad}
                         className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-100 px-4 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-200"
                       >
                         <CalendarDays size={16} />
-                        Ver disponibilidad
+                        {t.verDisponibilidad}
                       </button>
                     </div>
                   )}

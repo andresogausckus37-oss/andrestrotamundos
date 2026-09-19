@@ -3,9 +3,15 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useIdioma } from "../contextos/IdiomaContext";
+import { traducciones } from "../datos/traducciones";
+
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { idioma, cambiarIdioma } = useIdioma();
+  const t = traducciones[idioma].navbar;
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -49,7 +55,7 @@ const Navbar = () => {
     });
   };
 
-  /* IR A MI TIENDA */
+  /* IR A TIENDA */
   const irAMiTienda = () => {
     setIsMenuOpen(false);
     navigate("/tienda");
@@ -76,18 +82,49 @@ const Navbar = () => {
 
   const enlaces = [
     {
-      label: "Inicio",
+      label: t.inicio,
       onClick: irAInicio,
     },
     {
-      label: "Produtos Imprimibles",
+      label: t.tienda,
       onClick: irAMiTienda,
     },
     {
-      label: "Contacto",
+      label: t.contacto,
       onClick: irAContacto,
     },
   ];
+
+  /* SELECTOR DE IDIOMA */
+  const SelectorIdioma = () => (
+    <div className="flex items-center rounded-lg border border-slate-200 bg-white/90 p-1 text-xs font-semibold shadow-sm">
+      <button
+        type="button"
+        onClick={() => cambiarIdioma("es")}
+        className={`rounded-md px-2 py-1 transition ${
+          idioma === "es"
+            ? "bg-sky-600 text-white"
+            : "text-slate-500 hover:text-sky-600"
+        }`}
+        aria-label="Cambiar idioma a español"
+      >
+        ES
+      </button>
+
+      <button
+        type="button"
+        onClick={() => cambiarIdioma("en")}
+        className={`rounded-md px-2 py-1 transition ${
+          idioma === "en"
+            ? "bg-sky-600 text-white"
+            : "text-slate-500 hover:text-sky-600"
+        }`}
+        aria-label="Change language to English"
+      >
+        EN
+      </button>
+    </div>
+  );
 
   return (
     <header
@@ -136,22 +173,19 @@ const Navbar = () => {
           ))}
         </nav>
 
+        {/* IDIOMA ESCRITORIO */}
+        <div className="hidden md:block">
+          <SelectorIdioma />
+        </div>
+
         {/* MENÚ HAMBURGUESA */}
         <button
           type="button"
-          onClick={() =>
-            setIsMenuOpen((actual) => !actual)
-          }
+          onClick={() => setIsMenuOpen((actual) => !actual)}
           className="shrink-0 rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 md:hidden"
-          aria-label={
-            isMenuOpen ? "Cerrar menú" : "Abrir menú"
-          }
+          aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
         >
-          {isMenuOpen ? (
-            <X size={23} />
-          ) : (
-            <Menu size={23} />
-          )}
+          {isMenuOpen ? <X size={23} /> : <Menu size={23} />}
         </button>
       </div>
 
@@ -169,6 +203,10 @@ const Navbar = () => {
                 {enlace.label}
               </button>
             ))}
+
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <SelectorIdioma />
+            </div>
           </nav>
         </div>
       )}

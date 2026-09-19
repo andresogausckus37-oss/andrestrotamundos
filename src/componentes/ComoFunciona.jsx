@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 
 import { pasos } from "../datos/pasos";
+import { useIdioma } from "../contextos/IdiomaContext";
+import { traducciones } from "../datos/traducciones";
 
 const iconos = {
   video: Video,
@@ -32,6 +34,9 @@ const estilos = [
 ];
 
 const ComoFunciona = () => {
+  const { idioma } = useIdioma();
+  const t = traducciones[idioma].comoFunciona;
+
   const irADisponibilidad = () => {
     document.getElementById("disponibilidad")?.scrollIntoView({
       behavior: "smooth",
@@ -48,16 +53,15 @@ const ComoFunciona = () => {
 
         <div className="mx-auto mb-7 max-w-2xl text-center">
           <p className="eyebrow">
-            Cómo funciona
+            {t.etiqueta}
           </p>
 
           <h2 className="titulo-seccion">
-            Antes de cuidar, nos conocemos
+            {t.titulo}
           </h2>
 
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Un proceso sencillo para conocernos, acordar los detalles y
-            comenzar la estancia con tranquilidad.
+            {t.descripcion}
           </p>
         </div>
 
@@ -88,11 +92,11 @@ const ComoFunciona = () => {
                 </div>
 
                 <h3 className="text-md font-semibold text-slate-900 sm:text-base">
-                  {paso.titulo}
+                  {paso.titulo[idioma]}
                 </h3>
 
                 <p className="mt-2 text-sm leading-5 text-slate-600">
-                  {paso.descripcion}
+                  {paso.descripcion[idioma]}
                 </p>
               </article>
             );
@@ -108,7 +112,7 @@ const ComoFunciona = () => {
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700"
           >
             <CalendarDays size={16} />
-            Ver disponibilidad
+            {t.verDisponibilidad}
           </button>
         </div>
       </div>

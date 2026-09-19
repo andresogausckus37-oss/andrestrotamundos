@@ -4,18 +4,49 @@ import {
   MapPin,
 } from "lucide-react";
 
+import { useNavigate } from "react-router-dom";
+import { useIdioma } from "../contextos/IdiomaContext";
+import { traducciones } from "../datos/traducciones";
+
 const Footer = () => {
+  const navigate = useNavigate();
+
+  const { idioma } = useIdioma();
+  const t = traducciones[idioma].footer;
+
+  const irASeccion = (id) => {
+    if (window.location.pathname === "/") {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: "smooth",
+      });
+
+      return;
+    }
+
+    navigate(`/#${id}`);
+  };
+
+  const irATienda = () => {
+    navigate("/tienda");
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
   return (
     <footer className="bg-slate-900 px-5 py-14 text-white">
       <div className="contenedor">
         <div className="grid gap-10 md:grid-cols-3">
+          {/* Marca */}
+
           <div>
             <div className="flex items-center gap-3">
               <img
-  src={CONFIG.imagenes.logo}
-  alt={`Logo de ${CONFIG.marca.nombre}`}
-  className="h-10 w-10 rounded-full object-cover"
-/>
+                src={CONFIG.imagenes.logo}
+                alt={`Logo de ${CONFIG.marca.nombre}`}
+                className="h-10 w-10 rounded-full object-cover"
+              />
 
               <div>
                 <p className="font-semibold">
@@ -29,64 +60,73 @@ const Footer = () => {
             </div>
 
             <p className="mt-5 max-w-sm text-sm leading-6 text-slate-400">
-              Cuidado responsable de hogares y mascotas con acuerdos claros,
-              comunicación y confianza.
+              {t.descripcion}
             </p>
           </div>
 
+          {/* Navegación */}
+
           <div>
             <h3 className="text-sm font-semibold">
-              Navegación
+              {t.navegacion}
             </h3>
 
             <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-              <a
-                href="#servicios"
-                className="text-sm text-slate-400 transition hover:text-white"
+              <button
+                type="button"
+                onClick={() => irASeccion("servicios")}
+                className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                Servicios
-              </a>
+                {t.servicios}
+              </button>
 
-              <a
-                href="#mi-proceso"
-                className="text-sm text-slate-400 transition hover:text-white"
+              <button
+                type="button"
+                onClick={() => irASeccion("mi-proceso")}
+                className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                Cómo funciona
-              </a>
+                {t.comoFunciona}
+              </button>
 
-              <a
-                href="#galeria"
-                className="text-sm text-slate-400 transition hover:text-white"
+              <button
+                type="button"
+                onClick={() => irASeccion("resenas")}
+                className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                Experiencias
-              </a>
+                {t.resenas}
+              </button>
 
-              <a
-                href="#resenas"
-                className="text-sm text-slate-400 transition hover:text-white"
+              <button
+                type="button"
+                onClick={() => irASeccion("disponibilidad")}
+                className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                Reseñas
-              </a>
+                {t.disponibilidad}
+              </button>
 
-              <a
-                href="#disponibilidad"
-                className="text-sm text-slate-400 transition hover:text-white"
+              <button
+                type="button"
+                onClick={() => irASeccion("sobre-mi")}
+                className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                Disponibilidad
-              </a>
+                {t.sobreMi}
+              </button>
 
-              <a
-                href="#sobre-mi"
-                className="text-sm text-slate-400 transition hover:text-white"
+              <button
+                type="button"
+                onClick={irATienda}
+                className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                Sobre mí
-              </a>
+                {t.tienda}
+              </button>
             </div>
           </div>
 
+          {/* Contacto */}
+
           <div>
             <h3 className="text-sm font-semibold">
-              Contacto
+              {t.contacto}
             </h3>
 
             <div className="mt-4 space-y-3 text-sm text-slate-400">
@@ -108,8 +148,10 @@ const Footer = () => {
           </div>
         </div>
 
+        {/* Copyright */}
+
         <div className="mt-10 border-t border-slate-800 pt-6 text-center text-xs text-slate-500">
-          © 2026 {CONFIG.marca.nombre}. Todos los derechos reservados.
+          © {new Date().getFullYear()} {CONFIG.marca.nombre}. {t.derechos}
         </div>
       </div>
     </footer>

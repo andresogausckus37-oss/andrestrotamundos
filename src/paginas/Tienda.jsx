@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
+  FileDown,
   Gamepad2,
   Home,
   ShoppingBag,
@@ -16,42 +17,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { productosDigitales } from "../datos/productosDigitales";
 
-/* =========================================================
-   FORMATEAR PRECIO
-========================================================= */
-
-const formatearPrecio = (precio) => {
-  if (!precio) {
-    return "Precio a definir";
-  }
-
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    maximumFractionDigits: 0,
-  }).format(precio);
-};
-
-/* =========================================================
-   FILTROS
-========================================================= */
-
-const FILTROS = [
-  {
-    id: "todos",
-    nombre: "Todos",
-  },
-  {
-    id: "juegos",
-    nombre: "Juegos y actividades",
-    icono: Gamepad2,
-  },
-  {
-    id: "hogar",
-    nombre: "Hogar y mascotas",
-    icono: Home,
-  },
-];
+import { useIdioma } from "../contextos/IdiomaContext";
+import { traducciones } from "../datos/traducciones";
 
 /* =========================================================
    TIENDA
@@ -60,33 +27,185 @@ const FILTROS = [
 const Tienda = () => {
   const navigate = useNavigate();
 
+  const { idioma } = useIdioma();
+  const t = traducciones[idioma].tienda;
+
   const [filtroActivo, setFiltroActivo] =
+    useState("todos");
+
+  const [categoriaActiva, setCategoriaActiva] =
     useState("todos");
 
   const [mostrarTodos, setMostrarTodos] =
     useState(false);
 
   /* =======================================================
+     FORMATEAR PRECIO
+  ======================================================= */
+
+  const formatearPrecio = (precio) => {
+    if (!precio) {
+      return t.precioDefinir;
+    }
+
+    return new Intl.NumberFormat(
+      idioma === "es" ? "es-AR" : "en-US",
+      {
+        style: "currency",
+        currency: "ARS",
+        maximumFractionDigits: 0,
+      }
+    ).format(precio);
+  };
+
+  /* =======================================================
+     FILTROS PRINCIPALES
+  ======================================================= */
+
+  const filtros = [
+    {
+      id: "todos",
+      nombre: t.todos,
+    },
+    {
+      id: "juegos",
+      nombre: t.juegosActividades,
+      icono: Gamepad2,
+    },
+    {
+      id: "hogar",
+      nombre: t.hogarMascotas,
+      icono: Home,
+    },
+  ];
+
+  /* =======================================================
+     CATEGORÍAS
+  ======================================================= */
+
+  const categorias = {
+    juegos: [
+      {
+        id: "laberintos",
+        nombre: t.laberintos,
+      },
+      {
+        id: "sopa-de-letras",
+        nombre: t.sopaLetras,
+      },
+      {
+        id: "unir-los-puntos",
+        nombre: t.unirPuntos,
+      },
+      {
+        id: "encontrar-diferencias",
+        nombre: t.encontrarDiferencias,
+      },
+      {
+        id: "colorear",
+        nombre: t.colorear,
+      },
+      {
+        id: "crucigramas",
+        nombre: t.crucigramas,
+      },
+    ],
+
+    hogar: [
+      {
+        id: "mascotas",
+        nombre: t.mascotas,
+      },
+      {
+        id: "organizacion",
+        nombre: t.organizacion,
+      },
+      {
+        id: "planificadores",
+        nombre: t.planificadores,
+      },
+      {
+        id: "registros",
+        nombre: t.registros,
+      },
+      {
+        id: "checklists",
+        nombre: t.checklists,
+      },
+    ],
+  };
+
+  /* =======================================================
+     CATEGORÍAS VISIBLES
+  ======================================================= */
+
+  const categoriasVisibles = useMemo(() => {
+    if (
+      filtroActivo === "todos" ||
+      !categorias[filtroActivo]
+    ) {
+      return [];
+    }
+
+    const disponibles = categorias[
+      filtroActivo
+    ].filter((categoria) => {
+      return productosDigitales.some((producto) => {
+        const perteneceALinea =
+          filtroActivo === "juegos"
+            ? !producto.linea ||
+              producto.linea === "juegos"
+            : producto.linea === filtroActivo;
+
+        return (
+          perteneceALinea &&
+          producto.categoria === categoria.id
+        );
+      });
+    });
+
+    if (disponibles.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        id: "todos",
+        nombre: t.todos,
+      },
+      ...disponibles,
+    ];
+  }, [filtroActivo, idioma]);
+
+  /* =======================================================
      PRODUCTOS FILTRADOS
   ======================================================= */
 
   const productosFiltrados = useMemo(() => {
-    if (filtroActivo === "hogar") {
-      return productosDigitales.filter(
-        (producto) => producto.linea === "hogar"
-      );
-    }
+    return productosDigitales.filter((producto) => {
+      if (filtroActivo === "todos") {
+        return true;
+      }
 
-    if (filtroActivo === "juegos") {
-      return productosDigitales.filter(
-        (producto) =>
-          !producto.linea ||
-          producto.linea === "juegos"
-      );
-    }
+      const perteneceALinea =
+        filtroActivo === "juegos"
+          ? !producto.linea ||
+            producto.linea === "juegos"
+          : producto.linea === filtroActivo;
 
-    return productosDigitales;
-  }, [filtroActivo]);
+      if (!perteneceALinea) {
+        return false;
+      }
+
+      if (categoriaActiva === "todos") {
+        return true;
+      }
+
+      return (
+        producto.categoria === categoriaActiva
+      );
+    });
+  }, [filtroActivo, categoriaActiva]);
 
   /* =======================================================
      PRODUCTOS VISIBLES
@@ -97,11 +216,21 @@ const Tienda = () => {
     : productosFiltrados.slice(0, 3);
 
   /* =======================================================
-     CAMBIAR FILTRO
+     CAMBIAR FILTRO PRINCIPAL
   ======================================================= */
 
   const cambiarFiltro = (id) => {
     setFiltroActivo(id);
+    setCategoriaActiva("todos");
+    setMostrarTodos(false);
+  };
+
+  /* =======================================================
+     CAMBIAR CATEGORÍA
+  ======================================================= */
+
+  const cambiarCategoria = (id) => {
+    setCategoriaActiva(id);
     setMostrarTodos(false);
   };
 
@@ -111,29 +240,20 @@ const Tienda = () => {
           ENCABEZADO
       ====================================================== */}
 
-      <section className="border-b border-slate-200 bg-gradient-to-b from-sky-50 to-white px-5 py-8 sm:py-12">
+      <section className="border-b border-slate-200 bg-gradient-to-b from-sky-50 to-white px-5 py-4 sm:py-12">
         <div className="mx-auto max-w-6xl text-center">
-          {/* LOGO */}
-
           <img
             src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logo-andres-imprimibles"
             alt="Andres Imprimibles"
             className="mx-auto h-auto w-full max-w-[200px] object-contain sm:max-w-[320px]"
           />
 
-          {/* COLECCIÓN */}
-
           <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-sm">
-            Una colección de Andres House Sitter
+            {t.coleccion}
           </p>
 
-          {/* DESCRIPCIÓN */}
-
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-            Imprimibles para jugar, aprender y organizar.
-            Actividades para disfrutar en casa y recursos
-            prácticos para el cuidado del hogar y las
-            mascotas. Descargá, imprimí y usá.
+            {t.descripcion}
           </p>
         </div>
       </section>
@@ -142,25 +262,25 @@ const Tienda = () => {
           VOLVER
       ====================================================== */}
 
-      <div className="mx-auto max-w-6xl px-5 pt-4">
+      <div className="mx-auto max-w-6xl px-5 pt-2">
         <button
           type="button"
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-sky-600"
         >
           <ArrowLeft size={17} />
-          Volver
+          {t.volver}
         </button>
       </div>
 
       {/* =====================================================
-          FILTROS
+          FILTROS PRINCIPALES
       ====================================================== */}
 
       <section className="px-4 pt-2 sm:px-5 sm:pt-8">
         <div className="mx-auto max-w-6xl">
           <div className="mt-5 flex flex-wrap justify-center gap-2 sm:gap-3">
-            {FILTROS.map((filtro) => {
+            {filtros.map((filtro) => {
               const activo =
                 filtroActivo === filtro.id;
 
@@ -191,6 +311,47 @@ const Tienda = () => {
               );
             })}
           </div>
+
+          {/* =================================================
+              TIPOS DE PRODUCTO
+          ================================================== */}
+
+          {categoriasVisibles.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {t.explorarTipo}
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-2">
+                {categoriasVisibles.map(
+                  (categoria) => {
+                    const activa =
+                      categoriaActiva ===
+                      categoria.id;
+
+                    return (
+                      <button
+                        key={categoria.id}
+                        type="button"
+                        onClick={() =>
+                          cambiarCategoria(
+                            categoria.id
+                          )
+                        }
+                        className={`rounded-lg border px-3 py-1.5 text-[10px] font-semibold transition sm:px-4 sm:py-2 sm:text-xs ${
+                          activa
+                            ? "border-slate-800 bg-slate-800 text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+                        }`}
+                      >
+                        {categoria.nombre}
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -205,20 +366,18 @@ const Tienda = () => {
           <div className="mx-auto mb-5 max-w-2xl text-center">
             <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
               {filtroActivo === "hogar"
-                ? "Hogar y mascotas"
-                : "Imprimibles destacados"}
+                ? t.hogarMascotas
+                : t.imprimiblesDestacados}
             </h2>
 
-            <p className="mx-auto mt-1.5 max-w-xl text-sm leading-5 text-slate-500 sm:text-sm">
+            <p className="mx-auto mt-1.5 max-w-xl text-sm leading-5 text-slate-500">
               {filtroActivo === "hogar"
-                ? "Recursos imprimibles para organizar el hogar, las mascotas y la información importante."
-                : "Una selección de nuestros imprimibles para jugar, organizar y disfrutar en casa."}
+                ? t.descripcionHogar
+                : t.descripcionDestacados}
             </p>
           </div>
 
-          {/* =================================================
-              PRODUCTOS
-          ================================================== */}
+          {/* PRODUCTOS */}
 
           {productosMostrados.length > 0 ? (
             <div className="space-y-2.5 sm:space-y-3">
@@ -249,9 +408,7 @@ const Tienda = () => {
                     key={producto.id}
                     className="group flex overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md"
                   >
-                    {/* =========================================
-                        IMAGEN
-                    ========================================== */}
+                    {/* IMAGEN */}
 
                     <button
                       type="button"
@@ -261,7 +418,7 @@ const Tienda = () => {
                         )
                       }
                       className="w-[105px] shrink-0 bg-slate-50 sm:w-[130px]"
-                      aria-label={`Ver ${producto.nombre}`}
+                      aria-label={`${t.ver} ${producto.nombre[idioma]}`}
                     >
                       <div className="flex h-full min-h-[150px] items-center justify-center p-2 sm:min-h-[170px]">
                         <img
@@ -269,28 +426,39 @@ const Tienda = () => {
                             producto.imagenes
                               ?.portada
                           }
-                          alt={producto.nombre}
+                          alt={producto.nombre[idioma]}
                           className="h-full max-h-[150px] w-full object-contain transition duration-300 group-hover:scale-[1.02] sm:max-h-[165px]"
                         />
                       </div>
                     </button>
 
-                    {/* =========================================
-                        INFORMACIÓN
-                    ========================================== */}
+                    {/* INFORMACIÓN */}
 
                     <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-3">
                       {/* BADGES */}
 
                       <div className="flex flex-wrap items-center gap-1">
+                        {/* PDF */}
+
                         <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-sky-700 sm:text-[9px]">
                           <Download
                             size={9}
                             className="shrink-0"
                           />
-
-                          PDF
+                          {t.pdf}
                         </span>
+
+                        {/* DESCARGA DIGITAL */}
+
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-amber-700 sm:text-[9px]">
+                          <FileDown
+                            size={9}
+                            className="shrink-0"
+                          />
+                          {t.descargaDigital}
+                        </span>
+
+                        {/* HOGAR / INFANTIL */}
 
                         {producto.linea ===
                         "hogar" ? (
@@ -299,8 +467,7 @@ const Tienda = () => {
                               size={9}
                               className="shrink-0"
                             />
-
-                            Hogar
+                            {t.hogar}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-violet-700 sm:text-[9px]">
@@ -308,8 +475,7 @@ const Tienda = () => {
                               size={9}
                               className="shrink-0"
                             />
-
-                            Infantil
+                            {t.infantil}
                           </span>
                         )}
                       </div>
@@ -325,12 +491,10 @@ const Tienda = () => {
                       {/* TÍTULO */}
 
                       <h3 className="mt-1 line-clamp-2 text-[12px] font-semibold leading-4 text-slate-900 sm:text-sm sm:leading-5">
-                        {producto.nombre}
+                        {producto.nombre[idioma]}
                       </h3>
 
-                      {/* =======================================
-                          PRECIO
-                      ======================================== */}
+                      {/* PRECIO */}
 
                       <div className="mt-auto pt-2">
                         {tieneOferta ? (
@@ -355,32 +519,24 @@ const Tienda = () => {
                               </p>
 
                               <p className="text-[9px] font-medium text-emerald-700 sm:text-[10px]">
-                                Ahorrás{" "}
-                                {formatearPrecio(
-                                  ahorro
+                                {t.ahorras}{" "}
+                                {formatearPrecio(ahorro)}
+                                </p>
+                                </div>
+
+                                {producto.oferta?.etiqueta?.[idioma] && (
+                                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wide text-orange-600 sm:text-[9px]">
+                                    {producto.oferta.etiqueta[idioma]}
+                                  </p>
                                 )}
-                              </p>
-                            </div>
+                                </>
+                                ) : (
+                                  <p className="text-sm font-bold text-slate-900 sm:text-base">
+                                    {formatearPrecio(producto.precioARS)}
+                                  </p>
+                                )}
 
-                            {producto.oferta
-                              ?.etiqueta && (
-                              <p className="mt-1 text-[8px] font-bold uppercase tracking-wide text-orange-600 sm:text-[9px]">
-                                {
-                                  producto.oferta
-                                    .etiqueta
-                                }
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-sm font-bold text-slate-900 sm:text-base">
-                            {formatearPrecio(
-                              producto.precioARS
-                            )}
-                          </p>
-                        )}
-
-                        {/* BOTÓN */}
+                                {/* BOTÓN */}
 
                         <button
                           type="button"
@@ -396,7 +552,7 @@ const Tienda = () => {
                             className="shrink-0"
                           />
 
-                          Ver producto
+                          {t.verProducto}
                         </button>
                       </div>
                     </div>
@@ -405,9 +561,7 @@ const Tienda = () => {
               })}
             </div>
           ) : (
-            /* =================================================
-               SIN PRODUCTOS
-            ================================================== */
+            /* SIN PRODUCTOS */
 
             <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
               <Home
@@ -416,16 +570,12 @@ const Tienda = () => {
               />
 
               <p className="mt-3 text-sm leading-6 text-slate-500">
-                Próximamente vas a encontrar aquí
-                nuevos recursos imprimibles para el
-                hogar y las mascotas.
+                {t.proximamente}
               </p>
             </div>
           )}
 
-          {/* =================================================
-              VER TODOS / VER MENOS
-          ================================================== */}
+          {/* VER TODOS / VER MENOS */}
 
           {productosFiltrados.length > 3 && (
             <div className="mt-6 flex justify-center">
@@ -441,21 +591,22 @@ const Tienda = () => {
                 {mostrarTodos ? (
                   <>
                     <ChevronUp size={16} />
-                    Ver menos
+                    {t.verMenos}
                   </>
                 ) : (
                   <>
                     <ChevronDown size={16} />
-                    Ver todos
+                    {t.verTodos}
                   </>
                 )}
               </button>
             </div>
           )}
-        </div>
+          </div>
       </section>
     </main>
-  );
+    );
 };
 
 export default Tienda;
+    
