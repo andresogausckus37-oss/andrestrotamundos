@@ -18,35 +18,50 @@ const COLORES_NIVEL = {
     fondo: "#DCFCE7",
     texto: "#166534",
     borde: "#86EFAC",
-    etiqueta: "NIVEL FÁCIL",
+    etiqueta: {
+      es: "NIVEL FÁCIL",
+      en: "EASY LEVEL",
+    },
   },
 
   medio: {
     fondo: "#FEF3C7",
     texto: "#92400E",
     borde: "#FCD34D",
-    etiqueta: "NIVEL MEDIO",
+    etiqueta: {
+      es: "NIVEL MEDIO",
+      en: "MEDIUM LEVEL",
+    },
   },
 
   dificil: {
     fondo: "#FEE2E2",
     texto: "#991B1B",
     borde: "#FCA5A5",
-    etiqueta: "NIVEL DIFÍCIL",
+    etiqueta: {
+      es: "NIVEL DIFÍCIL",
+      en: "HARD LEVEL",
+    },
   },
 
   experto: {
     fondo: "#DBEAFE",
     texto: "#1E40AF",
     borde: "#93C5FD",
-    etiqueta: "NIVEL EXPERTO",
+    etiqueta: {
+      es: "NIVEL EXPERTO",
+      en: "EXPERT LEVEL",
+    },
   },
 
   legendario: {
     fondo: "#FCE7F3",
     texto: "#9D174D",
     borde: "#F9A8D4",
-    etiqueta: "NIVEL LEGENDARIO",
+    etiqueta: {
+      es: "NIVEL LEGENDARIO",
+      en: "LEGENDARY LEVEL",
+    },
   },
 };
 
@@ -68,6 +83,7 @@ export default function LaminaLaberinto({
   objetivo = "automatico",
   modoObjetivo = "rotativo",
   mostrarSolucion = false,
+  idiomaProducto = "es",
 }) {
   /* =======================================================
      AVENTURA
@@ -79,11 +95,10 @@ export default function LaminaLaberinto({
     {
       personajeSeleccionado: personaje,
       modoPersonaje,
-
       objetivoSeleccionado: objetivo,
       modoObjetivo,
-
       semilla,
+      idiomaProducto,
     }
   );
 
@@ -120,8 +135,10 @@ export default function LaminaLaberinto({
       aventura.personaje
     ] || {
       nombre:
-        aventura.nombrePersonaje ||
-        "Aventurero",
+  aventura.nombrePersonaje ||
+  (idiomaProducto === "en"
+    ? "Adventurer"
+    : "Aventurero"),
 
       imagen: "",
 
@@ -197,18 +214,20 @@ export default function LaminaLaberinto({
           }}
         >
           <div
-            style={{
-              fontSize: "18px",
-              fontWeight: 700,
-              color: "#64748B",
-            }}
-          >
-            DESAFÍO{" "}
-            {String(numero).padStart(
-              2,
-              "0"
-            )}
-          </div>
+  style={{
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#64748B",
+  }}
+>
+  {idiomaProducto === "en"
+    ? "CHALLENGE"
+    : "DESAFÍO"}{" "}
+  {String(numero).padStart(
+    2,
+    "0"
+  )}
+</div>
 
           <div
             style={{
@@ -231,7 +250,8 @@ export default function LaminaLaberinto({
               fontWeight: 700,
             }}
           >
-            {configuracionNivel.etiqueta}
+            {configuracionNivel.etiqueta[idiomaProducto] ||
+  configuracionNivel.etiqueta.es}
           </div>
         </div>
 
@@ -265,8 +285,10 @@ export default function LaminaLaberinto({
           }}
         >
           {mostrarSolucion
-            ? "Seguí el camino marcado para comprobar la solución."
-            : aventura.instrucciones}
+  ? idiomaProducto === "en"
+    ? "Follow the marked path to check the solution."
+    : "Sigue el camino marcado para comprobar la solución."
+  : aventura.instrucciones}
         </div>
       </div>
 
@@ -444,7 +466,9 @@ export default function LaminaLaberinto({
             colorTematicaTexto,
         }}
       >
-        Pequeños desafíos · Grandes aventuras
+        {idiomaProducto === "en"
+  ? "Small challenges · Great adventures"
+  : "Pequeños desafíos · Grandes aventuras"}
       </div>
     </div>
   );

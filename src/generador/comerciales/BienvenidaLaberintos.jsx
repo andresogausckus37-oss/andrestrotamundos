@@ -1,72 +1,53 @@
 import { ESTILOS_IMPRIMIBLES } from "../config/estilosImprimibles";
 
-const NIVELES = [
-  {
-    id: "facil",
-    nombre: "FÁCIL",
-    fondo: "#DCFCE7",
-    color: "#166534",
-    borde: "#86EFAC",
-  },
-  {
-    id: "medio",
-    nombre: "MEDIO",
-    fondo: "#FEF3C7",
-    color: "#92400E",
-    borde: "#FCD34D",
-  },
-  {
-    id: "dificil",
-    nombre: "DIFÍCIL",
-    fondo: "#FEE2E2",
-    color: "#991B1B",
-    borde: "#FCA5A5",
-  },
-  {
-    id: "experto",
-    nombre: "EXPERTO",
-    fondo: "#DBEAFE",
-    color: "#1E40AF",
-    borde: "#93C5FD",
-  },
-  {
-    id: "legendario",
-    nombre: "LEGENDARIO",
-    fondo: "#FCE7F3",
-    color: "#9D174D",
-    borde: "#F9A8D4",
-  },
-];
+const BENEFICIOS = {
+  es: [
+    "Estimulan la concentración y la atención",
+    "Favorecen el razonamiento y la creatividad",
+    "Promueven el aprendizaje de forma divertida",
+  ],
 
-const BENEFICIOS = [
-  "Favorecen la concentración y la atención",
-  "Estimulan el razonamiento lógico",
-  "Ayudan a desarrollar la resolución de problemas",
-  "Fortalecen la orientación y percepción visual",
-  "Promueven la paciencia y la perseverancia",
-];
+  en: [
+    "Improve concentration and attention",
+    "Encourage reasoning and creativity",
+    "Promote learning through fun activities",
+  ],
+};
 
 export default function BienvenidaLaberintos({
-  faciles = 0,
-  medios = 0,
-  dificiles = 0,
-  expertos = 0,
-  legendarios = 0,
+  idiomaProducto = "es",
 }) {
   const { logo, pagina, tipografia } =
     ESTILOS_IMPRIMIBLES;
 
-  const cantidades = {
-    facil: faciles,
-    medio: medios,
-    dificil: dificiles,
-    experto: expertos,
-    legendario: legendarios,
-  };
+  const textos =
+    idiomaProducto === "en"
+      ? {
+          titulo: "Your adventure starts here!",
+          descripcion:
+            "Get ready to have fun, take on new challenges, and enjoy every activity.",
+          progreso:
+            "As you progress, the activities will gradually become more challenging.",
+          beneficiosTitulo:
+            "Learn, play, and have fun",
+          cierre:
+            "Think, explore, and enjoy every challenge. Let the fun begin!",
+        }
+      : {
+          titulo: "¡Tu aventura comienza aquí!",
+          descripcion:
+            "Prepárate para divertirte, superar nuevos desafíos y disfrutar de cada actividad.",
+          progreso:
+            "A medida que avances, las actividades aumentarán progresivamente su dificultad.",
+          beneficiosTitulo:
+            "Aprende, juega y diviértete",
+          cierre:
+            "Piensa, explora y disfruta cada desafío. ¡Que comience la diversión!",
+        };
 
-  const nivelesActivos = NIVELES.filter(
-    (nivel) => cantidades[nivel.id] > 0
-  );
+  const beneficios =
+    BENEFICIOS[idiomaProducto] ||
+    BENEFICIOS.es;
 
   return (
     <div
@@ -76,8 +57,7 @@ export default function BienvenidaLaberintos({
         height: `${pagina.alto}px`,
         overflow: "hidden",
 
-        background:
-          "white",
+        background: "white",
 
         fontFamily:
           tipografia.principal,
@@ -118,7 +98,7 @@ export default function BienvenidaLaberintos({
             lineHeight: 1.1,
           }}
         >
-          ¡Tu aventura comienza aquí!
+          {textos.titulo}
         </div>
 
         <div
@@ -132,9 +112,7 @@ export default function BienvenidaLaberintos({
             color: "#475569",
           }}
         >
-          Prepárate para recorrer caminos,
-          superar desafíos y ayudar a nuestros
-          aventureros a encontrar su objetivo.
+          {textos.descripcion}
         </div>
 
         <div
@@ -148,17 +126,15 @@ export default function BienvenidaLaberintos({
             color: "#155E75",
           }}
         >
-          A medida que avances, los laberintos
-          aumentarán progresivamente su dificultad,
-          incluso dentro de un mismo nivel.
+          {textos.progreso}
         </div>
       </div>
 
-      {/* NIVELES */}
+      {/* BENEFICIOS */}
 
       <div
         style={{
-          marginTop: "55px",
+          marginTop: "60px",
           textAlign: "center",
         }}
       >
@@ -169,93 +145,62 @@ export default function BienvenidaLaberintos({
             color: "#334155",
           }}
         >
-          Estos son tus desafíos 💪
+          {textos.beneficiosTitulo}
         </div>
 
         <div
           style={{
-            marginTop: "25px",
+            margin: "30px auto 0",
+            maxWidth: "600px",
 
             display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-
-            flexWrap: "wrap",
-            gap: "13px",
+            flexDirection: "column",
+            gap: "18px",
           }}
         >
-          {nivelesActivos.map(
-            (nivel, indice) => (
+          {beneficios.map(
+            (beneficio, indice) => (
               <div
-                key={nivel.id}
+                key={indice}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "13px",
+                  padding: "16px 22px",
+
+                  borderRadius: "16px",
+
+                  background: "#F8FAFC",
+                  border: "2px solid #E2E8F0",
+
+                  fontSize: "20px",
+                  fontWeight: 500,
+                  lineHeight: 1.35,
+
+                  color: "#475569",
                 }}
               >
-                <div
-                  style={{
-                    padding: "10px 14px",
-
-                    borderRadius: "999px",
-
-                    background:
-                      nivel.fondo,
-
-                    border:
-                      `2px solid ${nivel.borde}`,
-
-                    color:
-                      nivel.color,
-
-                    fontSize: "18px",
-                    fontWeight: 500,
-                  }}
-                >
-                  {nivel.nombre}
-                </div>
-
-                {indice <
-                  nivelesActivos.length -
-                    1 && (
-                  <span
-                    style={{
-                      fontSize: "26px",
-                      fontWeight: 700,
-                      color: "#0F7490",
-                    }}
-                  >
-                    →
-                  </span>
-                )}
+                {beneficio}
               </div>
             )
           )}
         </div>
       </div>
 
-      
+      {/* CIERRE */}
 
-{/* CIERRE */}
+      <div
+        style={{
+          marginTop: "50px",
 
-<div
-  style={{
-    marginTop: "45px",
+          textAlign: "center",
 
-    textAlign: "center",
+          fontSize: "25px",
+          fontWeight: 500,
+          lineHeight: 1.3,
 
-    fontSize: "25px",
-    fontWeight: 500,
-    lineHeight: 1.3,
-
-    color: "#0F7490",
-  }}
->
-  Observá, pensá y encontrá el camino.
-  ¡Comienza la aventura!
+          color: "#0F7490",
+        }}
+      >
+        {textos.cierre}
+      </div>
     </div>
-          </div>
-        );
-      }
-      
+  );
+}

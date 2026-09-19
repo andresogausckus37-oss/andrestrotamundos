@@ -1061,6 +1061,9 @@ export default function GeneradorLaminas() {
      CONFIGURACIÓN DEL PRODUCTO
   ======================================================= */
 
+  const [idiomaProducto, setIdiomaProducto] =
+    useState("es");
+
   const [publico, setPublico] =
     useState("infantil");
 
@@ -1397,6 +1400,7 @@ const medirRecursosPdf =
   const configuracionProducto =
     useMemo(
       () => ({
+        idiomaProducto,
         publico,
         edad,
         tematica,
@@ -1414,6 +1418,7 @@ const medirRecursosPdf =
         semilla,
       }),
       [
+        idiomaProducto,
         publico,
         edad,
         tematica,
@@ -2365,7 +2370,9 @@ modoObjetivo:
             laminaExportarRef.current,
 
         nombreArchivo:
-          "Laberintos-Toby-y-Luna.pdf",
+  idiomaProducto === "en"
+    ? "Toby-and-Luna-Mazes.pdf"
+    : "Laberintos-Toby-y-Luna.pdf",
 
         calidad: 0.90,
 pixelRatio: 1.25,
@@ -2647,6 +2654,23 @@ pixelRatio: 1.25,
         </option>
       )
     )}
+  </select>
+</div>
+
+              <div>
+  <label className="block text-center text-[10px] font-bold text-slate-600">
+    Idioma del producto
+  </label>
+
+  <select
+    value={idiomaProducto}
+    onChange={(e) =>
+      setIdiomaProducto(e.target.value)
+    }
+    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+  >
+    <option value="es">Español</option>
+    <option value="en">English</option>
   </select>
 </div>
 
@@ -3014,26 +3038,29 @@ pixelRatio: 1.25,
                       }
                     />
                         ) : pagina.tipo === "bienvenida" ? (
-                          <BienvenidaLaberintos
-                            cantidad={
-                              cantidadActividades
-                            }
-                            faciles={
-                              cantidadFaciles
-                            }
-                            medios={
-                              cantidadMedios
-                            }
-                            dificiles={
-                              cantidadDificiles
-                            }
-                            expertos={
-                              cantidadExpertos
-                            }
-                            legendarios={
-                              cantidadLegendarios
-                            }
-                          />
+                    <BienvenidaLaberintos
+                      idiomaProducto={
+                        idiomaProducto
+                      }
+                      cantidad={
+                        cantidadActividades
+                      }
+                      faciles={
+                        cantidadFaciles
+                      }
+                      medios={
+                        cantidadMedios
+                      }
+                      dificiles={
+                        cantidadDificiles
+                      }
+                      expertos={
+                        cantidadExpertos
+                      }
+                      legendarios={
+                        cantidadLegendarios
+                      }
+                    />
                         ) :  pagina.tipo === "final" ? (
   <LaminaFinalLaberintos
     imagenFinal={imagenFinal}
@@ -3047,8 +3074,7 @@ pixelRatio: 1.25,
                         <LaminaLaberinto
                           numero={
                             pagina.numeroProducto ??
-                            indiceActividad +
-                              1
+                            indiceActividad + 1
                           }
                           nivel={
                             nivelPagina
@@ -3072,20 +3098,20 @@ pixelRatio: 1.25,
                             pagina?.tematica
                           }
                           personaje={
-  pagina?.personaje
-}
-
-modoPersonaje={
-  pagina?.modoPersonaje
-}
-
+                            pagina?.personaje
+                          }
+                          modoPersonaje={
+                            pagina?.modoPersonaje
+                          }
                           objetivo={
-  pagina?.objetivo
-}
-
-modoObjetivo={
-  pagina?.modoObjetivo
-}
+                            pagina?.objetivo
+                          }
+                          modoObjetivo={
+                            pagina?.modoObjetivo
+                          }
+                          idiomaProducto={
+                            idiomaProducto
+                          }
                           mostrarSolucion={
                             pagina.tipo ===
                             "solucion"

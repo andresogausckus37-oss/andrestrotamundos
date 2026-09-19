@@ -19,6 +19,11 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { useIdioma } from "../contextos/IdiomaContext";
 import { traducciones } from "../datos/traducciones";
+import { useMoneda } from "../contextos/MonedaContext";
+import {
+  convertirPrecio,
+  formatearMoneda,
+} from "../utilidades/monedas";
 
 const WHATSAPP = "5493548619293";
 
@@ -28,6 +33,12 @@ const DetalleProducto = () => {
 
   const { idioma } = useIdioma();
   const t = traducciones[idioma].detalleProducto;
+
+  const {
+  moneda,
+  cotizaciones,
+  cargandoCotizaciones,
+} = useMoneda();
 
   const [previewAbierto, setPreviewAbierto] =
     useState(false);
@@ -49,21 +60,30 @@ const DetalleProducto = () => {
      FORMATEAR PRECIO
   ========================================================= */
 
-  const formatearPrecio = (precio) => {
-    if (!precio) {
+  const formatearPrecio = (precioARS) => {
+    if (!precioARS) {
       return idioma === "es"
         ? "Precio a definir"
         : "Price to be determined";
     }
 
-    return new Intl.NumberFormat(
-      idioma === "es" ? "es-AR" : "en-US",
-      {
-        style: "currency",
-        currency: "ARS",
-        maximumFractionDigits: 0,
-      }
-    ).format(precio);
+    if (
+      moneda !== "ARS" &&
+      cargandoCotizaciones
+    ) {
+      return "...";
+    }
+
+    const precioConvertido = convertirPrecio(
+      precioARS,
+      moneda,
+      cotizaciones
+    );
+
+    return formatearMoneda(
+      precioConvertido,
+      moneda
+    );
   };
 
   /* =========================================================
@@ -281,8 +301,8 @@ ${t.whatsappFinal}`;
             <div>
               {/* IMAGEN PRINCIPAL */}
 
-              <div className="relative overflow-hidden rounded-2xl bg-white p-2 shadow-sm">
-                <div className="aspect-[4/6] w-full overflow-hidden rounded-xl bg-white">
+              <div className="relative rounded-2xl bg-white p-2 shadow-sm">
+                <div className="aspect-[4/5] w-full overflow-hidden overflow-hidden rounded-xl bg-white">
                   {imagenActiva === 0 ? (
                     <img
                       src={imagenes[imagenActiva]}

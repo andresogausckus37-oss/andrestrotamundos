@@ -27,6 +27,7 @@ import GeneradorPdf from "./paginas/GeneradorPdf";
 import Digitales from "./paginas/Digitales";
 import GeneradorLaminas from "./paginas/GeneradorLaminas";
 import OptimizadorImagenes from "./paginas/OptimizadorImagenes";
+import { MonedaProvider } from "./contextos/MonedaContext";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
@@ -154,14 +155,16 @@ const ContenidoApp = () => {
   );
 };
 
-const App = () => {
-  return (
-    <IdiomaProvider>
-      <BrowserRouter>
-        <ContenidoApp />
-      </BrowserRouter>
-    </IdiomaProvider>
-  );
-};
+      const App = () => {
+        return (
+          <IdiomaProvider>
+            <MonedaProvider>
+              <BrowserRouter>
+                <ContenidoApp />
+              </BrowserRouter>
+            </MonedaProvider>
+          </IdiomaProvider>
+        );
+      };
 
 export default App;

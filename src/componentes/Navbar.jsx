@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useIdioma } from "../contextos/IdiomaContext";
+import { useMoneda } from "../contextos/MonedaContext";
 import { traducciones } from "../datos/traducciones";
 
 const Navbar = () => {
@@ -11,6 +12,8 @@ const Navbar = () => {
   const location = useLocation();
 
   const { idioma, cambiarIdioma } = useIdioma();
+  const { moneda, cambiarMoneda } = useMoneda();
+
   const t = traducciones[idioma].navbar;
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -126,6 +129,27 @@ const Navbar = () => {
     </div>
   );
 
+  /* SELECTOR DE MONEDA */
+  const SelectorMoneda = () => (
+    <div className="flex items-center rounded-lg border border-slate-200 bg-white/90 p-1 text-xs font-semibold shadow-sm">
+      {["ARS", "USD", "EUR"].map((codigo) => (
+        <button
+          key={codigo}
+          type="button"
+          onClick={() => cambiarMoneda(codigo)}
+          className={`rounded-md px-2 py-1 transition ${
+            moneda === codigo
+              ? "bg-sky-600 text-white"
+              : "text-slate-500 hover:text-sky-600"
+          }`}
+          aria-label={`Cambiar moneda a ${codigo}`}
+        >
+          {codigo}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <header
       className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
@@ -173,9 +197,10 @@ const Navbar = () => {
           ))}
         </nav>
 
-        {/* IDIOMA ESCRITORIO */}
-        <div className="hidden md:block">
+        {/* SELECTORES ESCRITORIO */}
+        <div className="hidden items-center gap-2 md:flex">
           <SelectorIdioma />
+          <SelectorMoneda />
         </div>
 
         {/* MENÚ HAMBURGUESA */}
@@ -204,8 +229,10 @@ const Navbar = () => {
               </button>
             ))}
 
-            <div className="mt-4 border-t border-slate-200 pt-4">
+            {/* SELECTORES MÓVIL */}
+            <div className="mt-4 flex flex-col items-center gap-3 border-t border-slate-200 pt-4">
               <SelectorIdioma />
+              <SelectorMoneda />
             </div>
           </nav>
         </div>

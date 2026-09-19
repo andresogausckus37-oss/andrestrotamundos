@@ -1885,535 +1885,595 @@ export const OBJETOS_LABERINTOS = {
   // ============================================================
 
   hueso: {
-    nombre: "hueso",
-    articulo: "el",
-    tema: "mascotas",
-    personaje: "toby",
-    emoji: "🦴",
-    imagen: "/assets-opt/recurso-056.webp",
+  nombre: {
+    es: "hueso",
+    en: "bone",
   },
+  articulo: {
+    es: "el",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "toby",
+  emoji: "🦴",
+  imagen: "/assets-opt/recurso-056.webp",
+},
 
-  pelota: {
-    nombre: "pelota",
-    articulo: "la",
-    tema: "mascotas",
-    personaje: "toby",
-    emoji: "⚽",
-    imagen: "/assets-opt/recurso-057.webp",
+pelota: {
+  nombre: {
+    es: "pelota",
+    en: "ball",
   },
+  articulo: {
+    es: "la",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "toby",
+  emoji: "⚽",
+  imagen: "/assets-opt/recurso-057.webp",
+},
 
-  ovillo: {
-    nombre: "ovillo de lana",
-    articulo: "el",
-    tema: "mascotas",
-    personaje: "luna",
-    emoji: "🧶",
-    imagen: "/assets-opt/recurso-058.webp",
+ovillo: {
+  nombre: {
+    es: "ovillo de lana",
+    en: "ball of yarn",
   },
+  articulo: {
+    es: "el",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "luna",
+  emoji: "🧶",
+  imagen: "/assets-opt/recurso-058.webp",
+},
 
-  ratonJuguete: {
-    nombre: "ratón de juguete",
-    articulo: "el",
-    tema: "mascotas",
-    personaje: "luna",
-    emoji: "🐭",
-    imagen: "/assets-opt/recurso-059.webp",
+ratonJuguete: {
+  nombre: {
+    es: "ratón de juguete",
+    en: "toy mouse",
   },
+  articulo: {
+    es: "el",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "luna",
+  emoji: "🐭",
+  imagen: "/assets-opt/recurso-059.webp",
+},
 
-  zanahoria: {
-    nombre: "zanahoria",
-    articulo: "la",
-    tema: "mascotas",
-    personaje: "nube",
-    emoji: "🥕",
-    imagen: "/assets-opt/recurso-060.webp",
+zanahoria: {
+  nombre: {
+    es: "zanahoria",
+    en: "carrot",
   },
+  articulo: {
+    es: "la",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "nube",
+  emoji: "🥕",
+  imagen: "/assets-opt/recurso-060.webp",
+},
 
-  canastaVerduras: {
-    nombre: "canasta de verduras",
-    articulo: "la",
-    tema: "mascotas",
-    personaje: "nube",
-    emoji: "🥬",
-    imagen: "/assets-opt/recurso-061.webp",
+canastaVerduras: {
+  nombre: {
+    es: "canasta de verduras",
+    en: "basket of vegetables",
   },
+  articulo: {
+    es: "la",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "nube",
+  emoji: "🥬",
+  imagen: "/assets-opt/recurso-061.webp",
+},
 
-  semillas: {
-    nombre: "semillas",
-    articulo: "las",
-    tema: "mascotas",
-    personaje: "pipo",
-    emoji: "🌻",
-    imagen: "/assets-opt/recurso-062.webp",
+semillas: {
+  nombre: {
+    es: "semillas",
+    en: "seeds",
   },
+  articulo: {
+    es: "las",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "pipo",
+  emoji: "🌻",
+  imagen: "/assets-opt/recurso-062.webp",
+},
 
-  frutaTropical: {
-    nombre: "fruta tropical",
-    articulo: "la",
-    tema: "mascotas",
-    personaje: "pipo",
-    emoji: "🍍",
-    imagen: "/assets-opt/recurso-063.webp",
+frutaTropical: {
+  nombre: {
+    es: "fruta tropical",
+    en: "tropical fruit",
   },
+  articulo: {
+    es: "la",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "pipo",
+  emoji: "🍍",
+  imagen: "/assets-opt/recurso-063.webp",
+},
 
-  hojasVerdes: {
-    nombre: "hojas verdes",
-    articulo: "las",
-    tema: "mascotas",
-    personaje: "tito",
-    emoji: "🥬",
-    imagen: "/assets-opt/recurso-064.webp",
+hojasVerdes: {
+  nombre: {
+    es: "hojas verdes",
+    en: "green leaves",
   },
+  articulo: {
+    es: "las",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "tito",
+  emoji: "🥬",
+  imagen: "/assets-opt/recurso-064.webp",
+},
 
-  estanqueRefugio: {
-    nombre: "pequeño estanque",
-    articulo: "el",
-    tema: "mascotas",
-    personaje: "tito",
-    emoji: "🌿",
-    imagen: "/assets-opt/recurso-065.webp",
+estanqueRefugio: {
+  nombre: {
+    es: "pequeño estanque",
+    en: "small pond",
   },
+  articulo: {
+    es: "el",
+    en: "the",
+  },
+  tema: "mascotas",
+  personaje: "tito",
+  emoji: "🌿",
+  imagen: "/assets-opt/recurso-065.webp",
+},
 
   /* =======================================================
      PLAYA Y OCÉANO
   ======================================================= */
 
   caracola: {
-    nombre: "caracola",
-    articulo: "la",
-    emoji: "🐚",
-    imagen: "/assets-opt/recurso-066.webp",
-  },
+  nombre: { es: "caracola", en: "seashell" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🐚",
+  imagen: "/assets-opt/recurso-066.webp",
+},
 
-  perla: {
-    nombre: "perla",
-    articulo: "la",
-    emoji: "🦪",
-    imagen: "/assets-opt/recurso-067.webp",
-  },
+perla: {
+  nombre: { es: "perla", en: "pearl" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🦪",
+  imagen: "/assets-opt/recurso-067.webp",
+},
 
-  salvavidas: {
-    nombre: "salvavidas",
-    articulo: "el",
-    emoji: "🛟",
-    imagen: "/assets-opt/recurso-068.webp",
-  },
+salvavidas: {
+  nombre: { es: "salvavidas", en: "life ring" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🛟",
+  imagen: "/assets-opt/recurso-068.webp",
+},
 
-  tablaSurf: {
-    nombre: "tabla de surf",
-    articulo: "la",
-    emoji: "🏄",
-    imagen: "/assets-opt/recurso-069.webp",
-  },
+tablaSurf: {
+  nombre: { es: "tabla de surf", en: "surfboard" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🏄",
+  imagen: "/assets-opt/recurso-069.webp",
+},
 
-  coral: {
-    nombre: "coral",
-    articulo: "el",
-    emoji: "🪸",
-    imagen: "/assets-opt/recurso-070.webp",
-  },
+coral: {
+  nombre: { es: "coral", en: "coral" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🪸",
+  imagen: "/assets-opt/recurso-070.webp",
+},
 
-  estrellaMar: {
-    nombre: "estrella de mar",
-    articulo: "la",
-    emoji: "⭐",
-    imagen: "/assets-opt/recurso-071.webp",
-  },
+estrellaMar: {
+  nombre: { es: "estrella de mar", en: "starfish" },
+  articulo: { es: "la", en: "the" },
+  emoji: "⭐",
+  imagen: "/assets-opt/recurso-071.webp",
+},
 
-  algasMarinas: {
-    nombre: "algas marinas",
-    articulo: "las",
-    emoji: "🌿",
-    imagen: "/assets-opt/recurso-072.webp",
-  },
+algasMarinas: {
+  nombre: { es: "algas marinas", en: "seaweed" },
+  articulo: { es: "las", en: "the" },
+  emoji: "🌿",
+  imagen: "/assets-opt/recurso-072.webp",
+},
 
-  cofreSubmarino: {
-    nombre: "cofre submarino",
-    articulo: "el",
-    emoji: "🧰",
-    imagen: "/assets-opt/recurso-073.webp",
-  },
+cofreSubmarino: {
+  nombre: { es: "cofre submarino", en: "underwater treasure chest" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🧰",
+  imagen: "/assets-opt/recurso-073.webp",
+},
 
-  ancla: {
-    nombre: "ancla",
-    articulo: "el",
-    emoji: "⚓",
-    imagen: "/assets-opt/recurso-074.webp",
-  },
+ancla: {
+  nombre: { es: "ancla", en: "anchor" },
+  articulo: { es: "el", en: "the" },
+  emoji: "⚓",
+  imagen: "/assets-opt/recurso-074.webp",
+},
 
-  barco: {
-    nombre: "barco",
-    articulo: "el",
-    emoji: "⛵",
-    imagen: "/assets-opt/recurso-075.webp",
-  },
+barco: {
+  nombre: { es: "barco", en: "sailboat" },
+  articulo: { es: "el", en: "the" },
+  emoji: "⛵",
+  imagen: "/assets-opt/recurso-075.webp",
+},
 
   /* =======================================================
      ESPACIO
   ======================================================= */
 
   robotEspacial: {
-    nombre: "robot espacial",
-    articulo: "el",
-    emoji: "🤖",
-    imagen: "/assets-opt/recurso-076.webp",
-  },
+  nombre: { es: "robot espacial", en: "space robot" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🤖",
+  imagen: "/assets-opt/recurso-076.webp",
+},
 
-  naveEspacial: {
-    nombre: "nave espacial",
-    articulo: "la",
-    emoji: "🛸",
-    imagen: "/assets-opt/recurso-077.webp",
-  },
+naveEspacial: {
+  nombre: { es: "nave espacial", en: "spaceship" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🛸",
+  imagen: "/assets-opt/recurso-077.webp",
+},
 
-  luna: {
-    nombre: "luna",
-    articulo: "la",
-    emoji: "🌙",
-    imagen: "/assets-opt/recurso-078.webp",
-  },
+luna: {
+  nombre: { es: "luna", en: "moon" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🌙",
+  imagen: "/assets-opt/recurso-078.webp",
+},
 
-  meteorito: {
-    nombre: "meteorito",
-    articulo: "el",
-    emoji: "☄️",
-    imagen: "/assets-opt/recurso-079.webp",
-  },
+meteorito: {
+  nombre: { es: "meteorito", en: "meteorite" },
+  articulo: { es: "el", en: "the" },
+  emoji: "☄️",
+  imagen: "/assets-opt/recurso-079.webp",
+},
 
-  estrella: {
-    nombre: "estrella",
-    articulo: "la",
-    emoji: "⭐",
-    imagen: "/assets-opt/recurso-080.webp",
-  },
+estrella: {
+  nombre: { es: "estrella", en: "star" },
+  articulo: { es: "la", en: "the" },
+  emoji: "⭐",
+  imagen: "/assets-opt/recurso-080.webp",
+},
 
-  planetaTierra: {
-    nombre: "planeta Tierra",
-    articulo: "el",
-    emoji: "🌍",
-    imagen: "/assets-opt/recurso-081.webp",
-  },
+planetaTierra: {
+  nombre: { es: "planeta Tierra", en: "planet Earth" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🌍",
+  imagen: "/assets-opt/recurso-081.webp",
+},
 
-  satelite: {
-    nombre: "satélite",
-    articulo: "el",
-    emoji: "🛰️",
-    imagen: "/assets-opt/recurso-082.webp",
-  },
+satelite: {
+  nombre: { es: "satélite", en: "satellite" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🛰️",
+  imagen: "/assets-opt/recurso-082.webp",
+},
 
-  estrellaFugaz: {
-    nombre: "estrella fugaz",
-    articulo: "la",
-    emoji: "🌠",
-    imagen: "/assets-opt/recurso-083.webp",
-  },
+estrellaFugaz: {
+  nombre: { es: "estrella fugaz", en: "shooting star" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🌠",
+  imagen: "/assets-opt/recurso-083.webp",
+},
 
-  gema: {
-    nombre: "gema espacial",
-    articulo: "la",
-    emoji: "💎",
-    imagen: "/assets-opt/recurso-084.webp",
-  },
+gema: {
+  nombre: { es: "gema espacial", en: "space gem" },
+  articulo: { es: "la", en: "the" },
+  emoji: "💎",
+  imagen: "/assets-opt/recurso-084.webp",
+},
 
-  cohete: {
-    nombre: "cohete",
-    articulo: "el",
-    emoji: "🚀",
-    imagen: "/assets-opt/recurso-085.webp",
-  },
+cohete: {
+  nombre: { es: "cohete", en: "rocket" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🚀",
+  imagen: "/assets-opt/recurso-085.webp",
+},
 
   /* =======================================================
      MONTAÑA Y NATURALEZA
   ======================================================= */
 
   montana: {
-    nombre: "montaña",
-    articulo: "la",
-    emoji: "🏔️",
-    imagen: "/assets-opt/recurso-086.webp",
-  },
+  nombre: { es: "montaña", en: "mountain" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🏔️",
+  imagen: "/assets-opt/recurso-086.webp",
+},
 
-  bosque: {
-    nombre: "bosque",
-    articulo: "el",
-    emoji: "🌲",
-    imagen: "/assets-opt/recurso-087.webp",
-  },
+bosque: {
+  nombre: { es: "bosque", en: "forest" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🌲",
+  imagen: "/assets-opt/recurso-087.webp",
+},
 
-  huellas: {
-    nombre: "huellas",
-    articulo: "las",
-    emoji: "🐾",
-    imagen: "/assets-opt/recurso-088.webp",
-  },
+huellas: {
+  nombre: { es: "huellas", en: "footprints" },
+  articulo: { es: "las", en: "the" },
+  emoji: "🐾",
+  imagen: "/assets-opt/recurso-088.webp",
+},
 
-  floresSilvestres: {
-    nombre: "flores silvestres",
-    articulo: "las",
-    emoji: "🌼",
-    imagen: "/assets-opt/recurso-089.webp",
-  },
+floresSilvestres: {
+  nombre: { es: "flores silvestres", en: "wildflowers" },
+  articulo: { es: "las", en: "the" },
+  emoji: "🌼",
+  imagen: "/assets-opt/recurso-089.webp",
+},
 
-  colmena: {
-    nombre: "colmena",
-    articulo: "la",
-    emoji: "🍯",
-    imagen: "/assets-opt/recurso-090.webp",
-  },
+colmena: {
+  nombre: { es: "colmena", en: "beehive" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🍯",
+  imagen: "/assets-opt/recurso-090.webp",
+},
 
-  frutosBosque: {
-    nombre: "frutos del bosque",
-    articulo: "los",
-    emoji: "🫐",
-    imagen: "/assets-opt/recurso-091.webp",
-  },
+frutosBosque: {
+  nombre: { es: "frutos del bosque", en: "wild berries" },
+  articulo: { es: "los", en: "the" },
+  emoji: "🫐",
+  imagen: "/assets-opt/recurso-091.webp",
+},
 
-  nido: {
-    nombre: "nido",
-    articulo: "el",
-    emoji: "🪺",
-    imagen: "/assets-opt/recurso-092.webp",
-  },
+nido: {
+  nombre: { es: "nido", en: "nest" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🪺",
+  imagen: "/assets-opt/recurso-092.webp",
+},
 
-  pluma: {
-    nombre: "pluma",
-    articulo: "la",
-    emoji: "🪶",
-    imagen: "/assets-opt/recurso-093.webp",
-  },
+pluma: {
+  nombre: { es: "pluma", en: "feather" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🪶",
+  imagen: "/assets-opt/recurso-093.webp",
+},
 
-  madriguera: {
-    nombre: "madriguera",
-    articulo: "la",
-    emoji: "🕳️",
-    imagen: "/assets-opt/recurso-094.webp",
-  },
+madriguera: {
+  nombre: { es: "madriguera", en: "burrow" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🕳️",
+  imagen: "/assets-opt/recurso-094.webp",
+},
 
-  bellotas: {
-    nombre: "bellotas",
-    articulo: "las",
-    emoji: "🌰",
-    imagen: "/assets-opt/recurso-095.webp",
-  },
+bellotas: {
+  nombre: { es: "bellotas", en: "acorns" },
+  articulo: { es: "las", en: "the" },
+  emoji: "🌰",
+  imagen: "/assets-opt/recurso-095.webp",
+},
 
   /* =======================================================
      PIRATAS
   ======================================================= */
 
   mapa: {
-    nombre: "mapa",
-    articulo: "el",
-    emoji: "🗺️",
-    imagen: "/assets-opt/recurso-096.webp",
-  },
+  nombre: { es: "mapa", en: "map" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🗺️",
+  imagen: "/assets-opt/recurso-096.webp",
+},
 
-  brujula: {
-    nombre: "brújula",
-    articulo: "la",
-    emoji: "🧭",
-    imagen: "/assets-opt/recurso-097.webp",
-  },
+brujula: {
+  nombre: { es: "brújula", en: "compass" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🧭",
+  imagen: "/assets-opt/recurso-097.webp",
+},
 
-  catalejo: {
-    nombre: "catalejo",
-    articulo: "el",
-    emoji: "🔭",
-    imagen: "/assets-opt/recurso-098.webp",
-  },
+catalejo: {
+  nombre: { es: "catalejo", en: "spyglass" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🔭",
+  imagen: "/assets-opt/recurso-098.webp",
+},
 
-  monedaOro: {
-    nombre: "moneda de oro",
-    articulo: "la",
-    emoji: "🪙",
-    imagen: "/assets-opt/recurso-099.webp",
-  },
+monedaOro: {
+  nombre: { es: "moneda de oro", en: "gold coin" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🪙",
+  imagen: "/assets-opt/recurso-099.webp",
+},
 
-  cofre: {
-    nombre: "cofre",
-    articulo: "el",
-    emoji: "🧰",
-    imagen: "/assets-opt/recurso-100.webp",
-  },
+cofre: {
+  nombre: { es: "cofre", en: "treasure chest" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🧰",
+  imagen: "/assets-opt/recurso-100.webp",
+},
 
-  espadaPirata: {
-    nombre: "espada pirata",
-    articulo: "la",
-    emoji: "⚔️",
-    imagen: "/assets-opt/recurso-101.webp",
-  },
+espadaPirata: {
+  nombre: { es: "espada pirata", en: "pirate sword" },
+  articulo: { es: "la", en: "the" },
+  emoji: "⚔️",
+  imagen: "/assets-opt/recurso-101.webp",
+},
 
-  tesoro: {
-    nombre: "tesoro",
-    articulo: "el",
-    emoji: "💰",
-    imagen: "/assets-opt/recurso-102.webp",
-  },
+tesoro: {
+  nombre: { es: "tesoro", en: "treasure" },
+  articulo: { es: "el", en: "the" },
+  emoji: "💰",
+  imagen: "/assets-opt/recurso-102.webp",
+},
 
-  barril: {
-    nombre: "barril",
-    articulo: "el",
-    emoji: "🛢️",
-    imagen: "/assets-opt/recurso-103.webp",
-  },
+barril: {
+  nombre: { es: "barril", en: "barrel" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🛢️",
+  imagen: "/assets-opt/recurso-103.webp",
+},
 
-  collarPerlas: {
-    nombre: "collar de perlas",
-    articulo: "el",
-    emoji: "📿",
-    imagen: "/assets-opt/recurso-104.webp",
-  },
+collarPerlas: {
+  nombre: { es: "collar de perlas", en: "pearl necklace" },
+  articulo: { es: "el", en: "the" },
+  emoji: "📿",
+  imagen: "/assets-opt/recurso-104.webp",
+},
 
-  llaveDorada: {
-    nombre: "llave dorada",
-    articulo: "la",
-    emoji: "🔑",
-    imagen: "/assets-opt/recurso-105.webp",
-  },
+llaveDorada: {
+  nombre: { es: "llave dorada", en: "golden key" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🔑",
+  imagen: "/assets-opt/recurso-105.webp",
+},
 
   /* =======================================================
      CASTILLOS
   ======================================================= */
 
   espada: {
-    nombre: "espada",
-    articulo: "la",
-    emoji: "⚔️",
-    imagen: "/assets-opt/recurso-106.webp",
-  },
+  nombre: { es: "espada", en: "sword" },
+  articulo: { es: "la", en: "the" },
+  emoji: "⚔️",
+  imagen: "/assets-opt/recurso-106.webp",
+},
 
-  escudo: {
-    nombre: "escudo",
-    articulo: "el",
-    emoji: "🛡️",
-    imagen: "/assets-opt/recurso-107.webp",
-  },
+escudo: {
+  nombre: { es: "escudo", en: "shield" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🛡️",
+  imagen: "/assets-opt/recurso-107.webp",
+},
 
-  libroHechizos: {
-    nombre: "libro de hechizos",
-    articulo: "el",
-    emoji: "📖",
-    imagen: "/assets-opt/recurso-108.webp",
-  },
+libroHechizos: {
+  nombre: { es: "libro de hechizos", en: "spellbook" },
+  articulo: { es: "el", en: "the" },
+  emoji: "📖",
+  imagen: "/assets-opt/recurso-108.webp",
+},
 
-  varitaMagica: {
-    nombre: "varita mágica",
-    articulo: "la",
-    emoji: "🪄",
-    imagen: "/assets-opt/recurso-109.webp",
-  },
+varitaMagica: {
+  nombre: { es: "varita mágica", en: "magic wand" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🪄",
+  imagen: "/assets-opt/recurso-109.webp",
+},
 
-  castillo: {
-    nombre: "castillo",
-    articulo: "el",
-    emoji: "🏰",
-    imagen: "/assets-opt/recurso-110.webp",
-  },
+castillo: {
+  nombre: { es: "castillo", en: "castle" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🏰",
+  imagen: "/assets-opt/recurso-110.webp",
+},
 
-  gemaMagica: {
-    nombre: "gema mágica",
-    articulo: "la",
-    emoji: "💎",
-    imagen: "/assets-opt/recurso-111.webp",
-  },
+gemaMagica: {
+  nombre: { es: "gema mágica", en: "magic gem" },
+  articulo: { es: "la", en: "the" },
+  emoji: "💎",
+  imagen: "/assets-opt/recurso-111.webp",
+},
 
-  corona: {
-    nombre: "corona",
-    articulo: "la",
-    emoji: "👑",
-    imagen: "/assets-opt/recurso-112.webp",
-  },
+corona: {
+  nombre: { es: "corona", en: "crown" },
+  articulo: { es: "la", en: "the" },
+  emoji: "👑",
+  imagen: "/assets-opt/recurso-112.webp",
+},
 
-  cristalEncantado: {
-    nombre: "cristal encantado",
-    articulo: "el",
-    emoji: "🔮",
-    imagen: "/assets-opt/recurso-113.webp",
-  },
+cristalEncantado: {
+  nombre: { es: "cristal encantado", en: "enchanted crystal" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🔮",
+  imagen: "/assets-opt/recurso-113.webp",
+},
 
-  llave: {
-    nombre: "llave",
-    articulo: "la",
-    emoji: "🗝️",
-    imagen: "/assets-opt/recurso-114.webp",
-  },
+llave: {
+  nombre: { es: "llave", en: "key" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🗝️",
+  imagen: "/assets-opt/recurso-114.webp",
+},
 
-  orbeMagico: {
-    nombre: "orbe mágico",
-    articulo: "el",
-    emoji: "🔮",
-    imagen: "/assets-opt/recurso-115.webp",
-  },
+orbeMagico: {
+  nombre: { es: "orbe mágico", en: "magic orb" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🔮",
+  imagen: "/assets-opt/recurso-115.webp",
+},
 
   /* =======================================================
    DINOSAURIOS
 ======================================================= */
 
 huellasGigantes: {
-  nombre: "huellas gigantes",
-  articulo: "las",
+  nombre: { es: "huellas gigantes", en: "giant footprints" },
+  articulo: { es: "las", en: "the" },
   emoji: "🐾",
   imagen: "/assets-opt/recurso-116.webp",
 },
 
 huesoDinosaurio: {
-  nombre: "hueso de dinosaurio",
-  articulo: "el",
+  nombre: { es: "hueso de dinosaurio", en: "dinosaur bone" },
+  articulo: { es: "el", en: "the" },
   emoji: "🦴",
   imagen: "/assets-opt/recurso-117.webp",
 },
 
 helechos: {
-  nombre: "helechos",
-  articulo: "los",
+  nombre: { es: "helechos", en: "ferns" },
+  articulo: { es: "los", en: "the" },
   emoji: "🌿",
   imagen: "/assets-opt/recurso-118.webp",
 },
 
 nidoHuevos: {
-  nombre: "nido de huevos",
-  articulo: "el",
+  nombre: { es: "nido de huevos", en: "nest of eggs" },
+  articulo: { es: "el", en: "the" },
   emoji: "🪺",
   imagen: "/assets-opt/recurso-119.webp",
 },
 
 hojasArbol: {
-  nombre: "hojas de árbol",
-  articulo: "las",
+  nombre: { es: "hojas de árbol", en: "tree leaves" },
+  articulo: { es: "las", en: "the" },
   emoji: "🍃",
   imagen: "/assets-opt/recurso-120.webp",
 },
 
 arbolPrehistorico: {
-  nombre: "árbol prehistórico",
-  articulo: "el",
+  nombre: { es: "árbol prehistórico", en: "prehistoric tree" },
+  articulo: { es: "el", en: "the" },
   emoji: "🌳",
   imagen: "/assets-opt/recurso-121.webp",
 },
 
 huevoDinosaurio: {
-  nombre: "huevo de dinosaurio",
-  articulo: "el",
+  nombre: { es: "huevo de dinosaurio", en: "dinosaur egg" },
+  articulo: { es: "el", en: "the" },
   emoji: "🥚",
   imagen: "/assets-opt/recurso-122.webp",
 },
 
 fosil: {
-  nombre: "fósil",
-  articulo: "el",
+  nombre: { es: "fósil", en: "fossil" },
+  articulo: { es: "el", en: "the" },
   emoji: "🦴",
   imagen: "/assets-opt/recurso-123.webp",
 },
 
 lago: {
-  nombre: "lago",
-  articulo: "el",
+  nombre: { es: "lago", en: "lake" },
+  articulo: { es: "el", en: "the" },
   emoji: "🏞️",
   imagen: "/assets-opt/recurso-124.webp",
 },
 
 pezPrehistorico: {
-  nombre: "pez prehistórico",
-  articulo: "el",
+  nombre: { es: "pez prehistórico", en: "prehistoric fish" },
+  articulo: { es: "el", en: "the" },
   emoji: "🐟",
   imagen: "/assets-opt/recurso-125.webp",
 },
@@ -2423,145 +2483,145 @@ pezPrehistorico: {
   ======================================================= */
 
   valija: {
-    nombre: "valija",
-    articulo: "la",
-    emoji: "🧳",
-    imagen: "/assets-opt/recurso-126.webp",
-  },
+  nombre: { es: "valija", en: "suitcase" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🧳",
+  imagen: "/assets-opt/recurso-126.webp",
+},
 
-  brujulaViaje: {
-    nombre: "brújula",
-    articulo: "la",
-    emoji: "🧭",
-    imagen: "/assets-opt/recurso-127.webp",
-  },
+brujulaViaje: {
+  nombre: { es: "brújula", en: "compass" },
+  articulo: { es: "la", en: "the" },
+  emoji: "🧭",
+  imagen: "/assets-opt/recurso-127.webp",
+},
 
-  tren: {
-    nombre: "tren",
-    articulo: "el",
-    emoji: "🚆",
-    imagen: "/assets-opt/recurso-128.webp",
-  },
+tren: {
+  nombre: { es: "tren", en: "train" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🚆",
+  imagen: "/assets-opt/recurso-128.webp",
+},
 
-  camaraFotografica: {
-    nombre: "cámara fotográfica",
-    articulo: "la",
-    emoji: "📷",
-    imagen: "/assets-opt/recurso-129.webp",
-  },
+camaraFotografica: {
+  nombre: { es: "cámara fotográfica", en: "camera" },
+  articulo: { es: "la", en: "the" },
+  emoji: "📷",
+  imagen: "/assets-opt/recurso-129.webp",
+},
 
-  autobus: {
-    nombre: "autobús",
-    articulo: "el",
-    emoji: "🚌",
-    imagen: "/assets-opt/recurso-130.webp",
-  },
+autobus: {
+  nombre: { es: "autobús", en: "bus" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🚌",
+  imagen: "/assets-opt/recurso-130.webp",
+},
 
-  mapaCiudad: {
-    nombre: "mapa de la ciudad",
-    articulo: "el",
-    emoji: "🗺️",
-    imagen: "/assets-opt/recurso-131.webp",
-  },
+mapaCiudad: {
+  nombre: { es: "mapa de la ciudad", en: "city map" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🗺️",
+  imagen: "/assets-opt/recurso-131.webp",
+},
 
-  avion: {
-    nombre: "avión",
-    articulo: "el",
-    emoji: "✈️",
-    imagen: "/assets-opt/recurso-132.webp",
-  },
+avion: {
+  nombre: { es: "avión", en: "airplane" },
+  articulo: { es: "el", en: "the" },
+  emoji: "✈️",
+  imagen: "/assets-opt/recurso-132.webp",
+},
 
-  cartaPostal: {
-    nombre: "carta postal",
-    articulo: "la",
-    emoji: "💌",
-    imagen: "/assets-opt/recurso-133.webp",
-  },
+cartaPostal: {
+  nombre: { es: "carta postal", en: "postcard" },
+  articulo: { es: "la", en: "the" },
+  emoji: "💌",
+  imagen: "/assets-opt/recurso-133.webp",
+},
 
-  auto: {
-    nombre: "auto",
-    articulo: "el",
-    emoji: "🚗",
-    imagen: "/assets-opt/recurso-134.webp",
-  },
+auto: {
+  nombre: { es: "auto", en: "car" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🚗",
+  imagen: "/assets-opt/recurso-134.webp",
+},
 
-  pasaporte: {
-    nombre: "pasaporte",
-    articulo: "el",
-    emoji: "🛂",
-    imagen: "/assets-opt/recurso-135.webp",
-  },
+pasaporte: {
+  nombre: { es: "pasaporte", en: "passport" },
+  articulo: { es: "el", en: "the" },
+  emoji: "🛂",
+  imagen: "/assets-opt/recurso-135.webp",
+},
 
 /* =======================================================
    NAVIDAD
 ======================================================= */
 
 arbolNavidad: {
-  nombre: "árbol de Navidad",
-  articulo: "el",
+  nombre: { es: "árbol de Navidad", en: "Christmas tree" },
+  articulo: { es: "el", en: "the" },
   emoji: "🎄",
   imagen: "/assets-opt/recurso-136.webp",
 },
 
 estrellaNavidena: {
-  nombre: "estrella navideña",
-  articulo: "la",
+  nombre: { es: "estrella navideña", en: "Christmas star" },
+  articulo: { es: "la", en: "the" },
   emoji: "⭐",
   imagen: "/assets-opt/recurso-137.webp",
 },
 
 campanas: {
-  nombre: "campanas",
-  articulo: "las",
+  nombre: { es: "campanas", en: "bells" },
+  articulo: { es: "las", en: "the" },
   emoji: "🔔",
   imagen: "/assets-opt/recurso-138.webp",
 },
 
 trineo: {
-  nombre: "trineo",
-  articulo: "el",
+  nombre: { es: "trineo", en: "sleigh" },
+  articulo: { es: "el", en: "the" },
   emoji: "🛷",
   imagen: "/assets-opt/recurso-139.webp",
 },
 
 regalo: {
-  nombre: "regalo",
-  articulo: "el",
+  nombre: { es: "regalo", en: "gift" },
+  articulo: { es: "el", en: "the" },
   emoji: "🎁",
   imagen: "/assets-opt/recurso-140.webp",
 },
 
 sacoRegalos: {
-  nombre: "saco de regalos",
-  articulo: "el",
+  nombre: { es: "saco de regalos", en: "gift sack" },
+  articulo: { es: "el", en: "the" },
   emoji: "🎁",
   imagen: "/assets-opt/recurso-141.webp",
 },
 
 juguete: {
-  nombre: "juguete",
-  articulo: "el",
+  nombre: { es: "juguete", en: "toy" },
+  articulo: { es: "el", en: "the" },
   emoji: "🧸",
   imagen: "/assets-opt/recurso-142.webp",
 },
 
 herramientasElfa: {
-  nombre: "herramientas de elfa",
-  articulo: "las",
+  nombre: { es: "herramientas de elfa", en: "elf tools" },
+  articulo: { es: "las", en: "the" },
   emoji: "🛠️",
   imagen: "/assets-opt/recurso-143.webp",
 },
 
 bufanda: {
-  nombre: "bufanda",
-  articulo: "la",
+  nombre: { es: "bufanda", en: "scarf" },
+  articulo: { es: "la", en: "the" },
   emoji: "🧣",
   imagen: "/assets-opt/recurso-144.webp",
 },
 
 sombreroInvierno: {
-  nombre: "sombrero de invierno",
-  articulo: "el",
+  nombre: { es: "sombrero de invierno", en: "winter hat" },
+  articulo: { es: "el", en: "the" },
   emoji: "🎩",
   imagen: "/assets-opt/recurso-145.webp",
 },
@@ -2571,71 +2631,71 @@ sombreroInvierno: {
 ======================================================= */
 
 lunaCreciente: {
-  nombre: "luna creciente",
-  articulo: "la",
+  nombre: { es: "luna creciente", en: "crescent moon" },
+  articulo: { es: "la", en: "the" },
   emoji: "🌙",
   imagen: "/assets-opt/recurso-146.webp",
 },
 
 llaveMisteriosa: {
-  nombre: "llave misteriosa",
-  articulo: "la",
+  nombre: { es: "llave misteriosa", en: "mysterious key" },
+  articulo: { es: "la", en: "the" },
   emoji: "🗝️",
   imagen: "/assets-opt/recurso-147.webp",
 },
 
 farolEncantado: {
-  nombre: "farol encantado",
-  articulo: "el",
+  nombre: { es: "farol encantado", en: "enchanted lantern" },
+  articulo: { es: "el", en: "the" },
   emoji: "🏮",
   imagen: "/assets-opt/recurso-148.webp",
 },
 
 cadenaFantasmal: {
-  nombre: "cadena fantasmal",
-  articulo: "la",
+  nombre: { es: "cadena fantasmal", en: "ghostly chain" },
+  articulo: { es: "la", en: "the" },
   emoji: "⛓️",
   imagen: "/assets-opt/recurso-149.webp",
 },
 
 calderoPociones: {
-  nombre: "caldero de pociones",
-  articulo: "el",
+  nombre: { es: "caldero de pociones", en: "potion cauldron" },
+  articulo: { es: "el", en: "the" },
   emoji: "🧪",
   imagen: "/assets-opt/recurso-150.webp",
 },
 
 libroHechizosHalloween: {
-  nombre: "libro de hechizos",
-  articulo: "el",
+  nombre: { es: "libro de hechizos", en: "spellbook" },
+  articulo: { es: "el", en: "the" },
   emoji: "📖",
   imagen: "/assets-opt/recurso-151.webp",
 },
 
 calabazaEncantada: {
-  nombre: "calabaza encantada",
-  articulo: "la",
+  nombre: { es: "calabaza encantada", en: "enchanted pumpkin" },
+  articulo: { es: "la", en: "the" },
   emoji: "🎃",
   imagen: "/assets-opt/recurso-152.webp",
 },
 
 espantapajaros: {
-  nombre: "espantapájaros",
-  articulo: "el",
+  nombre: { es: "espantapájaros", en: "scarecrow" },
+  articulo: { es: "el", en: "the" },
   emoji: "🌾",
   imagen: "/assets-opt/recurso-153.webp",
 },
 
 ataud: {
-  nombre: "ataúd",
-  articulo: "el",
+  nombre: { es: "ataúd", en: "coffin" },
+  articulo: { es: "el", en: "the" },
   emoji: "⚰️",
   imagen: "/assets-opt/recurso-154.webp",
 },
 
 copaVampirica: {
-  nombre: "copa vampírica",
-  articulo: "la",
+  nombre: { es: "copa vampírica", en: "vampire goblet" },
+  articulo: { es: "la", en: "the" },
   emoji: "🍷",
   imagen: "/assets-opt/recurso-155.webp",
 },
@@ -2645,71 +2705,71 @@ copaVampirica: {
 ======================================================= */
 
 auriculares: {
-  nombre: "auriculares",
-  articulo: "los",
+  nombre: { es: "auriculares", en: "headphones" },
+  articulo: { es: "los", en: "the" },
   emoji: "🎧",
   imagen: "/assets-opt/recurso-156.webp",
 },
 
 patines: {
-  nombre: "patines",
-  articulo: "los",
+  nombre: { es: "patines", en: "roller skates" },
+  articulo: { es: "los", en: "the" },
   emoji: "🛼",
   imagen: "/assets-opt/recurso-157.webp",
 },
 
 cometa: {
-  nombre: "cometa",
-  articulo: "la",
+  nombre: { es: "cometa", en: "kite" },
+  articulo: { es: "la", en: "the" },
   emoji: "🪁",
   imagen: "/assets-opt/recurso-158.webp",
 },
 
 yoyo: {
-  nombre: "yo-yo",
-  articulo: "el",
+  nombre: { es: "yo-yo", en: "yo-yo" },
+  articulo: { es: "el", en: "the" },
   emoji: "🪀",
   imagen: "/assets-opt/recurso-159.webp",
 },
 
 cestaPicnic: {
-  nombre: "cesta de picnic",
-  articulo: "la",
+  nombre: { es: "cesta de picnic", en: "picnic basket" },
+  articulo: { es: "la", en: "the" },
   emoji: "🧺",
   imagen: "/assets-opt/recurso-160.webp",
 },
 
 termo: {
-  nombre: "termo",
-  articulo: "el",
+  nombre: { es: "termo", en: "thermos" },
+  articulo: { es: "el", en: "the" },
   emoji: "🧉",
   imagen: "/assets-opt/recurso-161.webp",
 },
 
 carpaCamping: {
-  nombre: "carpa de camping",
-  articulo: "la",
+  nombre: { es: "carpa de camping", en: "camping tent" },
+  articulo: { es: "la", en: "the" },
   emoji: "⛺",
   imagen: "/assets-opt/recurso-162.webp",
 },
 
 guitarra: {
-  nombre: "guitarra",
-  articulo: "la",
+  nombre: { es: "guitarra", en: "guitar" },
+  articulo: { es: "la", en: "the" },
   emoji: "🎸",
   imagen: "/assets-opt/recurso-163.webp",
 },
 
 tejido: {
-  nombre: "tejido con agujas",
-  articulo: "el",
+  nombre: { es: "tejido con agujas", en: "knitting" },
+  articulo: { es: "el", en: "the" },
   emoji: "🧶",
   imagen: "/assets-opt/recurso-164.webp",
 },
 
 tetera: {
-  nombre: "tetera",
-  articulo: "la",
+  nombre: { es: "tetera", en: "teapot" },
+  articulo: { es: "la", en: "the" },
   emoji: "🫖",
   imagen: "/assets-opt/recurso-165.webp",
 },
@@ -2759,258 +2819,259 @@ export const IMAGENES_LABERINTOS = {
    TEMÁTICAS
 ========================================================= */
 
+
 export const TEMATICAS_LABERINTOS = {
   mascotas: {
-    nombre: "Mascotas",
+    nombre: {
+      es: "Mascotas",
+      en: "Pets",
+    },
     decoracion: "🐾",
 
-    tituloBase:
-      "¡Una nueva aventura!",
+    tituloBase: {
+      es: "¡Una nueva aventura!",
+      en: "A new adventure!",
+    },
 
-    instruccionBase:
-      "Encontrá el camino correcto hasta el objetivo.",
+    instruccionBase: {
+      es: "Encuentra el camino correcto hasta el objetivo.",
+      en: "Find the correct path to the goal.",
+    },
 
-    colorPrincipal:
-      "#0F7490",
-
-    colorSecundario:
-      "#DB5685",
-
-    colorSuave:
-      "#ECFEFF",
-
-    colorTexto:
-      "#155E75",
+    colorPrincipal: "#0F7490",
+    colorSecundario: "#DB5685",
+    colorSuave: "#ECFEFF",
+    colorTexto: "#155E75",
   },
 
   oceano: {
-    nombre: "Océano",
+    nombre: {
+      es: "Océano",
+      en: "Ocean",
+    },
     decoracion: "🫧",
 
-    tituloBase:
-      "¡Aventura bajo el mar!",
+    tituloBase: {
+      es: "¡Aventura bajo el mar!",
+      en: "Underwater adventure!",
+    },
 
-    instruccionBase:
-      "Encontrá el camino correcto entre las profundidades del océano.",
+    instruccionBase: {
+      es: "Encuentra el camino correcto entre las profundidades del océano.",
+      en: "Find the correct path through the depths of the ocean.",
+    },
 
-    colorPrincipal:
-      "#0284C7",
-
-    colorSecundario:
-      "#06B6D4",
-
-    colorSuave:
-      "#ECFEFF",
-
-    colorTexto:
-      "#075985",
+    colorPrincipal: "#0284C7",
+    colorSecundario: "#06B6D4",
+    colorSuave: "#ECFEFF",
+    colorTexto: "#075985",
   },
 
   espacio: {
-    nombre: "Espacio",
+    nombre: {
+      es: "Espacio",
+      en: "Space",
+    },
     decoracion: "⭐",
 
-    tituloBase:
-      "¡Misión espacial!",
+    tituloBase: {
+      es: "¡Misión espacial!",
+      en: "Space mission!",
+    },
 
-    instruccionBase:
-      "Encontrá la ruta correcta a través del espacio.",
+    instruccionBase: {
+      es: "Encuentra la ruta correcta a través del espacio.",
+      en: "Find the correct route through space.",
+    },
 
-    colorPrincipal:
-      "#4338CA",
-
-    colorSecundario:
-      "#7C3AED",
-
-    colorSuave:
-      "#EEF2FF",
-
-    colorTexto:
-      "#312E81",
+    colorPrincipal: "#4338CA",
+    colorSecundario: "#7C3AED",
+    colorSuave: "#EEF2FF",
+    colorTexto: "#312E81",
   },
 
   montana: {
-    nombre: "Montaña",
+    nombre: {
+      es: "Montaña",
+      en: "Mountain",
+    },
     decoracion: "🌲",
 
-    tituloBase:
-      "¡Aventura en la montaña!",
+    tituloBase: {
+      es: "¡Aventura en la montaña!",
+      en: "Mountain adventure!",
+    },
 
-    instruccionBase:
-      "Encontrá el camino correcto entre senderos y naturaleza.",
+    instruccionBase: {
+      es: "Encuentra el camino correcto entre senderos y naturaleza.",
+      en: "Find the correct path through trails and nature.",
+    },
 
-    colorPrincipal:
-      "#15803D",
-
-    colorSecundario:
-      "#65A30D",
-
-    colorSuave:
-      "#F0FDF4",
-
-    colorTexto:
-      "#166534",
+    colorPrincipal: "#15803D",
+    colorSecundario: "#65A30D",
+    colorSuave: "#F0FDF4",
+    colorTexto: "#166534",
   },
 
   piratas: {
-    nombre: "Piratas",
+    nombre: {
+      es: "Piratas",
+      en: "Pirates",
+    },
     decoracion: "☠️",
 
-    tituloBase:
-      "¡Aventura pirata!",
+    tituloBase: {
+      es: "¡Aventura pirata!",
+      en: "Pirate adventure!",
+    },
 
-    instruccionBase:
-      "Encontrá la ruta correcta hasta el objetivo pirata.",
+    instruccionBase: {
+      es: "Encuentra la ruta correcta hasta el objetivo pirata.",
+      en: "Find the correct route to the pirate goal.",
+    },
 
-    colorPrincipal:
-      "#334155",
-
-    colorSecundario:
-      "#B45309",
-
-    colorSuave:
-      "#FFF7ED",
-
-    colorTexto:
-      "#431407",
+    colorPrincipal: "#334155",
+    colorSecundario: "#B45309",
+    colorSuave: "#FFF7ED",
+    colorTexto: "#431407",
   },
 
   castillos: {
-    nombre: "Castillos",
+    nombre: {
+      es: "Castillos",
+      en: "Castles",
+    },
     decoracion: "✨",
 
-    tituloBase:
-      "¡Misión en el castillo!",
+    tituloBase: {
+      es: "¡Misión en el castillo!",
+      en: "Castle mission!",
+    },
 
-    instruccionBase:
-      "Encontrá el camino correcto entre torres y pasadizos.",
+    instruccionBase: {
+      es: "Encuentra el camino correcto entre torres y pasadizos.",
+      en: "Find the correct path through towers and passageways.",
+    },
 
-    colorPrincipal:
-      "#7C3AED",
-
-    colorSecundario:
-      "#DB2777",
-
-    colorSuave:
-      "#FAF5FF",
-
-    colorTexto:
-      "#581C87",
+    colorPrincipal: "#7C3AED",
+    colorSecundario: "#DB2777",
+    colorSuave: "#FAF5FF",
+    colorTexto: "#581C87",
   },
 
   dinosaurios: {
-    nombre: "Dinosaurios",
+    nombre: {
+      es: "Dinosaurios",
+      en: "Dinosaurs",
+    },
     decoracion: "🦖",
 
-    tituloBase:
-      "¡Aventura jurásica!",
+    tituloBase: {
+      es: "¡Aventura jurásica!",
+      en: "Jurassic adventure!",
+    },
 
-    instruccionBase:
-      "Encontrá el camino correcto en tierra de dinosaurios.",
+    instruccionBase: {
+      es: "Encuentra el camino correcto en tierra de dinosaurios.",
+      en: "Find the correct path through the land of dinosaurs.",
+    },
 
-    colorPrincipal:
-      "#166534",
-
-    colorSecundario:
-      "#78716C",
-
-    colorSuave:
-      "#F0FDF4",
-
-    colorTexto:
-      "#14532D",
+    colorPrincipal: "#166534",
+    colorSecundario: "#78716C",
+    colorSuave: "#F0FDF4",
+    colorTexto: "#14532D",
   },
 
   viajes: {
-    nombre: "Viajes",
+    nombre: {
+      es: "Viajes",
+      en: "Travel",
+    },
     decoracion: "🧭",
 
-    tituloBase:
-      "¡Comienza el viaje!",
+    tituloBase: {
+      es: "¡Comienza el viaje!",
+      en: "The journey begins!",
+    },
 
-    instruccionBase:
-      "Encontrá la ruta correcta para continuar la aventura.",
+    instruccionBase: {
+      es: "Encuentra la ruta correcta para continuar la aventura.",
+      en: "Find the correct route to continue the adventure.",
+    },
 
-    colorPrincipal:
-      "#0369A1",
-
-    colorSecundario:
-      "#EA580C",
-
-    colorSuave:
-      "#F0F9FF",
-
-    colorTexto:
-      "#0C4A6E",
+    colorPrincipal: "#0369A1",
+    colorSecundario: "#EA580C",
+    colorSuave: "#F0F9FF",
+    colorTexto: "#0C4A6E",
   },
 
   navidad: {
-    nombre: "Navidad",
+    nombre: {
+      es: "Navidad",
+      en: "Christmas",
+    },
     decoracion: "❄️",
 
-    tituloBase:
-      "¡Misión navideña!",
+    tituloBase: {
+      es: "¡Misión navideña!",
+      en: "Christmas mission!",
+    },
 
-    instruccionBase:
-      "Encontrá el camino correcto en esta aventura de Navidad.",
+    instruccionBase: {
+      es: "Encuentra el camino correcto en esta aventura de Navidad.",
+      en: "Find the correct path in this Christmas adventure.",
+    },
 
-    colorPrincipal:
-      "#B91C1C",
-
-    colorSecundario:
-      "#15803D",
-
-    colorSuave:
-      "#FEF2F2",
-
-    colorTexto:
-      "#7F1D1D",
+    colorPrincipal: "#B91C1C",
+    colorSecundario: "#15803D",
+    colorSuave: "#FEF2F2",
+    colorTexto: "#7F1D1D",
   },
 
   halloween: {
-    nombre: "Halloween",
+    nombre: {
+      es: "Halloween",
+      en: "Halloween",
+    },
     decoracion: "🎃",
 
-    tituloBase:
-      "¡Aventura de Halloween!",
+    tituloBase: {
+      es: "¡Aventura de Halloween!",
+      en: "Halloween adventure!",
+    },
 
-    instruccionBase:
-      "Encontrá el camino correcto entre sorpresas y misterios.",
+    instruccionBase: {
+      es: "Encuentra el camino correcto entre sorpresas y misterios.",
+      en: "Find the correct path through surprises and mysteries.",
+    },
 
-    colorPrincipal:
-      "#7E22CE",
-
-    colorSecundario:
-      "#EA580C",
-
-    colorSuave:
-      "#FAF5FF",
-
-    colorTexto:
-      "#581C87",
+    colorPrincipal: "#7E22CE",
+    colorSecundario: "#EA580C",
+    colorSuave: "#FAF5FF",
+    colorTexto: "#581C87",
   },
 
   familia: {
-    nombre: "Familia",
+    nombre: {
+      es: "Familia",
+      en: "Family",
+    },
     decoracion: "❤️",
 
-    tituloBase:
-      "¡Una misión especial!",
+    tituloBase: {
+      es: "¡Una misión especial!",
+      en: "A special mission!",
+    },
 
-    instruccionBase:
-      "Encontrá el camino correcto hasta el objetivo.",
+    instruccionBase: {
+      es: "Encuentra el camino correcto hasta el objetivo.",
+      en: "Find the correct path to the goal.",
+    },
 
-    colorPrincipal:
-      "#DB2777",
-
-    colorSecundario:
-      "#EA580C",
-
-    colorSuave:
-      "#FFF1F2",
-
-    colorTexto:
-      "#9F1239",
+    colorPrincipal: "#DB2777",
+    colorSecundario: "#EA580C",
+    colorSuave: "#FFF1F2",
+    colorTexto: "#9F1239",
   },
 };
 
@@ -3140,11 +3201,9 @@ export function obtenerObjetosPorPersonaje(tema, personaje) {
 
 export const AVENTURAS_LABERINTOS = [
   {
-    tema:
-      "mascotas",
+    tema: "mascotas",
 
-    personaje:
-      "toby",
+    personaje: "toby",
 
     nombrePersonaje:
       PERSONAJES_LABERINTOS.toby.nombre,
@@ -3158,25 +3217,26 @@ export const AVENTURAS_LABERINTOS = [
     decoracion:
       PERSONAJES_LABERINTOS.toby.decoracion,
 
-    objeto:
-      "pelota",
+    objeto: "pelota",
 
     emojiObjeto:
       OBJETOS_LABERINTOS.pelota.emoji,
 
-    titulo:
-      "¡Toby busca su pelota!",
+    titulo: {
+      es: "¡Toby busca su pelota!",
+      en: "Toby is looking for his ball!",
+    },
 
-    instrucciones:
-      "Ayudá a Toby a encontrar el camino hasta su pelota.",
+    instrucciones: {
+      es: "Ayuda a Toby a encontrar el camino hasta su pelota.",
+      en: "Help Toby find the way to his ball.",
+    },
   },
 
   {
-    tema:
-      "mascotas",
+    tema: "mascotas",
 
-    personaje:
-      "luna",
+    personaje: "luna",
 
     nombrePersonaje:
       PERSONAJES_LABERINTOS.luna.nombre,
@@ -3190,25 +3250,26 @@ export const AVENTURAS_LABERINTOS = [
     decoracion:
       PERSONAJES_LABERINTOS.luna.decoracion,
 
-    objeto:
-      "ovillo",
+    objeto: "ovillo",
 
     emojiObjeto:
       OBJETOS_LABERINTOS.ovillo.emoji,
 
-    titulo:
-      "¡Luna busca su ovillo!",
+    titulo: {
+      es: "¡Luna busca su ovillo!",
+      en: "Luna is looking for her ball of yarn!",
+    },
 
-    instrucciones:
-      "Luna perdió su ovillo. ¿Podés ayudarla a encontrarlo?",
+    instrucciones: {
+      es: "Luna perdió su ovillo. ¿Puedes ayudarla a encontrarlo?",
+      en: "Luna lost her ball of yarn. Can you help her find it?",
+    },
   },
 
   {
-    tema:
-      "mascotas",
+    tema: "mascotas",
 
-    personaje:
-      "toby",
+    personaje: "toby",
 
     nombrePersonaje:
       PERSONAJES_LABERINTOS.toby.nombre,
@@ -3222,25 +3283,26 @@ export const AVENTURAS_LABERINTOS = [
     decoracion:
       PERSONAJES_LABERINTOS.toby.decoracion,
 
-    objeto:
-      "hueso",
+    objeto: "hueso",
 
     emojiObjeto:
       OBJETOS_LABERINTOS.hueso.emoji,
 
-    titulo:
-      "¡Toby quiere su hueso!",
+    titulo: {
+      es: "¡Toby quiere su hueso!",
+      en: "Toby wants his bone!",
+    },
 
-    instrucciones:
-      "Encontrá el camino correcto para que Toby llegue hasta su hueso.",
+    instrucciones: {
+      es: "Encuentra el camino correcto para que Toby llegue hasta su hueso.",
+      en: "Find the correct path so Toby can reach his bone.",
+    },
   },
 
   {
-    tema:
-      "mascotas",
+    tema: "mascotas",
 
-    personaje:
-      "luna",
+    personaje: "luna",
 
     nombrePersonaje:
       PERSONAJES_LABERINTOS.luna.nombre,
@@ -3254,25 +3316,26 @@ export const AVENTURAS_LABERINTOS = [
     decoracion:
       PERSONAJES_LABERINTOS.luna.decoracion,
 
-    objeto:
-  "ratonJuguete",
+    objeto: "ratonJuguete",
 
-emojiObjeto:
-  OBJETOS_LABERINTOS.ratonJuguete.emoji,
+    emojiObjeto:
+      OBJETOS_LABERINTOS.ratonJuguete.emoji,
 
-titulo:
-  "¡Luna encontró un nuevo juego!",
+    titulo: {
+      es: "¡Luna encontró un nuevo juego!",
+      en: "Luna found a new toy!",
+    },
 
-instrucciones:
-  "Ayudá a Luna a encontrar el camino hasta su ratón de juguete.",
+    instrucciones: {
+      es: "Ayuda a Luna a encontrar el camino hasta su ratón de juguete.",
+      en: "Help Luna find the way to her toy mouse.",
+    },
   },
 
   {
-    tema:
-      "mascotas",
+    tema: "mascotas",
 
-    personaje:
-      "toby",
+    personaje: "toby",
 
     nombrePersonaje:
       PERSONAJES_LABERINTOS.toby.nombre,
@@ -3286,25 +3349,26 @@ instrucciones:
     decoracion:
       PERSONAJES_LABERINTOS.toby.decoracion,
 
-  objeto:
-    "pelota",
+    objeto: "pelota",
 
-  emojiObjeto:
-    OBJETOS_LABERINTOS.pelota.emoji,
+    emojiObjeto:
+      OBJETOS_LABERINTOS.pelota.emoji,
 
-  titulo:
-    "¡A buscar la pelota!",
+    titulo: {
+      es: "¡A buscar la pelota!",
+      en: "Let's find the ball!",
+    },
 
-  instrucciones:
-    "Toby quiere recuperar su pelota. ¿Podés mostrarle el camino?",
+    instrucciones: {
+      es: "Toby quiere recuperar su pelota. ¿Puedes mostrarle el camino?",
+      en: "Toby wants to get his ball back. Can you show him the way?",
+    },
   },
 
   {
-    tema:
-      "mascotas",
+    tema: "mascotas",
 
-    personaje:
-      "luna",
+    personaje: "luna",
 
     nombrePersonaje:
       PERSONAJES_LABERINTOS.luna.nombre,
@@ -3318,18 +3382,21 @@ instrucciones:
     decoracion:
       PERSONAJES_LABERINTOS.luna.decoracion,
 
-    objeto:
-  "ovillo",
+    objeto: "ovillo",
 
-emojiObjeto:
-  OBJETOS_LABERINTOS.ovillo.emoji,
+    emojiObjeto:
+      OBJETOS_LABERINTOS.ovillo.emoji,
 
-titulo:
-  "¡Luna busca su ovillo!",
+    titulo: {
+      es: "¡Luna busca su ovillo!",
+      en: "Luna is looking for her ball of yarn!",
+    },
 
-instrucciones:
-  "Encontrá el camino correcto para que Luna llegue hasta su ovillo de lana.",
-},
+    instrucciones: {
+      es: "Encuentra el camino correcto para que Luna llegue hasta su ovillo de lana.",
+      en: "Find the correct path so Luna can reach her ball of yarn.",
+    },
+  },
 ];
 
 /* =========================================================
@@ -3394,14 +3461,15 @@ function generarTextoAventura({
   personaje,
   articulo,
   objeto,
+  idiomaProducto = "es",
 }) {
-  const variantes = [
+  const variantesES = [
     {
       titulo:
         `¡${personaje} busca ${articulo} ${objeto}!`,
 
       instrucciones:
-        `Ayudá a ${personaje} a encontrar el camino hasta ${articulo} ${objeto}.`,
+        `Ayuda a ${personaje} a encontrar el camino hasta ${articulo} ${objeto}.`,
     },
 
     {
@@ -3409,7 +3477,7 @@ function generarTextoAventura({
         `¡${personaje} tiene una misión!`,
 
       instrucciones:
-        `${personaje} necesita llegar hasta ${articulo} ${objeto}. Encontrá el camino correcto.`,
+        `${personaje} necesita llegar hasta ${articulo} ${objeto}. Encuentra el camino correcto.`,
     },
 
     {
@@ -3417,7 +3485,7 @@ function generarTextoAventura({
         `¡A encontrar ${articulo} ${objeto}!`,
 
       instrucciones:
-        `Mostrale a ${personaje} qué camino debe seguir para llegar hasta ${articulo} ${objeto}.`,
+        `Muéstrale a ${personaje} qué camino debe seguir para llegar hasta ${articulo} ${objeto}.`,
     },
 
     {
@@ -3425,7 +3493,7 @@ function generarTextoAventura({
         `¡Una nueva aventura para ${personaje}!`,
 
       instrucciones:
-        `Encontrá la ruta correcta para que ${personaje} llegue hasta ${articulo} ${objeto}.`,
+        `Encuentra la ruta correcta para que ${personaje} llegue hasta ${articulo} ${objeto}.`,
     },
 
     {
@@ -3433,7 +3501,7 @@ function generarTextoAventura({
         `¡${personaje} va por ${articulo} ${objeto}!`,
 
       instrucciones:
-        `Recorré el laberinto y ayudá a ${personaje} a alcanzar ${articulo} ${objeto}.`,
+        `Recorre el laberinto y ayuda a ${personaje} a alcanzar ${articulo} ${objeto}.`,
     },
 
     {
@@ -3441,13 +3509,67 @@ function generarTextoAventura({
         `¡El desafío de ${personaje}!`,
 
       instrucciones:
-        `${personaje} quiere encontrar ${articulo} ${objeto}. ¿Podés descubrir el camino correcto?`,
+        `${personaje} quiere encontrar ${articulo} ${objeto}. ¿Puedes descubrir el camino correcto?`,
     },
   ];
 
+  const variantesEN = [
+    {
+      titulo:
+        `${personaje} is looking for the ${objeto}!`,
+
+      instrucciones:
+        `Help ${personaje} find the way to the ${objeto}.`,
+    },
+
+    {
+      titulo:
+        `${personaje} has a mission!`,
+
+      instrucciones:
+        `${personaje} needs to reach the ${objeto}. Find the correct path.`,
+    },
+
+    {
+      titulo:
+        `Find the ${objeto}!`,
+
+      instrucciones:
+        `Show ${personaje} which path to follow to reach the ${objeto}.`,
+    },
+
+    {
+      titulo:
+        `A new adventure for ${personaje}!`,
+
+      instrucciones:
+        `Find the correct route so ${personaje} can reach the ${objeto}.`,
+    },
+
+    {
+      titulo:
+        `${personaje} is going for the ${objeto}!`,
+
+      instrucciones:
+        `Go through the maze and help ${personaje} reach the ${objeto}.`,
+    },
+
+    {
+      titulo:
+        `${personaje}'s challenge!`,
+
+      instrucciones:
+        `${personaje} wants to find the ${objeto}. Can you discover the correct path?`,
+    },
+  ];
+
+  const variantes =
+    idiomaProducto === "en"
+      ? variantesEN
+      : variantesES;
+
   return variantes[
-    indice %
-      variantes.length
+    indice % variantes.length
   ];
 }
 
@@ -3745,6 +3867,8 @@ export function obtenerAventuraLaberinto(
       "rotativo",
 
     semilla = 1,
+
+idiomaProducto = "es",
   } = opciones;
 
   /* =======================================================
@@ -3774,34 +3898,44 @@ export function obtenerAventuraLaberinto(
      SELECCIÓN GENERAL DE OBJETIVO
   ======================================================== */
 
-  const idObjeto =
-    seleccionarObjetivoLaberinto({
-      tema,
+const idObjeto =
+  seleccionarObjetivoLaberinto({
+    tema,
 
-      personajeId,
+    personajeId,
 
-      objetivoSeleccionado,
+    objetivoSeleccionado,
 
-      modoObjetivo,
+    modoObjetivo,
 
-      indice:
-        indiceSeguro,
+    indice:
+      indiceSeguro,
 
-      semilla,
-    });
+    semilla,
+  });
 
-  const objeto =
-    OBJETOS_LABERINTOS[
-      idObjeto
-    ];
+const objeto =
+  OBJETOS_LABERINTOS[
+    idObjeto
+  ];
 
-  const nombreObjeto =
-    objeto?.nombre ||
-    "objetivo";
+const nombreObjeto =
+  typeof objeto?.nombre === "object"
+    ? objeto.nombre[idiomaProducto] ||
+      objeto.nombre.es
+    : objeto?.nombre ||
+      (idiomaProducto === "en"
+        ? "goal"
+        : "objetivo");
 
-  const articuloObjeto =
-    objeto?.articulo ||
-    "el";
+const articuloObjeto =
+  typeof objeto?.articulo === "object"
+    ? objeto.articulo[idiomaProducto] ||
+      objeto.articulo.es
+    : objeto?.articulo ||
+      (idiomaProducto === "en"
+        ? "the"
+        : "el");
 
   /* =======================================================
      MASCOTAS
@@ -3832,16 +3966,17 @@ export function obtenerAventuraLaberinto(
       idObjeto ===
         aventuraBase.objeto;
 
-    const textoAventura =
-      mismaAventura
-        ? {
-            titulo:
-              aventuraBase.titulo,
+          const textoAventura = mismaAventura
+          ? {
+              titulo:
+                aventuraBase.titulo[idiomaProducto] ||
+                aventuraBase.titulo.es,
 
-            instrucciones:
-              aventuraBase.instrucciones,
-          }
-        : generarTextoAventura({
+              instrucciones:
+                aventuraBase.instrucciones[idiomaProducto] ||
+                aventuraBase.instrucciones.es,
+            }
+          : generarTextoAventura({
             indice:
               indiceSeguro,
 
@@ -3853,6 +3988,8 @@ export function obtenerAventuraLaberinto(
 
             objeto:
               nombreObjeto,
+
+          idiomaProducto,
           });
 
     return {
@@ -3876,6 +4013,8 @@ export function obtenerAventuraLaberinto(
 
       objeto:
         idObjeto,
+
+      idiomaProducto,
 
       emojiObjeto:
         objeto?.emoji ||

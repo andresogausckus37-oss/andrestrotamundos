@@ -290,8 +290,6 @@ await esperarFrames(1);
 
         skipFonts: true,
 
-    
-
         style: {
           width:
             `${ANCHO_A4_PX}px`,

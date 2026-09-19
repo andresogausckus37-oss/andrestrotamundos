@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-
 import CalificacionProducto from "../componentes/CalificacionProducto";
 
 import {
@@ -19,6 +18,11 @@ import { productosDigitales } from "../datos/productosDigitales";
 
 import { useIdioma } from "../contextos/IdiomaContext";
 import { traducciones } from "../datos/traducciones";
+import { useMoneda } from "../contextos/MonedaContext";
+import {
+  convertirPrecio,
+  formatearMoneda,
+} from "../utilidades/monedas";
 
 /* =========================================================
    TIENDA
@@ -30,6 +34,12 @@ const Tienda = () => {
   const { idioma } = useIdioma();
   const t = traducciones[idioma].tienda;
 
+const {
+  moneda,
+  cotizaciones,
+  cargandoCotizaciones,
+} = useMoneda();
+  
   const [filtroActivo, setFiltroActivo] =
     useState("todos");
 
@@ -43,19 +53,30 @@ const Tienda = () => {
      FORMATEAR PRECIO
   ======================================================= */
 
-  const formatearPrecio = (precio) => {
-    if (!precio) {
-      return t.precioDefinir;
+  const formatearPrecio = (precioARS) => {
+    if (!precioARS) {
+      return idioma === "es"
+        ? "Precio a definir"
+        : "Price to be determined";
     }
 
-    return new Intl.NumberFormat(
-      idioma === "es" ? "es-AR" : "en-US",
-      {
-        style: "currency",
-        currency: "ARS",
-        maximumFractionDigits: 0,
-      }
-    ).format(precio);
+    if (
+      moneda !== "ARS" &&
+      cargandoCotizaciones
+    ) {
+      return "...";
+    }
+
+    const precioConvertido = convertirPrecio(
+      precioARS,
+      moneda,
+      cotizaciones
+    );
+
+    return formatearMoneda(
+      precioConvertido,
+      moneda
+    );
   };
 
   /* =======================================================
