@@ -2617,16 +2617,19 @@ pixelRatio: 1.25,
     </option>
 
     {objetivosDisponibles.map(
-      (item) => (
-        <option
-          key={item.id}
-          value={item.id}
-        >
-          {item.emoji}{" "}
-          {item.nombre}
-        </option>
-      )
-    )}
+  (item) => (
+    <option
+      key={item.id}
+      value={item.id}
+    >
+      {item.emoji}{" "}
+      {typeof item.nombre === "object"
+        ? item.nombre[idiomaProducto] ||
+          item.nombre.es
+        : item.nombre}
+    </option>
+  )
+)}
   </select>
 </div>
 

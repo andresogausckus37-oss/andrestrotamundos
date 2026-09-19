@@ -115,7 +115,7 @@
       ],
 
       assets: {
-        principal: "/assets-opt/recurso-003.webp",
+        principal: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/personajes/luna",
         avatar: "",
         movimiento: "",
         habilidad: "",
