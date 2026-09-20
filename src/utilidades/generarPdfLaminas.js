@@ -1,328 +1,324 @@
-import jsPDF from "jspdf";
-import { toJpeg } from "html-to-image";
+import { PDFDocument, rgb } from "pdf-lib";
 
 /* =========================================================
    CONFIGURACIÓN A4
 ========================================================= */
 
-const ANCHO_A4_PX = 794;
-const ALTO_A4_PX = 1123;
-
-const ANCHO_A4_MM = 210;
-const ALTO_A4_MM = 297;
+const ANCHO_A4 = 595.28;
+const ALTO_A4 = 841.89;
 
 /* =========================================================
-   ESPERAR FRAMES
+   DESCARGAR ARCHIVO
 ========================================================= */
 
-function esperarFrames(cantidad = 2) {
-  return new Promise((resolve) => {
-    let frameActual = 0;
+async function descargarBytes(url, nombreRecurso) {
+  if (!url || typeof url !== "string") {
+    throw new Error(
+      `No se encontró ${nombreRecurso}.`
+    );
+  }
 
-    function siguienteFrame() {
-      frameActual += 1;
+  const respuesta = await fetch(url);
 
-      if (frameActual >= cantidad) {
-        resolve();
-        return;
-      }
+  if (!respuesta.ok) {
+    throw new Error(
+      `No se pudo descargar ${nombreRecurso}.`
+    );
+  }
 
-      requestAnimationFrame(siguienteFrame);
+  const buffer = await respuesta.arrayBuffer();
+
+  return new Uint8Array(buffer);
+}
+
+/* =========================================================
+   DETECTAR TIPO DE IMAGEN
+========================================================= */
+
+function detectarTipoImagen(bytes) {
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return "png";
+  }
+
+  if (
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff
+  ) {
+    return "jpg";
+  }
+
+  throw new Error(
+    "La imagen debe estar en formato PNG o JPG."
+  );
+}
+
+/* =========================================================
+   AGREGAR IMAGEN COMO PÁGINA A4
+========================================================= */
+
+async function agregarImagenA4(
+  documento,
+  url,
+  nombreRecurso
+) {
+  const bytes = await descargarBytes(
+    url,
+    nombreRecurso
+  );
+
+  const tipo = detectarTipoImagen(bytes);
+
+  const imagen =
+    tipo === "png"
+      ? await documento.embedPng(bytes)
+      : await documento.embedJpg(bytes);
+
+  const pagina = documento.addPage([
+    ANCHO_A4,
+    ALTO_A4,
+  ]);
+
+  const escala = Math.min(
+    ANCHO_A4 / imagen.width,
+    ALTO_A4 / imagen.height
+  );
+
+  const ancho = imagen.width * escala;
+  const alto = imagen.height * escala;
+
+  const x = (ANCHO_A4 - ancho) / 2;
+  const y = (ALTO_A4 - alto) / 2;
+
+  pagina.drawImage(imagen, {
+    x,
+    y,
+    width: ancho,
+    height: alto,
+  });
+
+  return pagina;
+}
+
+/* =========================================================
+   AGREGAR LOGO
+========================================================= */
+
+async function prepararLogo(
+  documento,
+  logoUrl
+) {
+  if (!logoUrl) {
+    return null;
+  }
+
+  try {
+    const bytes = await descargarBytes(
+      logoUrl,
+      "el logo"
+    );
+
+    const tipo = detectarTipoImagen(bytes);
+
+    if (tipo === "png") {
+      return await documento.embedPng(bytes);
     }
 
-    requestAnimationFrame(siguienteFrame);
+    return await documento.embedJpg(bytes);
+  } catch (error) {
+    console.warn(
+      "No se pudo agregar el logo:",
+      error
+    );
+
+    return null;
+  }
+}
+
+function dibujarLogo(
+  pagina,
+  logo
+) {
+  if (!pagina || !logo) {
+    return;
+  }
+
+  const anchoLogo = 72;
+
+  const escala =
+    anchoLogo / logo.width;
+
+  const altoLogo =
+    logo.height * escala;
+
+  const margenDerecho = 18;
+  const margenSuperior = 18;
+
+  const {
+    width: anchoPagina,
+    height: altoPagina,
+  } = pagina.getSize();
+
+  pagina.drawImage(logo, {
+    x:
+      anchoPagina -
+      anchoLogo -
+      margenDerecho,
+
+    y:
+      altoPagina -
+      altoLogo -
+      margenSuperior,
+
+    width: anchoLogo,
+    height: altoLogo,
   });
 }
 
 /* =========================================================
-   ESPERAR IMÁGENES
+   COBERTURA INFERIOR
 ========================================================= */
 
-async function esperarImagenes(elemento) {
-  if (!elemento) {
+function aplicarCoberturaInferior(
+  pagina,
+  cobertura
+) {
+  if (!cobertura?.activa) {
     return;
   }
 
-  const imagenes = Array.from(
-    elemento.querySelectorAll("img")
+  const {
+    width: anchoPagina,
+    height: altoPagina,
+  } = pagina.getSize();
+
+  // Los controles del editor están expresados en mm.
+  // pdf-lib trabaja en puntos.
+  const MM_A_PUNTOS = 72 / 25.4;
+
+  const anchoSolicitado =
+    Number(cobertura.ancho || 0) *
+    MM_A_PUNTOS;
+
+  const alturaSolicitada =
+    Number(cobertura.altura || 0) *
+    MM_A_PUNTOS;
+
+  const posicionDesdeAbajo =
+    Number(cobertura.posicion || 0) *
+    MM_A_PUNTOS;
+
+  const ancho = Math.min(
+    anchoSolicitado,
+    anchoPagina
   );
 
-  if (imagenes.length === 0) {
-    return;
-  }
-
-  await Promise.all(
-    imagenes.map((imagen) => {
-      if (
-        imagen.complete &&
-        imagen.naturalWidth > 0
-      ) {
-        return Promise.resolve();
-      }
-
-      return new Promise((resolve) => {
-        let terminado = false;
-
-        function terminar() {
-          if (terminado) {
-            return;
-          }
-
-          terminado = true;
-
-          imagen.removeEventListener(
-            "load",
-            terminar
-          );
-
-          imagen.removeEventListener(
-            "error",
-            terminar
-          );
-
-          resolve();
-        }
-
-        imagen.addEventListener(
-          "load",
-          terminar
-        );
-
-        imagen.addEventListener(
-          "error",
-          terminar
-        );
-
-        setTimeout(
-          terminar,
-          5000
-        );
-      });
-    })
+  const altura = Math.min(
+    alturaSolicitada,
+    altoPagina
   );
+
+  const x =
+    (anchoPagina - ancho) / 2;
+
+  const y = Math.min(
+    posicionDesdeAbajo,
+    Math.max(0, altoPagina - altura)
+  );
+
+pagina.drawRectangle({
+  x,
+  y,
+  width: ancho,
+  height: altura,
+  color: rgb(1, 1, 1),
+});
 }
 
 /* =========================================================
-   ESPERAR FUENTES
+   AGREGAR PDF EXTERNO
 ========================================================= */
 
-async function esperarFuentes() {
-  try {
-    if (document.fonts?.ready) {
-      await document.fonts.ready;
+async function agregarPdfExterno(
+  documentoFinal,
+  archivo,
+  logo,
+  coberturaInferior
+) {
+  const buffer =
+    await archivo.arrayBuffer();
+
+  const documentoOrigen =
+    await PDFDocument.load(buffer);
+
+  const indices =
+    documentoOrigen.getPageIndices();
+
+  const paginas =
+    await documentoFinal.copyPages(
+      documentoOrigen,
+      indices
+    );
+
+  for (const pagina of paginas) {
+  documentoFinal.addPage(pagina);
+
+  aplicarCoberturaInferior(
+    pagina,
+    coberturaInferior
+  );
+
+  dibujarLogo(
+    pagina,
+    logo
+  );
+  }
+
+  return paginas.length;
+}
+
+/* =========================================================
+   DESCARGAR PDF FINAL
+========================================================= */
+
+function descargarPdf(
+  bytes,
+  nombreArchivo
+) {
+  const blob = new Blob(
+    [bytes],
+    {
+      type: "application/pdf",
     }
-  } catch (error) {
-    console.warn(
-      "No se pudieron verificar las fuentes:",
-      error
-    );
-  }
-}
+  );
 
-/* =========================================================
-   PRECARGAR RECURSOS
-========================================================= */
+  const url =
+    URL.createObjectURL(blob);
 
-async function precargarRecursos(
-  recursos = [],
-  alActualizarProgreso
-) {
-  const urls = [
-    ...new Set(
-      recursos.filter(
-        (url) =>
-          typeof url === "string" &&
-          url.trim() !== ""
-      )
-    ),
-  ];
+  const enlace =
+    document.createElement("a");
 
-  if (urls.length === 0) {
-    return;
-  }
+  enlace.href = url;
 
-  let cargados = 0;
+  enlace.download =
+    nombreArchivo;
 
-  for (const url of urls) {
-    await new Promise((resolve) => {
-      const imagen = new Image();
+  document.body.appendChild(
+    enlace
+  );
 
-      let terminado = false;
+  enlace.click();
 
-      function terminar() {
-        if (terminado) {
-          return;
-        }
+  enlace.remove();
 
-        terminado = true;
-
-        imagen.onload = null;
-        imagen.onerror = null;
-
-        cargados += 1;
-
-        if (
-          typeof alActualizarProgreso ===
-          "function"
-        ) {
-          alActualizarProgreso({
-            fase: "recursos",
-            actual: cargados,
-            total: urls.length,
-            porcentaje: Math.round(
-              (cargados / urls.length) * 100
-            ),
-          });
-        }
-
-        resolve();
-      }
-
-      imagen.onload = terminar;
-      imagen.onerror = terminar;
-
-      imagen.src = url;
-
-      setTimeout(
-        terminar,
-        10000
-      );
-    });
-  }
-}
-
-/* =========================================================
-   DATA URL → UINT8ARRAY
-========================================================= */
-
-function dataUrlAUint8Array(dataUrl) {
-  const base64 =
-    dataUrl.split(",")[1];
-
-  const binario =
-    atob(base64);
-
-  const bytes =
-    new Uint8Array(
-      binario.length
-    );
-
-  for (
-    let i = 0;
-    i < binario.length;
-    i += 1
-  ) {
-    bytes[i] =
-      binario.charCodeAt(i);
-  }
-
-  return bytes;
-}
-
-/* =========================================================
-   CAPTURAR LÁMINA
-========================================================= */
-
-async function capturarLamina(
-  elemento,
-  {
-    calidad = 0.90,
-    pixelRatio = 1.25,
-  } = {}
-) {
-  if (!elemento) {
-    throw new Error(
-      "No se encontró la lámina para capturar."
-    );
-  }
-
-  /* -------------------------
-     Esperar imágenes
-  ------------------------- */
-
-  const inicioImagenes =
-    performance.now();
-
-  /*
-await esperarImagenes(
-  elemento
-);
-*/
-
-  const finImagenes =
-    performance.now();
-
-  /* -------------------------
-     Esperar render
-  ------------------------- */
-
-  
-await esperarFrames(1);
-
-
-  /* -------------------------
-     DOM → JPEG
-  ------------------------- */
-
-  const inicioToJpeg =
-    performance.now();
-
-  const resultado =
-    await toJpeg(
-      elemento,
-      {
-        quality:
-          calidad,
-
-        pixelRatio,
-
-        width:
-          ANCHO_A4_PX,
-
-        height:
-          ALTO_A4_PX,
-
-        backgroundColor:
-          "#ffffff",
-
-        cacheBust:
-          false,
-
-        skipFonts: true,
-
-        style: {
-          width:
-            `${ANCHO_A4_PX}px`,
-
-          height:
-            `${ALTO_A4_PX}px`,
-
-          transform:
-            "none",
-
-          transformOrigin:
-            "top left",
-        },
-      }
-    );
-
-  const finToJpeg =
-    performance.now();
-
-  return {
-    dataUrl:
-      resultado,
-
-    tiempos: {
-      imagenes:
-        finImagenes -
-        inicioImagenes,
-
-      toJpeg:
-        finToJpeg -
-        inicioToJpeg,
-    },
-  };
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 /* =========================================================
@@ -330,326 +326,235 @@ await esperarFrames(1);
 ========================================================= */
 
 export async function generarPdfLaminas({
-  totalPaginas,
+  imagenPortada = "",
 
-  cambiarPagina,
+  imagenFinal = "",
 
-  obtenerElemento,
+  archivosPdf = [],
 
-  recursosPrecargar = [],
+  logoUrl = "",
+
+  coberturaInferior = {
+  activa: false,
+  posicion: 18,
+  altura: 22,
+  ancho: 220,
+},
 
   nombreArchivo =
-  "Andres-Imprimibles-Laberintos.pdf",
-
-  calidad = 0.90,
-
-  pixelRatio = 1.25,
-
-  paginaOriginal = 0,
+    "Andres-Imprimibles.pdf",
 
   alActualizarProgreso,
-
-  alActualizarDiagnostico,
 }) {
   /* =======================================================
      VALIDACIONES
   ======================================================= */
 
   if (
-    !Number.isInteger(
-      totalPaginas
-    ) ||
-    totalPaginas < 1
+    !Array.isArray(archivosPdf) ||
+    archivosPdf.length === 0
   ) {
     throw new Error(
-      "No hay páginas para exportar."
-    );
-  }
-
-  if (
-    typeof cambiarPagina !==
-    "function"
-  ) {
-    throw new Error(
-      "Falta la función cambiarPagina."
-    );
-  }
-
-  if (
-    typeof obtenerElemento !==
-    "function"
-  ) {
-    throw new Error(
-      "Falta la función obtenerElemento."
+      "No hay PDFs para unir."
     );
   }
 
   /* =======================================================
-     CREAR PDF
+     CREAR DOCUMENTO
   ======================================================= */
 
-  const pdf =
-    new jsPDF({
-      orientation:
-        "portrait",
+  const documentoFinal =
+    await PDFDocument.create();
 
-      unit:
-        "mm",
+  /* =======================================================
+     CALCULAR TOTAL DE PÁGINAS
+  ======================================================= */
 
-      format:
-        "a4",
+  let totalPaginasPdf = 0;
 
-      compress:
-        true,
-    });
-
-  const diagnostico = [];
-
-  try {
-    /* =====================================================
-       PRECARGAR RECURSOS
-    ===================================================== */
-
-    await esperarFuentes();
-
-    await precargarRecursos(
-      recursosPrecargar,
-      alActualizarProgreso
-    );
-
-    await esperarFrames(2);
-
-    /* =====================================================
-       RECORRER PÁGINAS
-    ===================================================== */
-
-    for (
-      let indice = 0;
-      indice < totalPaginas;
-      indice += 1
-    ) {
-      /* -------------------------
-         Inicio tiempo real
-      ------------------------- */
-
-      const inicioTotalReal =
-        performance.now();
-
-      /* -------------------------
-         Cambiar/renderizar página
-      ------------------------- */
-
-      const inicioRender =
-        performance.now();
-
-      await cambiarPagina(
-        indice
-      );
-
-      await esperarFrames(1);
-
-      const elemento =
-        obtenerElemento();
-
-      const finRender =
-        performance.now();
-
-      if (!elemento) {
-        throw new Error(
-          `No se encontró la página ${
-            indice + 1
-          } para exportar.`
-        );
-      }
-
-      /* -------------------------
-         Capturar página
-      ------------------------- */
-
-      const captura =
-        await capturarLamina(
-          elemento,
-          {
-            calidad,
-            pixelRatio,
-          }
-        );
-    
-
-      /* -------------------------
-         Data URL → Uint8Array
-      ------------------------- */
-
-      const inicioConversion =
-        performance.now();
-
-      const imagenBytes =
-        dataUrlAUint8Array(
-          captura.dataUrl
-        );
-
-      const finConversion =
-        performance.now();
-
-      /* -------------------------
-         Nueva página PDF
-      ------------------------- */
-
-      if (indice > 0) {
-        pdf.addPage(
-          "a4",
-          "portrait"
-        );
-      }
-
-      /* -------------------------
-         Agregar imagen a jsPDF
-      ------------------------- */
-
-      const inicioAddImage =
-        performance.now();
-
-      pdf.addImage(
-        imagenBytes,
-        "JPEG",
-
-        0,
-        0,
-
-        ANCHO_A4_MM,
-        ALTO_A4_MM,
-
-        undefined,
-
-        "FAST"
-      );
-
-      const finAddImage =
-        performance.now();
-
-      /* -------------------------
-         Fin tiempo real
-      ------------------------- */
-
-      const finTotalReal =
-        performance.now();
-
-      /* ===================================================
-         DIAGNÓSTICO
-      =================================================== */
-
-      const medicion = {
-        pagina:
-          indice + 1,
-
-        render:
-          Math.round(
-            finRender -
-              inicioRender
-          ),
-
-        imagenes:
-          Math.round(
-            captura.tiempos.imagenes
-          ),
-
-        toJpeg:
-          Math.round(
-            captura.tiempos.toJpeg
-          ),
-
-        conversion:
-          Math.round(
-            finConversion -
-              inicioConversion
-          ),
-
-        addImage:
-          Math.round(
-            finAddImage -
-              inicioAddImage
-          ),
-
-        totalReal:
-          Math.round(
-            finTotalReal -
-              inicioTotalReal
-          ),
-      };
-
-      diagnostico.push(
-        medicion
-      );
-
-      if (
-        typeof alActualizarDiagnostico ===
-        "function"
-      ) {
-        alActualizarDiagnostico(
-          [...diagnostico]
-        );
-      }
-
-      /* ===================================================
-         PROGRESO
-      =================================================== */
-
-      if (
-        typeof alActualizarProgreso ===
-        "function"
-      ) {
-        const actual =
-          indice + 1;
-
-        const porcentaje =
-          Math.round(
-            (
-              actual /
-              totalPaginas
-            ) * 100
-          );
-
-        alActualizarProgreso({
-          fase:
-            "pdf",
-
-          actual,
-
-          total:
-            totalPaginas,
-
-          porcentaje,
-        });
-      }
-    }
-
-    /* =====================================================
-       DESCARGAR PDF
-    ===================================================== */
-
-    pdf.save(
-      nombreArchivo
-    );
-    
-  } catch (error) {
-    console.error(
-      "Error generando el PDF:",
-      error
-    );
-
-    throw error;
-  } finally {
-    /* =====================================================
-       RESTAURAR PÁGINA
-    ===================================================== */
-
+  for (const archivo of archivosPdf) {
     try {
-      await cambiarPagina(
-        paginaOriginal
-      );
+      const buffer =
+        await archivo.arrayBuffer();
+
+      const documento =
+        await PDFDocument.load(buffer);
+
+      totalPaginasPdf +=
+        documento.getPageCount();
     } catch {
-      // No bloqueamos la exportación
-      // si falla la restauración.
+      throw new Error(
+        `No se pudo leer "${archivo.name}".`
+      );
     }
   }
+
+  const totalPaginas =
+    totalPaginasPdf +
+    (imagenPortada ? 1 : 0) +
+    (imagenFinal ? 1 : 0);
+
+  let paginasProcesadas = 0;
+
+  function actualizarProgreso(
+    fase = "pdf"
+  ) {
+    if (
+      typeof alActualizarProgreso !==
+      "function"
+    ) {
+      return;
+    }
+
+    alActualizarProgreso({
+      fase,
+
+      actual:
+        paginasProcesadas,
+
+      total:
+        totalPaginas,
+
+      porcentaje:
+        totalPaginas > 0
+          ? Math.round(
+              (
+                paginasProcesadas /
+                totalPaginas
+              ) * 100
+            )
+          : 0,
+    });
+  }
+
+  actualizarProgreso(
+    "preparando"
+  );
+
+  /* =======================================================
+     PREPARAR LOGO
+  ======================================================= */
+
+  const logo =
+    await prepararLogo(
+      documentoFinal,
+      logoUrl
+    );
+
+  /* =======================================================
+     PORTADA
+  ======================================================= */
+
+  if (imagenPortada) {
+    const paginaPortada =
+      await agregarImagenA4(
+        documentoFinal,
+        imagenPortada,
+        "la portada"
+      );
+
+    dibujarLogo(
+      paginaPortada,
+      logo
+    );
+
+    paginasProcesadas += 1;
+
+    actualizarProgreso();
+  }
+
+  /* =======================================================
+     ACTIVIDADES + SOLUCIONES
+  ======================================================= */
+
+  for (
+    let indice = 0;
+    indice < archivosPdf.length;
+    indice += 1
+  ) {
+    const archivo =
+      archivosPdf[indice];
+
+    try {
+      const paginasAgregadas =
+  await agregarPdfExterno(
+    documentoFinal,
+    archivo,
+    logo,
+    coberturaInferior
+  );
+
+      paginasProcesadas +=
+        paginasAgregadas;
+
+      actualizarProgreso();
+    } catch (error) {
+      console.error(
+        `Error procesando ${archivo.name}:`,
+        error
+      );
+
+      throw new Error(
+        `No se pudo agregar "${archivo.name}" al PDF final.`
+      );
+    }
+  }
+
+  /* =======================================================
+     LÁMINA FINAL
+  ======================================================= */
+
+  if (imagenFinal) {
+    const paginaFinal =
+      await agregarImagenA4(
+        documentoFinal,
+        imagenFinal,
+        "la lámina final"
+      );
+
+    dibujarLogo(
+      paginaFinal,
+      logo
+    );
+
+    paginasProcesadas += 1;
+
+    actualizarProgreso();
+  }
+
+  /* =======================================================
+     GUARDAR
+  ======================================================= */
+
+  actualizarProgreso(
+    "guardando"
+  );
+
+  const bytes =
+    await documentoFinal.save({
+      useObjectStreams: true,
+    });
+
+  descargarPdf(
+    bytes,
+    nombreArchivo
+  );
+
+  paginasProcesadas =
+    totalPaginas;
+
+  actualizarProgreso(
+    "completado"
+  );
+
+  return {
+    paginas:
+      totalPaginas,
+
+    archivos:
+      archivosPdf.length,
+
+    bytes:
+      bytes.length,
+  };
 }

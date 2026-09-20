@@ -5,956 +5,31 @@ import {
   useState,
 } from "react";
 
+import {
+  ArrowDown,
+  ArrowUp,
+  FilePlus2,
+  FileText,
+  Image as ImageIcon,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
+
+import { PDFDocument } from "pdf-lib";
+
 import { generarPdfLaminas } from "../utilidades/generarPdfLaminas";
 
-import PortadaLaberintos from "../generador/comerciales/PortadaLaberintos";
-import LaminaFinalLaberintos from "../generador/comerciales/LaminaFinalLaberintos";
-
-import LaminaBase from "../generador/componentes/LaminaBase";
-import LaminaLaberinto from "../generador/componentes/LaminaLaberinto";
-
-import { validarLaberinto } from "../generador/juegos/Laberinto";
-
 import { ESTILOS_IMPRIMIBLES } from "../generador/config/estilosImprimibles";
-
 import { LABERINTOS_50 } from "../generador/productos/laberintos50";
 
 /* =========================================================
-   CONFIGURACIÓN GENERAL
+   UTILIDADES
 ========================================================= */
 
-const ANCHO_A4 = 794;
-const ALTO_A4 = 1123;
-
-const VALIDACIONES_POR_PAGINA = 25;
-const LIMITE_SELECTOR_PAGINAS = 300;
-
-/* =========================================================
-   NIVELES
-========================================================= */
-
-const CONFIG_LABERINTO = {
-  facil: {
-    nombre: "Fácil",
-    filas: 8,
-    columnas: 6,
-  },
-
-  medio: {
-    nombre: "Medio",
-    filas: 12,
-    columnas: 9,
-  },
-
-  dificil: {
-    nombre: "Difícil",
-    filas: 16,
-    columnas: 12,
-  },
-
-  experto: {
-    nombre: "Experto",
-    filas: 20,
-    columnas: 15,
-  },
-
-  legendario: {
-    nombre: "Legendario",
-    filas: 24,
-    columnas: 18,
-  },
-};
-
-const NOMBRE_NIVEL = {
-  facil: "Fácil",
-  medio: "Medio",
-  dificil: "Difícil",
-  experto: "Experto",
-  legendario: "Legendario",
-};
-
-/* =========================================================
-   RANGOS DE COMPLEJIDAD CALIBRADOS
-========================================================= */
-
-const RANGOS_COMPLEJIDAD = {
-  facil: {
-    solucion: [15, 37],
-    giros: [7, 24],
-    callejones: [3, 7],
-  },
-
-  medio: {
-    solucion: [28, 78],
-    giros: [15, 48],
-    callejones: [8, 15],
-  },
-
-  dificil: {
-    solucion: [43, 121],
-    giros: [25, 78],
-    callejones: [16, 24],
-  },
-
-  experto: {
-    solucion: [62, 180],
-    giros: [37, 116],
-    callejones: [26, 36],
-  },
-
-  legendario: {
-    solucion: [93, 259],
-    giros: [57, 167],
-    callejones: [38, 51],
-  },
-};
-
-const BANDAS_COMPLEJIDAD = {
-  muyBaja: {
-    nombre: "Muy baja",
-    minimo: 0,
-    maximo: 20,
-  },
-
-  baja: {
-    nombre: "Baja",
-    minimo: 21,
-    maximo: 40,
-  },
-
-  media: {
-    nombre: "Media",
-    minimo: 41,
-    maximo: 60,
-  },
-
-  alta: {
-    nombre: "Alta",
-    minimo: 61,
-    maximo: 80,
-  },
-
-  muyAlta: {
-    nombre: "Muy alta",
-    minimo: 81,
-    maximo: 100,
-  },
-};
-
-const NOMBRES_BANDAS = [
-  "Muy baja",
-  "Baja",
-  "Media",
-  "Alta",
-  "Muy alta",
-];
-
-/* =========================================================
-   NORMALIZACIÓN Y COMPLEJIDAD
-========================================================= */
-
-function normalizarValor(
-  valor,
-  minimo,
-  maximo
-) {
-  if (maximo === minimo) {
-    return 50;
-  }
-
-  const resultado =
-    ((valor - minimo) /
-      (maximo - minimo)) *
-    100;
-
-  return Math.max(
-    0,
-    Math.min(100, resultado)
-  );
-}
-
-function calcularComplejidad(item) {
-  const rangos =
-    RANGOS_COMPLEJIDAD[
-      item.nivel
-    ];
-
-  if (!rangos) {
-    return 0;
-  }
-
-  const puntuacionSolucion =
-    normalizarValor(
-      item.longitudSolucion,
-      rangos.solucion[0],
-      rangos.solucion[1]
-    );
-
-  const puntuacionGiros =
-    normalizarValor(
-      item.cantidadGiros,
-      rangos.giros[0],
-      rangos.giros[1]
-    );
-
-  const puntuacionCallejones =
-    normalizarValor(
-      item.cantidadCallejones,
-      rangos.callejones[0],
-      rangos.callejones[1]
-    );
-
-  const puntuacion =
-    puntuacionSolucion * 0.4 +
-    puntuacionGiros * 0.35 +
-    puntuacionCallejones * 0.25;
-
-  return Math.round(puntuacion);
-}
-
-function obtenerBandaComplejidad(
-  complejidad
-) {
-  const entrada =
-    Object.values(
-      BANDAS_COMPLEJIDAD
-    ).find(
-      (banda) =>
-        complejidad >=
-          banda.minimo &&
-        complejidad <=
-          banda.maximo
-    );
-
-  return entrada
-    ? entrada.nombre
-    : "Sin clasificar";
-}
-
-/* =========================================================
-   BANDAS Y GENERACIÓN DIRIGIDA
-========================================================= */
-
-function contarBandasComplejidad(
-  items
-) {
-  const resultado = {
-    "Muy baja": 0,
-    Baja: 0,
-    Media: 0,
-    Alta: 0,
-    "Muy alta": 0,
-  };
-
-  items.forEach((item) => {
-    if (
-      resultado[
-        item.bandaComplejidad
-      ] !== undefined
-    ) {
-      resultado[
-        item.bandaComplejidad
-      ] += 1;
-    }
-  });
-
-  return resultado;
-}
-
-function calcularObjetivoBandas(
-  cantidad
-) {
-  const objetivo = {
-    "Muy baja": 0,
-    Baja: 0,
-    Media: 0,
-    Alta: 0,
-    "Muy alta": 0,
-  };
-
-  if (
-    !Number.isFinite(cantidad) ||
-    cantidad <= 0
-  ) {
-    return objetivo;
-  }
-
-  const cantidadEntera =
-    Math.floor(cantidad);
-
-  const cantidadBase =
-    Math.floor(
-      cantidadEntera /
-        NOMBRES_BANDAS.length
-    );
-
-  let sobrantes =
-    cantidadEntera %
-    NOMBRES_BANDAS.length;
-
-  NOMBRES_BANDAS.forEach(
-    (banda) => {
-      objetivo[banda] =
-        cantidadBase +
-        (sobrantes > 0
-          ? 1
-          : 0);
-
-      if (sobrantes > 0) {
-        sobrantes -= 1;
-      }
-    }
-  );
-
-  return objetivo;
-}
-
-function calcularFaltantesPorBanda(
-  items,
-  cantidad
-) {
-  const objetivo =
-    calcularObjetivoBandas(
-      cantidad
-    );
-
-  const disponibles =
-    contarBandasComplejidad(
-      items
-    );
-
-  return {
-    "Muy baja": Math.max(
-      0,
-      objetivo["Muy baja"] -
-        (disponibles[
-          "Muy baja"
-        ] ?? 0)
-    ),
-
-    Baja: Math.max(
-      0,
-      objetivo.Baja -
-        (disponibles.Baja ?? 0)
-    ),
-
-    Media: Math.max(
-      0,
-      objetivo.Media -
-        (disponibles.Media ?? 0)
-    ),
-
-    Alta: Math.max(
-      0,
-      objetivo.Alta -
-        (disponibles.Alta ?? 0)
-    ),
-
-    "Muy alta": Math.max(
-      0,
-      objetivo["Muy alta"] -
-        (disponibles[
-          "Muy alta"
-        ] ?? 0)
-    ),
-  };
-}
-
-function filtrarPorBandaComplejidad(
-  items,
-  bandaObjetivo
-) {
-  if (
-    !Array.isArray(items) ||
-    items.length === 0
-  ) {
-    return [];
-  }
-
-  return items.filter(
-    (item) =>
-      item.bandaComplejidad ===
-      bandaObjetivo
-  );
-}
-
-function seleccionarPorComplejidad({
-  items,
-  banda,
-  cantidad,
-}) {
-  const candidatos =
-    filtrarPorBandaComplejidad(
-      items,
-      banda
-    );
-
-  if (
-    candidatos.length === 0 ||
-    cantidad <= 0
-  ) {
-    return [];
-  }
-
-  const ordenados =
-    [...candidatos].sort(
-      (a, b) =>
-        a.complejidad -
-        b.complejidad
-    );
-
-  if (
-    ordenados.length <= cantidad
-  ) {
-    return ordenados;
-  }
-
-  if (cantidad === 1) {
-    return [
-      ordenados[
-        Math.floor(
-          ordenados.length / 2
-        )
-      ],
-    ];
-  }
-
-  const seleccion = [];
-
-  for (
-    let i = 0;
-    i < cantidad;
-    i += 1
-  ) {
-    const posicion =
-      i / (cantidad - 1);
-
-    const indice =
-      Math.round(
-        posicion *
-          (ordenados.length - 1)
-      );
-
-    seleccion.push(
-      ordenados[indice]
-    );
-  }
-
-  return seleccion;
-}
-
-function seleccionarProgresivo({
-  items,
-  cantidad,
-}) {
-  if (
-    !Array.isArray(items) ||
-    items.length === 0 ||
-    cantidad <= 0
-
-      ) {
-    return [];
-  }
-
-  const objetivo = Math.min(
-    cantidad,
-    items.length
-  );
-
-  const cantidadBase =
-    Math.floor(
-      objetivo /
-        NOMBRES_BANDAS.length
-    );
-
-  let sobrantes =
-    objetivo %
-    NOMBRES_BANDAS.length;
-
-  const seleccion = [];
-  const seleccionados =
-    new Set();
-
-  NOMBRES_BANDAS.forEach(
-    (banda) => {
-            const cantidadBanda =
-        cantidadBase +
-        (sobrantes > 0
-          ? 1
-          : 0);
-
-      if (sobrantes > 0) {
-        sobrantes -= 1;
-      }
-
-      const candidatos =
-        seleccionarPorComplejidad({
-          items,
-          banda,
-          cantidad: cantidadBanda,
-        });
-
-      candidatos.forEach(
-        (item) => {
-          if (
-            !seleccionados.has(
-              item
-            )
-          ) {
-            seleccionados.add(
-              item
-            );
-            seleccion.push(item);
-          }
-        }
-      );
-    }
-  );
-
-  const faltantes =
-    objetivo -
-    seleccion.length;
-
-  if (faltantes > 0) {
-    const disponibles =
-      items
-        .filter(
-          (item) =>
-            !seleccionados.has(
-              item
-            )
-        )
-        .sort(
-          (a, b) =>
-            a.complejidad -
-            b.complejidad
-        );
-
-    if (
-      faltantes >=
-      disponibles.length
-    ) {
-      seleccion.push(
-        ...disponibles
-      );
-    } else if (
-      faltantes === 1
-    ) {
-      seleccion.push(
-        disponibles[
-          Math.floor(
-            disponibles.length /
-              2
-          )
-        ]
-      );
-    } else {
-      for (
-        let i = 0;
-        i < faltantes;
-        i += 1
-      ) {
-        const posicion =
-          i / (faltantes - 1);
-
-        const indice =
-          Math.round(
-            posicion *
-              (disponibles.length -
-                1)
-          );
-
-        seleccion.push(
-          disponibles[indice]
-        );
-      }
-    }
-  }
-
-  return seleccion.sort(
-    (a, b) =>
-      a.complejidad -
-      b.complejidad
-  );
-}
-
-function generarCandidatosDirigidos({
-  nivel,
-  faltantes,
-  semillaInicial,
-  maxIntentos = 1000,
-}) {
-  const configuracion =
-    CONFIG_LABERINTO[nivel];
-
-  if (!configuracion) {
-    return {
-      encontrados: [],
-      pendientes: faltantes,
-      intentos: 0,
-      completo: false,
-    };
-  }
-
-  const pendientes = {
-    "Muy baja":
-      faltantes["Muy baja"] ??
-      0,
-    Baja: faltantes.Baja ?? 0,
-    Media: faltantes.Media ?? 0,
-    Alta: faltantes.Alta ?? 0,
-    "Muy alta":
-      faltantes["Muy alta"] ??
-      0,
-  };
-
-  const totalObjetivo =
-    Object.values(
-      pendientes
-    ).reduce(
-      (total, cantidad) =>
-        total + cantidad,
-      0
-    );
-
-  const encontrados = [];
-
-  let semillaCandidata =
-    semillaInicial;
-  let intentos = 0;
-
-  while (
-    encontrados.length <
-      totalObjetivo &&
-    intentos < maxIntentos
-  ) {
-    const validacion =
-      validarLaberinto(
-        configuracion.filas,
-        configuracion.columnas,
-        semillaCandidata
-      );
-
-    const item = {
-      nivel,
-      ...validacion,
-    };
-
-    const complejidad =
-      calcularComplejidad(item);
-
-    const bandaComplejidad =
-      obtenerBandaComplejidad(
-        complejidad
-      );
-
-    if (
-      validacion.valido &&
-      (pendientes[
-        bandaComplejidad
-      ] ?? 0) > 0
-    ) {
-      encontrados.push({
-        ...item,
-        complejidad,
-        bandaComplejidad,
-        semillaLaberinto:
-          semillaCandidata,
-        esGenerado: true,
-      });
-
-      pendientes[
-        bandaComplejidad
-      ] -= 1;
-    }
-
-    semillaCandidata += 1;
-    intentos += 1;
-  }
-
-  const completo =
-    Object.values(
-      pendientes
-    ).every(
-      (cantidad) =>
-        cantidad === 0
-    );
-
-  return {
-    encontrados,
-    pendientes,
-    intentos,
-    completo,
-  };
-}
-
-function generarSeleccionDirigidaPorNivel({
-  validaciones,
-  nivel,
-  cantidad,
-  semillaInicial,
-  maxIntentos = 2000,
-}) {
-  const itemsNivel =
-    validaciones.filter(
-      (item) =>
-        item.nivel === nivel
-    );
-
-  if (
-    cantidad <= 0 ||
-    itemsNivel.length === 0
-  ) {
-    return {
-      seleccion: [],
-      candidatosNuevos: [],
-      faltantes: {
-        "Muy baja": 0,
-        Baja: 0,
-        Media: 0,
-        Alta: 0,
-        "Muy alta": 0,
-      },
-      intentos: 0,
-      completo: true,
-    };
-  }
-
-  const faltantes =
-    calcularFaltantesPorBanda(
-      itemsNivel,
-      cantidad
-    );
-
-  const busqueda =
-    generarCandidatosDirigidos({
-      nivel,
-      faltantes,
-      semillaInicial,
-      maxIntentos,
-    });
-
-  const candidatosCombinados = [
-    ...itemsNivel,
-    ...busqueda.encontrados,
-  ];
-
-  const seleccion =
-    seleccionarProgresivo({
-      items: candidatosCombinados,
-      cantidad,
-    });
-
-  return {
-    seleccion,
-    candidatosNuevos:
-      busqueda.encontrados,
-    faltantes,
-    intentos: busqueda.intentos,
-    completo: busqueda.completo,
-  };
-}
-
-function generarSeleccionDirigidaGlobal({
-  validaciones,
-  cantidades,
-  semillaInicial,
-}) {
-  const niveles = [
-    "facil",
-    "medio",
-    "dificil",
-    "experto",
-    "legendario",
-  ];
-
-  const seleccionGlobal = [];
-  const resumen = {};
-
-  let desplazamientoSemilla = 0;
-
-  niveles.forEach((nivel) => {
-    const cantidad =
-      cantidades[nivel] ?? 0;
-
-    if (cantidad <= 0) {
-      resumen[nivel] = {
-        seleccion: [],
-        candidatosNuevos: [],
-        faltantes: {},
-        intentos: 0,
-        completo: true,
-      };
-      return;
-    }
-
-    const resultado =
-      generarSeleccionDirigidaPorNivel({
-        validaciones,
-        nivel,
-        cantidad,
-        semillaInicial:
-          semillaInicial +
-          desplazamientoSemilla,
-        maxIntentos: 3000,
-      });
-
-    seleccionGlobal.push(
-      ...resultado.seleccion
-    );
-
-    resumen[nivel] = resultado;
-
-    desplazamientoSemilla +=
-      resultado.intentos + 1000;
-  });
-
-  return {
-    seleccion: seleccionGlobal,
-    resumen,
-  };
-}
-
-/* =========================================================
-   PERCENTILES
-========================================================= */
-
-function calcularPercentiles(
-  valores
-) {
-  if (
-    !Array.isArray(valores) ||
-    valores.length === 0
-  ) {
-    return {
-      p05: 0,
-      p25: 0,
-      p50: 0,
-      p75: 0,
-      p95: 0,
-    };
-  }
-
-  const ordenados =
-    [...valores].sort(
-      (a, b) => a - b
-    );
-
-  function obtener(percentil) {
-    if (
-      ordenados.length === 1
-    ) {
-      return ordenados[0];
-    }
-
-    const posicion =
-      (percentil / 100) *
-      (ordenados.length - 1);
-
-    const indiceInferior =
-      Math.floor(posicion);
-
-    const indiceSuperior =
-      Math.ceil(posicion);
-
-    if (
-      indiceInferior ===
-      indiceSuperior
-    ) {
-      return ordenados[
-        indiceInferior
-      ];
-    }
-
-    const pesoSuperior =
-      posicion -
-      indiceInferior;
-
-    const valor =
-      ordenados[
-        indiceInferior
-      ] *
-        (1 - pesoSuperior) +
-      ordenados[
-        indiceSuperior
-      ] *
-        pesoSuperior;
-
-    return Math.round(valor);
-  }
-
-  return {
-    p05: obtener(5),
-    p25: obtener(25),
-    p50: obtener(50),
-    p75: obtener(75),
-    p95: obtener(95),
-  };
-}
-
-/* =========================================================
-   MEDIR RECURSOS DE IMAGEN
-========================================================= */
-
-async function medirRecursoImagen(url) {
-  if (!url) return null;
-
-  try {
-    const respuesta = await fetch(url);
-
-    if (!respuesta.ok) {
-      throw new Error("No se pudo descargar");
-    }
-    
-    const blob = await respuesta.blob();
-
-    const dimensiones = await new Promise(
-      (resolve) => {
-        const imagen = new Image();
-        const objectUrl =
-          URL.createObjectURL(blob);
-
-        imagen.onload = () => {
-          resolve({
-            ancho: imagen.naturalWidth,
-            alto: imagen.naturalHeight,
-          });
-
-          URL.revokeObjectURL(
-            objectUrl
-          );
-        };
-
-        imagen.onerror = () => {
-          resolve({
-            ancho: 0,
-            alto: 0,
-          });
-
-          URL.revokeObjectURL(
-            objectUrl
-          );
-        };
-
-        imagen.src = objectUrl;
-      }
-    );
-
-    return {
-      url,
-      bytes: blob.size,
-      ancho: dimensiones.ancho,
-      alto: dimensiones.alto,
-    };
-  } catch (error) {
-    console.warn(
-      "No se pudo medir recurso:",
-      url,
-      error
-    );
-
-    return null;
-  }
+function crearIdArchivo() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function formatearBytes(bytes = 0) {
@@ -963,1025 +38,341 @@ function formatearBytes(bytes = 0) {
   }
 
   if (bytes < 1024 * 1024) {
-    return `${(
-      bytes / 1024
-    ).toFixed(1)} KB`;
+    return `${(bytes / 1024).toFixed(1)} KB`;
   }
 
-  return `${(
-    bytes /
-    (1024 * 1024)
-  ).toFixed(2)} MB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+async function obtenerCantidadPaginas(archivo) {
+  const bytes = await archivo.arrayBuffer();
+
+  const pdf = await PDFDocument.load(bytes, {
+    ignoreEncryption: false,
+  });
+
+  return pdf.getPageCount();
+}
+
+function moverElemento(lista, desde, hasta) {
+  if (
+    desde < 0 ||
+    hasta < 0 ||
+    desde >= lista.length ||
+    hasta >= lista.length ||
+    desde === hasta
+  ) {
+    return lista;
+  }
+
+  const copia = [...lista];
+  const [elemento] = copia.splice(desde, 1);
+
+  copia.splice(hasta, 0, elemento);
+
+  return copia;
 }
 
 /* =========================================================
    COMPONENTE
 ========================================================= */
+
 export default function GeneradorLaminas() {
-  /* =======================================================
-     REFERENCIAS
-  ======================================================= */
+  const inputArchivosRef = useRef(null);
 
-  const contenedorPreviewRef =
-    useRef(null);
-
-  const laminaExportarRef =
-    useRef(null);
-
-  /* =======================================================
-     CONFIGURACIÓN DEL PRODUCTO
-  ======================================================= */
-
-  const [
-    cantidadFaciles,
-    setCantidadFaciles,
-  ] = useState(5);
-
-  
-  const [
-    cantidadMedios,
-    setCantidadMedios,
-  ] = useState(10);
-
-  const [
-    cantidadDificiles,
-    setCantidadDificiles,
-  ] = useState(5);
-
-  const [
-    cantidadExpertos,
-    setCantidadExpertos,
-  ] = useState(0);
-
-  const [
-    cantidadLegendarios,
-    setCantidadLegendarios,
-  ] = useState(0);
-
-  const [
-    modoGeneracion,
-    setModoGeneracion,
-  ] = useState("aleatorio");
-
-  const [imagenPortada, setImagenPortada] =
-  useState(
+  const [imagenPortada, setImagenPortada] = useState(
     LABERINTOS_50.recursos.portada || ""
   );
 
-  const [imagenFinal, setImagenFinal] =
-  useState(
+  const [imagenFinal, setImagenFinal] = useState(
     LABERINTOS_50.recursos.laminaFinal || ""
   );
 
-  const [
-  recursosMedidos,
-  setRecursosMedidos,
-] = useState([]);
+  const [archivosPdf, setArchivosPdf] = useState([]);
 
-const [
-  midiendoRecursos,
-  setMidiendoRecursos,
-] = useState(false);
+  const [procesandoArchivos, setProcesandoArchivos] =
+    useState(false);
 
-  const [semilla, setSemilla] =
-    useState(1);
+  const [exportandoPdf, setExportandoPdf] =
+    useState(false);
 
-  /* =========================================================
-   RECURSOS PARA PRECARGAR PDF
-========================================================= */
+  const [progresoPdf, setProgresoPdf] = useState({
+    actual: 0,
+    total: 0,
+    porcentaje: 0,
+    fase: "",
+  });
 
-const recursosPdf = useMemo(() => {
-  const urls = new Set();
+  const [mensajeError, setMensajeError] =
+    useState("");
 
-  if (imagenPortada) {
-    urls.add(imagenPortada);
-  }
+  const [archivoPreviewId, setArchivoPreviewId] =
+    useState(null);
 
-  if (imagenFinal) {
-    urls.add(imagenFinal);
-  }
-
-  if (ESTILOS_IMPRIMIBLES.logo?.url) {
-    urls.add(ESTILOS_IMPRIMIBLES.logo.url);
-  }
-
-  return [...urls];
-}, [imagenPortada, imagenFinal]);
-
-const medirRecursosPdf =
-  async () => {
-    if (
-      recursosPdf.length === 0 ||
-      midiendoRecursos
-    ) {
-      return;
-    }
-
-    setMidiendoRecursos(true);
-
-    try {
-      const resultados = [];
-
-      /*
-       * Lo hacemos secuencialmente para
-       * no golpear la memoria del celular.
-       */
-      for (const url of recursosPdf) {
-        const resultado =
-          await medirRecursoImagen(url);
-
-        if (resultado) {
-          resultados.push(
-            resultado
-          );
-        }
-      }
-
-      setRecursosMedidos(
-        resultados
-      );
-    } finally {
-      setMidiendoRecursos(false);
-    }
-  };
-
-  const pesoTotalRecursos =
-  useMemo(
+  const archivoPreview = useMemo(
     () =>
-      recursosMedidos.reduce(
-        (total, recurso) =>
-          total + recurso.bytes,
-        0
-      ),
-    [recursosMedidos]
-  );
-  
-  const cantidadesProducto =
-    useMemo(
-      () => ({
-        facil: cantidadFaciles,
-        medio: cantidadMedios,
-        dificil: cantidadDificiles,
-        experto: cantidadExpertos,
-        legendario: cantidadLegendarios,
-      }),
-      [
-        cantidadFaciles,
-        cantidadMedios,
-        cantidadDificiles,
-        cantidadExpertos,
-        cantidadLegendarios,
-      ]
-    );
-
-  const configuracionProducto =
-    useMemo(
-      () => ({
-        cantidades: cantidadesProducto,
-        modoGeneracion,
-        semilla,
-      }),
-      [
-        cantidadesProducto,
-        modoGeneracion,
-        semilla,
-      ]
-    );
-
-  /* =======================================================
-     NAVEGACIÓN
-  ======================================================= */
-
-  const [
-    paginaActual,
-    setPaginaActual,
-  ] = useState(0);
-
-  const [
-    escalaPreview,
-    setEscalaPreview,
-  ] = useState(1);
-
-  const [
-    paginaValidacion,
-    setPaginaValidacion,
-  ] = useState(0);
-
-  /* =======================================================
-     PDF
-  ======================================================= */
-
-  const [
-    exportandoPdf,
-    setExportandoPdf,
-  ] = useState(false);
-
-  const [
-  progresoPdf,
-  setProgresoPdf,
-] = useState({
-  fase: "pdf",
-  actual: 0,
-  total: 0,
-  porcentaje: 0,
-});
-
-  const [
-  diagnosticoPdf,
-  setDiagnosticoPdf,
-] = useState([]);
-
-  /* =======================================================
-     CANTIDAD TOTAL
-  ======================================================= */
-
-  const cantidadActividades =
-    Object.values(
-      cantidadesProducto
-    ).reduce(
-      (total, cantidad) =>
-        total + cantidad,
-      0
-    );
-
-  /* =======================================================
-     ACTIVIDADES
-  ======================================================= */
-
-  const actividades = useMemo(
-    () => {
-      const {
-        facil,
-        medio,
-        dificil,
-        experto,
-        legendario,
-      } = cantidadesProducto;
-
-      return [
-        ...Array.from(
-          { length: facil },
-          (_, index) => ({
-            numero: index + 1,
-            nivel: "facil",
-          })
-        ),
-
-        ...Array.from(
-          { length: medio },
-          (_, index) => ({
-            numero:
-              facil + index + 1,
-            nivel: "medio",
-          })
-        ),
-
-        ...Array.from(
-          { length: dificil },
-          (_, index) => ({
-            numero:
-              facil +
-              medio +
-              index +
-              1,
-            nivel: "dificil",
-          })
-        ),
-
-        ...Array.from(
-          { length: experto },
-          (_, index) => ({
-            numero:
-              facil +
-              medio +
-              dificil +
-              index +
-              1,
-            nivel: "experto",
-          })
-        ),
-
-        ...Array.from(
-          { length: legendario },
-          (_, index) => ({
-            numero:
-              facil +
-              medio +
-              dificil +
-              experto +
-              index +
-              1,
-            nivel: "legendario",
-          })
-        ),
-      ];
-    },
-    [cantidadesProducto]
+      archivosPdf.find(
+        (item) => item.id === archivoPreviewId
+      ) || null,
+    [archivosPdf, archivoPreviewId]
   );
 
-  /* =======================================================
-     VALIDACIONES BASE
-  ====================================================== */
+  const [urlPreviewPdf, setUrlPreviewPdf] =
+    useState("");
 
-  const validaciones = useMemo(
-    () =>
-      actividades.map(
-        (actividad, index) => {
-          const configuracion =
-            CONFIG_LABERINTO[
-              actividad.nivel
-            ];
-
-          const semillaActividad =
-            configuracionProducto.semilla +
-            index;
-
-          const validacion =
-            validarLaberinto(
-              configuracion.filas,
-              configuracion.columnas,
-              semillaActividad
-            );
-
-          const item = {
-            numero:
-              actividad.numero,
-            nivel:
-              actividad.nivel,
-            indiceActividad: index,
-            semillaLaberinto:
-              semillaActividad,
-            ...validacion,
-          };
-
-          const complejidad =
-            calcularComplejidad(
-              item
-            );
-
-          return {
-            ...item,
-            complejidad,
-            bandaComplejidad:
-              obtenerBandaComplejidad(
-                complejidad
-              ),
-          };
-        }
-      ),
-    [
-      actividades,
-      configuracionProducto.semilla,
-    ]
-  );
-
-  /* =======================================================
-     VALIDACIONES FINALES
-  ======================================================= */
-
-  const validacionesFinales =
-    useMemo(
-      () => {
-        let resultadoFinal;
-
-        if (
-          configuracionProducto.modoGeneracion ===
-          "aleatorio"
-        ) {
-          resultadoFinal =
-            validaciones;
-        } else {
-          const resultado =
-            generarSeleccionDirigidaGlobal({
-              validaciones,
-              cantidades:
-                cantidadesProducto,
-              semillaInicial:
-
-                              configuracionProducto.semilla +
-                actividades.length +
-                10000,
-            });
-
-          resultadoFinal =
-            resultado.seleccion;
-
-                  }
-
-        return resultadoFinal.map(
-          (item, index) => ({
-            ...item,
-            numeroProducto:
-              index + 1,
-          })
-        );
-      },
-      [
-        validaciones,
-        configuracionProducto.modoGeneracion,
-        configuracionProducto.semilla,
-        cantidadesProducto,
-        actividades.length,
-      ]
-    );
-
-  /* =======================================================
-     ACTIVIDADES FINALES
-  ======================================================= */
-
-  const actividadesFinales =
-    useMemo(
-      () =>
-        validacionesFinales.map(
-          (item, index) => {
-            const actividadOriginal =
-              Number.isInteger(item.indiceActividad)
-                ? actividades[item.indiceActividad]
-                : null;
-
-            return {
-              numeroOriginal:
-                actividadOriginal?.numero ??
-                item.numero ??
-                null,
-              numeroProducto:
-                item.numeroProducto ?? index + 1,
-              nivel: item.nivel,
-              semillaLaberinto: item.semillaLaberinto,
-              esGenerado: item.esGenerado ?? false,
-            };
-          }
-        ),
-      [validacionesFinales, actividades]
-    );
-
-  /* =======================================================
-     PÁGINAS
-  ======================================================= */
-
-  const paginasJuegos = useMemo(
-    () =>
-      actividadesFinales.map((actividad, index) => ({
-        id: `juego-${index + 1}`,
-        nombre: `Laberinto ${index + 1}`,
-        tipo: "juego",
-        indiceActividad: index,
-        numeroProducto: index + 1,
-        numeroOriginal:
-          actividad.numeroOriginal ?? actividad.numeroProducto,
-        nivel: actividad.nivel,
-        semillaLaberinto: actividad.semillaLaberinto,
-      })),
-    [actividadesFinales]
-  );
-
-  const paginasSoluciones = useMemo(
-    () =>
-      actividadesFinales.map((actividad, index) => ({
-        id: `solucion-${index + 1}`,
-        nombre: `Solución ${index + 1}`,
-        tipo: "solucion",
-        indiceActividad: index,
-        numeroProducto: index + 1,
-        numeroOriginal:
-          actividad.numeroOriginal ?? actividad.numeroProducto,
-        nivel: actividad.nivel,
-        semillaLaberinto: actividad.semillaLaberinto,
-      })),
-    [actividadesFinales]
-  );
-
-  const paginas = useMemo(
-    () => [
-      { id: "portada", nombre: "Portada", tipo: "portada" },
-      ...paginasJuegos,
-      ...paginasSoluciones,
-      { id: "lamina-final", nombre: "Lámina final", tipo: "final" },
-    ],
-    [paginasJuegos, paginasSoluciones]
-  );
-
-  const pagina =
-    paginas[paginaActual];
-
-  const indiceActividad =
-    pagina?.indiceActividad ?? 0;
-
-  const nivelPagina =
-    pagina?.nivel ?? "facil";
-
-  const semillaPagina =
-    pagina?.semillaLaberinto ??
-    configuracionProducto.semilla +
-      indiceActividad;
-
-  const configuracionPagina =
-    CONFIG_LABERINTO[
-      nivelPagina
-    ] ?? CONFIG_LABERINTO.facil;
-
-  /* =======================================================
-     PREVIEW RESPONSIVE
-  ======================================================= */
+  const [cubrirTextoInferior, setCubrirTextoInferior] = useState(true);
+const [posicionCobertura, setPosicionCobertura] = useState(18);
+const [alturaCobertura, setAlturaCobertura] = useState(22);
+const [anchoCobertura, setAnchoCobertura] = useState(220);
 
   useEffect(() => {
-    const contenedor =
-      contenedorPreviewRef.current;
-
-    if (!contenedor) {
+    if (!archivoPreview?.archivo) {
+      setUrlPreviewPdf("");
       return undefined;
     }
 
-    let frameId = null;
-
-    function calcularEscala() {
-      if (frameId) {
-        cancelAnimationFrame(
-          frameId
-        );
-      }
-
-      frameId =
-        requestAnimationFrame(
-          () => {
-            const anchoContenedor =
-              contenedor
-                .getBoundingClientRect()
-                .width;
-
-            const anchoPadre =
-              contenedor
-                .parentElement
-                ?.getBoundingClientRect()
-                .width ?? 0;
-
-            const anchoViewport =
-              Math.max(
-                window.innerWidth -
-                  32,
-                1
-              );
-
-            const anchoDisponible =
-              anchoContenedor > 0
-                ? anchoContenedor
-                : anchoPadre > 0
-                  ? anchoPadre
-                  : anchoViewport;
-
-            const nuevaEscala =
-              Math.min(
-                anchoDisponible /
-                  ANCHO_A4,
-                1
-              );
-
-            setEscalaPreview(
-              nuevaEscala > 0
-                ? nuevaEscala
-                : 0.4
-            );
-          }
-        );
-    }
-
-    
-
-    calcularEscala();
-
-    const observer =
-      new ResizeObserver(
-        calcularEscala
-      );
-
-    observer.observe(
-      contenedor
+    const url = URL.createObjectURL(
+      archivoPreview.archivo
     );
 
-    window.addEventListener(
-      "resize",
-      calcularEscala
-    );
+    setUrlPreviewPdf(url);
 
     return () => {
-      observer.disconnect();
-
-      window.removeEventListener(
-        "resize",
-        calcularEscala
-      );
-
-      if (frameId) {
-        cancelAnimationFrame(
-          frameId
-        );
-      }
+      URL.revokeObjectURL(url);
     };
-  }, []);
+  }, [archivoPreview]);
 
-  /* =======================================================
-     AJUSTES DE NAVEGACIÓN
-  ======================================================= */
-
-  useEffect(() => {
-    if (
-      paginaActual >=
-      paginas.length
-    ) {
-      setPaginaActual(
-        Math.max(
-          paginas.length - 1,
-          0
-        )
-      );
-    }
-  }, [
-    paginaActual,
-    paginas.length,
-  ]);
-
-  useEffect(() => {
-    setPaginaValidacion(0);
-  }, [validacionesFinales]);
-
-  /* =======================================================
-     VALIDACIÓN FINAL Y PAGINACIÓN
-  ======================================================= */
-
-  const cantidadValidos =
-    useMemo(
-      () =>
-        validacionesFinales.reduce(
-          (total, item) =>
-            item.valido
-              ? total + 1
-              : total,
-          0
-        ),
-      [validacionesFinales]
-    );
-
-  const productoValido =
-    cantidadActividades > 0 &&
-    cantidadValidos ===
-      cantidadActividades;
-
-  const totalPaginasValidacion =
-    Math.max(
-      1,
-      Math.ceil(
-        validacionesFinales.length /
-          VALIDACIONES_POR_PAGINA
-      )
-    );
-
-  const inicioValidacion =
-    paginaValidacion *
-    VALIDACIONES_POR_PAGINA;
-
-  const finValidacion = Math.min(
-    inicioValidacion +
-      VALIDACIONES_POR_PAGINA,
-    validacionesFinales.length
+  const totalPaginasActividades = useMemo(
+    () =>
+      archivosPdf.reduce(
+        (total, item) =>
+          total + (item.paginas || 0),
+        0
+      ),
+    [archivosPdf]
   );
 
-  const validacionesVisibles =
-    useMemo(
-      () =>
-        validacionesFinales.slice(
-          inicioValidacion,
-          finValidacion
-        ),
-      [
-        validacionesFinales,
-        inicioValidacion,
-        finValidacion,
-      ]
+  const totalPaginasFinal = useMemo(() => {
+    return (
+      totalPaginasActividades +
+      (imagenPortada.trim() ? 1 : 0) +
+      (imagenFinal.trim() ? 1 : 0)
     );
-
-  useEffect(() => {
-    if (
-      paginaValidacion >=
-      totalPaginasValidacion
-    ) {
-      setPaginaValidacion(
-        Math.max(
-          totalPaginasValidacion -
-            1,
-          0
-        )
-      );
-    }
   }, [
-    paginaValidacion,
-    totalPaginasValidacion,
+    totalPaginasActividades,
+    imagenPortada,
+    imagenFinal,
   ]);
 
-    /* =======================================================
-     ESTADÍSTICAS POR NIVEL
-  ======================================================= */
+  const pesoTotal = useMemo(
+    () =>
+      archivosPdf.reduce(
+        (total, item) =>
+          total + (item.archivo?.size || 0),
+        0
+      ),
+    [archivosPdf]
+  );
 
-  const resumenPorNivel =
-    useMemo(
-      () =>
-        Object.keys(
-          CONFIG_LABERINTO
-        )
-          .map((nivel) => {
-            const itemsNivel =
-              validacionesFinales.filter(
-                (item) =>
-                  item.nivel ===
-                  nivel
-              );
-
-            if (
-              itemsNivel.length === 0
-            ) {
-              return null;
-            }
-
-            const soluciones =
-              itemsNivel.map(
-                (item) =>
-                  item.longitudSolucion
-              );
-
-            const giros =
-              itemsNivel.map(
-                (item) =>
-                  item.cantidadGiros
-              );
-
-            const callejones =
-              itemsNivel.map(
-                (item) =>
-                  item.cantidadCallejones
-              );
-
-            const recorridos =
-              itemsNivel.map(
-                (item) =>
-                  item.porcentajeRecorrido
-              );
-
-            const densidadesGiros =
-              itemsNivel.map(
-                (item) =>
-                  item.densidadGiros
-              );
-
-            const densidadesCallejones =
-              itemsNivel.map(
-                (item) =>
-                  item.densidadCallejones
-              );
-
-            const complejidades =
-              itemsNivel.map(
-                (item) =>
-                  item.complejidad
-              );
-
-            const bandasComplejidad =
-              contarBandasComplejidad(
-                itemsNivel
-              );
-
-            const sumar =
-              (valores) =>
-                valores.reduce(
-                  (total, valor) =>
-                    total + valor,
-                  0
-                );
-
-            return {
-              nivel,
-              cantidad:
-                itemsNivel.length,
-
-              promedioSolucion:
-                Math.round(
-                  sumar(soluciones) /
-                    itemsNivel.length
-                ),
-
-              promedioGiros:
-                Math.round(
-                  sumar(giros) /
-                    itemsNivel.length
-                ),
-
-              promedioCallejones:
-                Math.round(
-                  sumar(callejones) /
-                    itemsNivel.length
-                ),
-
-              promedioRecorrido:
-                Math.round(
-                  sumar(recorridos) /
-
-                                      itemsNivel.length
-                ),
-
-              promedioDensidadGiros:
-                Math.round(
-                  sumar(
-                    densidadesGiros
-                  ) /
-                    itemsNivel.length
-                ),
-
-              promedioDensidadCallejones:
-                Math.round(
-                  sumar(
-                    densidadesCallejones
-                  ) /
-                    itemsNivel.length
-                ),
-
-              promedioComplejidad:
-                Math.round(
-                  sumar(complejidades) /
-                    itemsNivel.length
-                ),
-
-              minimoSolucion:
-                Math.min(
-
-                                    ...soluciones
-                ),
-              maximoSolucion:
-                Math.max(
-                  ...soluciones
-                ),
-
-              minimoGiros:
-                Math.min(...giros),
-              maximoGiros:
-                Math.max(...giros),
-
-              minimoCallejones:
-                Math.min(
-                  ...callejones
-                ),
-              maximoCallejones:
-                Math.max(
-                  ...callejones
-                ),
-
-              minimoRecorrido:
-                Math.min(
-                  ...recorridos
-                ),
-              maximoRecorrido:
-                Math.max(
-                  ...recorridos
-                ),
-
-              minimoDensidadGiros:
-                Math.min(
-                  ...densidadesGiros
-                ),
-              maximoDensidadGiros:
-                Math.max(
-                  ...densidadesGiros
-                ),
-
-              minimoDensidadCallejones:
-                Math.min(
-                  ...densidadesCallejones
-                ),
-              maximoDensidadCallejones:
-                Math.max(
-                  ...densidadesCallejones
-                ),
-
-              minimoComplejidad:
-                Math.min(
-                  ...complejidades
-                ),
-              maximoComplejidad:
-                Math.max(
-                  ...complejidades
-                ),
-
-              percentilesSolucion:
-                calcularPercentiles(
-                  soluciones
-                ),
-
-              percentilesGiros:
-                calcularPercentiles(
-                  giros
-                ),
-
-              percentilesCallejones:
-                calcularPercentiles(
-                  callejones
-                ),
-
-              percentilesComplejidad:
-                calcularPercentiles(
-                  complejidades
-                ),
-
-              bandasComplejidad,
-            };
-          })
-          .filter(Boolean),
-      [validacionesFinales]
-    );
+  const hayArchivosInvalidos = useMemo(
+    () =>
+      archivosPdf.some(
+        (item) =>
+          item.estado === "error" ||
+          !item.paginas
+      ),
+    [archivosPdf]
+  );
 
   /* =======================================================
-     ACCIONES
+     AGREGAR PDFs
   ======================================================= */
 
-  function generarNuevoConjunto() {
-    setSemilla(
-      (actual) => actual + 1
+  async function agregarArchivos(evento) {
+    const seleccionados = Array.from(
+      evento.target.files || []
     );
-    setPaginaActual(0);
-    setPaginaValidacion(0);
-  }
 
-  async function descargarPdfCompleto() {
-    if (
-      exportandoPdf ||
-      paginas.length === 0
-    ) {
+    evento.target.value = "";
+
+    if (seleccionados.length === 0) {
       return;
     }
 
-    setDiagnosticoPdf([]);
+    setMensajeError("");
+    setProcesandoArchivos(true);
+
+    try {
+      const nuevos = [];
+
+      for (const archivo of seleccionados) {
+        if (
+          archivo.type !== "application/pdf" &&
+          !archivo.name.toLowerCase().endsWith(".pdf")
+        ) {
+          nuevos.push({
+            id: crearIdArchivo(),
+            archivo,
+            nombre: archivo.name,
+            paginas: 0,
+            estado: "error",
+            error: "El archivo no es un PDF.",
+          });
+
+          continue;
+        }
+
+        try {
+          const paginas =
+            await obtenerCantidadPaginas(archivo);
+
+          nuevos.push({
+            id: crearIdArchivo(),
+            archivo,
+            nombre: archivo.name,
+            paginas,
+            estado: "listo",
+            error: "",
+          });
+        } catch (error) {
+          console.error(
+            `No se pudo leer ${archivo.name}:`,
+            error
+          );
+
+          nuevos.push({
+            id: crearIdArchivo(),
+            archivo,
+            nombre: archivo.name,
+            paginas: 0,
+            estado: "error",
+            error:
+              "No se pudo leer este PDF. Puede estar dañado o protegido.",
+          });
+        }
+      }
+
+      setArchivosPdf((actuales) => [
+        ...actuales,
+        ...nuevos,
+      ]);
+    } finally {
+      setProcesandoArchivos(false);
+    }
+  }
+
+  /* =======================================================
+     ORDEN
+  ======================================================= */
+
+  function moverArchivo(indice, direccion) {
+    const destino =
+      direccion === "arriba"
+        ? indice - 1
+        : indice + 1;
+
+    setArchivosPdf((actuales) =>
+      moverElemento(
+        actuales,
+        indice,
+        destino
+      )
+    );
+  }
+
+  function eliminarArchivo(id) {
+    setArchivosPdf((actuales) =>
+      actuales.filter(
+        (item) => item.id !== id
+      )
+    );
+
+    if (archivoPreviewId === id) {
+      setArchivoPreviewId(null);
+    }
+  }
+
+  function eliminarTodos() {
+    setArchivosPdf([]);
+    setArchivoPreviewId(null);
+    setMensajeError("");
+  }
+
+  /* =======================================================
+     GENERAR PDF
+  ======================================================= */
+
+  async function descargarPdfCompleto() {
+    if (exportandoPdf) {
+      return;
+    }
+
+    if (archivosPdf.length === 0) {
+      setMensajeError(
+        "Selecciona al menos un PDF de actividades."
+      );
+      return;
+    }
+
+    if (hayArchivosInvalidos) {
+      setMensajeError(
+        "Hay archivos con errores. Elimínalos o reemplázalos antes de generar el PDF."
+      );
+      return;
+    }
+
+    setMensajeError("");
     setExportandoPdf(true);
 
     setProgresoPdf({
       actual: 0,
-      total: paginas.length,
+      total: totalPaginasFinal,
       porcentaje: 0,
+      fase: "preparando",
     });
 
     try {
       await generarPdfLaminas({
-        totalPaginas:
-          paginas.length,
+        imagenPortada:
+          imagenPortada.trim(),
 
-        recursosPrecargar:
-  recursosPdf,
+        imagenFinal:
+          imagenFinal.trim(),
 
-        cambiarPagina:
-          async (indice) => {
-            setPaginaActual(
-              indice
-            );
+        archivosPdf:
+          archivosPdf.map(
+            (item) => item.archivo
+          ),
 
-            await new Promise(
-              (resolve) => {
-                requestAnimationFrame(
-                  () => {
-                    requestAnimationFrame(
-                      resolve
-                    );
-                  }
-                );
-              }
+        logoUrl:
+          ESTILOS_IMPRIMIBLES.logo.url,
+
+        nombreArchivo:
+          "Andres-Imprimibles.pdf",
+
+        coberturaInferior: {
+  activa: cubrirTextoInferior,
+  posicion: posicionCobertura,
+  altura: alturaCobertura,
+  ancho: anchoCobertura,
+},
+
+        alActualizarProgreso:
+          (progreso) => {
+            setProgresoPdf(
+              progreso
             );
           },
-
-        obtenerElemento:
-          () =>
-            laminaExportarRef.current,
-
-        nombreArchivo: "Laberintos-Andres-Imprimibles.pdf",
-
-        calidad: 0.90,
-pixelRatio: 1.25,
-
-      alActualizarProgreso:
-      ({
-        fase,
-        actual,
-        total,
-        porcentaje,
-      }) => {
-        setProgresoPdf({
-          fase,
-          actual,
-          total,
-          porcentaje,
-        });
-      },
-
-      alActualizarDiagnostico:
-  undefined,
       });
     } catch (error) {
-      console.error(error);
-      alert(
-        "No se pudo generar el PDF. Revisá la consola."
+      console.error(
+        "Error generando el PDF:",
+        error
+      );
+
+      setMensajeError(
+        error?.message ||
+          "No se pudo generar el PDF."
       );
     } finally {
       setExportandoPdf(false);
@@ -1989,1186 +380,667 @@ pixelRatio: 1.25,
   }
 
   /* =======================================================
-     SIN PÁGINA
+     INTERFAZ
   ======================================================= */
 
-  if (!pagina) {
-    return (
-      <main className="min-h-screen bg-slate-100 p-4">
-        <div className="mx-auto max-w-xl rounded-2xl bg-white p-5 text-center shadow-sm">
-          <p className="font-bold text-slate-900">
-            No hay páginas disponibles
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-8 md:px-6">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-600">
+            Andrés Imprimibles
+          </p>
+
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+            Armador de productos PDF
+          </h1>
+
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+            Agrega la portada, selecciona todos los PDFs de
+            actividades y soluciones, ordénalos y genera el
+            producto final.
           </p>
         </div>
-      </main>
-    );
-  }
 
-    return (
-    <main className="min-h-screen overflow-x-hidden bg-slate-100">
-      <div className="mx-auto w-full max-w-7xl px-3 py-4">
-        {/* ===================================================
-            PANEL PRINCIPAL
-        ==================================================== */}
+        {/* =================================================
+            PORTADA
+        ================================================= */}
 
-        <section className="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
-          <div className="flex items-center justify-between gap-3">
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+              <ImageIcon size={21} />
+            </div>
+
             <div>
-              <h1 className="text-lg font-bold text-slate-900">
-                Generador de laberintos
-              </h1>
+              <h2 className="text-lg font-bold text-slate-900">
+                1. Portada
+              </h2>
 
-              <p className="text-xs text-slate-500">
-                Andrés Imprimibles
+              <p className="mt-1 text-sm leading-5 text-slate-500">
+                Pega la URL de la imagen que irá como primera
+                página del PDF.
               </p>
             </div>
+          </div>
 
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-              {cantidadActividades}{" "}
-              actividades
+          <label className="mt-5 block">
+            <span className="mb-2 block text-sm font-semibold text-slate-700">
+              URL de portada
             </span>
-          </div>
 
-          {/* =================================================
-              PORTADA / FINAL
-          ================================================== */}
+            <input
+              type="url"
+              value={imagenPortada}
+              onChange={(evento) =>
+                setImagenPortada(
+                  evento.target.value
+                )
+              }
+              placeholder="https://..."
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+            />
+          </label>
 
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div>
-              <label className="block text-center text-[10px] font-bold text-slate-600">
-                URL portada
-              </label>
-
-              <input
-                type="url"
-                value={imagenPortada}
-                onChange={(e) => setImagenPortada(e.target.value)}
-                placeholder="https://..."
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+          {imagenPortada.trim() && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+              <img
+                src={imagenPortada}
+                alt="Vista previa de portada"
+                className="mx-auto max-h-[420px] w-auto object-contain"
               />
+            </div>
+          )}
+        </section>
+
+        {/* =================================================
+            ACTIVIDADES
+        ================================================= */}
+
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+              <FileText size={21} />
             </div>
 
             <div>
-              <label className="block text-center text-[10px] font-bold text-slate-600">
-                URL final
-              </label>
+              <h2 className="text-lg font-bold text-slate-900">
+                2. Actividades y soluciones
+              </h2>
 
-              <input
-                type="url"
-                value={imagenFinal}
-                onChange={(e) => setImagenFinal(e.target.value)}
-                placeholder="https://..."
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-              />
+              <p className="mt-1 text-sm leading-5 text-slate-500">
+                Selecciona varios PDFs a la vez. Cada archivo
+                conservará todas sus páginas y el orden que
+                definas aquí.
+              </p>
             </div>
           </div>
 
-          {/* =================================================
-              NIVELES
-          ================================================== */}
+          <input
+            ref={inputArchivosRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            multiple
+            onChange={agregarArchivos}
+            className="hidden"
+          />
 
-          <div className="mt-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-              Cantidad por nivel
-            </p>
+          <button
+            type="button"
+            onClick={() =>
+              inputArchivosRef.current?.click()
+            }
+            disabled={procesandoArchivos}
+            className="mt-5 flex min-h-[116px] w-full items-center justify-center rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50 px-5 py-6 text-center transition active:scale-[0.99] disabled:opacity-60"
+          >
+            <div>
+              {procesandoArchivos ? (
+                <Loader2
+                  className="mx-auto animate-spin text-sky-600"
+                  size={30}
+                />
+              ) : (
+                <Upload
+                  className="mx-auto text-sky-600"
+                  size={30}
+                />
+              )}
 
-            <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
-              <Cantidad
-                titulo="Fácil"
-                valor={
-                  cantidadFaciles
-                }
-                onChange={
-                  setCantidadFaciles
-                }
-              />
-
-              <Cantidad
-                titulo="Medio"
-                valor={
-                  cantidadMedios
-                }
-                onChange={
-                  setCantidadMedios
-                }
-              />
-
-              <Cantidad
-                titulo="Difícil"
-                valor={
-                  cantidadDificiles
-                }
-                onChange={
-                  setCantidadDificiles
-                }
-              />
-
-              <Cantidad
-                titulo="Experto"
-                valor={
-                  cantidadExpertos
-                }
-                onChange={
-                  setCantidadExpertos
-                }
-              />
-
-              <Cantidad
-                                titulo="Legendario"
-                valor={
-                  cantidadLegendarios
-                }
-                onChange={
-                  setCantidadLegendarios
-                }
-              />
-            </div>
-          </div>
-
-          {/* =================================================
-              MODO DE GENERACIÓN
-          ================================================== */}
-
-          <div className="mt-4 rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-sky-600">
-              Modo de generación
-            </p>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setModoGeneracion(
-                    "aleatorio"
-                  )
-                }
-                className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
-                  configuracionProducto.modoGeneracion ===
-                  "aleatorio"
-                    ? "bg-slate-900 text-white"
-                    : "bg-white text-slate-600"
-                }`}
-              >
-                Aleatorio
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setModoGeneracion(
-                    "progresivo"
-                  )
-                }
-                className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
-                  configuracionProducto.modoGeneracion ===
-                  "progresivo"
-                    ? "bg-slate-900 text-white"
-                    : "bg-white text-slate-600"
-                }`}
-              >
-                Progresivo
-              </button>
-            </div>
-
-            <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-              {configuracionProducto.modoGeneracion ===
-              "progresivo"
-                ? "Los laberintos se seleccionan y ordenan de menor a mayor complejidad dentro de cada nivel."
-                : "Los laberintos mantienen el orden normal generado por la semilla."}
-            </p>
-          </div>
-
-          {/* =================================================
-              NAVEGACIÓN DE PÁGINAS
-          ================================================== */}
-
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setPaginaActual(
-                    (actual) =>
-                      Math.max(
-                        actual - 1,
-                        0
-                      )
-                  )
-                }
-                disabled={
-                  paginaActual === 0
-                }
-                className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 text-lg font-bold disabled:opacity-30"
-              >
-                ←
-              </button>
-
-              <div className="min-w-0 text-center">
-                <p className="truncate text-sm font-bold text-slate-900">
-                  {pagina.nombre}
-                </p>
-
-                <p className="text-[11px] text-slate-500">
-                  Página{" "}
-                  {paginaActual + 1}
-                  {" de "}
-                  {paginas.length}
-                </p>
+              <div className="mt-3 text-base font-bold text-slate-900">
+                {procesandoArchivos
+                  ? "Leyendo PDFs..."
+                  : archivosPdf.length > 0
+                    ? "Agregar más PDFs"
+                    : "Seleccionar PDFs"}
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  setPaginaActual(
-                    (actual) =>
-                      Math.min(
-                        actual + 1,
-                        paginas.length -
-                          1
-                      )
-                  )
-                }
-                disabled={
-                  paginaActual ===
-                  paginas.length - 1
-                }
-                className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 text-lg font-bold disabled:opacity-30"
-              >
-                →
-              </button>
-            </div>
-
-            {paginas.length <=
-            LIMITE_SELECTOR_PAGINAS ? (
-              <select
-                value={paginaActual}
-                onChange={(e) =>
-                  setPaginaActual(
-                    Number(
-                      e.target.value
-                    )
-                  )
-                }
-                className={`${CLASE_CAMPO} mt-3`}
-              >
-                {paginas.map(
-                  (item, index) => (
-                    <option
-                      key={item.id}
-                      value={index}
-                    >
-                      {index + 1}.{" "}
-                      {item.nombre}
-                    </option>
-                  )
-                )}
-              </select>
-
-                          ) : (
-              <div className="mt-3">
-                <label className="block">
-                  <span className="text-[11px] font-semibold text-slate-500">
-                    Ir a página
-                  </span>
-
-                  <input
-                    type="number"
-                    min="1"
-                    max={paginas.length}
-                    value={
-                      paginaActual + 1
-                    }
-                    onChange={(e) => {
-                      const valor =
-                        Number(
-                          e.target.value
-                        );
-
-                      if (
-                        !Number.isFinite(
-                          valor
-                        )
-                      ) {
-                        return;
-                      }
-
-                      const paginaDestino =
-                        Math.min(
-                          Math.max(
-                            Math.round(
-                              valor
-                            ),
-                            1
-                          ),
-                          paginas.length
-                        );
-
-                      setPaginaActual(
-                        paginaDestino - 1
-                      );
-                    }}
-                    className={
-                      CLASE_CAMPO
-                    }
-                  />
-                </label>
-
-                <p className="mt-1 text-[10px] text-slate-400">
-                  Producto grande: el selector completo se desactiva para ahorrar memoria.
-                </p>
+              <div className="mt-1 text-sm text-slate-500">
+                Puedes seleccionar varios archivos de una sola
+                vez.
               </div>
-            )}
-          </div>
-
-          {/* =================================================
-              PREVIEW A4
-          ================================================== */}
-
-          <section className="mt-4">
-            <div className="mb-2 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-slate-700">
-                  Vista previa
-                </p>
-
-                <p className="text-[11px] text-slate-500">
-                  A4 · 210 × 297 mm
-                </p>
-              </div>
-
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">
-                {Math.round(
-                  escalaPreview * 100
-                )}
-                %
-              </span>
             </div>
+          </button>
 
-            <div
-  ref={
-    contenedorPreviewRef
-  }
-  className="min-w-0 w-full overflow-hidden"
->
-              <div
-                className="mx-auto"
-                style={{
-                  width:
-                    ANCHO_A4 *
-                    escalaPreview,
-                  height:
-                    ALTO_A4 *
-                    escalaPreview,
-                }}
-              >
-                <div
-                  style={{
-                    width: ANCHO_A4,
-                    height: ALTO_A4,
-                    transform:
-                      `scale(${escalaPreview})`,
-                    transformOrigin:
-                      "top left",
-                  }}
-                >
-                  <div
-                    ref={
-                      laminaExportarRef
-                    }
-                    style={{
-                      width: ANCHO_A4,
-                      height: ALTO_A4,
-                    }}
-                  >
-                        {pagina.tipo === "portada" ? (
-                    <PortadaLaberintos
-  nombreProducto={LABERINTOS_50.nombre}
-  niveles={[
-    cantidadFacil > 0 && "facil",
-    cantidadMedio > 0 && "medio",
-    cantidadDificil > 0 && "dificil",
-    cantidadExperto > 0 && "experto",
-    cantidadLegendario > 0 && "legendario",
-  ].filter(Boolean)}
-/>
-                        ) :  pagina.tipo === "final" ? (
-  <LaminaFinalLaberintos
-    imagenFinal={imagenFinal}
-  />
-                        ) : (
-                      
-                      <LaminaBase
-                        titulo=""
-                        instrucciones=""
-                      >
-                        <LaminaLaberinto
-                          numero={
-                            pagina.numeroProducto ??
-                            indiceActividad + 1
-                          }
-                          nivel={
-                            nivelPagina
-                          }
-                          filas={
-                            configuracionPagina.filas
-                          }
-                          columnas={
-                            configuracionPagina.columnas
-                          }
-                          semilla={
-                            semillaPagina
-                          }
-                          mostrarSolucion={
-                            pagina.tipo ===
-                            "solucion"
-                          }
-                        />
-                      </LaminaBase>
+          {archivosPdf.length > 0 && (
+            <>
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Archivos
+                  </div>
+                  <div className="mt-1 text-xl font-bold text-slate-900">
+                    {archivosPdf.length}
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Páginas
+                  </div>
+                  <div className="mt-1 text-xl font-bold text-slate-900">
+                    {totalPaginasActividades}
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Peso
+                  </div>
+                  <div className="mt-1 text-xl font-bold text-slate-900">
+                    {formatearBytes(
+                      pesoTotal
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
-          </section>
 
-          {/* =================================================
-              ESTADO DEL PRODUCTO
-          ================================================== */}
-
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-            <p>
-              Laberintos finales:{" "}
-              <strong className="text-slate-700">
-                {
-                  validacionesFinales.length
-                }
-              </strong>
-            </p>
-
-            <p>
-              Actividades finales:{" "}
-              <strong className="text-slate-700">
-                {
-                  actividadesFinales.length
-                }
-              </strong>
-            </p>
-          </div>
-
-          {/* =================================================
-              ACCIONES
-          ================================================== */}
-
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={
-                generarNuevoConjunto
-              }
-              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white"
-            >
-              Generar nuevo conjunto
-            </button>
-
-            <button
-              type="button"
-              onClick={
-                descargarPdfCompleto
-              }
-              disabled={exportandoPdf}
-              className={`rounded-xl px-4 py-2.5 text-sm font-bold ${
-                exportandoPdf
-                  ? "bg-slate-300 text-slate-600"
-                  : "bg-sky-500 text-white"
-              }`}
-            >
-              {exportandoPdf
-                ? `PDF ${progresoPdf.porcentaje}%`
-                : "Descargar PDF"}
-            </button>
-          </div>
-
-        {exportandoPdf && (
-          <div className="mt-3">
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-              <div
-                className="h-full bg-slate-900 transition-all"
-                style={{
-                  width:
-                    `${progresoPdf.porcentaje}%`,
-                }}
-              />
-            </div>
-
-            <p className="mt-1 text-center text-[11px] font-semibold text-slate-500">
-              {progresoPdf.actual}
-              {" de "}
-              {progresoPdf.total}
-              {" páginas"}
-            </p>
-          </div>
-        )}
-
-                  {/* DIAGNÓSTICO PDF */}
-
-          {diagnosticoPdf.length > 0 && (
-            <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
-              <div className="mb-3 font-bold">
-                Diagnóstico PDF
-              </div>
-
-              {diagnosticoPdf.map((item) => (
-                <div
-                  key={item.pagina}
-                  className="border-b py-2"
-                >
-                  <div className="font-semibold">
-                    Página {item.pagina}
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    PDF final
                   </div>
-
-                  <div>
-                    Imágenes: {item.imagenes} ms
+                  <div className="mt-1 text-xl font-bold text-slate-900">
+                    {totalPaginasFinal}
                   </div>
-
-                  <div>
-  toJpeg: {item.toJpeg} ms
-</div>
-
-                  <div>
-                    Conversión: {item.conversion} ms
-                  </div>
-
-                  <div>
-                    jsPDF: {item.addImage} ms
-                  </div>
-
-                  <div>
-  Render: {item.render} ms
-</div>
-
-<div>
-  Total real: {item.totalReal} ms
-</div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* =================================================
-              RECURSOS DEL PDF
-          ================================================== */}
-
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold text-slate-700">
-                  Recursos del PDF
-                </p>
-
-                <p className="mt-1 text-[11px] text-slate-500">
-                  {recursosPdf.length} imágenes únicas
-                </p>
               </div>
 
-              <button
-                type="button"
-                onClick={medirRecursosPdf}
-                disabled={midiendoRecursos}
-                className={`rounded-lg px-3 py-2 text-xs font-bold ${
-                  midiendoRecursos
-                    ? "bg-slate-200 text-slate-500"
-                    : "bg-slate-900 text-white"
-                }`}
-              >
-                {midiendoRecursos
-                  ? "Analizando..."
-                  : "Analizar peso y resolución"}
-              </button>
-            </div>
+              <div className="mt-5 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-bold text-slate-900">
+                  Orden de los archivos
+                </h3>
 
-            {recursosMedidos.length > 0 && (
-              <div className="mt-3">
-                <p className="text-sm font-black text-slate-900">
-                  Total: {formatearBytes(pesoTotalRecursos)}
-                </p>
+                <button
+                  type="button"
+                  onClick={eliminarTodos}
+                  className="text-sm font-semibold text-red-600"
+                >
+                  Eliminar todos
+                </button>
+              </div>
 
-                <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
-                  {recursosMedidos.map((recurso, index) => (
+              <div className="mt-3 space-y-3">
+                {archivosPdf.map(
+                  (item, indice) => (
                     <div
-                      key={recurso.url}
-                      className="rounded-lg bg-white px-2 py-1.5 text-[11px] text-slate-600"
-                    >
-                      <span className="font-bold">
-                        {index + 1}.
-                      </span>{" "}
-                      {recurso.ancho} × {recurso.alto} px ·{" "}
-                      {formatearBytes(recurso.bytes)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* ===================================================
-            VALIDACIÓN
-        ==================================================== */}
-
-        <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm sm:p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-bold text-slate-900">
-                Validación
-              </h2>
-
-              <p className="text-[11px] text-slate-500">
-                Entrada, salida, solución y métricas del producto final.
-
-                              </p>
-            </div>
-
-            <span
-              className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
-                productoValido
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {cantidadValidos}
-              /
-              {cantidadActividades}
-            </span>
-          </div>
-
-          {validacionesFinales.length >
-            0 && (
-            <p className="mt-3 text-[11px] font-semibold text-slate-500">
-              Mostrando{" "}
-              {inicioValidacion + 1}
-              {" - "}
-              {finValidacion}
-              {" de "}
-              {
-                validacionesFinales.length
-              }
-            </p>
-          )}
-
-          <div className="mt-2 space-y-1.5">
-            {validacionesVisibles.map(
-              (item) => (
-                <div
-                  key={`${item.nivel}-${item.numeroProducto}-${item.semillaLaberinto}`}
-                  className="rounded-lg bg-slate-50 px-2.5 py-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                          item.valido
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {item.valido
-                          ? "✓"
-                          : "×"}
-                      </span>
-
-                      <span className="truncate text-xs font-semibold text-slate-700">
-                        Laberinto{" "}
-                        {
-                          item.numeroProducto
-                        }
-                        {" · "}
-                        {
-                          NOMBRE_NIVEL[
-                            item.nivel
-                          ]
-                        }
-                      </span>
-                    </div>
-
-                    <span
-                      className={`shrink-0 text-[10px] font-bold ${
-                        item.valido
-                          ? "text-emerald-600"
-                          : "text-red-600"
+                      key={item.id}
+                      className={`rounded-2xl border p-4 ${
+                        item.estado ===
+                        "error"
+                          ? "border-red-200 bg-red-50"
+                          : "border-slate-200 bg-white"
                       }`}
                     >
-                      {item.valido
-                        ? "VÁLIDO"
-                        : "ERROR"}
-                    </span>
-                  </div>
+                      <div className="flex gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-700">
+                          {indice + 1}
+                        </div>
 
-                  <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                    <Metrica
-                      titulo="Celdas"
-                      valor={
-                        item.totalCeldas
-                      }
-                    />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setArchivoPreviewId(
+                              item.id
+                            )
+                          }
+                          className="min-w-0 flex-1 text-left"
+                          disabled={
+                            item.estado ===
+                            "error"
+                          }
+                        >
+                          <div className="truncate text-sm font-bold text-slate-900">
+                            {item.nombre}
+                          </div>
 
-                    <Metrica
-                      titulo="Solución"
-                      valor={
-                        item.longitudSolucion
-                      }
-                    />
+                          {item.estado ===
+                          "error" ? (
+                            <div className="mt-1 text-xs font-medium text-red-600">
+                              {item.error}
+                            </div>
+                          ) : (
+                            <div className="mt-1 text-xs text-slate-500">
+                              {item.paginas}{" "}
+                              {item.paginas === 1
+                                ? "página"
+                                : "páginas"}{" "}
+                              ·{" "}
+                              {formatearBytes(
+                                item
+                                  .archivo
+                                  .size
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      </div>
 
-                    <Metrica
-                      titulo="Giros"
-                                            valor={
-                        item.cantidadGiros
-                      }
-                    />
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            moverArchivo(
+                              indice,
+                              "arriba"
+                            )
+                          }
+                          disabled={
+                            indice === 0
+                          }
+                          className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 disabled:opacity-30"
+                          aria-label="Mover hacia arriba"
+                        >
+                          <ArrowUp
+                            size={18}
+                          />
+                          Subir
+                        </button>
 
-                    <Metrica
-                      titulo="Callejones"
-                      valor={
-                        item.cantidadCallejones
-                      }
-                    />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            moverArchivo(
+                              indice,
+                              "abajo"
+                            )
+                          }
+                          disabled={
+                            indice ===
+                            archivosPdf.length -
+                              1
+                          }
+                          className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 disabled:opacity-30"
+                          aria-label="Mover hacia abajo"
+                        >
+                          <ArrowDown
+                            size={18}
+                          />
+                          Bajar
+                        </button>
 
-                    <Metrica
-                      titulo="Recorrido"
-                      valor={`${item.porcentajeRecorrido}%`}
-                    />
-
-                    <Metrica
-                      titulo="Dens. giros"
-                      valor={`${item.densidadGiros}%`}
-                    />
-
-                    <Metrica
-                      titulo="Dens. callejones"
-                      valor={`${item.densidadCallejones}%`}
-                    />
-
-                    <div className="rounded-md bg-slate-900 px-1.5 py-1.5 text-center">
-                      <p className="text-[9px] font-semibold uppercase text-slate-400">
-                        Complejidad
-                      </p>
-
-                      <p className="text-xs font-bold text-white">
-                        {item.complejidad}
-                        /100
-                      </p>
-
-                      <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                        {
-                          item.bandaComplejidad
-                        }
-                      </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            eliminarArchivo(
+                              item.id
+                            )
+                          }
+                          className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-600"
+                        >
+                          <Trash2
+                            size={17}
+                          />
+                          Eliminar
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  inputArchivosRef.current?.click()
+                }
+                disabled={
+                  procesandoArchivos
+                }
+                className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 text-sm font-bold text-sky-700 disabled:opacity-60"
+              >
+                <Plus size={19} />
+                Agregar más PDFs
+              </button>
+            </>
+          )}
+        </section>
+
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+  <div className="flex items-center justify-between gap-4">
+    <div>
+      <h2 className="text-lg font-bold text-slate-900">
+        Cubrir texto inferior
+      </h2>
+
+      <p className="mt-1 text-sm text-slate-500">
+        Ajusta la zona inferior que se cubrirá en todas las páginas importadas.
+      </p>
+    </div>
+
+    <input
+      type="checkbox"
+      checked={cubrirTextoInferior}
+      onChange={(evento) =>
+        setCubrirTextoInferior(evento.target.checked)
+      }
+      className="h-5 w-5"
+    />
+  </div>
+
+  {cubrirTextoInferior && (
+    <div className="mt-5 space-y-5">
+      <label className="block">
+        <div className="mb-2 flex justify-between text-sm">
+          <span>Posición desde abajo</span>
+          <strong>{posicionCobertura} mm</strong>
+        </div>
+
+        <input
+          type="range"
+          min="0"
+          max="80"
+          step="1"
+          value={posicionCobertura}
+          onChange={(evento) =>
+            setPosicionCobertura(Number(evento.target.value))
+          }
+          className="w-full"
+        />
+      </label>
+
+      <label className="block">
+        <div className="mb-2 flex justify-between text-sm">
+          <span>Altura</span>
+          <strong>{alturaCobertura} mm</strong>
+        </div>
+
+        <input
+          type="range"
+          min="5"
+          max="60"
+          step="1"
+          value={alturaCobertura}
+          onChange={(evento) =>
+            setAlturaCobertura(Number(evento.target.value))
+          }
+          className="w-full"
+        />
+      </label>
+
+      <label className="block">
+        <div className="mb-2 flex justify-between text-sm">
+          <span>Ancho</span>
+          <strong>{anchoCobertura} mm</strong>
+        </div>
+
+        <input
+          type="range"
+          min="50"
+          max="500"
+          step="5"
+          value={anchoCobertura}
+          onChange={(evento) =>
+            setAnchoCobertura(Number(evento.target.value))
+          }
+          className="w-full"
+        />
+      </label>
+    </div>
+  )}
+</section>
+
+        {/* =================================================
+            PREVIEW PDF INDIVIDUAL
+        ================================================= */}
+
+        {archivoPreview &&
+          urlPreviewPdf && (
+            <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Vista previa
+                  </h2>
+
+                  <p className="mt-1 truncate text-sm text-slate-500">
+                    {
+                      archivoPreview.nombre
+                    }
+                  </p>
                 </div>
-              )
-            )}
-          </div>
 
-          {totalPaginasValidacion >
-            1 && (
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setPaginaValidacion(
-                    (actual) =>
-                      Math.max(
-                        actual - 1,
-                        0
-                      )
-                  )
-                }
-                disabled={
-                  paginaValidacion === 0
-                }
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-30"
-              >
-                ← Anterior
-              </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setArchivoPreviewId(
+                      null
+                    )
+                  }
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600"
+                >
+                  Cerrar
+                </button>
+              </div>
 
-              <span className="text-center text-[11px] font-semibold text-slate-500">
-                Página{" "}
-                {paginaValidacion + 1}
-                {" de "}
-                {
-                  totalPaginasValidacion
-                }
-              </span>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setPaginaValidacion(
-                    (actual) =>
-                      Math.min(
-                        actual + 1,
-                        totalPaginasValidacion -
-                          1
-                      )
-                  )
-                }
-                disabled={
-                  paginaValidacion ===
-                  totalPaginasValidacion -
-                    1
-                }
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-30"
-              >
-                Siguiente →
-              </button>
-            </div>
+              <iframe
+                src={urlPreviewPdf}
+                title={`Vista previa ${archivoPreview.nombre}`}
+                className="mt-4 h-[520px] w-full rounded-xl border border-slate-200 bg-slate-100"
+              />
+            </section>
           )}
 
-          {productoValido && (
-            <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-center">
-              <p className="text-xs font-bold text-emerald-700">
-                ✓ PRODUCTO LISTO
+        {/* =================================================
+            LÁMINA FINAL
+        ================================================= */}
+
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+              <ImageIcon size={21} />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                3. Lámina final
+              </h2>
+
+              <p className="mt-1 text-sm leading-5 text-slate-500">
+                Pega la URL de la imagen que irá como última
+                página del producto.
               </p>
+            </div>
+          </div>
+
+          <label className="mt-5 block">
+            <span className="mb-2 block text-sm font-semibold text-slate-700">
+              URL de lámina final
+            </span>
+
+            <input
+              type="url"
+              value={imagenFinal}
+              onChange={(evento) =>
+                setImagenFinal(
+                  evento.target.value
+                )
+              }
+              placeholder="https://..."
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+            />
+          </label>
+
+          {imagenFinal.trim() && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+              <img
+                src={imagenFinal}
+                alt="Vista previa de lámina final"
+                className="mx-auto max-h-[420px] w-auto object-contain"
+              />
             </div>
           )}
         </section>
 
-        {/* ===================================================
-            ESTADÍSTICAS
-        ==================================================== */}
+        {/* =================================================
+            RESUMEN Y EXPORTACIÓN
+        ================================================= */}
 
-        <section className="mt-3 rounded-2xl bg-white p-3 shadow-sm sm:p-4">
-          <div className="mb-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">
-              Estadísticas
-            </p>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <FilePlus2 size={21} />
+            </div>
 
-            <h3 className="mt-1 text-base font-bold text-slate-800">
-              Resumen por nivel
-            </h3>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Generar producto final
+              </h2>
 
-            <p className="mt-1 text-xs text-slate-500">
-              Promedios, mínimos, máximos, percentiles y distribución del producto final.
-            </p>
+              <p className="mt-1 text-sm leading-5 text-slate-500">
+                Los PDFs se unirán exactamente en el orden
+                mostrado arriba.
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-3">
-            {resumenPorNivel.map(
-              (resumen) => (
+          <div className="mt-5 rounded-xl bg-slate-50 p-4">
+            <div className="flex justify-between gap-4 text-sm">
+              <span className="text-slate-500">
+                Portada
+              </span>
+              <span className="font-semibold text-slate-900">
+                {imagenPortada.trim()
+                  ? "Sí"
+                  : "No"}
+              </span>
+            </div>
+
+            <div className="mt-2 flex justify-between gap-4 text-sm">
+              <span className="text-slate-500">
+                PDFs agregados
+              </span>
+              <span className="font-semibold text-slate-900">
+                {archivosPdf.length}
+              </span>
+            </div>
+
+            <div className="mt-2 flex justify-between gap-4 text-sm">
+              <span className="text-slate-500">
+                Páginas de actividades
+              </span>
+              <span className="font-semibold text-slate-900">
+                {totalPaginasActividades}
+              </span>
+            </div>
+
+            <div className="mt-2 flex justify-between gap-4 text-sm">
+              <span className="text-slate-500">
+                Lámina final
+              </span>
+              <span className="font-semibold text-slate-900">
+                {imagenFinal.trim()
+                  ? "Sí"
+                  : "No"}
+              </span>
+            </div>
+
+            <div className="mt-3 border-t border-slate-200 pt-3">
+              <div className="flex justify-between gap-4">
+                <span className="text-sm font-bold text-slate-700">
+                  Total estimado
+                </span>
+
+                <span className="text-lg font-bold text-slate-900">
+                  {totalPaginasFinal} páginas
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {mensajeError && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium leading-5 text-red-700">
+              {mensajeError}
+            </div>
+          )}
+
+          {exportandoPdf && (
+            <div className="mt-5">
+              <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                <span className="font-semibold text-slate-700">
+                  Generando PDF...
+                </span>
+
+                <span className="font-bold text-slate-900">
+                  {progresoPdf.porcentaje ||
+                    0}
+                  %
+                </span>
+              </div>
+
+              <div className="h-3 overflow-hidden rounded-full bg-slate-200">
                 <div
-                  key={resumen.nivel}
-                  className="rounded-xl bg-slate-50 p-3"
-                >
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-slate-800">
-                      {
-                        NOMBRE_NIVEL[
-                          resumen.nivel
-                        ]
-                      }
-                    </p>
+                  className="h-full rounded-full bg-sky-600 transition-all"
+                  style={{
+                    width: `${Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        progresoPdf.porcentaje ||
+                          0
+                      )
+                    )}%`,
+                  }}
+                />
+              </div>
 
-                    <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">
-                      {resumen.cantidad}{" "}
-                      laberintos
-                    </span>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <EstadisticaPercentiles
-                      titulo="Callejones"
-                      promedio={
-                        resumen.promedioCallejones
-                      }
-                      minimo={
-                        resumen.minimoCallejones
-                      }
-                      maximo={
-                        resumen.maximoCallejones
-                      }
-                      percentiles={
-                        resumen.percentilesCallejones
-                      }
-                    />
-
-                    <EstadisticaPercentiles
-                      titulo="Solución"
-                      promedio={
-                        resumen.promedioSolucion
-                      }
-                      minimo={
-                        resumen.minimoSolucion
-                      }
-                      maximo={
-                        resumen.maximoSolucion
-                      }
-                      percentiles={
-                        resumen.percentilesSolucion
-                      }
-                    />
-
-                    <EstadisticaPercentiles
-                      titulo="Giros"
-                      promedio={
-                        resumen.promedioGiros
-                      }
-                      minimo={
-                        resumen.minimoGiros
-                      }
-                      maximo={
-                        resumen.maximoGiros
-                      }
-                      percentiles={
-                        resumen.percentilesGiros
-                      }
-                    />
-
-                    <EstadisticaSimple
-                      titulo="Recorrido"
-                      promedio={`${resumen.promedioRecorrido}%`}
-                      rango={`${resumen.minimoRecorrido}% - ${resumen.maximoRecorrido}%`}
-                    />
-
-                    <EstadisticaSimple
-                      titulo="Dens. giros"
-                      promedio={`${resumen.promedioDensidadGiros}%`}
-                      rango={`${resumen.minimoDensidadGiros}% - ${resumen.maximoDensidadGiros}%`}
-                    />
-
-                    <EstadisticaSimple
-                      titulo="Dens. callejones"
-                      promedio={`${resumen.promedioDensidadCallejones}%`}
-                      rango={`${resumen.minimoDensidadCallejones}% - ${resumen.maximoDensidadCallejones}%`}
-                    />
-
-                    <EstadisticaComplejidad
-                      promedio={
-                        resumen.promedioComplejidad
-                      }
-                      minimo={
-                        resumen.minimoComplejidad
-                      }
-                      maximo={
-                        resumen.maximoComplejidad
-                      }
-                      percentiles={
-                        resumen.percentilesComplejidad
-                      }
-                      bandas={
-                        resumen.bandasComplejidad
-                      }
-                    />
-                  </div>
+              {progresoPdf.total > 0 && (
+                <div className="mt-2 text-xs text-slate-500">
+                  {progresoPdf.actual} de{" "}
+                  {progresoPdf.total} páginas
                 </div>
-              )
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={descargarPdfCompleto}
+            disabled={
+              exportandoPdf ||
+              procesandoArchivos ||
+              archivosPdf.length ===
+                0 ||
+              hayArchivosInvalidos
+            }
+            className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 text-base font-bold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {exportandoPdf ? (
+              <>
+                <Loader2
+                  className="animate-spin"
+                  size={21}
+                />
+                Generando PDF...
+              </>
+            ) : (
+              <>
+                <FilePlus2
+                  size={21}
+                />
+                Generar PDF final
+              </>
             )}
-          </div>
+          </button>
         </section>
       </div>
     </main>
-  );
-}
-
-/* =========================================================
-   ESTILOS REUTILIZABLES
-========================================================= */
-
-const CLASE_CAMPO =
-  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400";
-
-/* =========================================================
-   CANTIDAD
-========================================================= */
-
-function Cantidad({
-  titulo,
-  valor,
-  onChange,
-}) {
-  return (
-    <label className="block">
-      <span className="block text-center text-[11px] font-semibold text-slate-500">
-        {titulo}
-      </span>
-
-      <input
-        type="number"
-        min="0"
-        max="10000"
-        value={valor}
-        onChange={(e) =>
-          onChange(
-            Math.min(
-              Math.max(
-                Number(
-                  e.target.value
-                ),
-                0
-              ),
-              10000
-            )
-          )
-        }
-        className="mt-1 w-full rounded-xl border border-slate-200 px-2 py-2 text-center text-sm font-bold outline-none focus:border-sky-400"
-      />
-    </label>
-  );
-}
-
-/* =========================================================
-   MÉTRICA INDIVIDUAL
-========================================================= */
-
-function Metrica({
-  titulo,
-  valor,
-}) {
-  return (
-    <div className="rounded-md bg-white px-1.5 py-1.5 text-center">
-      <p className="text-[9px] font-semibold uppercase text-slate-400">
-        {titulo}
-      </p>
-
-      <p className="text-xs font-bold text-slate-700">
-        {valor}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
-   ESTADÍSTICA SIMPLE
-========================================================= */
-
-function EstadisticaSimple({
-  titulo,
-  promedio,
-  rango,
-}) {
-  return (
-    <div className="rounded-lg bg-white p-2 text-center">
-      <p className="text-[9px] font-semibold uppercase text-slate-400">
-        {titulo}
-      </p>
-
-      <p className="mt-1 text-sm font-bold text-slate-700">
-        {promedio}
-      </p>
-
-      <p className="text-[9px] text-slate-400">
-        {rango}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
-   ESTADÍSTICA CON PERCENTILES
-========================================================= */
-
-function EstadisticaPercentiles({
-  titulo,
-  promedio,
-  minimo,
-  maximo,
-  percentiles,
-}) {
-  return (
-    <div className="rounded-lg bg-white p-2 text-center">
-      <p className="text-[9px] font-semibold uppercase text-slate-400">
-        {titulo}
-      </p>
-
-      <p className="mt-1 text-sm font-bold text-slate-700">
-        {promedio}
-      </p>
-
-      <p className="text-[9px] text-slate-400">
-        {minimo}
-        {" - "}
-        {maximo}
-      </p>
-
-      <p className="mt-1 text-[9px] leading-4 text-slate-500">
-        P05 {percentiles.p05}
-        {" · "}
-        P25 {percentiles.p25}
-        {" · "}
-        P50 {percentiles.p50}
-        {" · "}
-        P75 {percentiles.p75}
-        {" · "}
-        P95 {percentiles.p95}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
-   ESTADÍSTICA DE COMPLEJIDAD
-========================================================= */
-
-function EstadisticaComplejidad({
-  promedio,
-  minimo,
-  maximo,
-  percentiles,
-  bandas,
-}) {
-  return (
-    <div className="space-y-2 sm:col-span-2">
-      <div className="rounded-lg bg-slate-900 p-2 text-center">
-        <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-          Complejidad interna
-        </p>
-
-        <p className="mt-1 text-sm font-bold text-white">
-          {promedio}/100
-        </p>
-
-        <p className="text-[9px] text-slate-400">
-          {minimo}
-          {" - "}
-          {maximo}
-        </p>
-
-        <p className="mt-1 text-[9px] leading-4 text-slate-400">
-          P05 {percentiles.p05}
-          {" · "}
-          P25 {percentiles.p25}
-          {" · "}
-          P50 {percentiles.p50}
-          {" · "}
-          P75 {percentiles.p75}
-          {" · "}
-          P95 {percentiles.p95}
-        </p>
-      </div>
-
-      <div className="rounded-lg bg-white p-3">
-        <p className="text-center text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-          Distribución por complejidad
-        </p>
-
-        <div className="mt-2 grid grid-cols-5 gap-1">
-          {NOMBRES_BANDAS.map(
-            (banda) => (
-              <div
-                key={banda}
-                className="rounded-md bg-slate-50 px-1 py-2 text-center"
-              >
-                <p className="text-[8px] font-semibold leading-3 text-slate-400">
-                  {banda}
-                </p>
-
-                <p className="mt-1 text-xs font-bold text-slate-700">
-                  {bandas?.[banda] ?? 0}
-                </p>
-              </div>
-            )
-          )}
-        </div>
-      </div>
-    </div>
   );
 }

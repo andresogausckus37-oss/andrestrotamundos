@@ -1,57 +1,13 @@
 import { ESTILOS_IMPRIMIBLES } from "../config/estilosImprimibles";
 
-const DATOS_NIVELES = {
-  facil: {
-    etiqueta: "Fácil",
-    fondo: "#DCFCE7",
-    texto: "#166534",
-    borde: "#86EFAC",
-  },
-  medio: {
-    etiqueta: "Medio",
-    fondo: "#FEF3C7",
-    texto: "#92400E",
-    borde: "#FCD34D",
-  },
-  dificil: {
-    etiqueta: "Difícil",
-    fondo: "#FEE2E2",
-    texto: "#991B1B",
-    borde: "#FCA5A5",
-  },
-  experto: {
-    etiqueta: "Experto",
-    fondo: "#DBEAFE",
-    texto: "#1E40AF",
-    borde: "#93C5FD",
-  },
-  legendario: {
-    etiqueta: "Legendario",
-    fondo: "#FCE7F3",
-    texto: "#9D174D",
-    borde: "#F9A8D4",
-  },
-};
-
 export default function PortadaLaberintos({
   nombreProducto = "50 Laberintos",
-  niveles = [],
 }) {
   const { logo, pagina } = ESTILOS_IMPRIMIBLES;
 
-  const nivelesVisibles = niveles
-    .map((nivel) => {
-      if (typeof nivel === "string") {
-        return nivel;
-      }
-
-      return nivel?.nivel;
-    })
-    .filter(
-      (nivel, indice, lista) =>
-        DATOS_NIVELES[nivel] &&
-        lista.indexOf(nivel) === indice
-    );
+  const partesTitulo = String(nombreProducto).trim().split(" ");
+  const primeraParte = partesTitulo[0] || "50";
+  const restoTitulo = partesTitulo.slice(1).join(" ") || "Laberintos";
 
   return (
     <div
@@ -61,263 +17,600 @@ export default function PortadaLaberintos({
         height: `${pagina.alto}px`,
         overflow: "hidden",
         boxSizing: "border-box",
-        background:
-          "linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 48%, #FFF7ED 100%)",
+        background: "#FFF9E8",
         fontFamily: '"Montserrat", Arial, sans-serif',
       }}
     >
-      {/* DECORACIÓN SUPERIOR */}
+      {/* FONDO SUPERIOR */}
 
       <div
         style={{
           position: "absolute",
-          top: "-130px",
-          left: "-110px",
-          width: "360px",
-          height: "360px",
-          borderRadius: "50%",
-          background: "#BAE6FD",
-          opacity: 0.45,
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "515px",
+          background: "#FFD43B",
         }}
       />
 
       <div
         style={{
           position: "absolute",
-          top: "90px",
-          right: "-150px",
-          width: "330px",
-          height: "330px",
+          top: "-125px",
+          left: "-105px",
+          width: "310px",
+          height: "310px",
           borderRadius: "50%",
-          background: "#FED7AA",
-          opacity: 0.4,
+          background: "#FF8A34",
         }}
       />
 
-      {/* CONTENIDO */}
+      <div
+        style={{
+          position: "absolute",
+          top: "-105px",
+          right: "-90px",
+          width: "280px",
+          height: "280px",
+          borderRadius: "50%",
+          background: "#35BDF2",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: "395px",
+          left: "-90px",
+          width: "250px",
+          height: "250px",
+          borderRadius: "50%",
+          background: "#12B8B0",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: "430px",
+          right: "-115px",
+          width: "280px",
+          height: "280px",
+          borderRadius: "50%",
+          background: "#8B5CF6",
+        }}
+      />
+
+      {/* FORMAS DECORATIVAS */}
+
+      <div
+        style={{
+          position: "absolute",
+          top: "120px",
+          left: "55px",
+          width: "22px",
+          height: "70px",
+          borderRadius: "20px",
+          background: "#FF5A4F",
+          transform: "rotate(-35deg)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: "175px",
+          left: "95px",
+          width: "18px",
+          height: "50px",
+          borderRadius: "20px",
+          background: "#123B63",
+          transform: "rotate(35deg)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: "135px",
+          right: "70px",
+          width: "24px",
+          height: "75px",
+          borderRadius: "20px",
+          background: "#34C759",
+          transform: "rotate(35deg)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: "220px",
+          right: "105px",
+          width: "18px",
+          height: "48px",
+          borderRadius: "20px",
+          background: "#FF5A4F",
+          transform: "rotate(-40deg)",
+        }}
+      />
+
+      {/* CABECERA */}
 
       <div
         style={{
           position: "relative",
-          zIndex: 5,
-          height: "100%",
-          boxSizing: "border-box",
-          padding: "115px 70px 55px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
+          zIndex: 10,
+          paddingTop: "54px",
           textAlign: "center",
         }}
       >
-        {/* ETIQUETA */}
-
         <div
           style={{
-            fontSize: "18px",
+            display: "inline-block",
+            padding: "10px 27px",
+            borderRadius: "999px",
+            background: "#FFFFFF",
+            color: "#123B63",
+            fontSize: "17px",
+            lineHeight: 1,
             fontWeight: 700,
-            letterSpacing: "4px",
-            color: "#0284C7",
+            letterSpacing: "2.5px",
             textTransform: "uppercase",
+            boxShadow: "0 6px 0 rgba(18,59,99,0.12)",
           }}
         >
           Colección de actividades
         </div>
 
-        {/* TÍTULO */}
+        {/* NÚMERO */}
 
-        <h1
+        <div
           style={{
-            margin: "35px 0 0",
-            maxWidth: "650px",
+            marginTop: "24px",
+            fontSize: "122px",
+            lineHeight: 0.9,
+            fontWeight: 700,
+            letterSpacing: "-8px",
+            color: "#FFFFFF",
+            WebkitTextStroke: "5px #123B63",
+            textShadow:
+              "7px 7px 0 #12B8B0, 12px 12px 0 rgba(18,59,99,0.15)",
+          }}
+        >
+          {primeraParte}
+        </div>
+
+        {/* LABERINTOS */}
+
+        <div
+          style={{
+            marginTop: "8px",
             fontSize: "64px",
-            lineHeight: 1.05,
-            fontWeight: 800,
+            lineHeight: 1,
+            fontWeight: 700,
             letterSpacing: "-2px",
-            color: "#0F172A",
+            textTransform: "uppercase",
+            color: "#FFFFFF",
+            WebkitTextStroke: "3px #123B63",
+            textShadow: "5px 6px 0 #12B8B0",
           }}
         >
-          {nombreProducto}
-        </h1>
+          {restoTitulo}
+        </div>
 
-        {/* SUBTÍTULO */}
-
-        <p
+        <div
           style={{
-            margin: "26px 0 0",
-            maxWidth: "570px",
-            fontSize: "25px",
-            lineHeight: 1.45,
-            fontWeight: 500,
-            color: "#475569",
+            display: "inline-block",
+            marginTop: "25px",
+            padding: "11px 28px",
+            borderRadius: "14px",
+            background: "#8B5CF6",
+            color: "#FFFFFF",
+            fontSize: "18px",
+            lineHeight: 1.25,
+            fontWeight: 700,
+            transform: "rotate(-1deg)",
+            boxShadow: "5px 6px 0 #123B63",
           }}
         >
-          Desafíos para pensar, explorar y divertirse
-        </p>
+          PIENSA · EXPLORA · ENCUENTRA LA SALIDA
+        </div>
+      </div>
 
-        {/* LABERINTO DECORATIVO */}
+      {/* LABERINTO CENTRAL */}
 
+      <div
+        style={{
+          position: "absolute",
+          zIndex: 15,
+          top: "515px",
+          left: "112px",
+          width: "570px",
+          height: "400px",
+          padding: "18px",
+          boxSizing: "border-box",
+          borderRadius: "30px",
+          background: "#12B8B0",
+          border: "6px solid #123B63",
+          boxShadow: "12px 14px 0 rgba(18,59,99,0.16)",
+          transform: "rotate(-2deg)",
+        }}
+      >
         <div
           style={{
             position: "relative",
-            marginTop: "55px",
-            width: "460px",
-            height: "300px",
-            border: "4px solid #0F7490",
-            borderRadius: "28px",
-            background: "#FFFFFF",
-            boxShadow: "0 18px 45px rgba(15, 23, 42, 0.08)",
+            width: "100%",
+            height: "100%",
             overflow: "hidden",
+            borderRadius: "15px",
+            background: "#FFFFFF",
+            border: "4px solid #123B63",
           }}
         >
+          {/* PAREDES DEL LABERINTO */}
+
           <div
             style={{
               position: "absolute",
-              inset: "25px",
-              border: "3px solid #BAE6FD",
-              borderRadius: "18px",
+              top: "45px",
+              left: "0",
+              width: "185px",
+              height: "13px",
+              background: "#123B63",
             }}
           />
 
           <div
             style={{
               position: "absolute",
-              top: "65px",
-              left: "25px",
-              width: "280px",
-              height: "3px",
-              background: "#0F7490",
+              top: "45px",
+              left: "245px",
+              width: "230px",
+              height: "13px",
+              background: "#123B63",
             }}
           />
 
           <div
             style={{
               position: "absolute",
-              top: "65px",
-              left: "302px",
-              width: "3px",
-              height: "125px",
-              background: "#0F7490",
+              top: "45px",
+              left: "180px",
+              width: "13px",
+              height: "105px",
+              background: "#123B63",
             }}
           />
 
           <div
             style={{
               position: "absolute",
-              top: "187px",
-              left: "150px",
-              width: "155px",
-              height: "3px",
-              background: "#0F7490",
+              top: "105px",
+              left: "65px",
+              width: "125px",
+              height: "13px",
+              background: "#123B63",
             }}
           />
 
           <div
             style={{
               position: "absolute",
-              top: "125px",
-              left: "147px",
-              width: "3px",
-              height: "65px",
-              background: "#0F7490",
+              top: "105px",
+              left: "65px",
+              width: "13px",
+              height: "110px",
+              background: "#123B63",
             }}
           />
 
           <div
             style={{
               position: "absolute",
-              left: "42px",
-              top: "46px",
-              fontSize: "31px",
-              fontWeight: 800,
-              color: "#0F172A",
+              top: "105px",
+              left: "245px",
+              width: "13px",
+              height: "105px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "105px",
+              left: "245px",
+              width: "130px",
+              height: "13px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "105px",
+              left: "365px",
+              width: "13px",
+              height: "110px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "205px",
+              left: "65px",
+              width: "125px",
+              height: "13px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "155px",
+              left: "180px",
+              width: "13px",
+              height: "120px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "205px",
+              left: "245px",
+              width: "133px",
+              height: "13px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "205px",
+              left: "425px",
+              width: "13px",
+              height: "100px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "265px",
+              left: "0",
+              width: "130px",
+              height: "13px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "265px",
+              left: "180px",
+              width: "140px",
+              height: "13px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "265px",
+              left: "315px",
+              width: "13px",
+              height: "95px",
+              background: "#123B63",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "305px",
+              left: "65px",
+              width: "130px",
+              height: "13px",
+              background: "#123B63",
+            }}
+          />
+
+          {/* ENTRADA */}
+
+          <div
+            style={{
+              position: "absolute",
+              top: "18px",
+              left: "17px",
+              width: "53px",
+              height: "53px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "50%",
+              background: "#34C759",
+              border: "4px solid #123B63",
+              color: "#FFFFFF",
+              fontSize: "34px",
+              lineHeight: 1,
+              fontWeight: 700,
             }}
           >
             →
           </div>
 
+          {/* SALIDA */}
+
           <div
             style={{
               position: "absolute",
-              right: "40px",
-              bottom: "43px",
-              fontSize: "31px",
-              fontWeight: 800,
-              color: "#0F172A",
+              right: "18px",
+              bottom: "18px",
+              width: "53px",
+              height: "53px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "50%",
+              background: "#FF5A4F",
+              border: "4px solid #123B63",
+              color: "#FFFFFF",
+              fontSize: "34px",
+              lineHeight: 1,
+              fontWeight: 700,
             }}
           >
             →
           </div>
         </div>
+      </div>
 
-        {/* NIVELES */}
+      {/* LLAMADO */}
 
-        {nivelesVisibles.length > 0 && (
-          <div
-            style={{
-              marginTop: "42px",
-              display: "flex",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              gap: "10px",
-              maxWidth: "620px",
-            }}
-          >
-            {nivelesVisibles.map((nivel) => {
-              const datos = DATOS_NIVELES[nivel];
+      <div
+        style={{
+          position: "absolute",
+          zIndex: 25,
+          top: "570px",
+          right: "25px",
+          width: "150px",
+          padding: "17px 13px",
+          boxSizing: "border-box",
+          borderRadius: "24px",
+          background: "#FF5A4F",
+          border: "4px solid #123B63",
+          color: "#FFFFFF",
+          fontSize: "16px",
+          lineHeight: 1.2,
+          fontWeight: 700,
+          textAlign: "center",
+          transform: "rotate(7deg)",
+          boxShadow: "5px 6px 0 rgba(18,59,99,0.18)",
+        }}
+      >
+        ¿PUEDES
+        <br />
+        ENCONTRAR
+        <br />
+        LA SALIDA?
+      </div>
 
-              return (
-                <div
-                  key={nivel}
-                  style={{
-                    padding: "9px 17px",
-                    borderRadius: "999px",
-                    border: `2px solid ${datos.borde}`,
-                    background: datos.fondo,
-                    color: datos.texto,
-                    fontSize: "15px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {datos.etiqueta}
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* DECORACIÓN INFERIOR */}
 
-        {/* LOGO */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "-145px",
+          left: "-110px",
+          width: "350px",
+          height: "350px",
+          borderRadius: "50%",
+          background: "#35BDF2",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: "-170px",
+          right: "-95px",
+          width: "360px",
+          height: "360px",
+          borderRadius: "50%",
+          background: "#12B8B0",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: "72px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 30,
+          width: "330px",
+          minHeight: "108px",
+          padding: "18px 28px",
+          boxSizing: "border-box",
+          borderRadius: "55px 55px 25px 25px",
+          background: "#FFFFFF",
+          border: "4px solid #123B63",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "7px 8px 0 rgba(18,59,99,0.15)",
+        }}
+      >
+        <img
+          src={logo.url}
+          alt="Andrés Imprimibles"
+          draggable="false"
+          style={{
+            width: "115px",
+            height: "auto",
+            objectFit: "contain",
+          }}
+        />
 
         <div
           style={{
-            marginTop: "auto",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "9px",
+            marginTop: "5px",
+            color: "#123B63",
+            fontSize: "14px",
+            lineHeight: 1,
+            fontWeight: 700,
+            letterSpacing: "1.5px",
           }}
         >
-          <img
-            src={logo.url}
-            alt="Andrés Imprimibles"
-            draggable="false"
-            style={{
-              width: `${logo.ancho}px`,
-              height: "auto",
-              objectFit: "contain",
-            }}
-          />
-
-          <div
-            style={{
-              fontSize: "15px",
-              fontWeight: 600,
-              letterSpacing: "1px",
-              color: "#64748B",
-            }}
-          >
-            ANDRÉS IMPRIMIBLES
-          </div>
+          ANDRÉS IMPRIMIBLES
         </div>
+      </div>
+
+      {/* ESTRELLAS */}
+
+      <div
+        style={{
+          position: "absolute",
+          zIndex: 20,
+          bottom: "185px",
+          left: "48px",
+          color: "#FFD43B",
+          fontSize: "52px",
+          fontWeight: 700,
+          WebkitTextStroke: "3px #123B63",
+          transform: "rotate(-12deg)",
+        }}
+      >
+        ★
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          zIndex: 20,
+          bottom: "205px",
+          right: "55px",
+          color: "#FF8A34",
+          fontSize: "44px",
+          fontWeight: 700,
+          WebkitTextStroke: "3px #123B63",
+          transform: "rotate(15deg)",
+        }}
+      >
+        ★
       </div>
     </div>
   );
