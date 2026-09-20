@@ -10,8 +10,6 @@ import {
 } from "lucide-react";
 
 import { servicios } from "../datos/servicios";
-import { useIdioma } from "../contextos/IdiomaContext";
-import { traducciones } from "../datos/traducciones";
 
 const iconos = {
   dog: Dog,
@@ -36,49 +34,102 @@ const colores = {
   },
 };
 
-const Servicios = () => {
-  const [activeService, setActiveService] = useState(null);
+const textoEs = (valor) => {
+  if (typeof valor === "string") {
+    return valor;
+  }
 
-  const { idioma } = useIdioma();
-  const t = traducciones[idioma].servicios;
+  return valor?.es || "";
+};
+
+const listaEs = (valor) => {
+  if (Array.isArray(valor)) {
+    return valor;
+  }
+
+  return valor?.es || [];
+};
+
+const Servicios = () => {
+  const [activeService, setActiveService] =
+    useState(null);
 
   const irADisponibilidad = () => {
-    document.getElementById("disponibilidad")?.scrollIntoView({
-      behavior: "smooth",
-    });
+    document
+      .getElementById("disponibilidad")
+      ?.scrollIntoView({
+        behavior: "smooth",
+      });
   };
 
   return (
-    <section id="servicios" className="seccion bg-white">
+    <section
+      id="servicios"
+      className="seccion bg-white"
+    >
       <div className="contenedor">
-        {/* Encabezado */}
+        {/* ENCABEZADO */}
+
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <p className="eyebrow">{t.etiqueta}</p>
+          <p className="eyebrow">
+            Servicios
+          </p>
 
-          <h2 className="titulo-seccion">{t.titulo}</h2>
+          <h2 className="titulo-seccion">
+            Cuidado de hogares y mascotas
+          </h2>
 
-          <p className="subtitulo-seccion">{t.descripcion}</p>
+          <p className="subtitulo-seccion">
+            Opciones de cuidado adaptadas a las necesidades de cada hogar y mascota.
+          </p>
         </div>
 
-        {/* Cards */}
+        {/* CARDS */}
+
         <div className="grid gap-4 md:grid-cols-2">
           {servicios
-            .filter((servicio) => servicio.id !== "paseador")
+            .filter(
+              (servicio) =>
+                servicio.id !== "paseador"
+            )
             .map((servicio) => {
-              const Icono = iconos[servicio.icono];
-              const color = colores[servicio.id];
+              const Icono =
+                iconos[servicio.icono];
+
+              const color =
+                colores[servicio.id];
+
+              const titulo =
+                textoEs(servicio.titulo);
+
+              const descripcion =
+                textoEs(
+                  servicio.descripcion
+                );
+
+              const incluye =
+                listaEs(servicio.incluye);
+
+              const adicionales =
+                listaEs(
+                  servicio.adicionales
+                );
 
               return (
                 <article
                   key={servicio.id}
                   className="card overflow-hidden transition hover:-translate-y-0.5 hover:shadow-suave"
                 >
-                  {/* Parte visible */}
+                  {/* PARTE VISIBLE */}
+
                   <button
                     type="button"
                     onClick={() =>
                       setActiveService(
-                        activeService === servicio.id ? null : servicio.id,
+                        activeService ===
+                          servicio.id
+                          ? null
+                          : servicio.id
                       )
                     }
                     className="flex w-full items-start gap-3 p-6 text-left sm:p-5"
@@ -92,24 +143,26 @@ const Servicios = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
-                          {servicio.titulo[idioma]}
+                          {titulo}
                         </h3>
 
                         <span
                           className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${color.badge}`}
                         >
-                          {servicio.modalidad === "intercambio"
-                            ? t.intercambio
-                            : t.servicioPago}
+                          {servicio.modalidad ===
+                          "intercambio"
+                            ? "Intercambio"
+                            : "Servicio pago"}
                         </span>
                       </div>
 
                       <p className="mt-1.5 text-sm leading-5 text-slate-600">
-                        {servicio.descripcion[idioma]}
+                        {descripcion}
                       </p>
                     </div>
 
-                    {activeService === servicio.id ? (
+                    {activeService ===
+                    servicio.id ? (
                       <ChevronUp
                         size={18}
                         className="mt-1 min-w-5 text-slate-400"
@@ -122,64 +175,85 @@ const Servicios = () => {
                     )}
                   </button>
 
-                  {/* Detalle */}
-                  {activeService === servicio.id && (
+                  {/* DETALLE */}
+
+                  {activeService ===
+                    servicio.id && (
                     <div className="border-t border-slate-200 px-4 pb-5 pt-4 sm:px-5">
                       <div className="grid gap-5 sm:grid-cols-2">
-                        {/* Incluido */}
+                        {/* INCLUIDO */}
+
                         <div>
                           <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
-                            {servicio.modalidad === "intercambio"
-                              ? t.incluidoIntercambio
-                              : t.servicioBase}
+                            {servicio.modalidad ===
+                            "intercambio"
+                              ? "Incluido en el intercambio"
+                              : "Servicio base"}
                           </p>
 
                           <ul className="space-y-2">
-                            {servicio.incluye[idioma].map((item) => (
-                              <li
-                                key={item}
-                                className="flex items-start gap-2 text-sm leading-6 text-slate-600"
-                              >
-                                <CheckCircle2
-                                  size={14}
-                                  className="mt-1 min-w-4 text-emerald-600"
-                                />
+                            {incluye.map(
+                              (item) => (
+                                <li
+                                  key={item}
+                                  className="flex items-start gap-2 text-sm leading-6 text-slate-600"
+                                >
+                                  <CheckCircle2
+                                    size={14}
+                                    className="mt-1 min-w-4 text-emerald-600"
+                                  />
 
-                                <span>{item}</span>
-                              </li>
-                            ))}
+                                  <span>
+                                    {item}
+                                  </span>
+                                </li>
+                              )
+                            )}
                           </ul>
                         </div>
 
-                        {/* Adicionales */}
+                        {/* ADICIONALES */}
+
                         <div>
                           <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-orange-700">
-                            {t.adicionales}
+                            Adicionales
                           </p>
 
                           <ul className="space-y-2">
-                            {servicio.adicionales[idioma].map((item) => (
-                              <li
-                                key={item}
-                                className="flex items-start gap-2 text-sm leading-6 text-slate-600"
-                              >
-                                <span className="mt-1 text-orange-500">•</span>
+                            {adicionales.map(
+                              (item) => (
+                                <li
+                                  key={item}
+                                  className="flex items-start gap-2 text-sm leading-6 text-slate-600"
+                                >
+                                  <span className="mt-1 text-orange-500">
+                                    •
+                                  </span>
 
-                                <span>{item}</span>
-                              </li>
-                            ))}
+                                  <span>
+                                    {item}
+                                  </span>
+                                </li>
+                              )
+                            )}
                           </ul>
                         </div>
                       </div>
 
                       {/* CTA */}
+
                       <button
                         type="button"
-                        onClick={irADisponibilidad}
+                        onClick={
+                          irADisponibilidad
+                        }
                         className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-100 px-4 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-200"
                       >
-                        <CalendarDays size={16} />
-                        {t.verDisponibilidad}
+                        <CalendarDays
+                          size={16}
+                        />
+
+                        Ver disponibilidad
                       </button>
                     </div>
                   )}

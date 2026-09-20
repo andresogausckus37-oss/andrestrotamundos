@@ -15,15 +15,10 @@ import {
 } from "lucide-react";
 
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-
-import { useIdioma } from "../contextos/IdiomaContext";
-import { traducciones } from "../datos/traducciones";
-import { useMoneda } from "../contextos/MonedaContext";
 import {
-  convertirPrecio,
-  formatearMoneda,
-} from "../utilidades/monedas";
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 const WHATSAPP = "5493548619293";
 
@@ -31,68 +26,154 @@ const DetalleProducto = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { idioma } = useIdioma();
-  const t = traducciones[idioma].detalleProducto;
+  const t = {
+    noEncontrado: "Producto no encontrado",
+    noEncontradoDescripcion:
+      "El producto que buscas no está disponible.",
+    volverInicio: "Volver al inicio",
+    volver: "Volver",
+    vista: "Vista",
+    de: "de",
+    verImagen: "Ver imagen",
+    archivoFinal:
+      "El archivo final se entrega en",
+    altaCalidad: "alta calidad",
+    precio: "Precio",
+    ahorras: "Ahorras",
+    descargable: "Descargable",
+    queIncluye: "Qué incluye",
+    resenasTitulo: "Reseñas",
+    compraVerificada: "Compra verificada",
+    descargaPago: "Descarga digital",
+    descargaDescripcion:
+      "Recibirás las instrucciones de descarga después de completar la compra.",
+    totalOferta: "Precio de oferta",
+    comprarAhora: "Comprar ahora",
+    finalizarCompra: "Finalizar compra",
+    resumenPedido: "Resumen del pedido",
+    cerrar: "Cerrar",
+    completaColeccion:
+      "Completa tu colección",
+    agregaProducto:
+      "Agrega también este producto",
+    agregadoCompra:
+      "Agregado a la compra",
+    agregarCompra:
+      "Agregar a la compra",
+    agregadoTotal:
+      "El producto adicional fue agregado al total.",
+    tusDatos: "Tus datos",
+    nombre: "Nombre",
+    nombrePlaceholder: "Tu nombre",
+    correo: "Correo electrónico",
+    precioOriginal: "Precio original",
+    ofertaLanzamiento:
+      "Oferta lanzamiento",
+    total: "Total",
+    errorDatos:
+      "Ingresa tu nombre y correo electrónico.",
+    errorEmail:
+      "Ingresa un correo electrónico válido.",
+    whatsappProductoAdicional:
+      "Producto adicional",
+    whatsappHola:
+      "Hola, quiero realizar esta compra:",
+    whatsappProducto: "Producto",
+    whatsappPrecioOriginal:
+      "Precio original",
+    whatsappDescuento: "Descuento",
+    whatsappAhorro: "Ahorro",
+    whatsappTotal: "Total",
+    whatsappNombre: "Nombre",
+    whatsappEmail: "Email",
+    whatsappFinal:
+      "Quedo a la espera de las instrucciones para continuar.",
+    comprarWhatsapp:
+      "Continuar por WhatsApp",
+    instruccionesWhatsapp:
+      "Se abrirá WhatsApp con el resumen de tu pedido.",
+    cerrarPreview:
+      "Cerrar vista previa",
+    vistaAmpliada:
+      "Vista ampliada de",
+  };
 
-  const {
-  moneda,
-  cotizaciones,
-  cargandoCotizaciones,
-} = useMoneda();
+  const [
+    previewAbierto,
+    setPreviewAbierto,
+  ] = useState(false);
 
-  const [previewAbierto, setPreviewAbierto] =
-    useState(false);
+  const [
+    checkoutAbierto,
+    setCheckoutAbierto,
+  ] = useState(false);
 
-  const [checkoutAbierto, setCheckoutAbierto] =
-    useState(false);
+  const [
+    imagenActiva,
+    setImagenActiva,
+  ] = useState(0);
 
-  const [imagenActiva, setImagenActiva] =
-    useState(0);
+  const [
+    extraAgregado,
+    setExtraAgregado,
+  ] = useState(false);
 
-  const [extraAgregado, setExtraAgregado] =
-    useState(false);
+  const [nombre, setNombre] =
+    useState("");
 
-  const [nombre, setNombre] = useState("");
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
 
   /* =========================================================
      FORMATEAR PRECIO
   ========================================================= */
 
-  const formatearPrecio = (precioARS) => {
+  const formatearPrecio = (
+    precioARS
+  ) => {
     if (!precioARS) {
-      return idioma === "es"
-        ? "Precio a definir"
-        : "Price to be determined";
+      return "Precio a definir";
     }
 
+    return new Intl.NumberFormat(
+      "es-AR",
+      {
+        style: "currency",
+        currency: "ARS",
+        maximumFractionDigits: 0,
+      }
+    ).format(precioARS);
+  };
+
+  const textoEs = (valor) => {
     if (
-      moneda !== "ARS" &&
-      cargandoCotizaciones
+      typeof valor === "string"
     ) {
-      return "...";
+      return valor;
     }
 
-    const precioConvertido = convertirPrecio(
-      precioARS,
-      moneda,
-      cotizaciones
-    );
+    return valor?.es || "";
+  };
 
-    return formatearMoneda(
-      precioConvertido,
-      moneda
-    );
+  const listaEs = (valor) => {
+    if (Array.isArray(valor)) {
+      return valor;
+    }
+
+    return valor?.es || [];
   };
 
   /* =========================================================
      PRODUCTO
   ========================================================= */
 
-  const producto = productosDigitales.find(
-    (p) => p.id === id
-  );
+  const producto =
+    productosDigitales.find(
+      (p) => p.id === id
+    );
 
   if (!producto) {
     return (
@@ -103,12 +184,16 @@ const DetalleProducto = () => {
           </h1>
 
           <p className="mt-2 text-sm text-slate-600">
-            {t.noEncontradoDescripcion}
+            {
+              t.noEncontradoDescripcion
+            }
           </p>
 
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() =>
+              navigate("/")
+            }
             className="boton-principal mt-5"
           >
             {t.volverInicio}
@@ -123,47 +208,61 @@ const DetalleProducto = () => {
   ========================================================= */
 
   const tieneOferta =
-    producto.oferta?.activa === true;
+    producto.oferta?.activa ===
+    true;
 
-  const precioFinal = tieneOferta
-    ? producto.oferta.precioARS
-    : producto.precioARS;
+  const precioFinal =
+    tieneOferta
+      ? producto.oferta.precioARS
+      : producto.precioARS;
 
-  const ahorro = tieneOferta
-    ? producto.precioARS -
-      producto.oferta.precioARS
-    : 0;
+  const ahorro =
+    tieneOferta
+      ? producto.precioARS -
+        producto.oferta.precioARS
+      : 0;
 
-  const descuento = tieneOferta
-    ? Math.round(
-        (ahorro / producto.precioARS) * 100
-      )
-    : 0;
+  const descuento =
+    tieneOferta
+      ? Math.round(
+          (ahorro /
+            producto.precioARS) *
+            100
+        )
+      : 0;
 
   /* =========================================================
      VENTA CRUZADA
   ========================================================= */
 
-  const productoExtra = producto.ventaCruzadaId
-    ? productosDigitales.find(
-        (p) => p.id === producto.ventaCruzadaId
-      )
-    : null;
+  const productoExtra =
+    producto.ventaCruzadaId
+      ? productosDigitales.find(
+          (p) =>
+            p.id ===
+            producto.ventaCruzadaId
+        )
+      : null;
 
   const extraTieneOferta =
-    productoExtra?.oferta?.activa === true;
+    productoExtra?.oferta
+      ?.activa === true;
 
-  const precioExtra = productoExtra
-    ? extraTieneOferta
-      ? productoExtra.oferta.precioARS
-      : productoExtra.precioARS
-    : 0;
+  const precioExtra =
+    productoExtra
+      ? extraTieneOferta
+        ? productoExtra.oferta
+            .precioARS
+        : productoExtra.precioARS
+      : 0;
 
   const descuentoExtra =
-    productoExtra && extraTieneOferta
+    productoExtra &&
+    extraTieneOferta
       ? Math.round(
           ((productoExtra.precioARS -
-            productoExtra.oferta.precioARS) /
+            productoExtra.oferta
+              .precioARS) /
             productoExtra.precioARS) *
             100
         )
@@ -171,18 +270,21 @@ const DetalleProducto = () => {
 
   const totalPedido =
     precioFinal +
-    (extraAgregado && productoExtra
+    (extraAgregado &&
+    productoExtra
       ? precioExtra
       : 0);
 
   const precioOriginalPedido =
     producto.precioARS +
-    (extraAgregado && productoExtra
+    (extraAgregado &&
+    productoExtra
       ? productoExtra.precioARS
       : 0);
 
   const ahorroPedido =
-    precioOriginalPedido - totalPedido;
+    precioOriginalPedido -
+    totalPedido;
 
   const descuentoPedido =
     precioOriginalPedido > 0
@@ -200,7 +302,8 @@ const DetalleProducto = () => {
   const resenasDelProducto =
     resenasProductos.filter(
       (resena) =>
-        resena.productoId === producto.id
+        resena.productoId ===
+        producto.id
     );
 
   /* =========================================================
@@ -210,9 +313,11 @@ const DetalleProducto = () => {
   const imagenes = [
     producto.imagenes?.portada,
     producto.imagenes?.preview,
-    producto.imagenes?.previewIndividual,
+    producto.imagenes
+      ?.previewIndividual,
     ...(producto.imagenes
-      ?.previewsIndividuales || []),
+      ?.previewsIndividuales ||
+      []),
   ].filter(Boolean);
 
   /* =========================================================
@@ -227,67 +332,80 @@ const DetalleProducto = () => {
 
   /* =========================================================
      COMPRAR POR WHATSAPP
+     TEMPORAL HASTA IMPLEMENTAR MERCADO PAGO
   ========================================================= */
 
-  const comprarPorWhatsApp = () => {
-    const nombreLimpio = nombre.trim();
-    const emailLimpio = email.trim();
+  const comprarPorWhatsApp =
+    () => {
+      const nombreLimpio =
+        nombre.trim();
 
-    if (!nombreLimpio || !emailLimpio) {
-      setError(t.errorDatos);
-      return;
-    }
+      const emailLimpio =
+        email.trim();
 
-    const emailValido =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (
+        !nombreLimpio ||
+        !emailLimpio
+      ) {
+        setError(t.errorDatos);
+        return;
+      }
 
-    if (!emailValido.test(emailLimpio)) {
-      setError(t.errorEmail);
-      return;
-    }
+      const emailValido =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    setError("");
+      if (
+        !emailValido.test(
+          emailLimpio
+        )
+      ) {
+        setError(t.errorEmail);
+        return;
+      }
 
-    const detalleExtra =
-      extraAgregado && productoExtra
-        ? `\n*${t.whatsappProductoAdicional}:* ${
-            productoExtra.nombre[idioma]
-          }`
-        : "";
+      setError("");
 
-    const mensaje = `${t.whatsappHola}
+      const detalleExtra =
+        extraAgregado &&
+        productoExtra
+          ? `\n*${t.whatsappProductoAdicional}:* ${textoEs(
+              productoExtra.nombre
+            )}`
+          : "";
 
-*${t.whatsappProducto}:* ${
-      producto.nombre[idioma]
-    }${detalleExtra}
+      const mensaje = `${t.whatsappHola}
+
+*${t.whatsappProducto}:* ${textoEs(
+        producto.nombre
+      )}${detalleExtra}
 
 *${t.whatsappPrecioOriginal}:* ${formatearPrecio(
-      precioOriginalPedido
-    )}
+        precioOriginalPedido
+      )}
 *${t.whatsappDescuento}:* -${descuentoPedido}%
 *${t.whatsappAhorro}:* ${formatearPrecio(
-      ahorroPedido
-    )}
+        ahorroPedido
+      )}
 
 *${t.whatsappTotal}:* ${formatearPrecio(
-      totalPedido
-    )}
+        totalPedido
+      )}
 
 *${t.whatsappNombre}:* ${nombreLimpio}
 *${t.whatsappEmail}:* ${emailLimpio}
 
 ${t.whatsappFinal}`;
 
-    const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-      mensaje
-    )}`;
+      const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
+        mensaje
+      )}`;
 
-    window.open(
-      url,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  };
+      window.open(
+        url,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    };
 
   return (
     <>
@@ -302,28 +420,36 @@ ${t.whatsappFinal}`;
               {/* IMAGEN PRINCIPAL */}
 
               <div className="relative rounded-2xl bg-white p-2 shadow-sm">
-                <div className="aspect-[4/5] w-full overflow-hidden overflow-hidden rounded-xl bg-white">
-                  {imagenActiva === 0 ? (
+                <div className="aspect-[4/5] w-full overflow-hidden rounded-xl bg-white">
+                  {imagenActiva ===
+                  0 ? (
                     <img
-                      src={imagenes[imagenActiva]}
-                      alt={
-                        producto.nombre[idioma]
+                      src={
+                        imagenes[
+                          imagenActiva
+                        ]
                       }
+                      alt={textoEs(
+                        producto.nombre
+                      )}
                       className="h-full w-full object-contain"
                     />
                   ) : (
                     <ProteccionComercial>
                       <img
                         src={
-                          imagenes[imagenActiva]
-                        }
-                        alt={`${t.vista} ${
-                          imagenActiva + 1
-                        } ${t.de} ${
-                          producto.nombre[
-                            idioma
+                          imagenes[
+                            imagenActiva
                           ]
-                        }`}
+                        }
+                        alt={`${
+                          t.vista
+                        } ${
+                          imagenActiva +
+                          1
+                        } ${t.de} ${textoEs(
+                          producto.nombre
+                        )}`}
                         className="h-full w-full object-contain"
                       />
                     </ProteccionComercial>
@@ -335,44 +461,60 @@ ${t.whatsappFinal}`;
 
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() =>
+                  navigate(-1)
+                }
                 className="mb-3 mt-2 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-sky-600"
               >
-                <ArrowLeft size={17} />
+                <ArrowLeft
+                  size={17}
+                />
                 {t.volver}
               </button>
 
               {/* MINIATURAS */}
 
-              {imagenes.length > 1 && (
+              {imagenes.length >
+                1 && (
                 <div className="mt-3">
                   <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth">
                     {imagenes.map(
-                      (img, idx) => (
+                      (
+                        img,
+                        idx
+                      ) => (
                         <button
                           key={img}
                           type="button"
                           onClick={() =>
-                            setImagenActiva(idx)
+                            setImagenActiva(
+                              idx
+                            )
                           }
                           className={`h-20 w-20 flex-shrink-0 rounded-xl border-2 bg-white p-1.5 shadow-sm transition-all ${
-                            imagenActiva === idx
+                            imagenActiva ===
+                            idx
                               ? "border-sky-400 ring-2 ring-sky-100"
                               : "border-slate-200 hover:border-slate-300"
                           }`}
-                          aria-label={`${t.verImagen} ${
+                          aria-label={`${
+                            t.verImagen
+                          } ${
                             idx + 1
                           }`}
                         >
                           <img
                             src={img}
-                            alt={`${t.vista} ${
-                              idx + 1
-                            } ${t.de} ${
-                              producto.nombre[
-                                idioma
-                              ]
-                            }`}
+                            alt={`${
+                              t.vista
+                            } ${
+                              idx +
+                              1
+                            } ${
+                              t.de
+                            } ${textoEs(
+                              producto.nombre
+                            )}`}
                             className="h-full w-full object-contain"
                           />
                         </button>
@@ -382,13 +524,19 @@ ${t.whatsappFinal}`;
 
                   <div className="mt-1 flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-1.5">
                     <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                      <Check size={12} />
+                      <Check
+                        size={12}
+                      />
                     </div>
 
                     <p className="text-sm leading-relaxed text-slate-700">
-                      {t.archivoFinal}{" "}
+                      {
+                        t.archivoFinal
+                      }{" "}
                       <strong className="font-semibold text-emerald-700">
-                        {t.altaCalidad}
+                        {
+                          t.altaCalidad
+                        }
                       </strong>
                     </p>
                   </div>
@@ -401,34 +549,30 @@ ${t.whatsappFinal}`;
             ====================================================== */}
 
             <div className="lg:pt-1">
-              {/* TÍTULO */}
-
               <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
-                {producto.nombre[idioma]}
+                {textoEs(
+                  producto.nombre
+                )}
               </h1>
-
-              {/* CALIFICACIÓN */}
 
               <div className="mb-3 mt-2">
                 <CalificacionProducto
-                  productoId={producto.id}
+                  productoId={
+                    producto.id
+                  }
                 />
               </div>
 
-              {/* DESCRIPCIÓN */}
-
               <p className="text-sm leading-6 text-slate-600 sm:text-[15px]">
-                {producto.descripcionLarga?.[
-                  idioma
-                ] ||
-                  producto.descripcion?.[
-                    idioma
-                  ]}
+                {textoEs(
+                  producto.descripcionLarga
+                ) ||
+                  textoEs(
+                    producto.descripcion
+                  )}
               </p>
 
-              {/* =================================================
-                  PRECIO + DESCARGABLE
-              ================================================== */}
+              {/* PRECIO */}
 
               <div className="mt-4 border-y border-slate-200 py-4">
                 <div className="flex items-start justify-between gap-4">
@@ -447,7 +591,11 @@ ${t.whatsappFinal}`;
                           </p>
 
                           <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-700 sm:text-xs">
-                            -{descuento}%
+                            -
+                            {
+                              descuento
+                            }
+                            %
                           </span>
                         </div>
 
@@ -458,23 +606,25 @@ ${t.whatsappFinal}`;
                             )}
                           </span>
 
-                          {producto.oferta
-                            ?.etiqueta?.[
-                            idioma
-                          ] && (
+                          {textoEs(
+                            producto
+                              .oferta
+                              ?.etiqueta
+                          ) && (
                             <span className="text-[10px] font-bold uppercase tracking-wide text-orange-600 sm:text-xs">
-                              {
-                                producto.oferta
-                                  .etiqueta[
-                                  idioma
-                                ]
-                              }
+                              {textoEs(
+                                producto
+                                  .oferta
+                                  ?.etiqueta
+                              )}
                             </span>
                           )}
                         </div>
 
                         <p className="mt-1.5 text-xs font-semibold text-emerald-700 sm:text-sm">
-                          {t.ahorras}{" "}
+                          {
+                            t.ahorras
+                          }{" "}
                           {formatearPrecio(
                             ahorro
                           )}
@@ -490,95 +640,48 @@ ${t.whatsappFinal}`;
                   </div>
 
                   <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-[10px] font-semibold uppercase text-sky-700 sm:text-xs">
-                    <Download size={13} />
+                    <Download
+                      size={13}
+                    />
                     {t.descargable}
                   </span>
                 </div>
               </div>
 
-              {/* =================================================
-                  QUÉ INCLUYE
-              ================================================== */}
+              {/* QUÉ INCLUYE */}
 
-              {producto.incluye?.[idioma]
-                ?.length > 0 && (
+              {listaEs(
+                producto.incluye
+              ).length > 0 && (
                 <div className="mt-4">
                   <h2 className="mb-2 text-base font-semibold text-slate-900">
                     {t.queIncluye}
                   </h2>
 
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {producto.incluye[
-                      idioma
-                    ].map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex min-h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white p-2.5"
-                      >
-                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                          <Check size={12} />
-                        </div>
-
-                        <p className="text-xs leading-tight text-slate-600">
-                          {item}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* =================================================
-                  RESEÑAS
-              ================================================== */}
-
-              {resenasDelProducto.length >
-                0 && (
-                <div className="mt-5">
-                  <div className="mb-3">
-                    <h2 className="text-base font-semibold text-slate-900">
-                      {t.resenasTitulo}
-                    </h2>
-                  </div>
-
-                  <div className="space-y-3">
-                    {resenasDelProducto.map(
-                      (resena) => (
+                    {listaEs(
+                      producto.incluye
+                    ).map(
+                      (
+                        item,
+                        i
+                      ) => (
                         <div
-                          key={resena.id}
-                          className="rounded-xl border border-slate-200 bg-white p-4"
+                          key={i}
+                          className="flex min-h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white p-2.5"
                         >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-1 text-amber-500">
-                              {[
-                                1, 2, 3, 4, 5,
-                              ].map(
-                                (estrella) => (
-                                  <span
-                                    key={
-                                      estrella
-                                    }
-                                  >
-                                    {estrella <=
-                                    resena.estrellas
-                                      ? "★"
-                                      : "☆"}
-                                  </span>
-                                )
-                              )}
-                            </div>
-
-                            {resena.compraVerificada && (
-                              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
-                                {
-                                  t.compraVerificada
-                                }
-                              </span>
-                            )}
+                          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                            <Check
+                              size={
+                                12
+                              }
+                            />
                           </div>
 
-                          <p className="mt-3 text-sm leading-6 text-slate-600">
-                            “{resena.texto}”
+                          <p className="text-xs leading-tight text-slate-600">
+                            {
+                              item
+                            }
                           </p>
                         </div>
                       )
@@ -587,13 +690,85 @@ ${t.whatsappFinal}`;
                 </div>
               )}
 
-              {/* =================================================
-                  COMPRA
-              ================================================== */}
+                    {/* RESEÑAS */}
+
+                    {resenasDelProducto.length >
+                      0 && (
+                      <div className="mt-5">
+                        <div className="mb-3">
+                          <h2 className="text-base font-semibold text-slate-900">
+                            {
+                              t.resenasTitulo
+                            }
+                          </h2>
+                        </div>
+
+                        <div className="space-y-3">
+                          {resenasDelProducto.map(
+                            (
+                              resena
+                            ) => (
+                              <div
+                                key={
+                                  resena.id
+                                }
+                                className="rounded-xl border border-slate-200 bg-white p-4"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-1 text-amber-500">
+                                    {[
+                                      1,
+                                      2,
+                                      3,
+                                      4,
+                                      5,
+                                    ].map(
+                                      (
+                                        estrella
+                                      ) => (
+                                        <span
+                                          key={
+                                            estrella
+                                          }
+                                        >
+                                          {estrella <=
+                                          resena.estrellas
+                                            ? "★"
+                                            : "☆"}
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
+
+                                  {resena.compraVerificada && (
+                                    <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                                      {
+                                        t.compraVerificada
+                                      }
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="mt-3 text-sm leading-6 text-slate-600">
+                                  “
+                                  {
+                                    resena.texto
+                                  }
+                                  ”
+                                </p>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+              {/* COMPRA */}
 
               <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-4">
                 <p className="text-sm font-semibold text-slate-900">
-                  {t.descargaPago}
+                  {
+                    t.descargaPago
+                  }
                 </p>
 
                 <div className="mt-1 rounded-xl border border-sky-100 bg-sky-50 p-3">
@@ -604,7 +779,9 @@ ${t.whatsappFinal}`;
                     />
 
                     <p className="text-xs leading-5 text-slate-600">
-                      {t.descargaDescripcion}
+                      {
+                        t.descargaDescripcion
+                      }
                     </p>
                   </div>
                 </div>
@@ -613,7 +790,9 @@ ${t.whatsappFinal}`;
                   <div className="mt-3 rounded-lg bg-white/80 px-3 py-2">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-xs font-medium text-slate-600">
-                        {t.totalOferta}
+                        {
+                          t.totalOferta
+                        }
                       </span>
 
                       <span className="text-sm font-bold text-slate-900">
@@ -626,226 +805,180 @@ ${t.whatsappFinal}`;
                 )}
 
                 <button
-  type="button"
-  onClick={abrirCheckout}
-  className="boton-principal mt-3 flex w-full items-center justify-center gap-2"
->
-  <ShoppingBag size={17} />
-  {t.comprarAhora}
-</button>
+                  type="button"
+                  onClick={
+                    abrirCheckout
+                  }
+                  className="boton-principal mt-3 flex w-full items-center justify-center gap-2"
+                >
+                  <ShoppingBag
+                    size={17}
+                  />
+                  {
+                    t.comprarAhora
+                  }
+                </button>
               </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* =========================================================
-          MODAL CHECKOUT
-      ========================================================== */}
+            {/* =========================================================
+          CHECKOUT
+      ========================================================= */}
 
       {checkoutAbierto && (
-        <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4"
-          onClick={() => setCheckoutAbierto(false)}
-        >
-          <div
-            className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* CABECERA */}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            {/* ENCABEZADO */}
 
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                <h2 className="text-lg font-semibold text-slate-900">
                   {t.finalizarCompra}
-                </p>
-
-                <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
-                  {t.resumenPedido}
                 </h2>
+
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {t.resumenPedido}
+                </p>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setCheckoutAbierto(false)
-                }
-                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                onClick={() => {
+                  setCheckoutAbierto(false);
+                  setError("");
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                 aria-label={t.cerrar}
               >
-                <X size={19} />
+                <X size={20} />
               </button>
             </div>
 
-            <div className="max-h-[82vh] overflow-y-auto p-5">
-              {/* =================================================
-                  PRODUCTO
-              ================================================== */}
+            <div className="p-5">
+              {/* PRODUCTO PRINCIPAL */}
 
-              <div className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-white">
-                  <img
-                    src={producto.imagenes?.portada}
-                    alt={producto.nombre[idioma]}
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold leading-5 text-slate-900">
-                    {producto.nombre[idioma]}
-                  </p>
-
-                  {/* CALIFICACIÓN */}
-
-                  <div className="mt-2">
-                    <CalificacionProducto
-                      productoId={producto.id}
+              <div className="flex gap-3">
+                {producto.imagenes?.portada && (
+                  <div className="h-20 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <img
+                      src={producto.imagenes.portada}
+                      alt={textoEs(producto.nombre)}
+                      className="h-full w-full object-contain"
                     />
                   </div>
+                )}
 
-                  {/* PRECIO + DESCUENTO */}
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold leading-snug text-slate-900">
+                    {textoEs(producto.nombre)}
+                  </p>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="text-lg font-bold text-slate-900">
-                      {formatearPrecio(precioFinal)}
-                    </span>
-
-                    {tieneOferta && (
-                      <>
-                        <span className="text-sm text-slate-400 line-through">
-                          {formatearPrecio(
-                            producto.precioARS
-                          )}
+                  {tieneOferta ? (
+                    <div className="mt-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-slate-900">
+                          {formatearPrecio(precioFinal)}
                         </span>
 
-                        <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-bold text-red-600">
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                           -{descuento}%
                         </span>
-                      </>
-                    )}
-                  </div>
+                      </div>
+
+                      <span className="text-xs text-slate-400 line-through">
+                        {formatearPrecio(producto.precioARS)}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="mt-1 font-bold text-slate-900">
+                      {formatearPrecio(precioFinal)}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* =================================================
-                  VENTA CRUZADA
-              ================================================== */}
+              {/* VENTA CRUZADA */}
 
               {productoExtra && (
-                <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50/60 p-3">
-                  <div className="mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-orange-600">
-                      {t.completaColeccion}
-                    </p>
+                <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {t.completaColeccion}
+                  </p>
 
-                    <h3 className="mt-0.5 text-sm font-semibold text-slate-900">
-                      {t.agregaProducto}
-                    </h3>
-                  </div>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    {t.agregaProducto}
+                  </p>
 
-                  <div className="flex gap-3">
-                    {/* IMAGEN */}
-
-                    <div className="h-24 w-20 shrink-0 overflow-hidden rounded-lg bg-white">
-                      <img
-                        src={
-                          productoExtra.imagenes
-                            ?.portada
-                        }
-                        alt={
-                          productoExtra.nombre[
-                            idioma
-                          ]
-                        }
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-
-                    {/* INFORMACIÓN */}
-
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold leading-5 text-slate-900">
-                        {
-                          productoExtra.nombre[
-                            idioma
-                          ]
-                        }
-                      </p>
-
-                      <div className="mt-1">
-                        <CalificacionProducto
-                          productoId={
-                            productoExtra.id
-                          }
+                  <div className="mt-3 flex gap-3">
+                    {productoExtra.imagenes?.portada && (
+                      <div className="h-20 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                        <img
+                          src={productoExtra.imagenes.portada}
+                          alt={textoEs(productoExtra.nombre)}
+                          className="h-full w-full object-contain"
                         />
                       </div>
+                    )}
 
-                      {/* PRECIO */}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold leading-snug text-slate-900">
+                        {textoEs(productoExtra.nombre)}
+                      </p>
 
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="text-base font-bold text-slate-900">
-                          {formatearPrecio(
-                            precioExtra
-                          )}
-                        </span>
-
-                        {extraTieneOferta && (
-                          <>
-                            <span className="text-xs text-slate-400 line-through">
-                              {formatearPrecio(
-                                productoExtra.precioARS
-                              )}
+                      {extraTieneOferta ? (
+                        <div className="mt-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-bold text-slate-900">
+                              {formatearPrecio(precioExtra)}
                             </span>
 
                             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                               -{descuentoExtra}%
                             </span>
-                          </>
-                        )}
-                      </div>
+                          </div>
+
+                          <span className="text-xs text-slate-400 line-through">
+                            {formatearPrecio(productoExtra.precioARS)}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-sm font-bold text-slate-900">
+                          {formatearPrecio(precioExtra)}
+                        </p>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExtraAgregado((valor) => !valor)
+                        }
+                        className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                          extraAgregado
+                            ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                            : "border border-sky-300 bg-white text-sky-700 hover:bg-sky-100"
+                        }`}
+                      >
+                        {extraAgregado && <Check size={14} />}
+
+                        {extraAgregado
+                          ? t.agregadoCompra
+                          : t.agregarCompra}
+                      </button>
                     </div>
                   </div>
 
-                  {/* BOTÓN */}
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExtraAgregado(
-                        (estado) => !estado
-                      )
-                    }
-                    className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                      extraAgregado
-                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                        : "border border-orange-300 bg-white text-orange-700 hover:bg-orange-50"
-                    }`}
-                  >
-                    {extraAgregado ? (
-                      <>
-                        <Check size={17} />
-                        {t.agregadoCompra}
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingBag size={17} />
-                        {t.agregarCompra}
-                      </>
-                    )}
-                  </button>
-
                   {extraAgregado && (
-                    <p className="mt-2 text-center text-[11px] font-medium text-emerald-700">
+                    <p className="mt-3 text-xs font-medium text-emerald-700">
                       {t.agregadoTotal}
                     </p>
                   )}
                 </div>
               )}
 
-              {/* =================================================
-                  DATOS
-              ================================================== */}
+              {/* DATOS */}
 
               <div className="mt-5">
                 <h3 className="text-sm font-semibold text-slate-900">
@@ -853,197 +986,136 @@ ${t.whatsappFinal}`;
                 </h3>
 
                 <div className="mt-3 space-y-3">
-                  {/* NOMBRE */}
-
                   <div>
                     <label
-                      htmlFor="nombre"
-                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                      htmlFor="checkout-nombre"
+                      className="mb-1.5 block text-xs font-medium text-slate-700"
                     >
                       {t.nombre}
                     </label>
 
                     <div className="relative">
                       <User
-                        size={16}
+                        size={17}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                       />
 
                       <input
-                        id="nombre"
+                        id="checkout-nombre"
                         type="text"
                         value={nombre}
                         onChange={(e) => {
-                          setNombre(
-                            e.target.value
-                          );
-
-                          if (error) {
-                            setError("");
-                          }
+                          setNombre(e.target.value);
+                          setError("");
                         }}
-                        placeholder={
-                          t.nombrePlaceholder
-                        }
-                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400"
+                        placeholder={t.nombrePlaceholder}
+                        className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
                       />
                     </div>
                   </div>
 
-                  {/* EMAIL */}
-
                   <div>
                     <label
-                      htmlFor="email"
-                      className="mb-1.5 block text-xs font-medium text-slate-600"
+                      htmlFor="checkout-email"
+                      className="mb-1.5 block text-xs font-medium text-slate-700"
                     >
                       {t.correo}
                     </label>
 
                     <div className="relative">
                       <Mail
-                        size={16}
+                        size={17}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                       />
 
                       <input
-                        id="email"
+                        id="checkout-email"
                         type="email"
                         value={email}
                         onChange={(e) => {
-                          setEmail(
-                            e.target.value
-                          );
-
-                          if (error) {
-                            setError("");
-                          }
+                          setEmail(e.target.value);
+                          setError("");
                         }}
-                        placeholder="tu@email.com"
-                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400"
+                        placeholder="nombre@correo.com"
+                        className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
                       />
                     </div>
                   </div>
                 </div>
+
+                {error && (
+                  <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+                    {error}
+                  </p>
+                )}
               </div>
 
-              {/* =================================================
-                  RESUMEN
-              ================================================== */}
+              {/* RESUMEN */}
 
-              <div className="mt-5 border-y border-slate-200 py-4">
-                {/* PRODUCTOS DEL PEDIDO */}
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-slate-600">
-                      {producto.nombre[idioma]}
-                    </span>
-
-                    <span className="shrink-0 text-sm font-medium text-slate-900">
-                      {formatearPrecio(
-                        precioFinal
-                      )}
-                    </span>
-                  </div>
-
-                  {extraAgregado &&
-                    productoExtra && (
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-sm text-slate-600">
-                          +{" "}
-                          {
-                            productoExtra
-                              .nombre[idioma]
-                          }
-                        </span>
-
-                        <span className="shrink-0 text-sm font-medium text-slate-900">
-                          {formatearPrecio(
-                            precioExtra
-                          )}
-                        </span>
-                      </div>
-                    )}
-                </div>
-
-                {/* OFERTA */}
-
+              <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 {ahorroPedido > 0 && (
-                  <div className="mt-4 border-t border-slate-100 pt-3">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-sm text-slate-600">
+                  <>
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="text-slate-500">
                         {t.precioOriginal}
                       </span>
 
-                      <span className="text-sm text-slate-400 line-through">
-                        {formatearPrecio(
-                          precioOriginalPedido
-                        )}
+                      <span className="text-slate-500 line-through">
+                        {formatearPrecio(precioOriginalPedido)}
                       </span>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between gap-4">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+                    <div className="mt-2 flex items-center justify-between gap-3 text-xs">
+                      <span className="font-medium text-emerald-700">
                         {t.ofertaLanzamiento}
                       </span>
 
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                      <span className="font-semibold text-emerald-700">
                         -{descuentoPedido}%
                       </span>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between gap-4">
-                      <span className="text-sm font-medium text-emerald-700">
+                    <div className="mt-2 flex items-center justify-between gap-3 text-xs">
+                      <span className="font-medium text-emerald-700">
                         {t.ahorras}
                       </span>
 
-                      <span className="text-sm font-semibold text-emerald-700">
-                        {formatearPrecio(
-                          ahorroPedido
-                        )}
+                      <span className="font-semibold text-emerald-700">
+                        {formatearPrecio(ahorroPedido)}
                       </span>
                     </div>
-                  </div>
+                  </>
                 )}
 
-                {/* TOTAL */}
-
-                <div className="mt-4 flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
-                  <span className="font-semibold text-slate-900">
+                <div
+                  className={`flex items-center justify-between gap-3 ${
+                    ahorroPedido > 0
+                      ? "mt-3 border-t border-slate-200 pt-3"
+                      : ""
+                  }`}
+                >
+                  <span className="text-sm font-semibold text-slate-900">
                     {t.total}
                   </span>
 
                   <span className="text-xl font-bold text-slate-900">
-                    {formatearPrecio(
-                      totalPedido
-                    )}
+                    {formatearPrecio(totalPedido)}
                   </span>
                 </div>
               </div>
 
-              {/* ERROR */}
-
-              {error && (
-                <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
-                  {error}
-                </p>
-              )}
-
-              {/* =================================================
-                  WHATSAPP
-              ================================================== */}
+              {/* WHATSAPP TEMPORAL */}
 
               <button
                 type="button"
                 onClick={comprarPorWhatsApp}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-green-600"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-green-700"
               >
                 <MessageCircle size={18} />
                 {t.comprarWhatsapp}
               </button>
 
-              <p className="mt-3 text-center text-[11px] leading-4 text-slate-500">
+              <p className="mt-2 text-center text-[11px] leading-4 text-slate-500">
                 {t.instruccionesWhatsapp}
               </p>
             </div>
@@ -1052,40 +1124,36 @@ ${t.whatsappFinal}`;
       )}
 
       {/* =========================================================
-          MODAL PREVIEW
-      ========================================================== */}
+          PREVIEW AMPLIADO
+      ========================================================= */}
 
-      {previewAbierto && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4"
-          onClick={() =>
-            setPreviewAbierto(false)
-          }
-        >
-          <div
-            className="relative max-h-[92vh] w-full max-w-4xl overflow-auto rounded-2xl bg-white p-3 shadow-2xl"
-            onClick={(e) =>
-              e.stopPropagation()
-            }
+      {previewAbierto && imagenes[imagenActiva] && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4">
+          <button
+            type="button"
+            onClick={() => setPreviewAbierto(false)}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg transition hover:bg-slate-100"
+            aria-label={t.cerrarPreview}
           >
-            <button
-              type="button"
-              onClick={() =>
-                setPreviewAbierto(false)
-              }
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-md transition hover:bg-slate-100"
-              aria-label={t.cerrarPreview}
-            >
-              <X size={19} />
-            </button>
+            <X size={22} />
+          </button>
 
-            <img
-              src={producto.imagenes?.preview}
-              alt={`${t.vistaAmpliada} ${
-                producto.nombre[idioma]
-              }`}
-              className="mx-auto max-h-[86vh] w-full object-contain"
-            />
+          <div className="max-h-[92vh] max-w-4xl overflow-hidden rounded-xl bg-white p-2 shadow-2xl">
+            {imagenActiva === 0 ? (
+              <img
+                src={imagenes[imagenActiva]}
+                alt={`${t.vistaAmpliada} ${textoEs(producto.nombre)}`}
+                className="max-h-[88vh] max-w-full object-contain"
+              />
+            ) : (
+              <ProteccionComercial>
+                <img
+                  src={imagenes[imagenActiva]}
+                  alt={`${t.vistaAmpliada} ${textoEs(producto.nombre)}`}
+                  className="max-h-[88vh] max-w-full object-contain"
+                />
+              </ProteccionComercial>
+            )}
           </div>
         </div>
       )}

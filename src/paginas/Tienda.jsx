@@ -16,14 +16,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { productosDigitales } from "../datos/productosDigitales";
 
-import { useIdioma } from "../contextos/IdiomaContext";
-import { traducciones } from "../datos/traducciones";
-import { useMoneda } from "../contextos/MonedaContext";
-import {
-  convertirPrecio,
-  formatearMoneda,
-} from "../utilidades/monedas";
-
 /* =========================================================
    TIENDA
 ========================================================= */
@@ -31,15 +23,6 @@ import {
 const Tienda = () => {
   const navigate = useNavigate();
 
-  const { idioma } = useIdioma();
-  const t = traducciones[idioma].tienda;
-
-const {
-  moneda,
-  cotizaciones,
-  cargandoCotizaciones,
-} = useMoneda();
-  
   const [filtroActivo, setFiltroActivo] =
     useState("todos");
 
@@ -50,33 +33,85 @@ const {
     useState(false);
 
   /* =======================================================
+     TEXTOS
+  ======================================================= */
+
+  const t = {
+    coleccion: "Colección de imprimibles",
+    descripcion:
+      "Imprimibles digitales para jugar, aprender, organizar y disfrutar en casa.",
+
+    volver: "Volver",
+
+    todos: "Todos",
+    juegosActividades: "Juegos y actividades",
+    hogarMascotas: "Hogar y mascotas",
+
+    laberintos: "Laberintos",
+    sopaLetras: "Sopa de letras",
+    unirPuntos: "Unir los puntos",
+    encontrarDiferencias: "Encontrar las diferencias",
+    colorear: "Colorear",
+    crucigramas: "Crucigramas",
+
+    mascotas: "Mascotas",
+    organizacion: "Organización",
+    planificadores: "Planificadores",
+    registros: "Registros",
+    checklists: "Checklists",
+
+    explorarTipo: "Explorar por tipo",
+
+    imprimiblesDestacados: "Imprimibles destacados",
+    descripcionDestacados:
+      "Una selección variada de imprimibles para jugar, aprender y disfrutar en casa.",
+
+    descripcionHogar:
+      "Imprimibles prácticos para organizar el hogar y acompañar el cuidado de tus mascotas.",
+
+    ver: "Ver",
+    pdf: "PDF",
+    descargaDigital: "Descarga digital",
+    hogar: "Hogar",
+    infantil: "Infantil",
+    ahorras: "Ahorras",
+    verProducto: "Ver producto",
+
+    proximamente:
+      "Próximamente agregaremos nuevos productos en esta categoría.",
+
+    verTodos: "Ver todos",
+    verMenos: "Ver menos",
+  };
+
+  /* =======================================================
+     TEXTO ESPAÑOL
+     Compatible temporalmente con productos antiguos
+     que todavía tengan { es, en }.
+  ======================================================= */
+
+  const textoEs = (valor) => {
+    if (typeof valor === "string") {
+      return valor;
+    }
+
+    return valor?.es || "";
+  };
+
+  /* =======================================================
      FORMATEAR PRECIO
   ======================================================= */
 
   const formatearPrecio = (precioARS) => {
     if (!precioARS) {
-      return idioma === "es"
-        ? "Precio a definir"
-        : "Price to be determined";
+      return "Precio a definir";
     }
 
-    if (
-      moneda !== "ARS" &&
-      cargandoCotizaciones
-    ) {
-      return "...";
-    }
-
-    const precioConvertido = convertirPrecio(
-      precioARS,
-      moneda,
-      cotizaciones
-    );
-
-    return formatearMoneda(
-      precioConvertido,
-      moneda
-    );
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0,
+    }).format(precioARS);
   };
 
   /* =======================================================
@@ -168,22 +203,25 @@ const {
       return [];
     }
 
-    const disponibles = categorias[
-      filtroActivo
-    ].filter((categoria) => {
-      return productosDigitales.some((producto) => {
-        const perteneceALinea =
-          filtroActivo === "juegos"
-            ? !producto.linea ||
-              producto.linea === "juegos"
-            : producto.linea === filtroActivo;
+    const disponibles =
+      categorias[filtroActivo].filter(
+        (categoria) => {
+          return productosDigitales.some(
+            (producto) => {
+              const perteneceALinea =
+                filtroActivo === "juegos"
+                  ? !producto.linea ||
+                    producto.linea === "juegos"
+                  : producto.linea === filtroActivo;
 
-        return (
-          perteneceALinea &&
-          producto.categoria === categoria.id
-        );
-      });
-    });
+              return (
+                perteneceALinea &&
+                producto.categoria === categoria.id
+              );
+            }
+          );
+        }
+      );
 
     if (disponibles.length === 0) {
       return [];
@@ -196,45 +234,48 @@ const {
       },
       ...disponibles,
     ];
-  }, [filtroActivo, idioma]);
+  }, [filtroActivo]);
 
   /* =======================================================
      PRODUCTOS FILTRADOS
   ======================================================= */
 
   const productosFiltrados = useMemo(() => {
-    return productosDigitales.filter((producto) => {
-      if (filtroActivo === "todos") {
-        return true;
+    return productosDigitales.filter(
+      (producto) => {
+        if (filtroActivo === "todos") {
+          return true;
+        }
+
+        const perteneceALinea =
+          filtroActivo === "juegos"
+            ? !producto.linea ||
+              producto.linea === "juegos"
+            : producto.linea === filtroActivo;
+
+        if (!perteneceALinea) {
+          return false;
+        }
+
+        if (categoriaActiva === "todos") {
+          return true;
+        }
+
+        return (
+          producto.categoria === categoriaActiva
+        );
       }
-
-      const perteneceALinea =
-        filtroActivo === "juegos"
-          ? !producto.linea ||
-            producto.linea === "juegos"
-          : producto.linea === filtroActivo;
-
-      if (!perteneceALinea) {
-        return false;
-      }
-
-      if (categoriaActiva === "todos") {
-        return true;
-      }
-
-      return (
-        producto.categoria === categoriaActiva
-      );
-    });
+    );
   }, [filtroActivo, categoriaActiva]);
 
   /* =======================================================
      PRODUCTOS VISIBLES
   ======================================================= */
 
-  const productosMostrados = mostrarTodos
-    ? productosFiltrados
-    : productosFiltrados.slice(0, 3);
+  const productosMostrados =
+    mostrarTodos
+      ? productosFiltrados
+      : productosFiltrados.slice(0, 3);
 
   /* =======================================================
      CAMBIAR FILTRO PRINCIPAL
@@ -265,13 +306,10 @@ const {
         <div className="mx-auto max-w-6xl text-center">
           <img
             src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logo-andres-imprimibles"
-            alt="Andres Imprimibles"
-            className="mx-auto h-auto w-full max-w-[200px] object-contain sm:max-w-[320px]"
+            alt="Andrés Imprimibles"
+            className="mx-auto h-auto w-full max-w-[150px] object-contain sm:max-w-[320px]"
           />
 
-          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-sm">
-            {t.coleccion}
-          </p>
 
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
             {t.descripcion}
@@ -384,202 +422,210 @@ const {
         <div className="mx-auto max-w-4xl">
           {/* CABECERA */}
 
-          <div className="mx-auto mb-5 max-w-2xl text-center">
+          <div className="mx-auto mb-5 max-w-2xl text-left">
             <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
               {filtroActivo === "hogar"
                 ? t.hogarMascotas
                 : t.imprimiblesDestacados}
             </h2>
 
-            <p className="mx-auto mt-1.5 max-w-xl text-sm leading-5 text-slate-500">
-              {filtroActivo === "hogar"
-                ? t.descripcionHogar
-                : t.descripcionDestacados}
-            </p>
+            
           </div>
 
           {/* PRODUCTOS */}
 
           {productosMostrados.length > 0 ? (
             <div className="space-y-2.5 sm:space-y-3">
-              {productosMostrados.map((producto) => {
-                const tieneOferta =
-                  producto.oferta?.activa === true;
+              {productosMostrados.map(
+                (producto) => {
+                  const tieneOferta =
+                    producto.oferta?.activa === true;
 
-                const precioFinal = tieneOferta
-                  ? producto.oferta.precioARS
-                  : producto.precioARS;
+                  const precioFinal =
+                    tieneOferta
+                      ? producto.oferta.precioARS
+                      : producto.precioARS;
 
-                const ahorro = tieneOferta
-                  ? producto.precioARS -
-                    producto.oferta.precioARS
-                  : 0;
+                  const ahorro =
+                    tieneOferta
+                      ? producto.precioARS -
+                        producto.oferta.precioARS
+                      : 0;
 
-                const descuento =
-                  tieneOferta && producto.precioARS
-                    ? Math.round(
-                        (ahorro /
-                          producto.precioARS) *
-                          100
-                      )
-                    : 0;
-
-                return (
-                  <article
-                    key={producto.id}
-                    className="group flex overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md"
-                  >
-                    {/* IMAGEN */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(
-                          `/tienda/${producto.id}`
+                  const descuento =
+                    tieneOferta &&
+                    producto.precioARS
+                      ? Math.round(
+                          (ahorro /
+                            producto.precioARS) *
+                            100
                         )
-                      }
-                      className="w-[105px] shrink-0 bg-slate-50 sm:w-[130px]"
-                      aria-label={`${t.ver} ${producto.nombre[idioma]}`}
+                      : 0;
+
+                  const nombreProducto =
+                    textoEs(producto.nombre);
+
+                  const etiquetaOferta =
+                    textoEs(
+                      producto.oferta?.etiqueta
+                    );
+
+                  return (
+                    <article
+                      key={producto.id}
+                      className="group flex overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md"
                     >
-                      <div className="flex h-full min-h-[150px] items-center justify-center p-2 sm:min-h-[170px]">
-                        <img
-                          src={
-                            producto.imagenes
-                              ?.portada
-                          }
-                          alt={producto.nombre[idioma]}
-                          className="h-full max-h-[150px] w-full object-contain transition duration-300 group-hover:scale-[1.02] sm:max-h-[165px]"
-                        />
-                      </div>
-                    </button>
+                      {/* IMAGEN */}
 
-                    {/* INFORMACIÓN */}
-
-                    <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-3">
-                      {/* BADGES */}
-
-                      <div className="flex flex-wrap items-center gap-1">
-                        {/* PDF */}
-
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-sky-700 sm:text-[9px]">
-                          <Download
-                            size={9}
-                            className="shrink-0"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/tienda/${producto.id}`
+                          )
+                        }
+                        className="w-[105px] shrink-0 bg-slate-50 sm:w-[130px]"
+                        aria-label={`${t.ver} ${nombreProducto}`}
+                      >
+                        <div className="flex h-full min-h-[150px] items-center justify-center p-2 sm:min-h-[170px]">
+                          <img
+                            src={
+                              producto.imagenes
+                                ?.portada
+                            }
+                            alt={nombreProducto}
+                            className="h-full max-h-[150px] w-full object-contain transition duration-300 group-hover:scale-[1.02] sm:max-h-[165px]"
                           />
-                          {t.pdf}
-                        </span>
+                        </div>
+                      </button>
 
-                        {/* DESCARGA DIGITAL */}
+                      {/* INFORMACIÓN */}
 
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-amber-700 sm:text-[9px]">
-                          <FileDown
-                            size={9}
-                            className="shrink-0"
-                          />
-                          {t.descargaDigital}
-                        </span>
+                      <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-3">
+                        {/* BADGES */}
 
-                        {/* HOGAR / INFANTIL */}
-
-                        {producto.linea ===
-                        "hogar" ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-emerald-700 sm:text-[9px]">
-                            <Home
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-sky-700 sm:text-[9px]">
+                            <Download
                               size={9}
                               className="shrink-0"
                             />
-                            {t.hogar}
+                            {t.pdf}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-violet-700 sm:text-[9px]">
-                            <Baby
+
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-amber-700 sm:text-[9px]">
+                            <FileDown
                               size={9}
                               className="shrink-0"
                             />
-                            {t.infantil}
+                            {t.descargaDigital}
                           </span>
-                        )}
-                      </div>
 
-                      {/* RESEÑAS */}
+                          {producto.linea ===
+                          "hogar" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-emerald-700 sm:text-[9px]">
+                              <Home
+                                size={9}
+                                className="shrink-0"
+                              />
+                              {t.hogar}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-violet-700 sm:text-[9px]">
+                              <Baby
+                                size={9}
+                                className="shrink-0"
+                              />
+                              {t.infantil}
+                            </span>
+                          )}
+                        </div>
 
-                      <div className="mt-1 min-h-[16px] origin-left scale-[0.9]">
-                        <CalificacionProducto
-                          productoId={producto.id}
-                        />
-                      </div>
+                        {/* RESEÑAS */}
 
-                      {/* TÍTULO */}
+                        <div className="mt-1 min-h-[16px] origin-left scale-[0.9]">
+                          <CalificacionProducto
+                            productoId={
+                              producto.id
+                            }
+                          />
+                        </div>
 
-                      <h3 className="mt-1 line-clamp-2 text-[12px] font-semibold leading-4 text-slate-900 sm:text-sm sm:leading-5">
-                        {producto.nombre[idioma]}
-                      </h3>
+                        {/* TÍTULO */}
 
-                      {/* PRECIO */}
+                        <h3 className="mt-1 line-clamp-2 text-[12px] font-semibold leading-4 text-slate-900 sm:text-sm sm:leading-5">
+                          {nombreProducto}
+                        </h3>
+                                                {/* PRECIO */}
 
-                      <div className="mt-auto pt-2">
-                        {tieneOferta ? (
-                          <>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <p className="text-sm font-bold text-slate-900 sm:text-base">
-                                {formatearPrecio(
-                                  precioFinal
-                                )}
-                              </p>
-
-                              <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700">
-                                -{descuento}%
-                              </span>
-                            </div>
-
-                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2">
-                              <p className="text-[9px] text-slate-400 line-through sm:text-[10px]">
-                                {formatearPrecio(
-                                  producto.precioARS
-                                )}
-                              </p>
-
-                              <p className="text-[9px] font-medium text-emerald-700 sm:text-[10px]">
-                                {t.ahorras}{" "}
-                                {formatearPrecio(ahorro)}
+                        <div className="mt-auto pt-2">
+                          {tieneOferta ? (
+                            <>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <p className="text-sm font-bold text-slate-900 sm:text-base">
+                                  {formatearPrecio(
+                                    precioFinal
+                                  )}
                                 </p>
-                                </div>
 
-                                {producto.oferta?.etiqueta?.[idioma] && (
-                                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wide text-orange-600 sm:text-[9px]">
-                                    {producto.oferta.etiqueta[idioma]}
-                                  </p>
-                                )}
-                                </>
-                                ) : (
-                                  <p className="text-sm font-bold text-slate-900 sm:text-base">
-                                    {formatearPrecio(producto.precioARS)}
-                                  </p>
-                                )}
+                                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700">
+                                  -{descuento}%
+                                </span>
+                              </div>
 
-                                {/* BOTÓN */}
+                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2">
+                                <p className="text-[9px] text-slate-400 line-through sm:text-[10px]">
+                                  {formatearPrecio(
+                                    producto.precioARS
+                                  )}
+                                </p>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              `/tienda/${producto.id}`
-                            )
-                          }
-                          className="mt-2 inline-flex items-center justify-center gap-1 rounded-lg bg-sky-600 px-3 py-1.5 text-[10px] font-semibold text-white transition hover:bg-sky-700 sm:text-xs"
-                        >
-                          <ShoppingBag
-                            size={12}
-                            className="shrink-0"
-                          />
+                                <p className="text-[9px] font-medium text-emerald-700 sm:text-[10px]">
+                                  {t.ahorras}{" "}
+                                  {formatearPrecio(
+                                    ahorro
+                                  )}
+                                </p>
+                              </div>
 
-                          {t.verProducto}
-                        </button>
+                              {etiquetaOferta && (
+                                <p className="mt-1 text-[8px] font-bold uppercase tracking-wide text-orange-600 sm:text-[9px]">
+                                  {etiquetaOferta}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-sm font-bold text-slate-900 sm:text-base">
+                              {formatearPrecio(
+                                producto.precioARS
+                              )}
+                            </p>
+                          )}
+
+                          {/* BOTÓN */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/tienda/${producto.id}`
+                              )
+                            }
+                            className="mt-2 inline-flex items-center justify-center gap-1 rounded-lg bg-sky-600 px-3 py-1.5 text-[10px] font-semibold text-white transition hover:bg-sky-700 sm:text-xs"
+                          >
+                            <ShoppingBag
+                              size={12}
+                              className="shrink-0"
+                            />
+
+                            {t.verProducto}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
+                    </article>
+                  );
+                }
+              )}
             </div>
           ) : (
             /* SIN PRODUCTOS */
@@ -623,11 +669,10 @@ const {
               </button>
             </div>
           )}
-          </div>
+        </div>
       </section>
     </main>
-    );
+  );
 };
 
 export default Tienda;
-    

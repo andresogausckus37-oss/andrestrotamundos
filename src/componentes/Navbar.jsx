@@ -1,25 +1,23 @@
 import { CONFIG } from "../datos/config";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-
-import { useIdioma } from "../contextos/IdiomaContext";
-import { useMoneda } from "../contextos/MonedaContext";
-import { traducciones } from "../datos/traducciones";
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { idioma, cambiarIdioma } = useIdioma();
-  const { moneda, cambiarMoneda } = useMoneda();
+  const [isMenuOpen, setIsMenuOpen] =
+    useState(false);
 
-  const t = traducciones[idioma].navbar;
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isScrolled, setIsScrolled] =
+    useState(false);
 
   /* DETECTAR SCROLL */
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -27,26 +25,36 @@ const Navbar = () => {
 
     handleScroll();
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener(
+      "scroll",
+      handleScroll
+    );
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener(
+        "scroll",
+        handleScroll
+      );
     };
   }, []);
 
   /* CERRAR MENÚ AL CAMBIAR DE PÁGINA */
+
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
   /* IR AL INICIO */
+
   const irAInicio = () => {
     setIsMenuOpen(false);
 
     if (location.pathname === "/") {
-      document.getElementById("inicio")?.scrollIntoView({
-        behavior: "smooth",
-      });
+      document
+        .getElementById("inicio")
+        ?.scrollIntoView({
+          behavior: "smooth",
+        });
 
       return;
     }
@@ -59,19 +67,23 @@ const Navbar = () => {
   };
 
   /* IR A TIENDA */
+
   const irAMiTienda = () => {
     setIsMenuOpen(false);
     navigate("/tienda");
   };
 
   /* IR A CONTACTO */
+
   const irAContacto = () => {
     setIsMenuOpen(false);
 
     if (location.pathname === "/") {
-      document.getElementById("contacto")?.scrollIntoView({
-        behavior: "smooth",
-      });
+      document
+        .getElementById("contacto")
+        ?.scrollIntoView({
+          behavior: "smooth",
+        });
 
       return;
     }
@@ -85,82 +97,33 @@ const Navbar = () => {
 
   const enlaces = [
     {
-      label: t.inicio,
+      label: "Inicio",
       onClick: irAInicio,
     },
     {
-      label: t.tienda,
+      label: "Tienda",
       onClick: irAMiTienda,
     },
     {
-      label: t.contacto,
+      label: "Contacto",
       onClick: irAContacto,
     },
   ];
 
-  /* SELECTOR DE IDIOMA */
-  const SelectorIdioma = () => (
-    <div className="flex items-center rounded-lg border border-slate-200 bg-white/90 p-1 text-xs font-semibold shadow-sm">
-      <button
-        type="button"
-        onClick={() => cambiarIdioma("es")}
-        className={`rounded-md px-2 py-1 transition ${
-          idioma === "es"
-            ? "bg-sky-600 text-white"
-            : "text-slate-500 hover:text-sky-600"
-        }`}
-        aria-label="Cambiar idioma a español"
-      >
-        ES
-      </button>
-
-      <button
-        type="button"
-        onClick={() => cambiarIdioma("en")}
-        className={`rounded-md px-2 py-1 transition ${
-          idioma === "en"
-            ? "bg-sky-600 text-white"
-            : "text-slate-500 hover:text-sky-600"
-        }`}
-        aria-label="Change language to English"
-      >
-        EN
-      </button>
-    </div>
-  );
-
-  /* SELECTOR DE MONEDA */
-  const SelectorMoneda = () => (
-    <div className="flex items-center rounded-lg border border-slate-200 bg-white/90 p-1 text-xs font-semibold shadow-sm">
-      {["ARS", "USD", "EUR"].map((codigo) => (
-        <button
-          key={codigo}
-          type="button"
-          onClick={() => cambiarMoneda(codigo)}
-          className={`rounded-md px-2 py-1 transition ${
-            moneda === codigo
-              ? "bg-sky-600 text-white"
-              : "text-slate-500 hover:text-sky-600"
-          }`}
-          aria-label={`Cambiar moneda a ${codigo}`}
-        >
-          {codigo}
-        </button>
-      ))}
-    </div>
-  );
-
   return (
     <header
       className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
-        isScrolled || location.pathname !== "/"
+        isScrolled ||
+        location.pathname !== "/"
           ? "border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-xl"
           : "bg-transparent"
       }`}
     >
       {/* BARRA PRINCIPAL */}
+
       <div className="contenedor relative flex items-center justify-between px-5 py-3">
         {/* MARCA */}
+
         <button
           type="button"
           onClick={irAInicio}
@@ -184,6 +147,7 @@ const Navbar = () => {
         </button>
 
         {/* NAVEGACIÓN ESCRITORIO */}
+
         <nav className="absolute left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1 md:flex">
           {enlaces.map((enlace) => (
             <button
@@ -197,24 +161,32 @@ const Navbar = () => {
           ))}
         </nav>
 
-        {/* SELECTORES ESCRITORIO */}
-        <div className="hidden items-center gap-2 md:flex">
-          <SelectorIdioma />
-          <SelectorMoneda />
-        </div>
-
         {/* MENÚ HAMBURGUESA */}
+
         <button
           type="button"
-          onClick={() => setIsMenuOpen((actual) => !actual)}
+          onClick={() =>
+            setIsMenuOpen(
+              (actual) => !actual
+            )
+          }
           className="shrink-0 rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 md:hidden"
-          aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-label={
+            isMenuOpen
+              ? "Cerrar menú"
+              : "Abrir menú"
+          }
         >
-          {isMenuOpen ? <X size={23} /> : <Menu size={23} />}
+          {isMenuOpen ? (
+            <X size={23} />
+          ) : (
+            <Menu size={23} />
+          )}
         </button>
       </div>
 
       {/* MENÚ MÓVIL */}
+
       {isMenuOpen && (
         <div className="border-t border-slate-200 bg-white shadow-xl md:hidden">
           <nav className="contenedor flex flex-col items-center px-5 py-5">
@@ -228,12 +200,6 @@ const Navbar = () => {
                 {enlace.label}
               </button>
             ))}
-
-            {/* SELECTORES MÓVIL */}
-            <div className="mt-4 flex flex-col items-center gap-3 border-t border-slate-200 pt-4">
-              <SelectorIdioma />
-              <SelectorMoneda />
-            </div>
           </nav>
         </div>
       )}

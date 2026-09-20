@@ -7,27 +7,19 @@ export const ESTILOS_IMPRIMIBLES = {
   },
 
   tipografia: {
-  principal:
-    '"Kalam", cursive',
-},
+    principal: '"Kalam", cursive',
+  },
 
   comercial: {
     blur: 0,
 
     marcaAgua: {
       texto: "ANDRÉS IMPRIMIBLES",
-
       cantidad: 6,
-
       fontSize: 16,
-
-      fontFamily:
-        '"Montserrat", Arial, sans-serif',
-
+      fontFamily: '"Montserrat", Arial, sans-serif',
       fontWeight: 800,
-
-      opacity: 0.20,
-
+      opacity: 0.2,
       rotacion: -28,
     },
   },

@@ -6,8 +6,6 @@ import {
 } from "lucide-react";
 
 import { pasos } from "../datos/pasos";
-import { useIdioma } from "../contextos/IdiomaContext";
-import { traducciones } from "../datos/traducciones";
 
 const iconos = {
   video: Video,
@@ -34,13 +32,12 @@ const estilos = [
 ];
 
 const ComoFunciona = () => {
-  const { idioma } = useIdioma();
-  const t = traducciones[idioma].comoFunciona;
-
   const irADisponibilidad = () => {
-    document.getElementById("disponibilidad")?.scrollIntoView({
-      behavior: "smooth",
-    });
+    document
+      .getElementById("disponibilidad")
+      ?.scrollIntoView({
+        behavior: "smooth",
+      });
   };
 
   return (
@@ -49,28 +46,43 @@ const ComoFunciona = () => {
       className="bg-slate-50 px-5 py-14 md:py-16"
     >
       <div className="contenedor">
-        {/* Encabezado */}
+        {/* ENCABEZADO */}
 
         <div className="mx-auto mb-7 max-w-2xl text-center">
           <p className="eyebrow">
-            {t.etiqueta}
+            Mi proceso
           </p>
 
           <h2 className="titulo-seccion">
-            {t.titulo}
+            Cómo funciona
           </h2>
 
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            {t.descripcion}
+            Un proceso simple y claro para organizar el cuidado de tu hogar y tus mascotas.
           </p>
         </div>
 
-        {/* Pasos */}
+        {/* PASOS */}
 
         <div className="grid gap-3 md:grid-cols-3">
           {pasos.map((paso, index) => {
-            const Icono = iconos[paso.icono];
-            const estilo = estilos[index];
+            const Icono =
+              iconos[paso.icono];
+
+            const estilo =
+              estilos[index];
+
+            const titulo =
+              typeof paso.titulo ===
+              "string"
+                ? paso.titulo
+                : paso.titulo?.es;
+
+            const descripcion =
+              typeof paso.descripcion ===
+              "string"
+                ? paso.descripcion
+                : paso.descripcion?.es;
 
             return (
               <article
@@ -87,32 +99,38 @@ const ComoFunciona = () => {
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-lg ${estilo.icono}`}
                   >
-                    <Icono size={18} />
+                    <Icono
+                      size={18}
+                    />
                   </div>
                 </div>
 
                 <h3 className="text-md font-semibold text-slate-900 sm:text-base">
-                  {paso.titulo[idioma]}
+                  {titulo}
                 </h3>
 
                 <p className="mt-2 text-sm leading-5 text-slate-600">
-                  {paso.descripcion[idioma]}
+                  {descripcion}
                 </p>
               </article>
             );
           })}
         </div>
 
-        {/* Botón disponibilidad */}
+        {/* BOTÓN DISPONIBILIDAD */}
 
         <div className="mt-5 flex justify-center">
           <button
             type="button"
-            onClick={irADisponibilidad}
+            onClick={
+              irADisponibilidad
+            }
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700"
           >
-            <CalendarDays size={16} />
-            {t.verDisponibilidad}
+            <CalendarDays
+              size={16}
+            />
+            Ver disponibilidad
           </button>
         </div>
       </div>

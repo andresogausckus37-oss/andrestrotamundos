@@ -7,13 +7,10 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import { IdiomaProvider } from "./contextos/IdiomaContext";
-
 import Navbar from "./componentes/Navbar";
 import Hero from "./componentes/Hero";
 import Servicios from "./componentes/Servicios";
 import ComoFunciona from "./componentes/ComoFunciona";
-import Galeria from "./componentes/Galeria";
 import Resenas from "./componentes/Resenas";
 import Disponibilidad from "./componentes/Disponibilidad";
 import SobreMi from "./componentes/SobreMi";
@@ -27,15 +24,12 @@ import GeneradorPdf from "./paginas/GeneradorPdf";
 import Digitales from "./paginas/Digitales";
 import GeneradorLaminas from "./paginas/GeneradorLaminas";
 import OptimizadorImagenes from "./paginas/OptimizadorImagenes";
-import { MonedaProvider } from "./contextos/MonedaContext";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
   const location = useLocation();
 
   useEffect(() => {
-    /* Si venimos hacia una sección concreta del Home,
-       no hacemos scroll arriba */
     if (location.state?.scrollTo) {
       return;
     }
@@ -60,7 +54,6 @@ const Home = () => {
     });
   };
 
-  /* CUANDO VENIMOS DESDE OTRA PÁGINA HACIA UNA SECCIÓN */
   useEffect(() => {
     const seccion = location.state?.scrollTo;
 
@@ -74,7 +67,6 @@ const Home = () => {
       });
     });
 
-    /* Limpiamos el estado para que no vuelva a ejecutarse */
     navigate("/", {
       replace: true,
       state: null,
@@ -88,8 +80,6 @@ const Home = () => {
       <Servicios />
 
       <ComoFunciona />
-
-      {/* <Galeria /> */}
 
       <Resenas />
 
@@ -110,32 +100,35 @@ const ContenidoApp = () => {
 
   return (
     <>
-      {/* NAVBAR GLOBAL */}
       <Navbar />
 
-      {/* SCROLL AUTOMÁTICO */}
       <ScrollToTop />
 
-      {/*
-        En Home no agregamos espacio superior porque el Navbar
-        queda sobre el Hero.
-
-        En las demás páginas dejamos espacio para que el Navbar
-        fijo no tape el contenido.
-      */}
       <div className={esHome ? "" : "pt-20"}>
         <Routes>
           <Route path="/" element={<Home />} />
 
           <Route path="/tienda" element={<Tienda />} />
 
-          <Route path="/recomendados" element={<Recomendados />} />
+          <Route
+            path="/recomendados"
+            element={<Recomendados />}
+          />
 
-          <Route path="/generador-pdf" element={<GeneradorPdf />} />
+          <Route
+            path="/generador-pdf"
+            element={<GeneradorPdf />}
+          />
 
-          <Route path="/tienda/digitales" element={<Digitales />} />
+          <Route
+            path="/tienda/digitales"
+            element={<Digitales />}
+          />
 
-          <Route path="/tienda/:id" element={<DetalleProducto />} />
+          <Route
+            path="/tienda/:id"
+            element={<DetalleProducto />}
+          />
 
           <Route
             path="/generador-laminas"
@@ -148,23 +141,18 @@ const ContenidoApp = () => {
           />
         </Routes>
 
-        {/* GLOBAL */}
         <Footer />
       </div>
     </>
   );
 };
 
-      const App = () => {
-        return (
-          <IdiomaProvider>
-            <MonedaProvider>
-              <BrowserRouter>
-                <ContenidoApp />
-              </BrowserRouter>
-            </MonedaProvider>
-          </IdiomaProvider>
-        );
-      };
+const App = () => {
+  return (
+    <BrowserRouter>
+      <ContenidoApp />
+    </BrowserRouter>
+  );
+};
 
 export default App;

@@ -1,20 +1,18 @@
 export const LABERINTOS_50 = {
-  id: "50-laberintos-toby-luna",
+  id: "50-laberintos",
 
   nombre: "50 Laberintos",
 
-  subtitulo:
-    "Las Aventuras de Toby y Luna",
-
   cantidad: {
-    faciles: 15,
-    medios: 20,
-    dificiles: 15,
+    faciles: 10,
+    medios: 10,
+    dificiles: 10,
+    expertos: 10,
+    legendarios: 10,
   },
 
   pdf: {
-    nombreArchivo:
-      "50-Laberintos-Toby-y-Luna.pdf",
+    nombreArchivo: "50-Laberintos.pdf",
   },
 
   recursos: {

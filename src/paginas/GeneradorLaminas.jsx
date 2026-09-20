@@ -10,8 +10,6 @@ import { generarPdfLaminas } from "../utilidades/generarPdfLaminas";
 import PortadaLaberintos from "../generador/comerciales/PortadaLaberintos";
 import LaminaFinalLaberintos from "../generador/comerciales/LaminaFinalLaberintos";
 
-import BienvenidaLaberintos from "../generador/comerciales/BienvenidaLaberintos";
-
 import LaminaBase from "../generador/componentes/LaminaBase";
 import LaminaLaberinto from "../generador/componentes/LaminaLaberinto";
 
@@ -19,13 +17,6 @@ import { validarLaberinto } from "../generador/juegos/Laberinto";
 
 import { ESTILOS_IMPRIMIBLES } from "../generador/config/estilosImprimibles";
 
-import {
-  PERSONAJES_LABERINTOS,
-  PERSONAJES_POR_TEMATICA,
-  OBJETOS_LABERINTOS,
-  OBJETOS_POR_TEMATICA,
-  TEMATICAS_LABERINTOS,
-} from "../generador/productos/aventurasLaberintos";
 import { LABERINTOS_50 } from "../generador/productos/laberintos50";
 
 /* =========================================================
@@ -37,67 +28,6 @@ const ALTO_A4 = 1123;
 
 const VALIDACIONES_POR_PAGINA = 25;
 const LIMITE_SELECTOR_PAGINAS = 300;
-
-const OPCIONES_PUBLICO = [
-  { id: "infantil", nombre: "Infantil" },
-  { id: "familiar", nombre: "Familiar" },
-  { id: "adolescentes", nombre: "Adolescentes" },
-  { id: "adultos", nombre: "Adultos" },
-  { id: "todos", nombre: "Todos" },
-];
-
-const OPCIONES_EDAD = [
-  { id: "3-5", nombre: "3 a 5 años" },
-  { id: "6-8", nombre: "6 a 8 años" },
-  { id: "9-12", nombre: "9 a 12 años" },
-  { id: "13-17", nombre: "13 a 17 años" },
-  { id: "18+", nombre: "18 años o más" },
-  { id: "todas", nombre: "Todas las edades" },
-];
-
-const OPCIONES_MODO_PERSONAJE = [
-  {
-    id: "fijo",
-    nombre: "Fijo",
-  },
-  {
-    id: "rotativo",
-    nombre: "Rotativo",
-  },
-  {
-    id: "aleatorio",
-    nombre: "Aleatorio",
-  },
-];
-
-const OPCIONES_MODO_OBJETIVO = [
-  {
-    id: "fijo",
-    nombre: "Fijo",
-  },
-  {
-    id: "rotativo",
-    nombre: "Rotativo",
-  },
-  {
-    id: "aleatorio",
-    nombre: "Aleatorio",
-  },
-];
-
-const OPCIONES_TEMATICA = [
-  { id: "mascotas", nombre: "Mascotas" },
-  { id: "oceano", nombre: "Océano" },
-  { id: "espacio", nombre: "Espacio" },
-  { id: "montana", nombre: "Montaña" },
-  { id: "piratas", nombre: "Piratas" },
-  { id: "castillos", nombre: "Castillos" },
-  { id: "dinosaurios", nombre: "Dinosaurios" },
-  { id: "viajes", nombre: "Viajes" },
-  { id: "navidad", nombre: "Navidad" },
-  { id: "halloween", nombre: "Halloween" },
-  { id: "familia", nombre: "Familia" },
-];
 
 /* =========================================================
    NIVELES
@@ -521,7 +451,8 @@ function seleccionarProgresivo({
     !Array.isArray(items) ||
     items.length === 0 ||
     cantidad <= 0
-  ) {
+
+      ) {
     return [];
   }
 
@@ -974,7 +905,7 @@ async function medirRecursoImagen(url) {
     if (!respuesta.ok) {
       throw new Error("No se pudo descargar");
     }
-
+    
     const blob = await respuesta.blob();
 
     const dimensiones = await new Promise(
@@ -1061,38 +992,6 @@ export default function GeneradorLaminas() {
      CONFIGURACIÓN DEL PRODUCTO
   ======================================================= */
 
-  const [idiomaProducto, setIdiomaProducto] =
-    useState("es");
-
-  const [publico, setPublico] =
-    useState("infantil");
-
-  const [edad, setEdad] =
-    useState("6-8");
-
-  const [tematica, setTematica] =
-    useState("mascotas");
-
-  const [
-  personaje,
-  setPersonaje,
-] = useState("automatico");
-
-  const [
-  modoPersonaje,
-  setModoPersonaje,
-] = useState("rotativo");
-
-  const [
-  objetivo,
-  setObjetivo,
-] = useState("automatico");
-
-const [
-  modoObjetivo,
-  setModoObjetivo,
-] = useState("rotativo");
-
   const [
     cantidadFaciles,
     setCantidadFaciles,
@@ -1147,124 +1046,6 @@ const [
   const [semilla, setSemilla] =
     useState(1);
 
-  useEffect(
-  () => {
-    setPersonaje(
-      "automatico"
-    );
-
-    setObjetivo(
-      "automatico"
-    );
-  },
-  [
-    tematica,
-  ]
-);
-
-  const personajesDisponibles =
-  useMemo(
-    () => {
-      const ids =
-        PERSONAJES_POR_TEMATICA[
-          tematica
-        ] || [];
-
-      return ids
-        .map(
-          (id) => ({
-            id,
-
-            ...PERSONAJES_LABERINTOS[
-              id
-            ],
-          })
-        )
-        .filter(
-          (item) =>
-            item.nombre
-        );
-    },
-    [
-      tematica,
-    ]
-  );
-
-  const objetivosDisponibles =
-    useMemo(
-      () => {
-        const configuracionObjetos =
-          OBJETOS_POR_TEMATICA[
-            tematica
-          ];
-
-        let ids = [];
-
-        // Temáticas antiguas:
-        // ["objeto1", "objeto2", ...]
-        if (
-          Array.isArray(
-            configuracionObjetos
-          )
-        ) {
-          ids =
-            configuracionObjetos;
-        }
-
-        // Nueva estructura:
-        // { personaje: ["objeto1", "objeto2"] }
-        else if (
-          configuracionObjetos &&
-          typeof configuracionObjetos ===
-            "object"
-        ) {
-          // Si elegimos un personaje concreto,
-          // mostramos solo sus objetivos.
-          if (
-            personaje &&
-            personaje !==
-              "automatico"
-          ) {
-            ids =
-              configuracionObjetos[
-                personaje
-              ] || [];
-          }
-
-          // Si el personaje está en automático,
-          // mostramos todos los objetivos disponibles.
-          else {
-            ids = [
-              ...new Set(
-                Object.values(
-                  configuracionObjetos
-                ).flat()
-              ),
-            ];
-          }
-        }
-
-        return ids
-          .map(
-            (id) => ({
-              id,
-
-              ...OBJETOS_LABERINTOS[
-                id
-              ],
-            })
-          )
-          .filter(
-            (item) =>
-              item.nombre
-          );
-      },
-      [
-        tematica,
-        personaje,
-      ]
-    );
-
   /* =========================================================
    RECURSOS PARA PRECARGAR PDF
 ========================================================= */
@@ -1272,7 +1053,6 @@ const [
 const recursosPdf = useMemo(() => {
   const urls = new Set();
 
-  // Portada y lámina final
   if (imagenPortada) {
     urls.add(imagenPortada);
   }
@@ -1281,46 +1061,12 @@ const recursosPdf = useMemo(() => {
     urls.add(imagenFinal);
   }
 
-  // Logo
   if (ESTILOS_IMPRIMIBLES.logo?.url) {
-    urls.add(
-      ESTILOS_IMPRIMIBLES.logo.url
-    );
+    urls.add(ESTILOS_IMPRIMIBLES.logo.url);
   }
 
-  // Personajes de la temática seleccionada
-  personajesDisponibles.forEach(
-    (personaje) => {
-      const url =
-        personaje.assets?.principal ||
-        personaje.imagen;
-
-      if (url) {
-        urls.add(url);
-      }
-    }
-  );
-
-  // Objetivos de la temática seleccionada
-  objetivosDisponibles.forEach(
-    (objetivo) => {
-      const url =
-        objetivo.imagen ||
-        objetivo.assets?.principal;
-
-      if (url) {
-        urls.add(url);
-      }
-    }
-  );
-
   return [...urls];
-}, [
-  imagenPortada,
-  imagenFinal,
-  personajesDisponibles,
-  objetivosDisponibles,
-]);
+}, [imagenPortada, imagenFinal]);
 
 const medirRecursosPdf =
   async () => {
@@ -1370,23 +1116,14 @@ const medirRecursosPdf =
     [recursosMedidos]
   );
   
-  /*
-    Separar las cantidades del resto de la configuración
-    evita recalcular miles de laberintos cuando solamente
-    cambia público, edad o temática.
-  */
-
   const cantidadesProducto =
     useMemo(
       () => ({
         facil: cantidadFaciles,
         medio: cantidadMedios,
-        dificil:
-          cantidadDificiles,
-        experto:
-          cantidadExpertos,
-        legendario:
-          cantidadLegendarios,
+        dificil: cantidadDificiles,
+        experto: cantidadExpertos,
+        legendario: cantidadLegendarios,
       }),
       [
         cantidadFaciles,
@@ -1400,32 +1137,11 @@ const medirRecursosPdf =
   const configuracionProducto =
     useMemo(
       () => ({
-        idiomaProducto,
-        publico,
-        edad,
-        tematica,
-
-        personaje,
-        modoPersonaje,
-
-        objetivo,
-        modoObjetivo,
-
-        cantidades:
-          cantidadesProducto,
-
+        cantidades: cantidadesProducto,
         modoGeneracion,
         semilla,
       }),
       [
-        idiomaProducto,
-        publico,
-        edad,
-        tematica,
-        personaje,
-        modoPersonaje,
-        objetivo,
-        modoObjetivo,
         cantidadesProducto,
         modoGeneracion,
         semilla,
@@ -1641,7 +1357,8 @@ const medirRecursosPdf =
               cantidades:
                 cantidadesProducto,
               semillaInicial:
-                configuracionProducto.semilla +
+
+                              configuracionProducto.semilla +
                 actividades.length +
                 10000,
             });
@@ -1678,75 +1395,24 @@ const medirRecursosPdf =
         validacionesFinales.map(
           (item, index) => {
             const actividadOriginal =
-              Number.isInteger(
-                item.indiceActividad
-              )
-                ? actividades[
-                    item.indiceActividad
-                  ]
+              Number.isInteger(item.indiceActividad)
+                ? actividades[item.indiceActividad]
                 : null;
 
-            const actividadBase =
-              actividadOriginal ?? {
-                numero: index + 1,
-                nivel: item.nivel,
-              };
-
             return {
-              ...actividadBase,
-
               numeroOriginal:
-                actividadOriginal
-                  ?.numero ??
+                actividadOriginal?.numero ??
                 item.numero ??
                 null,
-
               numeroProducto:
-                item.numeroProducto ??
-                index + 1,
-
+                item.numeroProducto ?? index + 1,
               nivel: item.nivel,
-
-              publico:
-                configuracionProducto.publico,
-
-              edad:
-                configuracionProducto.edad,
-
-              tematica:
-                configuracionProducto.tematica,
-
-              personaje:
-  configuracionProducto.personaje,
-
-modoPersonaje:
-  configuracionProducto.modoPersonaje,
-
-              objetivo:
-  configuracionProducto.objetivo,
-
-modoObjetivo:
-  configuracionProducto.modoObjetivo,
-
-              semillaLaberinto:
-                item.semillaLaberinto,
-
-              esGenerado:
-                item.esGenerado ??
-                false,
+              semillaLaberinto: item.semillaLaberinto,
+              esGenerado: item.esGenerado ?? false,
             };
           }
         ),
-      [
-        validacionesFinales,
-        actividades,
-        configuracionProducto.publico,
-        configuracionProducto.edad,
-        configuracionProducto.tematica,
-        configuracionProducto.personaje,
-configuracionProducto.modoPersonaje,    configuracionProducto.objetivo,
-configuracionProducto.modoObjetivo,
-      ]
+      [validacionesFinales, actividades]
     );
 
   /* =======================================================
@@ -1755,125 +1421,44 @@ configuracionProducto.modoObjetivo,
 
   const paginasJuegos = useMemo(
     () =>
-      actividadesFinales.map(
-        (actividad, index) => ({
-          id: `juego-${index + 1}`,
-          nombre:
-            `Laberinto ${index + 1}`,
-          tipo: "juego",
-          indiceActividad: index,
-          numeroProducto:
-            index + 1,
-          numeroOriginal:
-            actividad.numeroOriginal ??
-            actividad.numero,
-          nivel: actividad.nivel,
-          publico:
-            actividad.publico,
-          edad: actividad.edad,
-          tematica:
-            actividad.tematica,
-          personaje:
-  actividad.personaje,
-
-modoPersonaje:
-  actividad.modoPersonaje,
-          objetivo:
-  actividad.objetivo,
-
-modoObjetivo:
-  actividad.modoObjetivo,
-          semillaLaberinto:
-            actividad.semillaLaberinto,
-        })),
+      actividadesFinales.map((actividad, index) => ({
+        id: `juego-${index + 1}`,
+        nombre: `Laberinto ${index + 1}`,
+        tipo: "juego",
+        indiceActividad: index,
+        numeroProducto: index + 1,
+        numeroOriginal:
+          actividad.numeroOriginal ?? actividad.numeroProducto,
+        nivel: actividad.nivel,
+        semillaLaberinto: actividad.semillaLaberinto,
+      })),
     [actividadesFinales]
   );
 
-  const paginasSoluciones =
-    useMemo(
-      () =>
-        actividadesFinales.map(
-          (actividad, index) => ({
-            id:
-              `solucion-${index + 1}`,
-
-            nombre:
-              `Solución ${index + 1}`,
-
-            tipo:
-              "solucion",
-
-            indiceActividad:
-              index,
-
-            numeroProducto:
-              index + 1,
-
-            numeroOriginal:
-              actividad.numeroOriginal ??
-              actividad.numero,
-
-            nivel:
-              actividad.nivel,
-
-            publico:
-              actividad.publico,
-
-            edad:
-              actividad.edad,
-
-            tematica:
-              actividad.tematica,
-
-            personaje:
-              actividad.personaje,
-
-            modoPersonaje:
-              actividad.modoPersonaje,
-
-            objetivo:
-              actividad.objetivo,
-
-            modoObjetivo:
-              actividad.modoObjetivo,
-
-            semillaLaberinto:
-              actividad.semillaLaberinto,
-          })
-        ),
-      [
-        actividadesFinales,
-      ]
-    );
+  const paginasSoluciones = useMemo(
+    () =>
+      actividadesFinales.map((actividad, index) => ({
+        id: `solucion-${index + 1}`,
+        nombre: `Solución ${index + 1}`,
+        tipo: "solucion",
+        indiceActividad: index,
+        numeroProducto: index + 1,
+        numeroOriginal:
+          actividad.numeroOriginal ?? actividad.numeroProducto,
+        nivel: actividad.nivel,
+        semillaLaberinto: actividad.semillaLaberinto,
+      })),
+    [actividadesFinales]
+  );
 
   const paginas = useMemo(
     () => [
-      {
-        id: "portada",
-        nombre: "Portada",
-        tipo: "portada",
-      },
-
-      {
-        id: "bienvenida",
-        nombre: "Bienvenida",
-        tipo: "bienvenida",
-      },
-
+      { id: "portada", nombre: "Portada", tipo: "portada" },
       ...paginasJuegos,
-
       ...paginasSoluciones,
-
-      {
-        id: "lamina-final",
-        nombre: "Lámina final",
-        tipo: "final",
-      },
+      { id: "lamina-final", nombre: "Lámina final", tipo: "final" },
     ],
-    [
-      paginasJuegos,
-      paginasSoluciones,
-    ]
+    [paginasJuegos, paginasSoluciones]
   );
 
   const pagina =
@@ -2225,7 +1810,8 @@ modoObjetivo:
 
               minimoSolucion:
                 Math.min(
-                  ...soluciones
+
+                                    ...soluciones
                 ),
               maximoSolucion:
                 Math.max(
@@ -2369,10 +1955,7 @@ modoObjetivo:
           () =>
             laminaExportarRef.current,
 
-        nombreArchivo:
-  idiomaProducto === "en"
-    ? "Toby-and-Luna-Mazes.pdf"
-    : "Laberintos-Toby-y-Luna.pdf",
+        nombreArchivo: "Laberintos-Andres-Imprimibles.pdf",
 
         calidad: 0.90,
 pixelRatio: 1.25,
@@ -2447,275 +2030,38 @@ pixelRatio: 1.25,
           </div>
 
           {/* =================================================
-              PÚBLICO / EDAD / TEMÁTICA
+              PORTADA / FINAL
           ================================================== */}
 
-            <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div>
+              <label className="block text-center text-[10px] font-bold text-slate-600">
+                URL portada
+              </label>
 
-              {/* PÚBLICO */}
-
-              <div>
-                <label className="block text-center text-[10px] font-bold text-slate-600">
-                  Público
-                </label>
-
-                <select
-                  value={publico}
-                  onChange={(e) =>
-                    setPublico(
-                      e.target.value
-                    )
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-                >
-                  {OPCIONES_PUBLICO.map(
-                    (opcion) => (
-                      <option
-                        key={opcion.id}
-                        value={opcion.id}
-                      >
-                        {opcion.nombre}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              {/* EDAD */}
-
-              <div>
-                <label className="block text-center text-[10px] font-bold text-slate-600">
-                  Edad
-                </label>
-
-                <select
-                  value={edad}
-                  onChange={(e) =>
-                    setEdad(
-                      e.target.value
-                    )
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-                >
-                  {OPCIONES_EDAD.map(
-                    (opcion) => (
-                      <option
-                        key={opcion.id}
-                        value={opcion.id}
-                      >
-                        {opcion.nombre}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              {/* TEMÁTICA */}
-
-              <div>
-                <label className="block text-center text-[10px] font-bold text-slate-600">
-                  Temática
-                </label>
-
-                <select
-                  value={tematica}
-                  onChange={(e) =>
-                    setTematica(
-                      e.target.value
-                    )
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-                >
-                  {OPCIONES_TEMATICA.map(
-                    (opcion) => (
-                      <option
-                        key={opcion.id}
-                        value={opcion.id}
-                      >
-                        {opcion.nombre}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div>
-  <label className="block text-center text-[10px] font-bold text-slate-600">
-    Personaje
-  </label>
-
-  <select
-    value={personaje}
-    onChange={(e) =>
-      setPersonaje(
-        e.target.value
-      )
-    }
-    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-  >
-    <option value="automatico">
-      Automático
-    </option>
-
-    {personajesDisponibles.map(
-      (item) => (
-        <option
-          key={item.id}
-          value={item.id}
-        >
-          {item.emoji}{" "}
-          {item.nombre}
-        </option>
-      )
-    )}
-  </select>
-</div>
-
-              <div>
-  <label className="block text-center text-[10px] font-bold text-slate-600">
-    Modo personaje
-  </label>
-
-  <select
-    value={modoPersonaje}
-    onChange={(e) =>
-      setModoPersonaje(
-        e.target.value
-      )
-    }
-    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-  >
-    {OPCIONES_MODO_PERSONAJE.map(
-      (opcion) => (
-        <option
-          key={opcion.id}
-          value={opcion.id}
-        >
-          {opcion.nombre}
-        </option>
-      )
-    )}
-  </select>
-</div>
-
-              <div>
-  <label className="block text-center text-[10px] font-bold text-slate-600">
-    Objetivo
-  </label>
-
-  <select
-    value={objetivo}
-    onChange={(e) =>
-      setObjetivo(
-        e.target.value
-      )
-    }
-    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-  >
-    <option value="automatico">
-      Automático
-    </option>
-
-    {objetivosDisponibles.map(
-  (item) => (
-    <option
-      key={item.id}
-      value={item.id}
-    >
-      {item.emoji}{" "}
-      {typeof item.nombre === "object"
-        ? item.nombre[idiomaProducto] ||
-          item.nombre.es
-        : item.nombre}
-    </option>
-  )
-)}
-  </select>
-</div>
-
-<div>
-  <label className="block text-center text-[10px] font-bold text-slate-600">
-    Modo objetivo
-  </label>
-
-  <select
-    value={modoObjetivo}
-    onChange={(e) =>
-      setModoObjetivo(
-        e.target.value
-      )
-    }
-    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-  >
-    {OPCIONES_MODO_OBJETIVO.map(
-      (opcion) => (
-        <option
-          key={opcion.id}
-          value={opcion.id}
-        >
-          {opcion.nombre}
-        </option>
-      )
-    )}
-  </select>
-</div>
-
-              <div>
-  <label className="block text-center text-[10px] font-bold text-slate-600">
-    Idioma del producto
-  </label>
-
-  <select
-    value={idiomaProducto}
-    onChange={(e) =>
-      setIdiomaProducto(e.target.value)
-    }
-    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-  >
-    <option value="es">Español</option>
-    <option value="en">English</option>
-  </select>
-</div>
-
-              <div>
-  <label className="block text-center text-[10px] font-bold text-slate-600">
-    URL portada
-  </label>
-
-  <input
-    type="url"
-    value={imagenPortada}
-    onChange={(e) =>
-      setImagenPortada(e.target.value)
-    }
-    placeholder="https://..."
-    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-  />
-</div>
-
-              <div>
-  <label className="block text-center text-[10px] font-bold text-slate-600">
-    URL final
-  </label>
-
-  <input
-    type="url"
-    value={imagenFinal}
-    onChange={(e) =>
-      setImagenFinal(e.target.value)
-    }
-    placeholder="https://..."
-    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
-  />
-</div>
-
+              <input
+                type="url"
+                value={imagenPortada}
+                onChange={(e) => setImagenPortada(e.target.value)}
+                placeholder="https://..."
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+              />
             </div>
-          
 
-            <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-              Público, edad y temática describen el producto. La dificultad matemática se controla por separado con los niveles.
-            </p>
-          
+            <div>
+              <label className="block text-center text-[10px] font-bold text-slate-600">
+                URL final
+              </label>
+
+              <input
+                type="url"
+                value={imagenFinal}
+                onChange={(e) => setImagenFinal(e.target.value)}
+                placeholder="https://..."
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none"
+              />
+            </div>
+          </div>
 
           {/* =================================================
               NIVELES
@@ -2917,7 +2263,8 @@ pixelRatio: 1.25,
                   )
                 )}
               </select>
-            ) : (
+
+                          ) : (
               <div className="mt-3">
                 <label className="block">
                   <span className="text-[11px] font-semibold text-slate-500">
@@ -3035,35 +2382,15 @@ pixelRatio: 1.25,
                   >
                         {pagina.tipo === "portada" ? (
                     <PortadaLaberintos
-                      imagenPortada={imagenPortada}
-                      nombreProducto={
-                        LABERINTOS_50.nombre
-                      }
-                    />
-                        ) : pagina.tipo === "bienvenida" ? (
-                    <BienvenidaLaberintos
-                      idiomaProducto={
-                        idiomaProducto
-                      }
-                      cantidad={
-                        cantidadActividades
-                      }
-                      faciles={
-                        cantidadFaciles
-                      }
-                      medios={
-                        cantidadMedios
-                      }
-                      dificiles={
-                        cantidadDificiles
-                      }
-                      expertos={
-                        cantidadExpertos
-                      }
-                      legendarios={
-                        cantidadLegendarios
-                      }
-                    />
+  nombreProducto={LABERINTOS_50.nombre}
+  niveles={[
+    cantidadFacil > 0 && "facil",
+    cantidadMedio > 0 && "medio",
+    cantidadDificil > 0 && "dificil",
+    cantidadExperto > 0 && "experto",
+    cantidadLegendario > 0 && "legendario",
+  ].filter(Boolean)}
+/>
                         ) :  pagina.tipo === "final" ? (
   <LaminaFinalLaberintos
     imagenFinal={imagenFinal}
@@ -3090,30 +2417,6 @@ pixelRatio: 1.25,
                           }
                           semilla={
                             semillaPagina
-                          }
-                          publico={
-                            pagina?.publico
-                          }
-                          edad={
-                            pagina?.edad
-                          }
-                          tematica={
-                            pagina?.tematica
-                          }
-                          personaje={
-                            pagina?.personaje
-                          }
-                          modoPersonaje={
-                            pagina?.modoPersonaje
-                          }
-                          objetivo={
-                            pagina?.objetivo
-                          }
-                          modoObjetivo={
-                            pagina?.modoObjetivo
-                          }
-                          idiomaProducto={
-                            idiomaProducto
                           }
                           mostrarSolucion={
                             pagina.tipo ===
@@ -3417,7 +2720,7 @@ pixelRatio: 1.25,
 
                     <Metrica
                       titulo="Giros"
-                      valor={
+                                            valor={
                         item.cantidadGiros
                       }
                     />

@@ -1,12 +1,6 @@
 import { ChevronRight } from "lucide-react";
 
-import { useIdioma } from "../contextos/IdiomaContext";
-import { traducciones } from "../datos/traducciones";
-
 const Hero = ({ scrollTo }) => {
-  const { idioma } = useIdioma();
-  const t = traducciones[idioma].hero;
-
   return (
     <section
       id="inicio"
@@ -21,31 +15,35 @@ const Hero = ({ scrollTo }) => {
       <div className="contenedor grid w-full items-center gap-12 py-16 md:grid-cols-[1.1fr_.9fr]">
         <div className="text-center md:text-left">
           <h1 className="text-4xl font-semibold leading-[1.12] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-            {t.titulo}
+            Tu hogar y tus mascotas
 
             <span className="block text-sky-600">
-              {t.tituloDestacado}
+              en buenas manos
             </span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg md:mx-0">
-            {t.descripcion}
+            Cuidado responsable de tu hogar y tus mascotas mientras estás fuera, con atención personalizada y comunicación directa.
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row md:justify-start">
             <button
+              type="button"
               onClick={() => scrollTo("servicios")}
               className="boton-principal w-full gap-2 sm:w-auto"
             >
-              {t.verServicios}
+              Ver servicios
               <ChevronRight size={17} />
             </button>
 
             <button
-              onClick={() => scrollTo("disponibilidad")}
+              type="button"
+              onClick={() =>
+                scrollTo("disponibilidad")
+              }
               className="boton-secundario w-full sm:w-auto"
             >
-              {t.disponibilidad}
+              Ver disponibilidad
             </button>
           </div>
         </div>

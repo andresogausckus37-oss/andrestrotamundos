@@ -41,7 +41,7 @@ export default function LaminaBase({
       {mostrarLogo && (
         <img
           src={logo.url}
-          alt="Toby y Luna Imprimibles"
+          alt="Andrés Imprimibles"
           draggable="false"
           style={{
             position: "absolute",

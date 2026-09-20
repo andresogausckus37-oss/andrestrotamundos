@@ -5,14 +5,9 @@ import {
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
-import { useIdioma } from "../contextos/IdiomaContext";
-import { traducciones } from "../datos/traducciones";
 
 const Footer = () => {
   const navigate = useNavigate();
-
-  const { idioma } = useIdioma();
-  const t = traducciones[idioma].footer;
 
   const irASeccion = (id) => {
     if (window.location.pathname === "/") {
@@ -28,6 +23,7 @@ const Footer = () => {
 
   const irATienda = () => {
     navigate("/tienda");
+
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -38,7 +34,7 @@ const Footer = () => {
     <footer className="bg-slate-900 px-5 py-14 text-white">
       <div className="contenedor">
         <div className="grid gap-10 md:grid-cols-3">
-          {/* Marca */}
+          {/* MARCA */}
 
           <div>
             <div className="flex items-center gap-3">
@@ -60,56 +56,66 @@ const Footer = () => {
             </div>
 
             <p className="mt-5 max-w-sm text-sm leading-6 text-slate-400">
-              {t.descripcion}
+              Cuidado responsable de casas y mascotas, con atención personalizada y comunicación directa.
             </p>
           </div>
 
-          {/* Navegación */}
+          {/* NAVEGACIÓN */}
 
           <div>
             <h3 className="text-sm font-semibold">
-              {t.navegacion}
+              Navegación
             </h3>
 
             <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
               <button
                 type="button"
-                onClick={() => irASeccion("servicios")}
+                onClick={() =>
+                  irASeccion("servicios")
+                }
                 className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                {t.servicios}
+                Servicios
               </button>
 
               <button
                 type="button"
-                onClick={() => irASeccion("mi-proceso")}
+                onClick={() =>
+                  irASeccion("mi-proceso")
+                }
                 className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                {t.comoFunciona}
+                Cómo funciona
               </button>
 
               <button
                 type="button"
-                onClick={() => irASeccion("resenas")}
+                onClick={() =>
+                  irASeccion("resenas")
+                }
                 className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                {t.resenas}
+                Reseñas
               </button>
 
               <button
                 type="button"
-                onClick={() => irASeccion("disponibilidad")}
+                onClick={() =>
+                  irASeccion("disponibilidad")
+                }
                 className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                {t.disponibilidad}
+                Disponibilidad
               </button>
 
               <button
                 type="button"
-                onClick={() => irASeccion("sobre-mi")}
+                onClick={() =>
+                  irASeccion("sobre-mi")
+                }
                 className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                {t.sobreMi}
+                Sobre mí
               </button>
 
               <button
@@ -117,16 +123,16 @@ const Footer = () => {
                 onClick={irATienda}
                 className="text-left text-sm text-slate-400 transition hover:text-white"
               >
-                {t.tienda}
+                Tienda
               </button>
             </div>
           </div>
 
-          {/* Contacto */}
+          {/* CONTACTO */}
 
           <div>
             <h3 className="text-sm font-semibold">
-              {t.contacto}
+              Contacto
             </h3>
 
             <div className="mt-4 space-y-3 text-sm text-slate-400">
@@ -137,21 +143,27 @@ const Footer = () => {
                 className="flex items-center gap-2 transition hover:text-white"
               >
                 <MessageCircle size={16} />
-                {CONFIG.contacto.whatsappVisible}
+
+                {
+                  CONFIG.contacto
+                    .whatsappVisible
+                }
               </a>
 
               <p className="flex items-center gap-2">
                 <MapPin size={16} />
+
                 {CONFIG.ubicacion.pais}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Copyright */}
+        {/* COPYRIGHT */}
 
         <div className="mt-10 border-t border-slate-800 pt-6 text-center text-xs text-slate-500">
-          © {new Date().getFullYear()} {CONFIG.marca.nombre}. {t.derechos}
+          © {new Date().getFullYear()}{" "}
+          {CONFIG.marca.nombre}. Todos los derechos reservados.
         </div>
       </div>
     </footer>

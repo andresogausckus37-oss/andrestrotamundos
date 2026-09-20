@@ -670,7 +670,7 @@ function generarLaberinto(
       columnas - 1
     );
 
-  ultima.paredes.derecha =
+    ultima.paredes.derecha =
     false;
 
   return celdas;
@@ -1343,6 +1343,7 @@ function analizarCaminosFalsos(
                   camino;
               }
 
+              
               continue;
             }
 

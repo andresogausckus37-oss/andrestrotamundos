@@ -339,7 +339,7 @@ export async function generarPdfLaminas({
   recursosPrecargar = [],
 
   nombreArchivo =
-    "Toby-y-Luna-Imprimibles.pdf",
+  "Andres-Imprimibles-Laberintos.pdf",
 
   calidad = 0.90,
 
