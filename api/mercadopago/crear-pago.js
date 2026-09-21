@@ -90,7 +90,7 @@ export default async function handler(req, res) {
     if (!respuesta.ok) {
       console.error(
         "Error Mercado Pago:",
-        datos
+        JSON.stringify(datos, null, 2)
       );
 
       return res.status(respuesta.status).json({
