@@ -53,8 +53,56 @@ function detectarTipoImagen(bytes) {
     return "jpg";
   }
 
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "webp";
+  }
+
   throw new Error(
-    "La imagen debe estar en formato PNG o JPG."
+    "La imagen debe estar en formato PNG, JPG o WebP."
+  );
+}
+
+async function convertirWebpAPng(bytes) {
+  const blob = new Blob([bytes], {
+    type: "image/webp",
+  });
+
+  const bitmap = await createImageBitmap(blob);
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+
+  const contexto = canvas.getContext("2d");
+
+  contexto.drawImage(bitmap, 0, 0);
+
+  bitmap.close();
+
+  const blobPng = await new Promise((resolve, reject) => {
+    canvas.toBlob((resultado) => {
+      if (resultado) {
+        resolve(resultado);
+      } else {
+        reject(
+          new Error("No se pudo convertir la imagen WebP.")
+        );
+      }
+    }, "image/png");
+  });
+
+  return new Uint8Array(
+    await blobPng.arrayBuffer()
   );
 }
 
@@ -74,10 +122,16 @@ async function agregarImagenA4(
 
   const tipo = detectarTipoImagen(bytes);
 
-  const imagen =
-    tipo === "png"
-      ? await documento.embedPng(bytes)
-      : await documento.embedJpg(bytes);
+  let imagen;
+
+if (tipo === "png") {
+  imagen = await documento.embedPng(bytes);
+} else if (tipo === "jpg") {
+  imagen = await documento.embedJpg(bytes);
+} else {
+  const bytesPng = await convertirWebpAPng(bytes);
+  imagen = await documento.embedPng(bytesPng);
+}
 
   const pagina = documento.addPage([
     ANCHO_A4,
@@ -453,11 +507,6 @@ export async function generarPdfLaminas({
         "la portada"
       );
 
-    dibujarLogo(
-      paginaPortada,
-      logo
-    );
-
     paginasProcesadas += 1;
 
     actualizarProgreso();
@@ -511,11 +560,6 @@ export async function generarPdfLaminas({
         imagenFinal,
         "la lámina final"
       );
-
-    dibujarLogo(
-      paginaFinal,
-      logo
-    );
 
     paginasProcesadas += 1;
 

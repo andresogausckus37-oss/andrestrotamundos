@@ -5,7 +5,7 @@ export const resenasProductos = [
 
   {
     id: 1,
-    productoId: "10-razas-perros-colorear",
+    productoId: "50-laberintos-para-ninos",
     texto:
       "Muy lindas las láminas y fáciles de imprimir. La calidad del PDF está excelente.",
     estrellas: 5,
@@ -14,16 +14,16 @@ export const resenasProductos = [
 
   {
     id: 2,
-    productoId: "10-razas-perros-colorear",
+    productoId: "50-laberintos-para-ninos",
     texto:
-      "Re lindas, la verdad. Amo a los perritos y nos encanta pintar 😊",
+      "Re lindas la verdad. a mi hija les gusta mucho haacer laberintos, y despues los pinta 😊",
     estrellas: 5,
     compraVerificada: true,
   },
 
   {
     id: 3,
-    productoId: "10-razas-perros-colorear",
+    productoId: "50-laberintos-para-ninos",
     texto:
       "Las láminas tienen mucho detalle, se nota la buena calidad. Imprimirlas es fácil y rápido y son muy divertidas.",
     estrellas: 5,

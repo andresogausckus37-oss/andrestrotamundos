@@ -1,56 +1,40 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   FilePlus2,
-  FileText,
-  Image as ImageIcon,
   Loader2,
   Plus,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
-
 import { PDFDocument } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 import { generarPdfLaminas } from "../utilidades/generarPdfLaminas";
-
 import { ESTILOS_IMPRIMIBLES } from "../generador/config/estilosImprimibles";
 import { LABERINTOS_50 } from "../generador/productos/laberintos50";
 
-/* =========================================================
-   UTILIDADES
-========================================================= */
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
+const ALTURA_COBERTURA_MM = 12;
+const ANCHO_COBERTURA_MM = 210;
 
 function crearIdArchivo() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function formatearBytes(bytes = 0) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 async function obtenerCantidadPaginas(archivo) {
   const bytes = await archivo.arrayBuffer();
-
-  const pdf = await PDFDocument.load(bytes, {
-    ignoreEncryption: false,
-  });
-
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: false });
   return pdf.getPageCount();
 }
 
@@ -67,15 +51,195 @@ function moverElemento(lista, desde, hasta) {
 
   const copia = [...lista];
   const [elemento] = copia.splice(desde, 1);
-
   copia.splice(hasta, 0, elemento);
-
   return copia;
 }
 
-/* =========================================================
-   COMPONENTE
-========================================================= */
+function PreviewPaginaPdf({
+  archivo,
+  numeroPagina,
+  titulo,
+  posicionCobertura,
+}) {
+  const canvasRef = useRef(null);
+  const [estado, setEstado] = useState("cargando");
+  const [proporcion, setProporcion] = useState(297 / 210);
+
+  useEffect(() => {
+    let cancelado = false;
+    let tareaCarga = null;
+    let tareaRender = null;
+
+    async function renderizar() {
+      if (!archivo || !canvasRef.current) return;
+
+      setEstado("cargando");
+
+      try {
+        const bytes = new Uint8Array(await archivo.arrayBuffer());
+
+        tareaCarga = pdfjsLib.getDocument({
+          data: bytes,
+          disableAutoFetch: true,
+          disableStream: true,
+        });
+
+        const pdf = await tareaCarga.promise;
+
+        if (numeroPagina > pdf.numPages) {
+          if (!cancelado) setEstado("sin-pagina");
+          return;
+        }
+
+        const pagina = await pdf.getPage(numeroPagina);
+        const viewportBase = pagina.getViewport({ scale: 1 });
+
+        if (!cancelado) {
+          setProporcion(viewportBase.height / viewportBase.width);
+        }
+
+        const anchoObjetivo = 500;
+        const escala = anchoObjetivo / viewportBase.width;
+        const viewport = pagina.getViewport({ scale: escala });
+
+        const canvas = canvasRef.current;
+        if (!canvas || cancelado) return;
+
+        const contexto = canvas.getContext("2d", { alpha: false });
+
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+
+        tareaRender = pagina.render({
+          canvasContext: contexto,
+          viewport,
+          background: "rgb(255,255,255)",
+        });
+
+        await tareaRender.promise;
+
+        if (!cancelado) setEstado("listo");
+      } catch (error) {
+        if (
+          error?.name !== "RenderingCancelledException" &&
+          !cancelado
+        ) {
+          console.error("Error mostrando preview PDF:", error);
+          setEstado("error");
+        }
+      }
+    }
+
+    renderizar();
+
+    return () => {
+      cancelado = true;
+
+      try {
+        tareaRender?.cancel();
+      } catch {
+        // Sin acción.
+      }
+
+      try {
+        tareaCarga?.destroy();
+      } catch {
+        // Sin acción.
+      }
+    };
+  }, [archivo, numeroPagina]);
+
+  const altoPaginaMm = 210 * proporcion;
+
+  const alturaPorcentaje = Math.min(
+    100,
+    (ALTURA_COBERTURA_MM / altoPaginaMm) * 100
+  );
+
+  const desdeAbajoPorcentaje = Math.min(
+    100 - alturaPorcentaje,
+    (posicionCobertura / altoPaginaMm) * 100
+  );
+
+  return (
+    <div className="min-w-0 flex-1">
+      <div className="mb-1 text-center text-[10px] font-bold text-slate-600">
+        {titulo}
+      </div>
+
+      <div
+        className="relative mx-auto w-full max-w-[240px] overflow-hidden rounded border border-slate-200 bg-white"
+        style={{ aspectRatio: `1 / ${proporcion}` }}
+      >
+        <canvas
+          ref={canvasRef}
+          className={`h-full w-full object-contain ${
+            estado === "listo" ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        {estado === "cargando" && (
+          <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+            <Loader2 size={18} className="animate-spin" />
+          </div>
+        )}
+
+        {estado === "sin-pagina" && (
+          <div className="absolute inset-0 flex items-center justify-center p-3 text-center text-[10px] text-slate-500">
+            Este PDF no tiene página {numeroPagina}.
+          </div>
+        )}
+
+        {estado === "error" && (
+          <div className="absolute inset-0 flex items-center justify-center p-3 text-center text-[10px] text-red-600">
+            No se pudo mostrar esta página.
+          </div>
+        )}
+
+        {estado === "listo" && (
+          <div
+            className="pointer-events-none absolute left-0 right-0 border-y border-slate-300 bg-white"
+            style={{
+              height: `${alturaPorcentaje}%`,
+              bottom: `${desdeAbajoPorcentaje}%`,
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ModalImagen({ url, titulo, onCerrar }) {
+  if (!url) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3"
+      onClick={onCerrar}
+    >
+      <div
+        className="relative max-h-[94vh] max-w-3xl overflow-auto rounded-lg bg-white p-2"
+        onClick={(evento) => evento.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onCerrar}
+          className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white"
+          aria-label="Cerrar"
+        >
+          <X size={18} />
+        </button>
+
+        <img
+          src={url}
+          alt={titulo}
+          className="max-h-[90vh] w-auto max-w-full object-contain"
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function GeneradorLaminas() {
   const inputArchivosRef = useRef(null);
@@ -83,18 +247,15 @@ export default function GeneradorLaminas() {
   const [imagenPortada, setImagenPortada] = useState(
     LABERINTOS_50.recursos.portada || ""
   );
-
   const [imagenFinal, setImagenFinal] = useState(
     LABERINTOS_50.recursos.laminaFinal || ""
   );
-
   const [archivosPdf, setArchivosPdf] = useState([]);
-
-  const [procesandoArchivos, setProcesandoArchivos] =
-    useState(false);
-
-  const [exportandoPdf, setExportandoPdf] =
-    useState(false);
+  const [procesandoArchivos, setProcesandoArchivos] = useState(false);
+  const [exportandoPdf, setExportandoPdf] = useState(false);
+  const [mensajeError, setMensajeError] = useState("");
+  const [posicionCobertura, setPosicionCobertura] = useState(8);
+  const [modalImagen, setModalImagen] = useState(null);
 
   const [progresoPdf, setProgresoPdf] = useState({
     actual: 0,
@@ -103,72 +264,32 @@ export default function GeneradorLaminas() {
     fase: "",
   });
 
-  const [mensajeError, setMensajeError] =
-    useState("");
-
-  const [archivoPreviewId, setArchivoPreviewId] =
-    useState(null);
-
-  const archivoPreview = useMemo(
-    () =>
-      archivosPdf.find(
-        (item) => item.id === archivoPreviewId
-      ) || null,
-    [archivosPdf, archivoPreviewId]
+  const primerPdfValido = useMemo(
+    () => archivosPdf.find((item) => item.estado === "listo") || null,
+    [archivosPdf]
   );
-
-  const [urlPreviewPdf, setUrlPreviewPdf] =
-    useState("");
-
-  const [cubrirTextoInferior, setCubrirTextoInferior] = useState(true);
-const [posicionCobertura, setPosicionCobertura] = useState(18);
-const [alturaCobertura, setAlturaCobertura] = useState(22);
-const [anchoCobertura, setAnchoCobertura] = useState(220);
-
-  useEffect(() => {
-    if (!archivoPreview?.archivo) {
-      setUrlPreviewPdf("");
-      return undefined;
-    }
-
-    const url = URL.createObjectURL(
-      archivoPreview.archivo
-    );
-
-    setUrlPreviewPdf(url);
-
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [archivoPreview]);
 
   const totalPaginasActividades = useMemo(
     () =>
       archivosPdf.reduce(
-        (total, item) =>
-          total + (item.paginas || 0),
+        (total, item) => total + (item.paginas || 0),
         0
       ),
     [archivosPdf]
   );
 
-  const totalPaginasFinal = useMemo(() => {
-    return (
+  const totalPaginasFinal = useMemo(
+    () =>
       totalPaginasActividades +
       (imagenPortada.trim() ? 1 : 0) +
-      (imagenFinal.trim() ? 1 : 0)
-    );
-  }, [
-    totalPaginasActividades,
-    imagenPortada,
-    imagenFinal,
-  ]);
+      (imagenFinal.trim() ? 1 : 0),
+    [totalPaginasActividades, imagenPortada, imagenFinal]
+  );
 
   const pesoTotal = useMemo(
     () =>
       archivosPdf.reduce(
-        (total, item) =>
-          total + (item.archivo?.size || 0),
+        (total, item) => total + (item.archivo?.size || 0),
         0
       ),
     [archivosPdf]
@@ -177,27 +298,16 @@ const [anchoCobertura, setAnchoCobertura] = useState(220);
   const hayArchivosInvalidos = useMemo(
     () =>
       archivosPdf.some(
-        (item) =>
-          item.estado === "error" ||
-          !item.paginas
+        (item) => item.estado === "error" || !item.paginas
       ),
     [archivosPdf]
   );
 
-  /* =======================================================
-     AGREGAR PDFs
-  ======================================================= */
-
   async function agregarArchivos(evento) {
-    const seleccionados = Array.from(
-      evento.target.files || []
-    );
-
+    const seleccionados = Array.from(evento.target.files || []);
     evento.target.value = "";
 
-    if (seleccionados.length === 0) {
-      return;
-    }
+    if (seleccionados.length === 0) return;
 
     setMensajeError("");
     setProcesandoArchivos(true);
@@ -218,13 +328,11 @@ const [anchoCobertura, setAnchoCobertura] = useState(220);
             estado: "error",
             error: "El archivo no es un PDF.",
           });
-
           continue;
         }
 
         try {
-          const paginas =
-            await obtenerCantidadPaginas(archivo);
+          const paginas = await obtenerCantidadPaginas(archivo);
 
           nuevos.push({
             id: crearIdArchivo(),
@@ -235,10 +343,7 @@ const [anchoCobertura, setAnchoCobertura] = useState(220);
             error: "",
           });
         } catch (error) {
-          console.error(
-            `No se pudo leer ${archivo.name}:`,
-            error
-          );
+          console.error(`No se pudo leer ${archivo.name}:`, error);
 
           nuevos.push({
             id: crearIdArchivo(),
@@ -246,77 +351,47 @@ const [anchoCobertura, setAnchoCobertura] = useState(220);
             nombre: archivo.name,
             paginas: 0,
             estado: "error",
-            error:
-              "No se pudo leer este PDF. Puede estar dañado o protegido.",
+            error: "No se pudo leer este PDF.",
           });
         }
       }
 
-      setArchivosPdf((actuales) => [
-        ...actuales,
-        ...nuevos,
-      ]);
+      setArchivosPdf((actuales) => [...actuales, ...nuevos]);
     } finally {
       setProcesandoArchivos(false);
     }
   }
 
-  /* =======================================================
-     ORDEN
-  ======================================================= */
-
   function moverArchivo(indice, direccion) {
-    const destino =
-      direccion === "arriba"
-        ? indice - 1
-        : indice + 1;
+    const destino = direccion === "arriba" ? indice - 1 : indice + 1;
 
     setArchivosPdf((actuales) =>
-      moverElemento(
-        actuales,
-        indice,
-        destino
-      )
+      moverElemento(actuales, indice, destino)
     );
   }
 
   function eliminarArchivo(id) {
     setArchivosPdf((actuales) =>
-      actuales.filter(
-        (item) => item.id !== id
-      )
+      actuales.filter((item) => item.id !== id)
     );
-
-    if (archivoPreviewId === id) {
-      setArchivoPreviewId(null);
-    }
   }
 
   function eliminarTodos() {
     setArchivosPdf([]);
-    setArchivoPreviewId(null);
     setMensajeError("");
   }
 
-  /* =======================================================
-     GENERAR PDF
-  ======================================================= */
-
   async function descargarPdfCompleto() {
-    if (exportandoPdf) {
-      return;
-    }
+    if (exportandoPdf) return;
 
     if (archivosPdf.length === 0) {
-      setMensajeError(
-        "Selecciona al menos un PDF de actividades."
-      );
+      setMensajeError("Selecciona al menos un PDF.");
       return;
     }
 
     if (hayArchivosInvalidos) {
       setMensajeError(
-        "Hay archivos con errores. Elimínalos o reemplázalos antes de generar el PDF."
+        "Hay archivos con errores. Elimínalos o reemplázalos."
       );
       return;
     }
@@ -333,147 +408,103 @@ const [anchoCobertura, setAnchoCobertura] = useState(220);
 
     try {
       await generarPdfLaminas({
-        imagenPortada:
-          imagenPortada.trim(),
-
-        imagenFinal:
-          imagenFinal.trim(),
-
-        archivosPdf:
-          archivosPdf.map(
-            (item) => item.archivo
-          ),
-
-        logoUrl:
-          ESTILOS_IMPRIMIBLES.logo.url,
-
-        nombreArchivo:
-          "Andres-Imprimibles.pdf",
-
+        imagenPortada: imagenPortada.trim(),
+        imagenFinal: imagenFinal.trim(),
+        archivosPdf: archivosPdf.map((item) => item.archivo),
+        logoUrl: ESTILOS_IMPRIMIBLES.logo.url,
+        nombreArchivo: "Andres-Imprimibles.pdf",
         coberturaInferior: {
-  activa: cubrirTextoInferior,
-  posicion: posicionCobertura,
-  altura: alturaCobertura,
-  ancho: anchoCobertura,
-},
-
-        alActualizarProgreso:
-          (progreso) => {
-            setProgresoPdf(
-              progreso
-            );
-          },
+          activa: true,
+          posicion: posicionCobertura,
+          altura: ALTURA_COBERTURA_MM,
+          ancho: ANCHO_COBERTURA_MM,
+        },
+        alActualizarProgreso: setProgresoPdf,
       });
     } catch (error) {
-      console.error(
-        "Error generando el PDF:",
-        error
-      );
-
-      setMensajeError(
-        error?.message ||
-          "No se pudo generar el PDF."
-      );
+      console.error("Error generando el PDF:", error);
+      setMensajeError(error?.message || "No se pudo generar el PDF.");
     } finally {
       setExportandoPdf(false);
     }
   }
 
-  /* =======================================================
-     INTERFAZ
-  ======================================================= */
-
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 md:px-6">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-600">
-            Andrés Imprimibles
-          </p>
-
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
-            Armador de productos PDF
+    <main className="min-h-screen bg-slate-50 px-2 py-3 md:px-4">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-3">
+          <h1 className="text-lg font-bold text-slate-900">
+            Armador de PDF
           </h1>
-
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
-            Agrega la portada, selecciona todos los PDFs de
-            actividades y soluciones, ordénalos y genera el
-            producto final.
+          <p className="mt-0.5 text-[11px] text-slate-500">
+            Portada + actividades y soluciones + lámina final.
           </p>
         </div>
 
-        {/* =================================================
-            PORTADA
-        ================================================= */}
-
-        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
-              <ImageIcon size={21} />
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">
+        {/* PORTADA */}
+        <section className="mb-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="grid grid-cols-[1fr_64px] items-end gap-2">
+            <label className="min-w-0">
+              <span className="mb-1 block text-[11px] font-bold text-slate-700">
                 1. Portada
-              </h2>
-
-              <p className="mt-1 text-sm leading-5 text-slate-500">
-                Pega la URL de la imagen que irá como primera
-                página del PDF.
-              </p>
-            </div>
-          </div>
-
-          <label className="mt-5 block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">
-              URL de portada
-            </span>
-
-            <input
-              type="url"
-              value={imagenPortada}
-              onChange={(evento) =>
-                setImagenPortada(
-                  evento.target.value
-                )
-              }
-              placeholder="https://..."
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-            />
-          </label>
-
-          {imagenPortada.trim() && (
-            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-              <img
-                src={imagenPortada}
-                alt="Vista previa de portada"
-                className="mx-auto max-h-[420px] w-auto object-contain"
+              </span>
+              <input
+                type="url"
+                value={imagenPortada}
+                onChange={(evento) => setImagenPortada(evento.target.value)}
+                placeholder="URL de portada"
+                className="h-8 w-full rounded-lg border border-slate-300 px-2 text-[11px] outline-none focus:border-sky-500"
               />
-            </div>
-          )}
+            </label>
+
+            {imagenPortada.trim() && (
+              <button
+                type="button"
+                onClick={() =>
+                  setModalImagen({
+
+                                        url: imagenPortada,
+                    titulo: "Portada",
+                  })
+                }
+                className="h-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                aria-label="Ampliar portada"
+              >
+                <img
+                  src={imagenPortada}
+                  alt="Vista previa de portada"
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            )}
+          </div>
         </section>
 
-        {/* =================================================
-            ACTIVIDADES
-        ================================================= */}
-
-        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-              <FileText size={21} />
-            </div>
-
+        {/* PDFs */}
+        <section className="mb-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">
-                2. Actividades y soluciones
+              <h2 className="text-xs font-bold text-slate-900">
+                2. PDFs
               </h2>
-
-              <p className="mt-1 text-sm leading-5 text-slate-500">
-                Selecciona varios PDFs a la vez. Cada archivo
-                conservará todas sus páginas y el orden que
-                definas aquí.
+              <p className="text-[10px] text-slate-500">
+                Selección múltiple. Cada PDF conserva todas sus páginas.
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={() => inputArchivosRef.current?.click()}
+              disabled={procesandoArchivos}
+              className="flex h-8 shrink-0 items-center gap-1 rounded-lg bg-sky-600 px-2.5 text-[10px] font-bold text-white disabled:opacity-50"
+            >
+              {procesandoArchivos ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Upload size={14} />
+              )}
+              {archivosPdf.length ? "Agregar" : "Seleccionar"}
+            </button>
           </div>
 
           <input
@@ -485,562 +516,282 @@ const [anchoCobertura, setAnchoCobertura] = useState(220);
             className="hidden"
           />
 
-          <button
-            type="button"
-            onClick={() =>
-              inputArchivosRef.current?.click()
-            }
-            disabled={procesandoArchivos}
-            className="mt-5 flex min-h-[116px] w-full items-center justify-center rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50 px-5 py-6 text-center transition active:scale-[0.99] disabled:opacity-60"
-          >
-            <div>
-              {procesandoArchivos ? (
-                <Loader2
-                  className="mx-auto animate-spin text-sky-600"
-                  size={30}
-                />
-              ) : (
-                <Upload
-                  className="mx-auto text-sky-600"
-                  size={30}
-                />
-              )}
-
-              <div className="mt-3 text-base font-bold text-slate-900">
-                {procesandoArchivos
-                  ? "Leyendo PDFs..."
-                  : archivosPdf.length > 0
-                    ? "Agregar más PDFs"
-                    : "Seleccionar PDFs"}
-              </div>
-
-              <div className="mt-1 text-sm text-slate-500">
-                Puedes seleccionar varios archivos de una sola
-                vez.
-              </div>
-            </div>
-          </button>
-
           {archivosPdf.length > 0 && (
             <>
-              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="mb-2 grid grid-cols-4 gap-1">
+                <div className="rounded-lg bg-slate-50 p-1.5">
+                  <div className="text-[8px] font-bold uppercase text-slate-400">
                     Archivos
                   </div>
-                  <div className="mt-1 text-xl font-bold text-slate-900">
-                    {archivosPdf.length}
-                  </div>
+                  <div className="text-xs font-bold">{archivosPdf.length}</div>
                 </div>
-
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="rounded-lg bg-slate-50 p-1.5">
+                  <div className="text-[8px] font-bold uppercase text-slate-400">
                     Páginas
                   </div>
-                  <div className="mt-1 text-xl font-bold text-slate-900">
-                    {totalPaginasActividades}
-                  </div>
+                  <div className="text-xs font-bold">{totalPaginasActividades}</div>
                 </div>
-
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="rounded-lg bg-slate-50 p-1.5">
+                  <div className="text-[8px] font-bold uppercase text-slate-400">
                     Peso
                   </div>
-                  <div className="mt-1 text-xl font-bold text-slate-900">
-                    {formatearBytes(
-                      pesoTotal
-                    )}
+                  <div className="truncate text-xs font-bold">
+                    {formatearBytes(pesoTotal)}
                   </div>
                 </div>
-
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    PDF final
+                <div className="rounded-lg bg-slate-50 p-1.5">
+                  <div className="text-[8px] font-bold uppercase text-slate-400">
+                    Final
                   </div>
-                  <div className="mt-1 text-xl font-bold text-slate-900">
-                    {totalPaginasFinal}
-                  </div>
+                  <div className="text-xs font-bold">{totalPaginasFinal}</div>
                 </div>
               </div>
 
-              <div className="mt-5 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-bold text-slate-900">
-                  Orden de los archivos
-                </h3>
-
+              <div className="mb-1 flex justify-between">
+                <span className="text-[10px] font-bold text-slate-600">
+                  Orden
+                </span>
                 <button
                   type="button"
                   onClick={eliminarTodos}
-                  className="text-sm font-semibold text-red-600"
+                  className="text-[10px] font-bold text-red-600"
                 >
                   Eliminar todos
                 </button>
               </div>
 
-              <div className="mt-3 space-y-3">
-                {archivosPdf.map(
-                  (item, indice) => (
-                    <div
-                      key={item.id}
-                      className={`rounded-2xl border p-4 ${
-                        item.estado ===
-                        "error"
-                          ? "border-red-200 bg-red-50"
-                          : "border-slate-200 bg-white"
-                      }`}
-                    >
-                      <div className="flex gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-700">
-                          {indice + 1}
-                        </div>
+              <div className="space-y-1">
+                {archivosPdf.map((item, indice) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-1.5 rounded-lg border p-1.5 ${
+                      item.estado === "error"
+                        ? "border-red-200 bg-red-50"
+                        : "border-slate-200"
+                    }`}
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold">
+                      {indice + 1}
+                    </div>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setArchivoPreviewId(
-                              item.id
-                            )
-                          }
-                          className="min-w-0 flex-1 text-left"
-                          disabled={
-                            item.estado ===
-                            "error"
-                          }
-                        >
-                          <div className="truncate text-sm font-bold text-slate-900">
-                            {item.nombre}
-                          </div>
-
-                          {item.estado ===
-                          "error" ? (
-                            <div className="mt-1 text-xs font-medium text-red-600">
-                              {item.error}
-                            </div>
-                          ) : (
-                            <div className="mt-1 text-xs text-slate-500">
-                              {item.paginas}{" "}
-                              {item.paginas === 1
-                                ? "página"
-                                : "páginas"}{" "}
-                              ·{" "}
-                              {formatearBytes(
-                                item
-                                  .archivo
-                                  .size
-                              )}
-                            </div>
-                          )}
-                        </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[10px] font-bold text-slate-800">
+                        {item.nombre}
                       </div>
-
-                      <div className="mt-4 grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            moverArchivo(
-                              indice,
-                              "arriba"
-                            )
-                          }
-                          disabled={
-                            indice === 0
-                          }
-                          className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 disabled:opacity-30"
-                          aria-label="Mover hacia arriba"
-                        >
-                          <ArrowUp
-                            size={18}
-                          />
-                          Subir
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            moverArchivo(
-                              indice,
-                              "abajo"
-                            )
-                          }
-                          disabled={
-                            indice ===
-                            archivosPdf.length -
-                              1
-                          }
-                          className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 disabled:opacity-30"
-                          aria-label="Mover hacia abajo"
-                        >
-                          <ArrowDown
-                            size={18}
-                          />
-                          Bajar
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            eliminarArchivo(
-                              item.id
-                            )
-                          }
-                          className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-600"
-                        >
-                          <Trash2
-                            size={17}
-                          />
-                          Eliminar
-                        </button>
+                      <div className="text-[9px] text-slate-400">
+                        {item.estado === "error"
+                          ? item.error
+                          : `${item.paginas} pág. · ${formatearBytes(
+                              item.archivo.size
+                            )}`}
                       </div>
                     </div>
-                  )
-                )}
+
+                    <button
+                      type="button"
+                      onClick={() => moverArchivo(indice, "arriba")}
+                      disabled={indice === 0}
+                      className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 disabled:opacity-20"
+                      aria-label="Subir"
+                    >
+                      <ArrowUp size={13} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => moverArchivo(indice, "abajo")}
+                      disabled={indice === archivosPdf.length - 1}
+                      className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 disabled:opacity-20"
+                      aria-label="Bajar"
+                    >
+                      <ArrowDown size={13} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => eliminarArchivo(item.id)}
+                      className="flex h-7 w-7 items-center justify-center rounded-md border border-red-200 text-red-600"
+                      aria-label="Eliminar"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  inputArchivosRef.current?.click()
-                }
-                disabled={
-                  procesandoArchivos
-                }
-                className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 text-sm font-bold text-sky-700 disabled:opacity-60"
+                onClick={() => inputArchivosRef.current?.click()}
+                className="mt-2 flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-sky-200 bg-sky-50 text-[10px] font-bold text-sky-700"
               >
-                <Plus size={19} />
+                <Plus size={13} />
                 Agregar más PDFs
               </button>
             </>
           )}
         </section>
 
-        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-  <div className="flex items-center justify-between gap-4">
-    <div>
-      <h2 className="text-lg font-bold text-slate-900">
-        Cubrir texto inferior
-      </h2>
-
-      <p className="mt-1 text-sm text-slate-500">
-        Ajusta la zona inferior que se cubrirá en todas las páginas importadas.
-      </p>
-    </div>
-
-    <input
-      type="checkbox"
-      checked={cubrirTextoInferior}
-      onChange={(evento) =>
-        setCubrirTextoInferior(evento.target.checked)
-      }
-      className="h-5 w-5"
-    />
-  </div>
-
-  {cubrirTextoInferior && (
-    <div className="mt-5 space-y-5">
-      <label className="block">
-        <div className="mb-2 flex justify-between text-sm">
-          <span>Posición desde abajo</span>
-          <strong>{posicionCobertura} mm</strong>
-        </div>
-
-        <input
-          type="range"
-          min="0"
-          max="80"
-          step="1"
-          value={posicionCobertura}
-          onChange={(evento) =>
-            setPosicionCobertura(Number(evento.target.value))
-          }
-          className="w-full"
-        />
-      </label>
-
-      <label className="block">
-        <div className="mb-2 flex justify-between text-sm">
-          <span>Altura</span>
-          <strong>{alturaCobertura} mm</strong>
-        </div>
-
-        <input
-          type="range"
-          min="5"
-          max="60"
-          step="1"
-          value={alturaCobertura}
-          onChange={(evento) =>
-            setAlturaCobertura(Number(evento.target.value))
-          }
-          className="w-full"
-        />
-      </label>
-
-      <label className="block">
-        <div className="mb-2 flex justify-between text-sm">
-          <span>Ancho</span>
-          <strong>{anchoCobertura} mm</strong>
-        </div>
-
-        <input
-          type="range"
-          min="50"
-          max="500"
-          step="5"
-          value={anchoCobertura}
-          onChange={(evento) =>
-            setAnchoCobertura(Number(evento.target.value))
-          }
-          className="w-full"
-        />
-      </label>
-    </div>
-  )}
-</section>
-
-        {/* =================================================
-            PREVIEW PDF INDIVIDUAL
-        ================================================= */}
-
-        {archivoPreview &&
-          urlPreviewPdf && (
-            <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="text-lg font-bold text-slate-900">
-                    Vista previa
-                  </h2>
-
-                  <p className="mt-1 truncate text-sm text-slate-500">
-                    {
-                      archivoPreview.nombre
-                    }
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setArchivoPreviewId(
-                      null
-                    )
-                  }
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600"
-                >
-                  Cerrar
-                </button>
+        {/* PREVIEW + COBERTURA */}
+        {primerPdfValido && (
+          <section className="mb-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="text-xs font-bold text-slate-900">
+                  Vista previa de cobertura
+                </h2>
+                <p className="max-w-[230px] truncate text-[9px] text-slate-400">
+                  {primerPdfValido.nombre}
+                </p>
               </div>
 
-              <iframe
-                src={urlPreviewPdf}
-                title={`Vista previa ${archivoPreview.nombre}`}
-                className="mt-4 h-[520px] w-full rounded-xl border border-slate-200 bg-slate-100"
+              <div className="text-right">
+                <div className="text-[9px] text-slate-500">
+                  Subir / bajar franja
+                </div>
+                <div className="text-[10px] font-bold text-slate-700">
+                  {posicionCobertura} mm
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <PreviewPaginaPdf
+                archivo={primerPdfValido.archivo}
+                numeroPagina={1}
+                titulo="Laberinto"
+                posicionCobertura={posicionCobertura}
               />
-            </section>
-          )}
 
-        {/* =================================================
-            LÁMINA FINAL
-        ================================================= */}
-
-        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-              <ImageIcon size={21} />
+              <PreviewPaginaPdf
+                archivo={primerPdfValido.archivo}
+                numeroPagina={2}
+                titulo="Solución"
+                posicionCobertura={posicionCobertura}
+              />
             </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">
-                3. Lámina final
-              </h2>
-
-              <p className="mt-1 text-sm leading-5 text-slate-500">
-                Pega la URL de la imagen que irá como última
-                página del producto.
-              </p>
-            </div>
-          </div>
-
-          <label className="mt-5 block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">
-              URL de lámina final
-            </span>
 
             <input
-              type="url"
-              value={imagenFinal}
+              type="range"
+              min="0"
+              max="60"
+              step="1"
+              value={posicionCobertura}
               onChange={(evento) =>
-                setImagenFinal(
-                  evento.target.value
-                )
+                setPosicionCobertura(Number(evento.target.value))
               }
-              placeholder="https://..."
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+              className="mt-2 w-full"
+              aria-label="Posición de la cobertura"
             />
-          </label>
 
-          {imagenFinal.trim() && (
-            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-              <img
-                src={imagenFinal}
-                alt="Vista previa de lámina final"
-                className="mx-auto max-h-[420px] w-auto object-contain"
+            <p className="mt-1 text-center text-[9px] text-slate-400">
+              La franja blanca tiene ancho completo y altura fija de{" "}
+              {ALTURA_COBERTURA_MM} mm.
+            </p>
+          </section>
+        )}
+
+        {/* LÁMINA FINAL */}
+        <section className="mb-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="grid grid-cols-[1fr_64px] items-end gap-2">
+            <label className="min-w-0">
+              <span className="mb-1 block text-[11px] font-bold text-slate-700">
+                3. Lámina final
+              </span>
+              <input
+                type="url"
+                value={imagenFinal}
+                onChange={(evento) => setImagenFinal(evento.target.value)}
+                placeholder="URL de lámina final"
+                className="h-8 w-full rounded-lg border border-slate-300 px-2 text-[11px] outline-none focus:border-sky-500"
               />
-            </div>
-          )}
+            </label>
+
+            {imagenFinal.trim() && (
+              <button
+                type="button"
+                onClick={() =>
+                  setModalImagen({
+                    url: imagenFinal,
+                    titulo: "Lámina final",
+                  })
+                }
+                className="h-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                aria-label="Ampliar lámina final"
+              >
+                <img
+                  src={imagenFinal}
+                  alt="Vista previa de lámina final"
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            )}
+          </div>
         </section>
 
-        {/* =================================================
-            RESUMEN Y EXPORTACIÓN
-        ================================================= */}
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <FilePlus2 size={21} />
-            </div>
-
+        {/* EXPORTAR */}
+        <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">
-                Generar producto final
+              <h2 className="text-xs font-bold text-slate-900">
+                Generar PDF final
               </h2>
-
-              <p className="mt-1 text-sm leading-5 text-slate-500">
-                Los PDFs se unirán exactamente en el orden
-                mostrado arriba.
+              <p className="text-[9px] text-slate-400">
+                {totalPaginasFinal} páginas estimadas
               </p>
             </div>
-          </div>
 
-          <div className="mt-5 rounded-xl bg-slate-50 p-4">
-            <div className="flex justify-between gap-4 text-sm">
-              <span className="text-slate-500">
-                Portada
-              </span>
-              <span className="font-semibold text-slate-900">
-                {imagenPortada.trim()
-                  ? "Sí"
-                  : "No"}
-              </span>
-            </div>
-
-            <div className="mt-2 flex justify-between gap-4 text-sm">
-              <span className="text-slate-500">
-                PDFs agregados
-              </span>
-              <span className="font-semibold text-slate-900">
-                {archivosPdf.length}
-              </span>
-            </div>
-
-            <div className="mt-2 flex justify-between gap-4 text-sm">
-              <span className="text-slate-500">
-                Páginas de actividades
-              </span>
-              <span className="font-semibold text-slate-900">
-                {totalPaginasActividades}
-              </span>
-            </div>
-
-            <div className="mt-2 flex justify-between gap-4 text-sm">
-              <span className="text-slate-500">
-                Lámina final
-              </span>
-              <span className="font-semibold text-slate-900">
-                {imagenFinal.trim()
-                  ? "Sí"
-                  : "No"}
-              </span>
-            </div>
-
-            <div className="mt-3 border-t border-slate-200 pt-3">
-              <div className="flex justify-between gap-4">
-                <span className="text-sm font-bold text-slate-700">
-                  Total estimado
-                </span>
-
-                <span className="text-lg font-bold text-slate-900">
-                  {totalPaginasFinal} páginas
-                </span>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={descargarPdfCompleto}
+              disabled={
+                exportandoPdf ||
+                procesandoArchivos ||
+                archivosPdf.length === 0 ||
+                hayArchivosInvalidos
+              }
+              className="flex h-9 items-center justify-center gap-1.5 rounded-lg bg-sky-600 px-3 text-[11px] font-bold text-white disabled:opacity-40"
+            >
+              {exportandoPdf ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <FilePlus2 size={15} />
+              )}
+              {exportandoPdf ? "Generando..." : "Generar PDF"}
+            </button>
           </div>
 
           {mensajeError && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium leading-5 text-red-700">
+            <div className="mt-2 rounded-lg bg-red-50 px-2 py-1.5 text-[10px] font-medium text-red-700">
               {mensajeError}
             </div>
           )}
 
           {exportandoPdf && (
-            <div className="mt-5">
-              <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-                <span className="font-semibold text-slate-700">
-                  Generando PDF...
-                </span>
-
-                <span className="font-bold text-slate-900">
-                  {progresoPdf.porcentaje ||
-                    0}
-                  %
-                </span>
-              </div>
-
-              <div className="h-3 overflow-hidden rounded-full bg-slate-200">
+            <div className="mt-2">
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
                 <div
-                  className="h-full rounded-full bg-sky-600 transition-all"
+                  className="h-full bg-sky-600 transition-all"
                   style={{
                     width: `${Math.max(
                       0,
-                      Math.min(
-                        100,
-                        progresoPdf.porcentaje ||
-                          0
-                      )
+                      Math.min(100, progresoPdf.porcentaje || 0)
                     )}%`,
                   }}
                 />
               </div>
-
-              {progresoPdf.total > 0 && (
-                <div className="mt-2 text-xs text-slate-500">
-                  {progresoPdf.actual} de{" "}
-                  {progresoPdf.total} páginas
-                </div>
-              )}
+              <div className="mt-1 text-right text-[9px] text-slate-400">
+                {progresoPdf.porcentaje || 0}%
+              </div>
             </div>
           )}
-
-          <button
-            type="button"
-            onClick={descargarPdfCompleto}
-            disabled={
-              exportandoPdf ||
-              procesandoArchivos ||
-              archivosPdf.length ===
-                0 ||
-              hayArchivosInvalidos
-            }
-            className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 text-base font-bold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {exportandoPdf ? (
-              <>
-                <Loader2
-                  className="animate-spin"
-                  size={21}
-                />
-                Generando PDF...
-              </>
-            ) : (
-              <>
-                <FilePlus2
-                  size={21}
-                />
-                Generar PDF final
-              </>
-            )}
-          </button>
         </section>
       </div>
+
+      <ModalImagen
+        url={modalImagen?.url}
+        titulo={modalImagen?.titulo || ""}
+        onCerrar={() => setModalImagen(null)}
+      />
     </main>
   );
 }

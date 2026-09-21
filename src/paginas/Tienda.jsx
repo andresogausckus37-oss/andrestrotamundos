@@ -3,7 +3,6 @@ import CalificacionProducto from "../componentes/CalificacionProducto";
 
 import {
   ArrowLeft,
-  Baby,
   ChevronDown,
   ChevronUp,
   Download,
@@ -435,7 +434,7 @@ const Tienda = () => {
           {/* PRODUCTOS */}
 
           {productosMostrados.length > 0 ? (
-            <div className="space-y-2.5 sm:space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {productosMostrados.map(
                 (producto) => {
                   const tieneOferta =
@@ -473,7 +472,7 @@ const Tienda = () => {
                   return (
                     <article
                       key={producto.id}
-                      className="group flex overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md"
+                      className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md"
                     >
                       {/* IMAGEN */}
 
@@ -484,28 +483,25 @@ const Tienda = () => {
                             `/tienda/${producto.id}`
                           )
                         }
-                        className="w-[105px] shrink-0 bg-slate-50 sm:w-[130px]"
+                        className="w-full bg-slate-50"
                         aria-label={`${t.ver} ${nombreProducto}`}
                       >
-                        <div className="flex h-full min-h-[150px] items-center justify-center p-2 sm:min-h-[170px]">
-                          <img
-                            src={
-                              producto.imagenes
-                                ?.portada
-                            }
-                            alt={nombreProducto}
-                            className="h-full max-h-[150px] w-full object-contain transition duration-300 group-hover:scale-[1.02] sm:max-h-[165px]"
-                          />
-                        </div>
+                        <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-slate-50">
+  <img
+    src={producto.imagenes?.portada}
+    alt={nombreProducto}
+    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+  />
+</div>
                       </button>
 
                       {/* INFORMACIÓN */}
 
-                      <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-3">
+                      <div className="flex min-w-0 flex-1 flex-col p-1 sm:p-3">
                         {/* BADGES */}
 
-                        <div className="flex flex-wrap items-center gap-1">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-sky-700 sm:text-[9px]">
+                        <div className="mb-1 flex flex-wrap items-center gap-1">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-sky-700 sm:text-[9px]">
                             <Download
                               size={9}
                               className="shrink-0"
@@ -513,7 +509,7 @@ const Tienda = () => {
                             {t.pdf}
                           </span>
 
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-amber-700 sm:text-[9px]">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 text-[11px] font-semibold uppercase text-amber-700 sm:text-[9px]">
                             <FileDown
                               size={9}
                               className="shrink-0"
@@ -521,25 +517,13 @@ const Tienda = () => {
                             {t.descargaDigital}
                           </span>
 
-                          {producto.linea ===
-                          "hogar" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-emerald-700 sm:text-[9px]">
-                              <Home
-                                size={9}
-                                className="shrink-0"
-                              />
-                              {t.hogar}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-violet-700 sm:text-[9px]">
-                              <Baby
-                                size={9}
-                                className="shrink-0"
-                              />
-                              {t.infantil}
-                            </span>
-                          )}
-                        </div>
+                          
+                        </div>                     
+                        {/* TÍTULO */}
+
+                        <h3 className="mt-1 line-clamp-2 text-[14px] font-normal leading-4 text-slate-900 sm:text-sm sm:leading-5">
+                          {nombreProducto}
+                        </h3>
 
                         {/* RESEÑAS */}
 
@@ -550,57 +534,46 @@ const Tienda = () => {
                             }
                           />
                         </div>
-
-                        {/* TÍTULO */}
-
-                        <h3 className="mt-1 line-clamp-2 text-[12px] font-semibold leading-4 text-slate-900 sm:text-sm sm:leading-5">
-                          {nombreProducto}
-                        </h3>
                                                 {/* PRECIO */}
 
-                        <div className="mt-auto pt-2">
-                          {tieneOferta ? (
-                            <>
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <p className="text-sm font-bold text-slate-900 sm:text-base">
-                                  {formatearPrecio(
-                                    precioFinal
-                                  )}
-                                </p>
+<div className="mt-auto pt-2">
+  {tieneOferta ? (
+    <>
+      {/* FILA 1: PRECIO OFERTA + PRECIO ORIGINAL */}
 
-                                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700">
-                                  -{descuento}%
-                                </span>
-                              </div>
+      <div className="flex items-center gap-3">
+        <p className="text-2xl font-medium text-slate-900 sm:text-2xl">
+          {formatearPrecio(precioFinal)}
+        </p>
 
-                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2">
-                                <p className="text-[9px] text-slate-400 line-through sm:text-[10px]">
-                                  {formatearPrecio(
-                                    producto.precioARS
-                                  )}
-                                </p>
+        <p className="text-sm font-medium text-slate-400 line-through sm:text-base">
+          {formatearPrecio(producto.precioARS)}
+        </p>
+      </div>
 
-                                <p className="text-[9px] font-medium text-emerald-700 sm:text-[10px]">
-                                  {t.ahorras}{" "}
-                                  {formatearPrecio(
-                                    ahorro
-                                  )}
-                                </p>
-                              </div>
+      {/* FILA 2: DESCUENTO + AHORRO */}
 
-                              {etiquetaOferta && (
-                                <p className="mt-1 text-[8px] font-bold uppercase tracking-wide text-orange-600 sm:text-[9px]">
-                                  {etiquetaOferta}
-                                </p>
-                              )}
-                            </>
-                          ) : (
-                            <p className="text-sm font-bold text-slate-900 sm:text-base">
-                              {formatearPrecio(
-                                producto.precioARS
-                              )}
-                            </p>
-                          )}
+      <div className="mb-4 mt-0.5 flex flex-col items-start">
+        <p className="text-[14px] font-normal leading-4 text-slate-900 sm:text-sm sm:leading-5">
+          {descuento}% de descuento
+        </p>
+
+        
+      </div>
+
+      {/* ETIQUETA OFERTA */}
+
+      {etiquetaOferta && (
+        <p className="mt-1.5 text-[9px] font-bold uppercase tracking-wide text-orange-600 sm:text-[10px]">
+          {etiquetaOferta}
+        </p>
+      )}
+    </>
+  ) : (
+    <p className="text-xl font-bold text-slate-900 sm:text-2xl">
+      {formatearPrecio(producto.precioARS)}
+    </p>
+  )}
 
                           {/* BOTÓN */}
 
@@ -611,7 +584,7 @@ const Tienda = () => {
                                 `/tienda/${producto.id}`
                               )
                             }
-                            className="mt-2 inline-flex items-center justify-center gap-1 rounded-lg bg-sky-600 px-3 py-1.5 text-[10px] font-semibold text-white transition hover:bg-sky-700 sm:text-xs"
+                            className="mt-2 inline-flex items-center justify-center gap-1 rounded-lg bg-sky-600 px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-sky-700 sm:text-xs"
                           >
                             <ShoppingBag
                               size={12}
