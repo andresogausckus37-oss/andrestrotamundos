@@ -18,6 +18,15 @@ export default async function handler(req, res) {
       );
     }
 
+    const email =
+  req.body?.email?.trim();
+
+if (!email) {
+  return res.status(400).json({
+    error: "Falta el correo electrónico.",
+  });
+}
+
     /* =====================================================
        PRODUCTO DE PRUEBA
     ===================================================== */
@@ -67,7 +76,11 @@ export default async function handler(req, res) {
 
           external_reference: pedidoId,
 
-          items: [
+payer: {
+  email: email,
+},
+
+items: [
             {
               title: producto.nombre,
               quantity: 1,
@@ -109,6 +122,8 @@ export default async function handler(req, res) {
 
         nombreProducto:
           producto.nombre,
+
+        emailComprador: email,
 
         precio:
           producto.precio,
