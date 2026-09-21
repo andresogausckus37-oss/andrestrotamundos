@@ -554,7 +554,7 @@ const Tienda = () => {
       {/* FILA 2: DESCUENTO + AHORRO */}
 
       <div className="mb-4 mt-0.5 flex flex-col items-start">
-        <p className="text-[14px] font-normal leading-4 text-slate-900 sm:text-sm sm:leading-5">
+        <p className="text-[12px] font-normal leading-4 text-slate-900 sm:text-sm sm:leading-5">
           {descuento}% de descuento
         </p>
 

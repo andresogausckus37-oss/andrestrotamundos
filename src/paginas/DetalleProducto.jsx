@@ -620,12 +620,7 @@ ${t.whatsappFinal}`;
       </div>
     </div>
 
-    {/* DESCARGABLE */}
-
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-[10px] font-semibold uppercase text-sky-700 sm:text-xs">
-      <Download size={13} />
-      {t.descargable}
-    </span>
+    
   </div>
 </div>
 

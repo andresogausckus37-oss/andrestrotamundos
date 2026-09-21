@@ -61,10 +61,78 @@ export const productosDigitales = [
 
     edadRecomendada: "Menores de 7 años",
 
-    nivel: "Principiante - Caminos abiertos (mismo nivel)",
+    nivel: "Principiante - Caminos abiertos",
 
     entrega: "Descarga digital",
 
     destacado: false,
   },
+
+  {
+  id: "50-crucigramas-reino-animal",
+
+  nombre: "50 Crucigramas del Reino Animal con Soluciones",
+
+  ventaCruzadaId: "",
+
+  descripcion:
+    "50 crucigramas imprimibles del reino animal con dificultad progresiva y soluciones incluidas. Una forma entretenida de poner a prueba la lógica, la concentración y el vocabulario.",
+
+  descripcionLarga:
+    "Una colección de 50 crucigramas imprimibles dedicados al fascinante mundo animal. Las actividades están organizadas con dificultad progresiva, comenzando con crucigramas de 5 palabras y avanzando gradualmente hasta desafíos de 8 palabras. Incluye animales conocidos y otros menos comunes para ampliar el vocabulario mientras se ejercitan la concentración, la memoria y la lógica. Cada crucigrama incluye su solución correspondiente y está preparado en formato A4 para imprimir fácilmente en casa o en una imprenta.",
+
+  tipo: "digital",
+  categoria: "crucigramas",
+  linea: "juegos",
+
+  precioARS: 2999,
+
+  descuento: 0,
+
+  oferta: {
+    activa: true,
+    precioARS: 1999,
+    etiqueta: "",
+  },
+
+  imagenes: {
+    portada: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/50%20crucigramas%20dificultad%20progresiva/file_000000003fa0820e8a614ec29e4e5de9.webp",
+
+    preview: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/50%20crucigramas%20dificultad%20progresiva/file_00000000122c820e81ff12e1f1825881.webp",
+
+    previewsIndividuales: [
+      "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/50%20crucigramas%20dificultad%20progresiva/file_00000000197c820e947e5d3e67d82077.webp",
+      "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/50%20crucigramas%20dificultad%20progresiva/file_00000000e5f8820e9f511de451f8b3a7.webp",
+    ],
+  },
+
+  formato: "PDF",
+  tamano: "A4",
+
+  paginas: 102,
+  laminas: 50,
+
+  incluye: [
+    "50 crucigramas del reino animal",
+    "50 soluciones incluidas",
+    "Dificultad progresiva",
+    "PDF A4 listo para imprimir",
+    "Descarga digital instantánea",
+  ],
+
+  beneficios: [
+    "Concentración",
+    "Lógica",
+    "Memoria",
+    "Vocabulario",
+  ],
+
+  edadRecomendada: "Para todas las edades",
+
+  nivel: "Dificultad progresiva",
+
+  entrega: "Descarga digital",
+
+  destacado: false,
+},
 ];
