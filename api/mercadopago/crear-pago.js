@@ -70,14 +70,8 @@ export default async function handler(req, res) {
           items: [
             {
               title: producto.nombre,
-
               quantity: 1,
-
               unit_price: monto,
-
-              unit_measure: "unit",
-
-              total_amount: monto,
             },
           ],
         }),
