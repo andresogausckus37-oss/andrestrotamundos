@@ -9,7 +9,6 @@ import {
   Download,
   ShoppingBag,
   X,
-  MessageCircle,
   Mail,
   User,
 } from "lucide-react";
@@ -19,8 +18,6 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-
-const WHATSAPP = "5493548619293";
 
 const DetalleProducto = () => {
   const { id } = useParams();
@@ -126,6 +123,9 @@ const DetalleProducto = () => {
 
   const [error, setError] =
     useState("");
+
+  const [procesandoPago, setProcesandoPago] =
+  useState(false);
 
   /* =========================================================
      FORMATEAR PRECIO
@@ -331,81 +331,67 @@ const DetalleProducto = () => {
   };
 
   /* =========================================================
-     COMPRAR POR WHATSAPP
-     TEMPORAL HASTA IMPLEMENTAR MERCADO PAGO
+     PAGAR CON MERCADO PAGO
   ========================================================= */
 
-  const comprarPorWhatsApp =
-    () => {
-      const nombreLimpio =
-        nombre.trim();
+  const pagarConMercadoPago = async () => {
+    const nombreLimpio = nombre.trim();
+    const emailLimpio = email.trim();
 
-      const emailLimpio =
-        email.trim();
+    if (!nombreLimpio || !emailLimpio) {
+      setError(t.errorDatos);
+      return;
+    }
 
-      if (
-        !nombreLimpio ||
-        !emailLimpio
-      ) {
-        setError(t.errorDatos);
-        return;
-      }
+    const emailValido =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-      const emailValido =
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailValido.test(emailLimpio)) {
+      setError(t.errorEmail);
+      return;
+    }
 
-      if (
-        !emailValido.test(
-          emailLimpio
-        )
-      ) {
-        setError(t.errorEmail);
-        return;
-      }
-
+    try {
       setError("");
+      setProcesandoPago(true);
 
-      const detalleExtra =
-        extraAgregado &&
-        productoExtra
-          ? `\n*${t.whatsappProductoAdicional}:* ${textoEs(
-              productoExtra.nombre
-            )}`
-          : "";
-
-      const mensaje = `${t.whatsappHola}
-
-*${t.whatsappProducto}:* ${textoEs(
-        producto.nombre
-      )}${detalleExtra}
-
-*${t.whatsappPrecioOriginal}:* ${formatearPrecio(
-        precioOriginalPedido
-      )}
-*${t.whatsappDescuento}:* -${descuentoPedido}%
-*${t.whatsappAhorro}:* ${formatearPrecio(
-        ahorroPedido
-      )}
-
-*${t.whatsappTotal}:* ${formatearPrecio(
-        totalPedido
-      )}
-
-*${t.whatsappNombre}:* ${nombreLimpio}
-*${t.whatsappEmail}:* ${emailLimpio}
-
-${t.whatsappFinal}`;
-
-      const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-        mensaje
-      )}`;
-
-      window.open(
-        url,
-        "_blank",
-        "noopener,noreferrer"
+      const respuesta = await fetch(
+        "/api/mercadopago/crear-pago",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productoId: producto.id,
+            nombre: nombreLimpio,
+            email: emailLimpio,
+          }),
+        }
       );
-    };
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok || !datos.checkoutUrl) {
+        throw new Error(
+          "No se pudo iniciar el pago."
+        );
+      }
+
+      window.location.href = datos.checkoutUrl;
+    } catch (error) {
+      console.error(
+        "Error iniciando Mercado Pago:",
+        error
+      );
+
+      setError(
+        "No se pudo iniciar el pago. Intenta nuevamente."
+      );
+
+      setProcesandoPago(false);
+    }
+  };
 
   return (
     <>
@@ -1072,23 +1058,27 @@ ${t.whatsappFinal}`;
                 </div>
               </div>
 
-              {/* WHATSAPP TEMPORAL */}
+      {/* MERCADO PAGO */}
 
-              <button
-                type="button"
-                onClick={comprarPorWhatsApp}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-green-700"
-              >
-                <MessageCircle size={18} />
-                {t.comprarWhatsapp}
-              </button>
+      <button
+        type="button"
+        onClick={pagarConMercadoPago}
+        disabled={procesandoPago}
+        className="boton-principal mt-4 flex w-full items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <ShoppingBag size={18} />
 
-              <p className="mt-2 text-center text-[11px] leading-4 text-slate-500">
-                {t.instruccionesWhatsapp}
-              </p>
-            </div>
-          </div>
-        </div>
+        {procesandoPago
+          ? "Redirigiendo..."
+          : "Pagar con Mercado Pago"}
+      </button>
+
+      <p className="mt-2 text-center text-[11px] leading-4 text-slate-500">
+        Serás redirigido a Mercado Pago para completar el pago de forma segura.
+      </p>
+      </div>
+      </div>
+      </div>
       )}
 
       {/* =========================================================
