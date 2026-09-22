@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Check,
@@ -8,6 +8,33 @@ import {
   Loader2,
   Upload,
 } from "lucide-react";
+
+const PASOS = [
+  {
+    id: "pedido_creado",
+    nombre: "Pedido creado",
+  },
+  {
+    id: "esperando_transferencia",
+    nombre: "Esperando transferencia",
+  },
+  {
+    id: "comprobante_recibido",
+    nombre: "Comprobante recibido",
+  },
+  {
+    id: "verificando_pago",
+    nombre: "Verificando pago",
+  },
+  {
+    id: "pago_confirmado",
+    nombre: "Pago confirmado",
+  },
+  {
+    id: "descarga_habilitada",
+    nombre: "Descarga habilitada",
+  },
+];
 
 export default function PagoTransferencia() {
   const [searchParams] = useSearchParams();
@@ -20,6 +47,12 @@ export default function PagoTransferencia() {
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState("");
 
+  const [estadoPedido, setEstadoPedido] =
+    useState(null);
+
+  const [historialEstados, setHistorialEstados] =
+    useState([]);
+
   const pedidoId =
     searchParams.get("pedidoId");
 
@@ -29,6 +62,61 @@ export default function PagoTransferencia() {
     alias: "andres.imprimibles",
     cvu: "0000003100023252705282",
   };
+
+  /* CONSULTAR ESTADO */
+
+  const consultarEstado = async () => {
+    if (!pedidoId) return;
+
+    try {
+      const respuesta = await fetch(
+        `/api/transferencia/estado-pedido?pedidoId=${encodeURIComponent(
+          pedidoId
+        )}`
+      );
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) return;
+
+      setEstadoPedido(datos.estado);
+
+      setHistorialEstados(
+        datos.historialEstados || []
+      );
+
+      if (
+        datos.historialEstados?.some(
+          (item) =>
+            item.estado ===
+            "comprobante_recibido"
+        )
+      ) {
+        setEnviado(true);
+      }
+    } catch (error) {
+      console.error(
+        "Error consultando pedido:",
+        error
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!pedidoId) return;
+
+    consultarEstado();
+
+    const intervalo = setInterval(
+      consultarEstado,
+      5000
+    );
+
+    return () =>
+      clearInterval(intervalo);
+  }, [pedidoId]);
+
+  /* COPIAR */
 
   const copiar = async (valor, campo) => {
     try {
@@ -40,9 +128,14 @@ export default function PagoTransferencia() {
         setCopiado("");
       }, 1800);
     } catch (error) {
-      console.error("Error copiando:", error);
+      console.error(
+        "Error copiando:",
+        error
+      );
     }
   };
+
+  /* ARCHIVO */
 
   const seleccionarArchivo = (event) => {
     const seleccionado =
@@ -63,25 +156,34 @@ export default function PagoTransferencia() {
       )
     ) {
       setArchivo(null);
+
       setError(
         "Selecciona un archivo JPG, PNG, WEBP o PDF."
       );
+
       return;
     }
 
-    const maximo = 8 * 1024 * 1024;
+    const maximo =
+      8 * 1024 * 1024;
 
-    if (seleccionado.size > maximo) {
+    if (
+      seleccionado.size > maximo
+    ) {
       setArchivo(null);
+
       setError(
         "El comprobante no puede superar los 8 MB."
       );
+
       return;
     }
 
     setError("");
     setArchivo(seleccionado);
   };
+
+  /* SUBIR COMPROBANTE */
 
   const subirComprobante = async () => {
     if (!pedidoId) {
@@ -133,6 +235,8 @@ export default function PagoTransferencia() {
 
       setEnviado(true);
       setArchivo(null);
+
+      await consultarEstado();
     } catch (error) {
       console.error(
         "Error subiendo comprobante:",
@@ -146,6 +250,37 @@ export default function PagoTransferencia() {
     } finally {
       setSubiendo(false);
     }
+  };
+
+  /* ESTADOS */
+
+  const buscarEstado = (id) =>
+    historialEstados.find(
+      (item) => item.estado === id
+    );
+
+  const indiceActual = Math.max(
+    0,
+    ...historialEstados.map((item) =>
+      PASOS.findIndex(
+        (paso) =>
+          paso.id === item.estado
+      )
+    )
+  );
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "";
+
+    return new Intl.DateTimeFormat(
+      "es-AR",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    ).format(new Date(fecha));
   };
 
   return (
@@ -170,7 +305,7 @@ export default function PagoTransferencia() {
           </p>
         </div>
 
-        {/* DATOS DE TRANSFERENCIA */}
+        {/* DATOS */}
 
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
@@ -190,8 +325,6 @@ export default function PagoTransferencia() {
           </div>
 
           <div className="space-y-3">
-
-            {/* TITULAR */}
 
             <div>
               <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
@@ -318,8 +451,7 @@ export default function PagoTransferencia() {
                   />
 
                   <p className="mt-1.5 text-[10px] text-slate-500">
-                    JPG, PNG, WEBP o PDF · Máx.
-                    8 MB
+                    JPG, PNG, WEBP o PDF · Máx. 8 MB
                   </p>
 
                   <button
@@ -425,21 +557,97 @@ export default function PagoTransferencia() {
             Seguimiento de tu pedido
           </h2>
 
-          <p className="mt-1 text-[11px] leading-4 text-slate-500">
-            Después de enviar el comprobante
-            podrás seguir aquí el estado de tu
-            compra. No necesitas comunicarte por
-            WhatsApp.
+          <p className="mt-1 text-[10px] text-slate-500">
+            El estado se actualiza automáticamente.
           </p>
 
+          <div className="mt-4">
+            {PASOS.map((paso, index) => {
+              const registro =
+                buscarEstado(paso.id);
+
+              const completado =
+                Boolean(registro);
+
+              const actual =
+                index === indiceActual &&
+                estadoPedido !== "aprobado";
+
+              return (
+                <div
+                  key={paso.id}
+                  className="relative flex gap-3 pb-4 last:pb-0"
+                >
+                  {index <
+                    PASOS.length - 1 && (
+                    <div
+                      className={`absolute left-[9px] top-5 h-full w-px ${
+                        completado
+                          ? "bg-emerald-300"
+                          : "bg-slate-200"
+                      }`}
+                    />
+                  )}
+
+                  <div
+                    className={`relative z-10 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full ${
+                      completado
+                        ? "bg-emerald-500 text-white"
+                        : actual
+                          ? "bg-violet-600 text-white"
+                          : "bg-slate-200 text-slate-400"
+                    }`}
+                  >
+                    {completado ? (
+                      <Check size={11} />
+                    ) : actual ? (
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                    ) : (
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                    )}
+                  </div>
+
+                  <div className="-mt-0.5">
+                    <p
+                      className={`text-[11px] font-semibold ${
+                        completado
+                          ? "text-slate-800"
+                          : actual
+                            ? "text-violet-700"
+                            : "text-slate-400"
+                      }`}
+                    >
+                      {paso.nombre}
+                    </p>
+
+                    {registro?.fecha && (
+                      <p className="mt-0.5 text-[9px] text-slate-400">
+                        {formatearFecha(
+                          registro.fecha
+                        )}
+                      </p>
+                    )}
+
+                    {actual &&
+                      !completado && (
+                        <p className="mt-0.5 text-[9px] text-violet-500">
+                          En proceso
+                        </p>
+                      )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {pedidoId && (
-            <p className="mt-2 text-[9px] text-slate-400">
+            <p className="mt-4 border-t border-slate-100 pt-3 text-[9px] text-slate-400">
               Pedido: {pedidoId}
             </p>
           )}
         </section>
 
-        {/* ESPACIO PARA RECOMENDADOS */}
+        {/* RECOMENDADOS */}
 
         <section className="mt-8 min-h-[220px] border-t border-slate-200 pt-5">
           {/* Productos recomendados */}
