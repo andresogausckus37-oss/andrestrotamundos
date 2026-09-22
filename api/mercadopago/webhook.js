@@ -50,6 +50,8 @@ export default async function handler(req, res) {
   dataIdBody: req.body?.data?.id,
   typeQuery: req.query.type,
   typeBody: req.body?.type,
+        liveMode: req.body?.live_mode,
+applicationId: req.body?.application_id,
 });
       WebhookSignatureValidator.validate({
   xSignature,
