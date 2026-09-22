@@ -22,7 +22,7 @@ export const productosDigitales = [
 
     oferta: {
       activa: true,
-      precioARS: 2999,
+      precioARS: 1,
       etiqueta: "",
     },
 
