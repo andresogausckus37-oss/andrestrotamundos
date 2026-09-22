@@ -17,10 +17,17 @@ export default function PagoExitoso() {
   const [productos, setProductos] =
     useState([]);
 
+  const [descargando, setDescargando] =
+    useState(null);
+
+  const [descargados, setDescargados] =
+    useState([]);
+
+  const [errorDescarga, setErrorDescarga] =
+    useState("");
+
   const pedidoId =
-    searchParams.get(
-      "external_reference"
-    );
+    searchParams.get("external_reference");
 
   useEffect(() => {
     if (!pedidoId) {
@@ -90,12 +97,123 @@ export default function PagoExitoso() {
     };
   }, [pedidoId]);
 
+  /* =====================================================
+     DESCARGAR SIN SALIR DE LA PÁGINA
+  ===================================================== */
+
+  const descargarProducto = async (
+    producto
+  ) => {
+    if (
+      descargando ||
+      descargados.includes(
+        producto.productoId
+      )
+    ) {
+      return;
+    }
+
+    setDescargando(
+      producto.productoId
+    );
+
+    setErrorDescarga("");
+
+    try {
+      const respuesta = await fetch(
+        `/api/descargas/${encodeURIComponent(
+          pedidoId
+        )}?productoId=${encodeURIComponent(
+          producto.productoId
+        )}`
+      );
+
+      if (!respuesta.ok) {
+        const datos =
+          await respuesta
+            .json()
+            .catch(() => null);
+
+        throw new Error(
+          datos?.error ||
+            "No se pudo descargar el archivo"
+        );
+      }
+
+      const blob =
+        await respuesta.blob();
+
+      const url =
+        window.URL.createObjectURL(
+          blob
+        );
+
+      const enlace =
+        document.createElement("a");
+
+      enlace.href = url;
+
+      const contentDisposition =
+        respuesta.headers.get(
+          "Content-Disposition"
+        );
+
+      let nombreArchivo =
+        `${producto.productoId}.pdf`;
+
+      if (contentDisposition) {
+        const coincidencia =
+          contentDisposition.match(
+            /filename="([^"]+)"/
+          );
+
+        if (coincidencia?.[1]) {
+          nombreArchivo =
+            coincidencia[1];
+        }
+      }
+
+      enlace.download =
+        nombreArchivo;
+
+      document.body.appendChild(
+        enlace
+      );
+
+      enlace.click();
+
+      enlace.remove();
+
+      window.URL.revokeObjectURL(
+        url
+      );
+
+      setDescargados(
+        (anteriores) => [
+          ...anteriores,
+          producto.productoId,
+        ]
+      );
+    } catch (error) {
+      console.error(
+        "Error descargando:",
+        error
+      );
+
+      setErrorDescarga(
+        error.message ||
+          "No se pudo descargar el archivo."
+      );
+    } finally {
+      setDescargando(null);
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-slate-50 px-4 pb-16">
+    <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-8 sm:pt-10">
       <div className="mx-auto max-w-3xl">
-        {/* =====================================================
-            ENCABEZADO
-        ====================================================== */}
+
+        {/* ENCABEZADO */}
 
         <div className="mb-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -112,9 +230,7 @@ export default function PagoExitoso() {
           </p>
         </div>
 
-        {/* =====================================================
-            VERIFICANDO
-        ====================================================== */}
+        {/* VERIFICANDO */}
 
         {estado === "verificando" && (
           <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -142,9 +258,7 @@ export default function PagoExitoso() {
           </section>
         )}
 
-        {/* =====================================================
-            APROBADO
-        ====================================================== */}
+        {/* APROBADO */}
 
         {estado === "aprobado" && (
           <>
@@ -183,10 +297,19 @@ export default function PagoExitoso() {
                 </p>
               </div>
 
-              {productos.length > 0 ? (
-                <div className="space-y-2">
-                  {productos.map(
-                    (producto) => (
+              <div className="space-y-2">
+                {productos.map(
+                  (producto) => {
+                    const estaDescargando =
+                      descargando ===
+                      producto.productoId;
+
+                    const estaDescargado =
+                      descargados.includes(
+                        producto.productoId
+                      );
+
+                    return (
                       <div
                         key={
                           producto.productoId
@@ -204,35 +327,59 @@ export default function PagoExitoso() {
                           </p>
                         </div>
 
-                        <a
-                          href={`/api/descargas/${encodeURIComponent(
-                            pedidoId
-                          )}?productoId=${encodeURIComponent(
-                            producto.productoId
-                          )}`}
-                          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-bold text-white transition hover:bg-slate-800"
+                        <button
+                          type="button"
+                          disabled={
+                            estaDescargando ||
+                            estaDescargado
+                          }
+                          onClick={() =>
+                            descargarProducto(
+                              producto
+                            )
+                          }
+                          className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-bold transition ${
+                            estaDescargado
+                              ? "cursor-default bg-emerald-100 text-emerald-700"
+                              : estaDescargando
+                                ? "cursor-wait bg-slate-200 text-slate-500"
+                                : "bg-slate-900 text-white hover:bg-slate-800"
+                          }`}
                         >
-                          <Download
-                            size={13}
-                          />
-                          Descargar
-                        </a>
+                          {estaDescargando ? (
+                            <>
+                              <LoaderCircle
+                                size={12}
+                                className="animate-spin"
+                              />
+                              Descargando
+                            </>
+                          ) : estaDescargado ? (
+                            <>
+                              <Check
+                                size={12}
+                              />
+                              Descargado
+                            </>
+                          ) : (
+                            <>
+                              <Download
+                                size={12}
+                              />
+                              Descargar
+                            </>
+                          )}
+                        </button>
                       </div>
-                    )
-                  )}
-                </div>
-              ) : (
-                /* COMPATIBILIDAD CON PEDIDOS ANTERIORES */
+                    );
+                  }
+                )}
+              </div>
 
-                <a
-                  href={`/api/descargas/${encodeURIComponent(
-                    pedidoId
-                  )}`}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-bold text-white transition hover:bg-slate-800"
-                >
-                  <Download size={13} />
-                  Descargar PDF
-                </a>
+              {errorDescarga && (
+                <p className="mt-2 text-[10px] text-red-600">
+                  {errorDescarga}
+                </p>
               )}
 
               <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-3 text-[9px] text-slate-400">
@@ -240,6 +387,7 @@ export default function PagoExitoso() {
                   size={12}
                   className="text-emerald-600"
                 />
+
                 Descarga protegida vinculada a
                 tu compra.
               </div>
@@ -247,9 +395,7 @@ export default function PagoExitoso() {
           </>
         )}
 
-        {/* =====================================================
-            PENDIENTE
-        ====================================================== */}
+        {/* PENDIENTE */}
 
         {estado === "pendiente" && (
           <section className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm">
@@ -266,9 +412,7 @@ export default function PagoExitoso() {
           </section>
         )}
 
-        {/* =====================================================
-            ERROR
-        ====================================================== */}
+        {/* ERROR */}
 
         {estado === "error" && (
           <section className="rounded-xl border border-red-200 bg-white p-4 shadow-sm">
@@ -283,16 +427,12 @@ export default function PagoExitoso() {
           </section>
         )}
 
-        {/* =====================================================
-            ESPACIO PARA RECOMENDADOS
-        ====================================================== */}
+        {/* ESPACIO PARA PRODUCTOS RECOMENDADOS */}
 
-        <section className="mt-6 min-h-[180px] border-t border-slate-200 pt-5">
+        <section className="mt-8 min-h-[220px] border-t border-slate-200 pt-5">
           {/*
-            Próximamente:
-            productos recomendados mientras
-            el cliente espera o después de
-            completar su compra.
+            Aquí agregaremos posteriormente
+            los productos recomendados.
           */}
         </section>
       </div>

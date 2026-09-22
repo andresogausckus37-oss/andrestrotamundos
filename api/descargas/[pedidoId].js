@@ -5,8 +5,8 @@ const ARCHIVOS_PRODUCTOS = {
   "50-laberintos-para-ninos":
     "50-laberintos-para-niños.pdf",
 
-  "50-crucigramas-dificultad-progresiva":
-    "50-crucigramas-dificultad-progresiva.pdf",
+  "50-crucigramas-reino-animal":
+    "50-crucigramas-reino-animal-con-soluciones.pdf",
 };
 
 export default async function handler(req, res) {
@@ -58,16 +58,12 @@ export default async function handler(req, res) {
           )
         : [pedido.productoId];
 
-    /* =====================================================
-       DETERMINAR PRODUCTO A DESCARGAR
-    ===================================================== */
-
     const productoSolicitado =
       productoId ||
       pedido.productoId;
 
     /* =====================================================
-       VALIDAR QUE EL PRODUCTO PERTENEZCA AL PEDIDO
+       VALIDAR PRODUCTO
     ===================================================== */
 
     if (
@@ -82,7 +78,28 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       OBTENER ARCHIVO
+       COMPROBAR SI YA FUE DESCARGADO
+    ===================================================== */
+
+    const yaDescargado =
+      Array.isArray(
+        pedido.historialDescargas
+      ) &&
+      pedido.historialDescargas.some(
+        (descarga) =>
+          descarga.productoId ===
+          productoSolicitado
+      );
+
+    if (yaDescargado) {
+      return res.status(403).json({
+        error:
+          "Este producto ya fue descargado",
+      });
+    }
+
+    /* =====================================================
+       ARCHIVO
     ===================================================== */
 
     const archivo =
@@ -96,10 +113,6 @@ export default async function handler(req, res) {
           "Archivo del producto no encontrado",
       });
     }
-
-    /* =====================================================
-       OBTENER PDF PRIVADO
-    ===================================================== */
 
     const resultado = await get(
       archivo,
@@ -115,7 +128,55 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       HEADERS
+       RESERVAR DESCARGA
+       Evita múltiples solicitudes simultáneas
+    ===================================================== */
+
+    const fechaDescarga = new Date();
+
+    const actualizacion = await db
+      .collection("pedidos")
+      .updateOne(
+        {
+          pedidoId,
+          estado: "aprobado",
+          historialDescargas: {
+            $not: {
+              $elemMatch: {
+                productoId:
+                  productoSolicitado,
+              },
+            },
+          },
+        },
+        {
+          $inc: {
+            descargas: 1,
+          },
+
+          $push: {
+            historialDescargas: {
+              productoId:
+                productoSolicitado,
+
+              fecha:
+                fechaDescarga,
+            },
+          },
+        }
+      );
+
+    if (
+      actualizacion.modifiedCount !== 1
+    ) {
+      return res.status(403).json({
+        error:
+          "Este producto ya fue descargado",
+      });
+    }
+
+    /* =====================================================
+       ENVIAR PDF
     ===================================================== */
 
     res.setHeader(
@@ -134,10 +195,6 @@ export default async function handler(req, res) {
       "private, no-store"
     );
 
-    /* =====================================================
-       STREAM DEL ARCHIVO
-    ===================================================== */
-
     const reader =
       resultado.stream.getReader();
 
@@ -153,31 +210,6 @@ export default async function handler(req, res) {
     }
 
     res.end();
-
-    /* =====================================================
-       REGISTRAR DESCARGA
-    ===================================================== */
-
-    await db
-      .collection("pedidos")
-      .updateOne(
-        { pedidoId },
-        {
-          $inc: {
-            descargas: 1,
-          },
-
-          $push: {
-            historialDescargas: {
-              productoId:
-                productoSolicitado,
-
-              fecha:
-                new Date(),
-            },
-          },
-        }
-      );
   } catch (error) {
     console.error(
       "Error descargando producto:",
