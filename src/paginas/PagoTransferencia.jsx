@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   Check,
   Copy,
+  Download,
   FileText,
   Landmark,
   Loader2,
@@ -53,6 +54,22 @@ export default function PagoTransferencia() {
   const [historialEstados, setHistorialEstados] =
     useState([]);
 
+  const [productos, setProductos] = useState([]);
+
+  const [
+    descargaHabilitada,
+    setDescargaHabilitada,
+  ] = useState(false);
+
+  const [descargando, setDescargando] =
+    useState(null);
+
+  const [descargados, setDescargados] =
+    useState([]);
+
+  const [errorDescarga, setErrorDescarga] =
+    useState("");
+
   const pedidoId =
     searchParams.get("pedidoId");
 
@@ -83,6 +100,12 @@ export default function PagoTransferencia() {
 
       setHistorialEstados(
         datos.historialEstados || []
+      );
+
+      setProductos(datos.productos || []);
+
+      setDescargaHabilitada(
+        Boolean(datos.descargaHabilitada)
       );
 
       if (
@@ -164,12 +187,9 @@ export default function PagoTransferencia() {
       return;
     }
 
-    const maximo =
-      8 * 1024 * 1024;
+    const maximo = 8 * 1024 * 1024;
 
-    if (
-      seleccionado.size > maximo
-    ) {
+    if (seleccionado.size > maximo) {
       setArchivo(null);
 
       setError(
@@ -252,6 +272,84 @@ export default function PagoTransferencia() {
     }
   };
 
+  /* DESCARGAR PRODUCTO */
+
+  const descargarProducto = async (
+    producto
+  ) => {
+    if (
+      !pedidoId ||
+      !producto?.productoId ||
+      !descargaHabilitada
+    ) {
+      return;
+    }
+
+    try {
+      setDescargando(producto.productoId);
+      setErrorDescarga("");
+
+      const respuesta = await fetch(
+        `/api/descargas/${encodeURIComponent(
+          pedidoId
+        )}?productoId=${encodeURIComponent(
+          producto.productoId
+        )}`
+      );
+
+      if (!respuesta.ok) {
+        let mensaje =
+          "No se pudo descargar el producto.";
+
+        try {
+          const datos =
+            await respuesta.json();
+
+          mensaje =
+            datos.error || mensaje;
+        } catch {
+          // La respuesta no era JSON.
+        }
+
+        throw new Error(mensaje);
+      }
+
+      const blob = await respuesta.blob();
+
+      const url =
+        URL.createObjectURL(blob);
+
+      const enlace =
+        document.createElement("a");
+
+      enlace.href = url;
+
+      enlace.download =
+        `${producto.nombre || "producto"}.pdf`;
+
+      document.body.appendChild(enlace);
+
+      enlace.click();
+      enlace.remove();
+
+      URL.revokeObjectURL(url);
+
+      setDescargados((actuales) => [
+        ...new Set([
+          ...actuales,
+          producto.productoId,
+        ]),
+      ]);
+    } catch (error) {
+      setErrorDescarga(
+        error.message ||
+          "No se pudo descargar el producto."
+      );
+    } finally {
+      setDescargando(null);
+    }
+  };
+
   /* ESTADOS */
 
   const buscarEstado = (id) =>
@@ -325,7 +423,6 @@ export default function PagoTransferencia() {
           </div>
 
           <div className="space-y-3">
-
             <div>
               <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
                 Titular
@@ -646,6 +743,104 @@ export default function PagoTransferencia() {
             </p>
           )}
         </section>
+
+        {/* DESCARGAS */}
+
+        {descargaHabilitada &&
+          productos.length > 0 && (
+            <section className="mt-3 rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
+              <div className="mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+                  Pago confirmado
+                </p>
+
+                <h2 className="mt-0.5 text-sm font-bold text-slate-900">
+                  Tus descargas
+                </h2>
+
+                                <p className="mt-1 text-[10px] text-slate-500">
+                  Tu pago fue aprobado. Ya puedes
+                  descargar tus productos.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {productos.map((producto) => {
+                  const descargado =
+                    descargados.includes(
+                      producto.productoId
+                    );
+
+                  const estaDescargando =
+                    descargando ===
+                    producto.productoId;
+
+                  return (
+                    <div
+                      key={producto.productoId}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold text-slate-800">
+                          {producto.nombre}
+                        </p>
+
+                        <p className="mt-0.5 text-[9px] text-slate-400">
+                          Archivo PDF
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={
+                          descargado ||
+                          estaDescargando
+                        }
+                        onClick={() =>
+                          descargarProducto(
+                            producto
+                          )
+                        }
+                        className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-bold ${
+                          descargado
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-violet-600 text-white disabled:opacity-60"
+                        }`}
+                      >
+                        {estaDescargando ? (
+                          <>
+                            <Loader2
+                              size={13}
+                              className="animate-spin"
+                            />
+                            Descargando
+                          </>
+                        ) : descargado ? (
+                          <>
+                            <Check size={13} />
+                            Descargado
+                          </>
+                        ) : (
+                          <>
+                            <Download
+                              size={13}
+                            />
+                            Descargar PDF
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {errorDescarga && (
+                <p className="mt-3 text-[10px] font-medium text-red-600">
+                  {errorDescarga}
+                </p>
+              )}
+            </section>
+          )}
 
         {/* RECOMENDADOS */}
 
