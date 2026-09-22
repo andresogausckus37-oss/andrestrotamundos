@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 import {
   WebhookSignatureValidator,
   InvalidWebhookSignatureError,
@@ -41,24 +43,58 @@ export default async function handler(req, res) {
       });
     }
 
+    // Diagnóstico temporal de la firma
     try {
+      const partes = Object.fromEntries(
+        xSignature.split(",").map((parte) => {
+          const [clave, valor] =
+            parte.split("=");
 
-      console.log("WEBHOOK DEBUG", {
-  xSignature,
-  xRequestId,
-  dataIdQuery: req.query["data.id"],
-  dataIdBody: req.body?.data?.id,
-  typeQuery: req.query.type,
-  typeBody: req.body?.type,
-        liveMode: req.body?.live_mode,
-applicationId: req.body?.application_id,
-});
+          return [
+            clave.trim(),
+            valor.trim(),
+          ];
+        })
+      );
+
+      const ts = partes.ts;
+      const v1 = partes.v1;
+
+      const calcularFirma = (id) => {
+        const manifest =
+          `id:${id};request-id:${xRequestId};ts:${ts};`;
+
+        return crypto
+          .createHmac(
+            "sha256",
+            secret.trim()
+          )
+          .update(manifest)
+          .digest("hex");
+      };
+
+      const firmaOriginal =
+        calcularFirma(dataId);
+
+      const firmaMinuscula =
+        calcularFirma(
+          String(dataId).toLowerCase()
+        );
+
+      console.log("FIRMA DEBUG", {
+        dataId,
+        coincideOriginal:
+          firmaOriginal === v1,
+        coincideMinuscula:
+          firmaMinuscula === v1,
+      });
+
       WebhookSignatureValidator.validate({
-  xSignature,
-  xRequestId,
-  dataId,
-  secret: secret.trim(),
-});
+        xSignature,
+        xRequestId,
+        dataId,
+        secret: secret.trim(),
+      });
     } catch (error) {
       if (
         error instanceof
@@ -99,7 +135,8 @@ applicationId: req.body?.application_id,
       );
 
       return res.status(500).json({
-        error: "No se pudo verificar la Order",
+        error:
+          "No se pudo verificar la Order",
       });
     }
 
@@ -108,9 +145,11 @@ applicationId: req.body?.application_id,
 
     const pagoAprobado =
       order.status === "processed" &&
-      order.status_detail === "accredited" &&
+      order.status_detail ===
+        "accredited" &&
       pago?.status === "processed" &&
-      pago?.status_detail === "accredited";
+      pago?.status_detail ===
+        "accredited";
 
     if (!pagoAprobado) {
       return res.status(200).json({
@@ -121,14 +160,34 @@ applicationId: req.body?.application_id,
 
     const db = await conectarMongoDB();
 
-    const pedido =
-      await db.collection("pedidos").findOne({
-        pedidoId: order.external_reference,
+    const pedido = await db
+      .collection("pedidos")
+      .findOne({
+        pedidoId:
+          order.external_reference,
       });
 
     if (!pedido) {
       console.error(
         "Pedido no encontrado:",
+        order.external_reference
+      );
+
+      return res.status(200).json({
+        recibido: true,
+      });
+    }
+
+    // Verifica que la Order recibida sea
+    // exactamente la creada para este pedido
+    if (
+      pedido.mercadoPagoOrderId &&
+      String(
+        pedido.mercadoPagoOrderId
+      ) !== String(order.id)
+    ) {
+      console.error(
+        "Order incorrecta para el pedido:",
         order.external_reference
       );
 
@@ -151,19 +210,22 @@ applicationId: req.body?.application_id,
       });
     }
 
-    await db.collection("pedidos").updateOne(
-      {
-        pedidoId: order.external_reference,
-      },
-      {
-        $set: {
-          estado: "aprobado",
-          pagadoEn: new Date(),
-          mercadoPagoPaymentId:
-            pago.id,
+    await db
+      .collection("pedidos")
+      .updateOne(
+        {
+          pedidoId:
+            order.external_reference,
         },
-      }
-    );
+        {
+          $set: {
+            estado: "aprobado",
+            pagadoEn: new Date(),
+            mercadoPagoPaymentId:
+              pago.id,
+          },
+        }
+      );
 
     return res.status(200).json({
       recibido: true,
@@ -176,7 +238,8 @@ applicationId: req.body?.application_id,
     );
 
     return res.status(500).json({
-      error: "Error procesando webhook",
+      error:
+        "Error procesando webhook",
     });
   }
 }
