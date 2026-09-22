@@ -16,13 +16,13 @@ export const productosDigitales = [
     categoria: "laberintos",
     linea: "juegos",
 
-    precioARS: 2,
+    precioARS: 3499,
 
     descuento: 0,
 
     oferta: {
       activa: true,
-      precioARS: 1,
+      precioARS: 2499,
       etiqueta: "",
     },
 
@@ -85,13 +85,13 @@ export const productosDigitales = [
   categoria: "crucigramas",
   linea: "juegos",
 
-  precioARS: 3,
+  precioARS: 2999,
 
   descuento: 0,
 
   oferta: {
     activa: true,
-    precioARS: 2,
+    precioARS: 2499,
     etiqueta: "",
   },
 
