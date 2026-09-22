@@ -30,6 +30,7 @@ import PagoFallido from "./paginas/PagoFallido";
 import Checkout from "./paginas/Checkout";
 import PagoTransferencia from "./paginas/PagoTransferencia";
 import LoginAdmin from "./paginas/LoginAdmin";
+import Admin from "./paginas/Admin";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
@@ -153,6 +154,11 @@ const ContenidoApp = () => {
           <Route
   path="/admin/login"
   element={<LoginAdmin />}
+/>
+
+          <Route
+  path="/admin"
+  element={<Admin />}
 />
 
           <Route
