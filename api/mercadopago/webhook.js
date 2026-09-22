@@ -43,11 +43,11 @@ export default async function handler(req, res) {
 
     try {
       WebhookSignatureValidator.validate({
-        xSignature,
-        xRequestId,
-        dataId,
-        secret,
-      });
+  xSignature,
+  xRequestId,
+  dataId: String(dataId).toLowerCase(),
+  secret,
+});
     } catch (error) {
       if (
         error instanceof
