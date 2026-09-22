@@ -24,6 +24,9 @@ import GeneradorPdf from "./paginas/GeneradorPdf";
 import Digitales from "./paginas/Digitales";
 import GeneradorLaminas from "./paginas/GeneradorLaminas";
 import OptimizadorImagenes from "./paginas/OptimizadorImagenes";
+import PagoExitoso from "./paginas/PagoExitoso";
+import PagoPendiente from "./paginas/PagoPendiente";
+import PagoFallido from "./paginas/PagoFallido";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
@@ -109,6 +112,10 @@ const ContenidoApp = () => {
           <Route path="/" element={<Home />} />
 
           <Route path="/tienda" element={<Tienda />} />
+
+          <Route path="/pago/exitoso" element={<PagoExitoso />} />
+<Route path="/pago/pendiente" element={<PagoPendiente />} />
+<Route path="/pago/fallido" element={<PagoFallido />} />
 
           <Route
             path="/recomendados"

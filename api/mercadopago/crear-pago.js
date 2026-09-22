@@ -76,6 +76,21 @@ if (!email) {
 
           external_reference: pedidoId,
 
+          config: {
+  online: {
+    success_url:
+      "https://andreshousesitter.com/pago/exitoso",
+
+    failure_url:
+      "https://andreshousesitter.com/pago/fallido",
+
+    pending_url:
+      "https://andreshousesitter.com/pago/pendiente",
+
+    auto_return: "all",
+  },
+},
+
 payer: {
   email: email,
 },
