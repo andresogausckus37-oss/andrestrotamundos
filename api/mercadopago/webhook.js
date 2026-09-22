@@ -57,7 +57,7 @@ applicationId: req.body?.application_id,
   xSignature,
   xRequestId,
   dataId,
-  secret,
+  secret: secret.trim(),
 });
     } catch (error) {
       if (
