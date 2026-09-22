@@ -42,6 +42,15 @@ export default async function handler(req, res) {
     }
 
     try {
+
+      console.log("WEBHOOK DEBUG", {
+  xSignature,
+  xRequestId,
+  dataIdQuery: req.query["data.id"],
+  dataIdBody: req.body?.data?.id,
+  typeQuery: req.query.type,
+  typeBody: req.body?.type,
+});
       WebhookSignatureValidator.validate({
   xSignature,
   xRequestId,
