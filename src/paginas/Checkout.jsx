@@ -19,7 +19,7 @@ import {
 import { productosDigitales } from "../datos/productosDigitales";
 import { resenasProductos } from "../datos/resenasProductos";
 
-const DESCUENTO_TRANSFERENCIA = 10;
+const DESCUENTO_TRANSFERENCIA = 5;
 
 export default function Checkout() {
   const { id } = useParams();
@@ -223,17 +223,84 @@ const total =
     }
   };
 
+  const crearPedidoTransferencia = async () => {
+  if (!validarDatos()) return;
+
+  try {
+    setProcesando(true);
+    setError("");
+
+    const respuesta = await fetch(
+      "/api/transferencia/crear-pedido",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          productoId:
+            producto.id,
+
+          ventaCruzadaId:
+            ventaCruzadaAgregada &&
+            productoVentaCruzada
+              ? productoVentaCruzada.id
+              : null,
+
+          nombre:
+            nombre.trim(),
+
+          email:
+            email.trim(),
+        }),
+      }
+    );
+
+    const datos =
+      await respuesta.json();
+
+    if (
+      !respuesta.ok ||
+      !datos.pedidoId
+    ) {
+      throw new Error(
+        datos.error ||
+          "No se pudo crear el pedido."
+      );
+    }
+
+    navigate(
+      `/pago/transferencia?pedidoId=${encodeURIComponent(
+        datos.pedidoId
+      )}`
+    );
+  } catch (error) {
+    console.error(
+      "Error creando pedido por transferencia:",
+      error
+    );
+
+    setError(
+      error.message ||
+        "No se pudo crear el pedido."
+    );
+
+    setProcesando(false);
+  }
+};
+
   const continuarPago = () => {
     if (metodoPago === "mercadopago") {
       pagarMercadoPago();
       return;
     }
 
-    if (!validarDatos()) return;
-
-    setError(
-      "La transferencia bancaria estará disponible próximamente."
-    );
+    if (metodoPago === "transferencia") {
+      crearPedidoTransferencia();
+    }
   };
 
   return (
