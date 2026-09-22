@@ -27,6 +27,7 @@ import OptimizadorImagenes from "./paginas/OptimizadorImagenes";
 import PagoExitoso from "./paginas/PagoExitoso";
 import PagoPendiente from "./paginas/PagoPendiente";
 import PagoFallido from "./paginas/PagoFallido";
+import Checkout from "./paginas/Checkout";
 
 /* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
 const ScrollToTop = () => {
@@ -136,6 +137,11 @@ const ContenidoApp = () => {
             path="/tienda/:id"
             element={<DetalleProducto />}
           />
+
+          <Route
+  path="/checkout/:id"
+  element={<Checkout />}
+/>
 
           <Route
             path="/generador-laminas"

@@ -2,6 +2,33 @@ import crypto from "crypto";
 import { conectarMongoDB } from "../../lib/mongodb.js";
 import { productosDigitales } from "../../src/datos/productosDigitales.js";
 
+/* =====================================================
+   CALCULAR PRECIO REAL DE UN PRODUCTO
+===================================================== */
+
+const obtenerPrecioFinal = (producto) => {
+  const precio =
+    producto.oferta?.activa &&
+    Number(producto.oferta.precioARS) > 0
+      ? Number(producto.oferta.precioARS)
+      : Number(producto.precioARS);
+
+  if (
+    !Number.isFinite(precio) ||
+    precio <= 0
+  ) {
+    throw new Error(
+      `Precio inválido para el producto ${producto.id}`
+    );
+  }
+
+  return precio;
+};
+
+/* =====================================================
+   HANDLER
+===================================================== */
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -19,12 +46,19 @@ export default async function handler(req, res) {
       );
     }
 
-    const email = req.body?.email?.trim();
-    const productoId = req.body?.productoId;
+    const email =
+      req.body?.email?.trim();
+
+    const productoId =
+      req.body?.productoId;
+
+    const ventaCruzadaId =
+      req.body?.ventaCruzadaId || null;
 
     if (!email) {
       return res.status(400).json({
-        error: "Falta el correo electrónico.",
+        error:
+          "Falta el correo electrónico.",
       });
     }
 
@@ -35,47 +69,130 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       OBTENER PRODUCTO
+       PRODUCTO PRINCIPAL
     ===================================================== */
 
     const producto =
       productosDigitales.find(
-        (item) => item.id === productoId
+        (item) =>
+          item.id === productoId
       );
 
     if (!producto) {
       return res.status(404).json({
-        error: "Producto no encontrado.",
+        error:
+          "Producto no encontrado.",
       });
     }
 
+    const precioPrincipal =
+      obtenerPrecioFinal(producto);
+
     /* =====================================================
-       CALCULAR PRECIO FINAL
+       VENTA CRUZADA
     ===================================================== */
 
-    const precioFinal =
-      producto.oferta?.activa &&
-      Number(producto.oferta.precioARS) > 0
-        ? Number(producto.oferta.precioARS)
-        : Number(producto.precioARS);
+    let productoVentaCruzada = null;
+    let precioVentaCruzada = 0;
 
-    if (
-      !Number.isFinite(precioFinal) ||
-      precioFinal <= 0
-    ) {
-      throw new Error(
-        "El producto tiene un precio inválido"
-      );
+    if (ventaCruzadaId) {
+      /*
+       * Seguridad:
+       * solamente permitimos agregar el producto
+       * configurado como venta cruzada del producto
+       * principal.
+       */
+      if (
+        producto.ventaCruzadaId !==
+        ventaCruzadaId
+      ) {
+        return res.status(400).json({
+          error:
+            "Producto adicional no válido.",
+        });
+      }
+
+      productoVentaCruzada =
+        productosDigitales.find(
+          (item) =>
+            item.id === ventaCruzadaId
+        );
+
+      if (!productoVentaCruzada) {
+        return res.status(404).json({
+          error:
+            "Producto adicional no encontrado.",
+        });
+      }
+
+      if (
+        productoVentaCruzada.id ===
+        producto.id
+      ) {
+        return res.status(400).json({
+          error:
+            "El producto adicional no es válido.",
+        });
+      }
+
+      precioVentaCruzada =
+        obtenerPrecioFinal(
+          productoVentaCruzada
+        );
     }
+
+    /* =====================================================
+       TOTAL REAL DEL PEDIDO
+    ===================================================== */
+
+    const precioTotal =
+      precioPrincipal +
+      precioVentaCruzada;
+
+    const monto =
+      precioTotal.toFixed(2);
+
+    /* =====================================================
+       ITEMS DEL PEDIDO
+    ===================================================== */
+
+    const productosPedido = [
+      {
+        productoId: producto.id,
+        nombre: producto.nombre,
+        precio: precioPrincipal,
+      },
+    ];
+
+    if (productoVentaCruzada) {
+      productosPedido.push({
+        productoId:
+          productoVentaCruzada.id,
+
+        nombre:
+          productoVentaCruzada.nombre,
+
+        precio:
+          precioVentaCruzada,
+      });
+    }
+
+    const itemsMercadoPago =
+      productosPedido.map(
+        (item) => ({
+          title: item.nombre,
+          quantity: 1,
+          unit_price:
+            item.precio.toFixed(2),
+        })
+      );
 
     /* =====================================================
        CREAR PEDIDO INTERNO
     ===================================================== */
 
-    const pedidoId = crypto.randomUUID();
-
-    const monto =
-      precioFinal.toFixed(2);
+    const pedidoId =
+      crypto.randomUUID();
 
     /* =====================================================
        CREAR ORDER EN MERCADO PAGO
@@ -104,7 +221,8 @@ export default async function handler(req, res) {
 
           total_amount: monto,
 
-          external_reference: pedidoId,
+          external_reference:
+            pedidoId,
 
           config: {
             online: {
@@ -125,13 +243,7 @@ export default async function handler(req, res) {
             email,
           },
 
-          items: [
-            {
-              title: producto.nombre,
-              quantity: 1,
-              unit_price: monto,
-            },
-          ],
+          items: itemsMercadoPago,
         }),
       }
     );
@@ -142,13 +254,19 @@ export default async function handler(req, res) {
     if (!respuesta.ok) {
       console.error(
         "Error Mercado Pago:",
-        JSON.stringify(datos, null, 2)
+        JSON.stringify(
+          datos,
+          null,
+          2
+        )
       );
 
-      return res.status(respuesta.status).json({
-        error:
-          "No se pudo crear el pago.",
-      });
+      return res
+        .status(respuesta.status)
+        .json({
+          error:
+            "No se pudo crear el pago.",
+        });
     }
 
     /* =====================================================
@@ -163,37 +281,53 @@ export default async function handler(req, res) {
       .insertOne({
         pedidoId,
 
-        productoId: producto.id,
+        /* Compatibilidad con pedidos anteriores */
+        productoId:
+          producto.id,
 
         nombreProducto:
           producto.nombre,
 
-        emailComprador: email,
+        /* Nueva estructura */
+        productos:
+          productosPedido,
 
-        precio: precioFinal,
+        ventaCruzadaId:
+          productoVentaCruzada?.id ||
+          null,
+
+        emailComprador:
+          email,
+
+        precio:
+          precioTotal,
 
         moneda: "ARS",
 
         mercadoPagoOrderId:
           datos.id,
 
-        estado: "pendiente",
+        estado:
+          "pendiente",
 
-        creadoEn: new Date(),
+        creadoEn:
+          new Date(),
 
-        pagadoEn: null,
+        pagadoEn:
+          null,
 
         descargas: 0,
       });
 
     /* =====================================================
-       RESPUESTA AL FRONTEND
+       RESPUESTA
     ===================================================== */
 
     return res.status(201).json({
       pedidoId,
 
-      orderId: datos.id,
+      orderId:
+        datos.id,
 
       checkoutUrl:
         datos.checkout_url,

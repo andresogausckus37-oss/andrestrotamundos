@@ -1,5 +1,3 @@
-import crypto from "crypto";
-
 import {
   WebhookSignatureValidator,
   InvalidWebhookSignatureError,
@@ -27,6 +25,10 @@ export default async function handler(req, res) {
       );
     }
 
+    /* =====================================================
+       VALIDAR FIRMA DEL WEBHOOK
+    ===================================================== */
+
     const xSignature =
       req.headers["x-signature"];
 
@@ -37,58 +39,18 @@ export default async function handler(req, res) {
       req.query["data.id"] ||
       req.body?.data?.id;
 
-    if (!xSignature || !xRequestId || !dataId) {
+    if (
+      !xSignature ||
+      !xRequestId ||
+      !dataId
+    ) {
       return res.status(400).json({
-        error: "Notificación incompleta",
+        error:
+          "Notificación incompleta",
       });
     }
 
-    // Diagnóstico temporal de la firma
     try {
-      const partes = Object.fromEntries(
-        xSignature.split(",").map((parte) => {
-          const [clave, valor] =
-            parte.split("=");
-
-          return [
-            clave.trim(),
-            valor.trim(),
-          ];
-        })
-      );
-
-      const ts = partes.ts;
-      const v1 = partes.v1;
-
-      const calcularFirma = (id) => {
-        const manifest =
-          `id:${id};request-id:${xRequestId};ts:${ts};`;
-
-        return crypto
-          .createHmac(
-            "sha256",
-            secret.trim()
-          )
-          .update(manifest)
-          .digest("hex");
-      };
-
-      const firmaOriginal =
-        calcularFirma(dataId);
-
-      const firmaMinuscula =
-        calcularFirma(
-          String(dataId).toLowerCase()
-        );
-
-      console.log("FIRMA DEBUG", {
-        dataId,
-        coincideOriginal:
-          firmaOriginal === v1,
-        coincideMinuscula:
-          firmaMinuscula === v1,
-      });
-
       WebhookSignatureValidator.validate({
         xSignature,
         xRequestId,
@@ -108,11 +70,19 @@ export default async function handler(req, res) {
       throw error;
     }
 
+    /* =====================================================
+       SOLO PROCESAR ORDERS
+    ===================================================== */
+
     if (req.body?.type !== "order") {
       return res.status(200).json({
         recibido: true,
       });
     }
+
+    /* =====================================================
+       CONSULTAR ORDER EN MERCADO PAGO
+    ===================================================== */
 
     const respuesta = await fetch(
       `https://api.mercadopago.com/v1/orders/${encodeURIComponent(
@@ -126,12 +96,17 @@ export default async function handler(req, res) {
       }
     );
 
-    const order = await respuesta.json();
+    const order =
+      await respuesta.json();
 
     if (!respuesta.ok) {
       console.error(
         "Error consultando Order:",
-        JSON.stringify(order, null, 2)
+        JSON.stringify(
+          order,
+          null,
+          2
+        )
       );
 
       return res.status(500).json({
@@ -140,14 +115,21 @@ export default async function handler(req, res) {
       });
     }
 
+    /* =====================================================
+       VALIDAR ESTADO DEL PAGO
+    ===================================================== */
+
     const pago =
-      order.transactions?.payments?.[0];
+      order.transactions
+        ?.payments?.[0];
 
     const pagoAprobado =
-      order.status === "processed" &&
+      order.status ===
+        "processed" &&
       order.status_detail ===
         "accredited" &&
-      pago?.status === "processed" &&
+      pago?.status ===
+        "processed" &&
       pago?.status_detail ===
         "accredited";
 
@@ -158,7 +140,12 @@ export default async function handler(req, res) {
       });
     }
 
-    const db = await conectarMongoDB();
+    /* =====================================================
+       BUSCAR PEDIDO
+    ===================================================== */
+
+    const db =
+      await conectarMongoDB();
 
     const pedido = await db
       .collection("pedidos")
@@ -178,8 +165,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // Verifica que la Order recibida sea
-    // exactamente la creada para este pedido
+    /* =====================================================
+       VALIDAR ORDER
+    ===================================================== */
+
     if (
       pedido.mercadoPagoOrderId &&
       String(
@@ -196,6 +185,11 @@ export default async function handler(req, res) {
       });
     }
 
+    /* =====================================================
+       VALIDAR TOTAL DEL PEDIDO
+       FUNCIONA CON UNO O VARIOS PRODUCTOS
+    ===================================================== */
+
     if (
       Number(order.total_amount) !==
       Number(pedido.precio)
@@ -210,6 +204,10 @@ export default async function handler(req, res) {
       });
     }
 
+    /* =====================================================
+       APROBAR PEDIDO
+    ===================================================== */
+
     await db
       .collection("pedidos")
       .updateOne(
@@ -219,8 +217,12 @@ export default async function handler(req, res) {
         },
         {
           $set: {
-            estado: "aprobado",
-            pagadoEn: new Date(),
+            estado:
+              "aprobado",
+
+            pagadoEn:
+              new Date(),
+
             mercadoPagoPaymentId:
               pago.id,
           },

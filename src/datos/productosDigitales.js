@@ -4,7 +4,7 @@ export const productosDigitales = [
 
     nombre: "50 Laberintos Imprimibles Para Niños con Soluciones",
 
-    ventaCruzadaId: "",
+    ventaCruzadaId: "50-crucigramas-reino-animal",
 
     descripcion:
       "50 laberintos con caminos abiertos, ideal para menores de 7 años. Diversión y aprendizaje en un mismo PDF imprimible con soluciones incluidas.",
@@ -16,13 +16,13 @@ export const productosDigitales = [
     categoria: "laberintos",
     linea: "juegos",
 
-    precioARS: 5,
+    precioARS: 3499,
 
     descuento: 0,
 
     oferta: {
       activa: true,
-      precioARS: 3,
+      precioARS: 2499,
       etiqueta: "",
     },
 
@@ -73,7 +73,7 @@ export const productosDigitales = [
 
   nombre: "50 Crucigramas del Reino Animal con Soluciones",
 
-  ventaCruzadaId: "",
+  ventaCruzadaId: "50-laberintos-para-ninos",
 
   descripcion:
     "50 crucigramas imprimibles del reino animal con dificultad progresiva y soluciones incluidas. Una forma entretenida de poner a prueba la lógica, la concentración y el vocabulario.",
@@ -85,13 +85,13 @@ export const productosDigitales = [
   categoria: "crucigramas",
   linea: "juegos",
 
-  precioARS: 2,
+  precioARS: 3999,
 
   descuento: 0,
 
   oferta: {
     activa: true,
-    precioARS: 1,
+    precioARS: 2999,
     etiqueta: "",
   },
 

@@ -17,7 +17,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { pedidoId } = req.query;
+    const { pedidoId, productoId } =
+      req.query;
 
     if (!pedidoId) {
       return res.status(400).json({
@@ -39,28 +40,83 @@ export default async function handler(req, res) {
 
     if (pedido.estado !== "aprobado") {
       return res.status(403).json({
-        error: "El pago todavía no está aprobado",
+        error:
+          "El pago todavía no está aprobado",
       });
     }
 
+    /* =====================================================
+       PRODUCTOS COMPRADOS
+    ===================================================== */
+
+    const productosComprados =
+      Array.isArray(pedido.productos) &&
+      pedido.productos.length > 0
+        ? pedido.productos.map(
+            (producto) =>
+              producto.productoId
+          )
+        : [pedido.productoId];
+
+    /* =====================================================
+       DETERMINAR PRODUCTO A DESCARGAR
+    ===================================================== */
+
+    const productoSolicitado =
+      productoId ||
+      pedido.productoId;
+
+    /* =====================================================
+       VALIDAR QUE EL PRODUCTO PERTENEZCA AL PEDIDO
+    ===================================================== */
+
+    if (
+      !productosComprados.includes(
+        productoSolicitado
+      )
+    ) {
+      return res.status(403).json({
+        error:
+          "Este producto no pertenece al pedido",
+      });
+    }
+
+    /* =====================================================
+       OBTENER ARCHIVO
+    ===================================================== */
+
     const archivo =
-      ARCHIVOS_PRODUCTOS[pedido.productoId];
+      ARCHIVOS_PRODUCTOS[
+        productoSolicitado
+      ];
 
     if (!archivo) {
       return res.status(404).json({
-        error: "Archivo del producto no encontrado",
+        error:
+          "Archivo del producto no encontrado",
       });
     }
 
-    const resultado = await get(archivo, {
-      access: "private",
-    });
+    /* =====================================================
+       OBTENER PDF PRIVADO
+    ===================================================== */
+
+    const resultado = await get(
+      archivo,
+      {
+        access: "private",
+      }
+    );
 
     if (!resultado) {
       return res.status(404).json({
         error: "PDF no encontrado",
       });
     }
+
+    /* =====================================================
+       HEADERS
+    ===================================================== */
 
     res.setHeader(
       "Content-Type",
@@ -78,6 +134,10 @@ export default async function handler(req, res) {
       "private, no-store"
     );
 
+    /* =====================================================
+       STREAM DEL ARCHIVO
+    ===================================================== */
+
     const reader =
       resultado.stream.getReader();
 
@@ -87,17 +147,35 @@ export default async function handler(req, res) {
 
       if (done) break;
 
-      res.write(Buffer.from(value));
+      res.write(
+        Buffer.from(value)
+      );
     }
 
     res.end();
+
+    /* =====================================================
+       REGISTRAR DESCARGA
+    ===================================================== */
 
     await db
       .collection("pedidos")
       .updateOne(
         { pedidoId },
         {
-          $inc: { descargas: 1 },
+          $inc: {
+            descargas: 1,
+          },
+
+          $push: {
+            historialDescargas: {
+              productoId:
+                productoSolicitado,
+
+              fecha:
+                new Date(),
+            },
+          },
         }
       );
   } catch (error) {
