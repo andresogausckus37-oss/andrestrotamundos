@@ -35,7 +35,7 @@ if (!email) {
       id: "50-laberintos-para-ninos",
       nombre:
         "50 Laberintos para Niños con Caminos Abiertos",
-      precio: 2990,
+      precio: 1,
     };
 
     /* =====================================================
