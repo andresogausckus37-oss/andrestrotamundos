@@ -1,15 +1,24 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Check,
   Copy,
+  FileText,
   Landmark,
+  Loader2,
   Upload,
 } from "lucide-react";
 
 export default function PagoTransferencia() {
   const [searchParams] = useSearchParams();
+
+  const inputArchivoRef = useRef(null);
+
   const [copiado, setCopiado] = useState("");
+  const [archivo, setArchivo] = useState(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [error, setError] = useState("");
 
   const pedidoId =
     searchParams.get("pedidoId");
@@ -23,9 +32,7 @@ export default function PagoTransferencia() {
 
   const copiar = async (valor, campo) => {
     try {
-      await navigator.clipboard.writeText(
-        valor
-      );
+      await navigator.clipboard.writeText(valor);
 
       setCopiado(campo);
 
@@ -33,10 +40,111 @@ export default function PagoTransferencia() {
         setCopiado("");
       }, 1800);
     } catch (error) {
+      console.error("Error copiando:", error);
+    }
+  };
+
+  const seleccionarArchivo = (event) => {
+    const seleccionado =
+      event.target.files?.[0];
+
+    if (!seleccionado) return;
+
+    const tiposPermitidos = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+    ];
+
+    if (
+      !tiposPermitidos.includes(
+        seleccionado.type
+      )
+    ) {
+      setArchivo(null);
+      setError(
+        "Selecciona un archivo JPG, PNG, WEBP o PDF."
+      );
+      return;
+    }
+
+    const maximo = 8 * 1024 * 1024;
+
+    if (seleccionado.size > maximo) {
+      setArchivo(null);
+      setError(
+        "El comprobante no puede superar los 8 MB."
+      );
+      return;
+    }
+
+    setError("");
+    setArchivo(seleccionado);
+  };
+
+  const subirComprobante = async () => {
+    if (!pedidoId) {
+      setError(
+        "No se encontró el número de pedido."
+      );
+      return;
+    }
+
+    if (!archivo) {
+      setError(
+        "Selecciona un comprobante."
+      );
+      return;
+    }
+
+    try {
+      setSubiendo(true);
+      setError("");
+
+      const respuesta = await fetch(
+        `/api/transferencia/subir-comprobante?pedidoId=${encodeURIComponent(
+          pedidoId
+        )}`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              archivo.type,
+          },
+
+          body: archivo,
+        }
+      );
+
+      const datos =
+        await respuesta.json();
+
+      if (
+        !respuesta.ok ||
+        !datos.recibido
+      ) {
+        throw new Error(
+          datos.error ||
+            "No se pudo enviar el comprobante."
+        );
+      }
+
+      setEnviado(true);
+      setArchivo(null);
+    } catch (error) {
       console.error(
-        "Error copiando:",
+        "Error subiendo comprobante:",
         error
       );
+
+      setError(
+        error.message ||
+          "No se pudo enviar el comprobante."
+      );
+    } finally {
+      setSubiendo(false);
     }
   };
 
@@ -185,31 +293,129 @@ export default function PagoTransferencia() {
               </h2>
 
               <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                Después de realizar la
-                transferencia, selecciona el
-                comprobante desde la galería de
-                tu dispositivo.
+                Selecciona el comprobante desde
+                la galería o los archivos de tu
+                dispositivo.
               </p>
             </div>
           </div>
 
-          <div className="mt-3 rounded-lg border border-dashed border-slate-300 p-4 text-center">
-            <Upload
-              size={18}
-              className="mx-auto text-slate-400"
-            />
+          {!enviado ? (
+            <>
+              <input
+                ref={inputArchivoRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={seleccionarArchivo}
+                className="hidden"
+              />
 
-            <p className="mt-1.5 text-[10px] text-slate-500">
-              JPG, PNG o PDF
-            </p>
+              {!archivo ? (
+                <div className="mt-3 rounded-lg border border-dashed border-slate-300 p-4 text-center">
+                  <Upload
+                    size={18}
+                    className="mx-auto text-slate-400"
+                  />
 
-            <button
-              type="button"
-              className="mt-2 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-bold text-white"
-            >
-              Seleccionar comprobante
-            </button>
-          </div>
+                  <p className="mt-1.5 text-[10px] text-slate-500">
+                    JPG, PNG, WEBP o PDF · Máx.
+                    8 MB
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      inputArchivoRef.current?.click()
+                    }
+                    className="mt-2 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-bold text-white"
+                  >
+                    Seleccionar comprobante
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center gap-2">
+                    <FileText
+                      size={18}
+                      className="shrink-0 text-violet-600"
+                    />
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] font-semibold text-slate-800">
+                        {archivo.name}
+                      </p>
+
+                      <p className="text-[9px] text-slate-400">
+                        {(
+                          archivo.size /
+                          1024 /
+                          1024
+                        ).toFixed(2)}{" "}
+                        MB
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={subiendo}
+                      onClick={() =>
+                        inputArchivoRef.current?.click()
+                      }
+                      className="text-[10px] font-bold text-slate-500"
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={subiendo}
+                    onClick={subirComprobante}
+                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2.5 text-[11px] font-bold text-white disabled:opacity-60"
+                  >
+                    {subiendo ? (
+                      <>
+                        <Loader2
+                          size={14}
+                          className="animate-spin"
+                        />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={14} />
+                        Enviar comprobante
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {error && (
+                <p className="mt-2 text-[10px] font-medium text-red-600">
+                  {error}
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                  <Check size={15} />
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-bold text-emerald-800">
+                    Comprobante recibido
+                  </p>
+
+                  <p className="text-[10px] text-emerald-700">
+                    Tu pago será verificado.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* SEGUIMIENTO */}
