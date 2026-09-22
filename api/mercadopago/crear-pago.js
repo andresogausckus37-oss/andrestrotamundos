@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { conectarMongoDB } from "../../lib/mongodb.js";
+import { productosDigitales } from "../../src/datos/productosDigitales.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -18,25 +19,54 @@ export default async function handler(req, res) {
       );
     }
 
-    const email =
-  req.body?.email?.trim();
+    const email = req.body?.email?.trim();
+    const productoId = req.body?.productoId;
 
-if (!email) {
-  return res.status(400).json({
-    error: "Falta el correo electrónico.",
-  });
-}
+    if (!email) {
+      return res.status(400).json({
+        error: "Falta el correo electrónico.",
+      });
+    }
+
+    if (!productoId) {
+      return res.status(400).json({
+        error: "Falta el producto.",
+      });
+    }
 
     /* =====================================================
-       PRODUCTO DE PRUEBA
+       OBTENER PRODUCTO
     ===================================================== */
 
-    const producto = {
-      id: "50-laberintos-para-ninos",
-      nombre:
-        "50 Laberintos para Niños con Caminos Abiertos",
-      precio: 1,
-    };
+    const producto =
+      productosDigitales.find(
+        (item) => item.id === productoId
+      );
+
+    if (!producto) {
+      return res.status(404).json({
+        error: "Producto no encontrado.",
+      });
+    }
+
+    /* =====================================================
+       CALCULAR PRECIO FINAL
+    ===================================================== */
+
+    const precioFinal =
+      producto.oferta?.activa &&
+      Number(producto.oferta.precioARS) > 0
+        ? Number(producto.oferta.precioARS)
+        : Number(producto.precioARS);
+
+    if (
+      !Number.isFinite(precioFinal) ||
+      precioFinal <= 0
+    ) {
+      throw new Error(
+        "El producto tiene un precio inválido"
+      );
+    }
 
     /* =====================================================
        CREAR PEDIDO INTERNO
@@ -45,7 +75,7 @@ if (!email) {
     const pedidoId = crypto.randomUUID();
 
     const monto =
-      Number(producto.precio).toFixed(2);
+      precioFinal.toFixed(2);
 
     /* =====================================================
        CREAR ORDER EN MERCADO PAGO
@@ -77,25 +107,25 @@ if (!email) {
           external_reference: pedidoId,
 
           config: {
-  online: {
-    success_url:
-      "https://andreshousesitter.com/pago/exitoso",
+            online: {
+              success_url:
+                "https://andreshousesitter.com/pago/exitoso",
 
-    failure_url:
-      "https://andreshousesitter.com/pago/fallido",
+              failure_url:
+                "https://andreshousesitter.com/pago/fallido",
 
-    pending_url:
-      "https://andreshousesitter.com/pago/pendiente",
+              pending_url:
+                "https://andreshousesitter.com/pago/pendiente",
 
-    auto_return: "all",
-  },
-},
+              auto_return: "all",
+            },
+          },
 
-payer: {
-  email: email,
-},
+          payer: {
+            email,
+          },
 
-items: [
+          items: [
             {
               title: producto.nombre,
               quantity: 1,
@@ -140,8 +170,7 @@ items: [
 
         emailComprador: email,
 
-        precio:
-          producto.precio,
+        precio: precioFinal,
 
         moneda: "ARS",
 
