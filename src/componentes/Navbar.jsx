@@ -115,13 +115,14 @@ const Navbar = () => {
       className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
         isScrolled ||
         location.pathname !== "/"
-          ? "border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-xl"
+          ? "border-b border-[#E5E2DA] bg-[#FFFEFC]/95 backdrop-blur-xl"
           : "bg-transparent"
       }`}
     >
       {/* BARRA PRINCIPAL */}
 
       <div className="contenedor relative flex items-center justify-between px-5 py-3">
+
         {/* MARCA */}
 
         <button
@@ -136,11 +137,11 @@ const Navbar = () => {
           />
 
           <div className="ml-10 flex flex-col items-start text-left">
-            <p className="whitespace-nowrap text-sm font-medium leading-tight tracking-tight text-slate-900 sm:text-base">
+            <p className="whitespace-nowrap text-sm font-medium leading-tight tracking-tight text-[#26352F] sm:text-base">
               {CONFIG.marca.nombre}
             </p>
 
-            <p className="mt-1 whitespace-nowrap text-[9px] font-medium uppercase leading-none tracking-[0.12em] text-slate-500 sm:text-[10px] sm:tracking-[0.16em]">
+            <p className="mt-1 whitespace-nowrap text-[9px] font-medium uppercase leading-none tracking-[0.12em] text-[#7B8680] sm:text-[10px] sm:tracking-[0.16em]">
               {CONFIG.marca.lema}
             </p>
           </div>
@@ -154,7 +155,7 @@ const Navbar = () => {
               key={enlace.label}
               type="button"
               onClick={enlace.onClick}
-              className="px-4 py-1 text-center text-xs font-medium text-slate-600 transition hover:text-sky-600"
+              className="relative px-4 py-1 text-center text-xs font-medium text-[#66736D] transition-colors duration-200 hover:text-[#3F6655]"
             >
               {enlace.label}
             </button>
@@ -170,7 +171,7 @@ const Navbar = () => {
               (actual) => !actual
             )
           }
-          className="shrink-0 rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 md:hidden"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[#3F6655] transition hover:bg-[#E8F0EA] md:hidden"
           aria-label={
             isMenuOpen
               ? "Cerrar menú"
@@ -178,9 +179,15 @@ const Navbar = () => {
           }
         >
           {isMenuOpen ? (
-            <X size={23} />
+            <X
+              size={21}
+              strokeWidth={1.7}
+            />
           ) : (
-            <Menu size={23} />
+            <Menu
+              size={21}
+              strokeWidth={1.7}
+            />
           )}
         </button>
       </div>
@@ -188,18 +195,35 @@ const Navbar = () => {
       {/* MENÚ MÓVIL */}
 
       {isMenuOpen && (
-        <div className="border-t border-slate-200 bg-white shadow-xl md:hidden">
-          <nav className="contenedor flex flex-col items-center px-5 py-5">
-            {enlaces.map((enlace) => (
-              <button
-                key={enlace.label}
-                type="button"
-                onClick={enlace.onClick}
-                className="w-full max-w-[240px] rounded-xl px-4 py-3 text-center text-sm font-medium text-slate-600 transition hover:bg-sky-50 hover:text-sky-700"
-              >
-                {enlace.label}
-              </button>
-            ))}
+        <div className="border-t border-[#E5E2DA] bg-[#FFFEFC] md:hidden">
+          <nav className="contenedor flex flex-col items-center px-5 py-4">
+            {enlaces.map(
+              (enlace, index) => (
+                <button
+                  key={enlace.label}
+                  type="button"
+                  onClick={enlace.onClick}
+                  className={`w-full max-w-[240px] rounded-md px-4 py-2.5 text-center text-[13px] font-medium text-[#66736D] transition hover:bg-[#F1F5EF] hover:text-[#3F6655] ${
+                    index <
+                    enlaces.length - 1
+                      ? "border-b border-[#EEEAE4]"
+                      : ""
+                  }`}
+                >
+                  {enlace.label}
+                </button>
+              )
+            )}
+
+            {/* DETALLE */}
+
+            <div className="mt-3 flex items-center gap-2">
+              <span className="h-1 w-1 rounded-full bg-[#C9785C]" />
+
+              <span className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#8A948F]">
+                Cuidado responsable
+              </span>
+            </div>
           </nav>
         </div>
       )}

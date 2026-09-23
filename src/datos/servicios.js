@@ -19,7 +19,7 @@ export const servicios = [
 
     adicionales: [
       "Baños",
-      "Paseos adicionales",
+      "Paseos",
       "Administración de medicación especial",
     ],
   },

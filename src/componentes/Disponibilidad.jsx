@@ -232,41 +232,44 @@ Quisiera recibir más información.`;
     <>
       <section
         id="disponibilidad"
-        className="seccion bg-white"
+        className="bg-[#FBF2ED] px-5 py-12 md:py-14"
       >
         <div className="mx-auto max-w-3xl">
+
           {/* ENCABEZADO */}
 
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="eyebrow">
+          <div className="mx-auto mb-7 max-w-xl text-center">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#C9785C]">
               Disponibilidad
             </p>
 
-            <h2 className="titulo-seccion">
+            <h2 className="mt-1.5 text-2xl font-medium tracking-[-0.02em] text-[#26352F] md:text-[28px]">
               Consulta las fechas disponibles
             </h2>
 
-            <p className="subtitulo-seccion">
-              Selecciona tu ubicación y las fechas que necesitas para consultar disponibilidad.
+            <p className="mt-2.5 text-sm font-normal leading-6 text-[#66736D]">
+              Selecciona tu ubicación y las fechas
+              que necesitas para consultar
+              disponibilidad.
             </p>
           </div>
 
           {/* UBICACIÓN */}
 
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-            <p className="text-sm font-semibold text-slate-900">
+          <div className="mb-3 rounded-md border border-[#E8DDD6] bg-[#FFFEFC] p-4">
+            <p className="text-[14px] font-medium text-[#26352F]">
               Ubicación
             </p>
 
-            <p className="mt-1 text-xs leading-5 text-slate-500">
+            <p className="mt-1 text-[12px] font-normal leading-5 text-[#66736D]">
               Indica dónde necesitas el servicio.
             </p>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
                 <label
                   htmlFor="provincia"
-                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                  className="mb-1.5 block text-[11px] font-medium text-[#66736D]"
                 >
                   Provincia
                 </label>
@@ -281,7 +284,7 @@ Quisiera recibir más información.`;
 
                     setErrorUbicacion("");
                   }}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400"
+                  className="w-full rounded-md border border-[#DDDCD6] bg-white px-3 py-2.5 text-[13px] font-normal text-[#26352F] outline-none transition focus:border-[#7D9A8B]"
                 >
                   <option value="">
                     Selecciona una provincia
@@ -303,7 +306,7 @@ Quisiera recibir más información.`;
               <div>
                 <label
                   htmlFor="ciudad"
-                  className="mb-1.5 block text-xs font-medium text-slate-600"
+                  className="mb-1.5 block text-[11px] font-medium text-[#66736D]"
                 >
                   Ciudad
                 </label>
@@ -320,7 +323,7 @@ Quisiera recibir más información.`;
                     setErrorUbicacion("");
                   }}
                   placeholder="Ingresa tu ciudad"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400"
+                  className="w-full rounded-md border border-[#DDDCD6] bg-white px-3 py-2.5 text-[13px] font-normal text-[#26352F] outline-none transition placeholder:text-[#9BA39F] focus:border-[#7D9A8B]"
                 />
               </div>
             </div>
@@ -328,22 +331,24 @@ Quisiera recibir más información.`;
 
           {/* CALENDARIO */}
 
-          <div className="rounded-3xl border border-sky-200 bg-sky-50 p-5 shadow-sm sm:p-7">
+          <div className="rounded-md border border-[#E8DDD6] bg-[#FFFEFC] p-4 sm:p-5">
+
             {/* MES */}
 
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <button
                 type="button"
                 onClick={mesAnterior}
-                className="rounded-xl p-2.5 text-slate-500 transition hover:bg-white hover:text-slate-900"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-[#66736D] transition hover:bg-[#F1F5EF] hover:text-[#3F6655]"
                 aria-label="Mes anterior"
               >
                 <ChevronLeft
-                  size={20}
+                  size={18}
+                  strokeWidth={1.7}
                 />
               </button>
 
-              <h3 className="text-base font-semibold capitalize text-slate-900 sm:text-lg">
+              <h3 className="text-[15px] font-medium capitalize text-[#26352F]">
                 {
                   meses[
                     currentMonth.getMonth()
@@ -355,38 +360,39 @@ Quisiera recibir más información.`;
               <button
                 type="button"
                 onClick={mesSiguiente}
-                className="rounded-xl p-2.5 text-slate-500 transition hover:bg-white hover:text-slate-900"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-[#66736D] transition hover:bg-[#F1F5EF] hover:text-[#3F6655]"
                 aria-label="Mes siguiente"
               >
                 <ChevronRight
-                  size={20}
+                  size={18}
+                  strokeWidth={1.7}
                 />
               </button>
             </div>
 
             {/* REFERENCIAS */}
 
-            <div className="mb-6 flex flex-wrap items-center justify-center gap-4 rounded-2xl border border-sky-100 bg-white/80 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-emerald-500" />
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-y border-[#EEEAE4] py-2.5">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#6F927E]" />
 
-                <span className="text-xs font-medium text-slate-600">
+                <span className="text-[11px] font-normal text-[#66736D]">
                   Disponible
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-rose-500" />
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#C9785C]" />
 
-                <span className="text-xs font-medium text-slate-600">
+                <span className="text-[11px] font-normal text-[#66736D]">
                   Reservado
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-slate-400" />
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#A7ACA9]" />
 
-                <span className="text-xs font-medium text-slate-600">
+                <span className="text-[11px] font-normal text-[#66736D]">
                   No disponible
                 </span>
               </div>
@@ -394,12 +400,12 @@ Quisiera recibir más información.`;
 
             {/* DÍAS DE SEMANA */}
 
-            <div className="mb-2 grid grid-cols-7 gap-1">
+            <div className="mb-1.5 grid grid-cols-7 gap-1">
               {diasSemana.map(
                 (dia, index) => (
                   <div
                     key={`${dia}-${index}`}
-                    className="py-2 text-center text-[11px] font-semibold uppercase text-slate-500"
+                    className="py-1.5 text-center text-[10px] font-medium uppercase text-[#8A948F]"
                   >
                     {dia}
                   </div>
@@ -475,31 +481,31 @@ Quisiera recibir más información.`;
                   !isUnavailable;
 
                 let estilos =
-                  "border border-transparent text-slate-700";
+                  "border border-transparent text-[#66736D]";
 
                 if (isPast) {
                   estilos =
-                    "cursor-not-allowed bg-white/50 text-slate-300";
+                    "cursor-not-allowed bg-[#FAF9F6] text-[#C5C9C6]";
                 } else if (
                   isReserved
                 ) {
                   estilos =
-                    "cursor-not-allowed border-rose-100 bg-rose-50 text-rose-500";
+                    "cursor-not-allowed border-[#F0D8CE] bg-[#FBF2ED] text-[#B8664B]";
                 } else if (
                   isUnavailable
                 ) {
                   estilos =
-                    "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400";
+                    "cursor-not-allowed border-[#E4E5E3] bg-[#F3F4F2] text-[#A1A6A3]";
                 } else if (
                   isSelected
                 ) {
                   estilos =
-                    "border-emerald-700 bg-emerald-700 text-white shadow-sm";
+                    "border-[#3F6655] bg-[#3F6655] text-white";
                 } else if (
                   isAvailable
                 ) {
                   estilos =
-                    "border-emerald-100 bg-emerald-50 text-emerald-800 hover:border-emerald-300 hover:bg-emerald-100";
+                    "border-[#DDE7DF] bg-[#F1F5EF] text-[#3F6655] hover:border-[#BFCFC3] hover:bg-[#E8F0EA]";
                 }
 
                 let ariaLabel = `${fechaString}, disponible`;
@@ -530,7 +536,7 @@ Quisiera recibir más información.`;
                     onClick={() =>
                       toggleDate(day)
                     }
-                    className={`relative aspect-square rounded-xl text-xs font-semibold transition sm:text-sm ${estilos}`}
+                    className={`relative aspect-square rounded-md text-[12px] font-medium transition sm:text-[13px] ${estilos}`}
                     aria-label={
                       ariaLabel
                     }
@@ -538,33 +544,34 @@ Quisiera recibir más información.`;
                     {day}
 
                     {isReserved && (
-                      <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-rose-500" />
+                      <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#C9785C]" />
                     )}
 
                     {isUnavailable && (
-                      <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-slate-400" />
+                      <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#A7ACA9]" />
                     )}
                   </button>
                 );
               })}
             </div>
 
-                        {/* FECHAS ELEGIDAS */}
+            {/* FECHAS ELEGIDAS */}
 
             {selectedDates.length > 0 && (
-              <div className="mt-7 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+              <div className="mt-5 rounded-md border border-[#D8E4DA] bg-[#F1F5EF] p-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2
-                    size={18}
-                    className="text-emerald-600"
+                    size={16}
+                    strokeWidth={1.7}
+                    className="text-[#3F6655]"
                   />
 
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#3F6655]">
                     Fechas seleccionadas
                   </p>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {selectedDates.map(
                     (fecha) => (
                       <button
@@ -579,12 +586,13 @@ Quisiera recibir más información.`;
                               )
                           )
                         }
-                        className="inline-flex items-center gap-2 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:border-rose-200 hover:text-rose-600"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-[#D8E4DA] bg-[#FFFEFC] px-2.5 py-1.5 text-[11px] font-normal text-[#4F5F57] transition hover:border-[#E6C4B6] hover:text-[#B8664B]"
                       >
                         {fecha}
 
                         <XCircle
-                          size={13}
+                          size={12}
+                          strokeWidth={1.7}
                         />
                       </button>
                     )
@@ -592,7 +600,7 @@ Quisiera recibir más información.`;
                 </div>
 
                 {errorUbicacion && (
-                  <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium leading-5 text-rose-600">
+                  <p className="mt-3 rounded-md border border-[#F0D8CE] bg-[#FBF2ED] px-3 py-2 text-[11px] font-normal leading-5 text-[#B8664B]">
                     {errorUbicacion}
                   </p>
                 )}
@@ -602,12 +610,13 @@ Quisiera recibir más información.`;
                   onClick={
                     consultarPorWhatsApp
                   }
-                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#3F6655] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[#345548] active:scale-[0.99]"
                 >
                   Consultar fechas
 
                   <MessageCircle
-                    size={17}
+                    size={15}
+                    strokeWidth={1.8}
                   />
                 </button>
               </div>
@@ -616,7 +625,7 @@ Quisiera recibir más información.`;
 
           {/* ACUERDOS */}
 
-          <div className="mt-5 flex justify-center">
+          <div className="mt-4 flex justify-center">
             <button
               type="button"
               onClick={() =>
@@ -624,9 +633,12 @@ Quisiera recibir más información.`;
                   true
                 )
               }
-              className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-sky-700"
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#66736D] transition hover:text-[#3F6655]"
             >
-              <Info size={16} />
+              <Info
+                size={14}
+                strokeWidth={1.7}
+              />
 
               Acuerdos y reservas
             </button>
@@ -638,7 +650,7 @@ Quisiera recibir más información.`;
 
       {modalReservasAbierto && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-5 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#26352F]/45 p-5 backdrop-blur-sm"
           onClick={() =>
             setModalReservasAbierto(
               false
@@ -646,11 +658,13 @@ Quisiera recibir más información.`;
           }
         >
           <div
-            className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl sm:p-7"
+            className="relative w-full max-w-lg rounded-md border border-[#E5E2DA] bg-[#FFFEFC] p-5 shadow-xl sm:p-6"
             onClick={(e) =>
               e.stopPropagation()
             }
           >
+            {/* CERRAR */}
+
             <button
               type="button"
               onClick={() =>
@@ -658,49 +672,67 @@ Quisiera recibir más información.`;
                   false
                 )
               }
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-md bg-[#F1F5EF] text-[#66736D] transition hover:bg-[#E8F0EA] hover:text-[#3F6655]"
               aria-label="Cerrar"
             >
-              <X size={18} />
+              <X
+                size={16}
+                strokeWidth={1.7}
+              />
             </button>
 
+            {/* ENCABEZADO */}
+
             <div className="pr-10">
-              <h3 className="text-xl font-semibold text-slate-900">
+              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#C9785C]">
+                Información
+              </p>
+
+              <h3 className="mt-1 text-lg font-medium text-[#26352F]">
                 Acuerdos y reservas
               </h3>
             </div>
 
-            <div className="-mt-2 space-y-4 text-sm leading-6 text-slate-600">
-              <div className="flex gap-3" />
+            {/* INFORMACIÓN */}
 
-              <div className="flex gap-3" />
-
-              <div className="flex gap-3" />
-
-              <div className="rounded-xl border border-sky-100 bg-sky-50 p-4">
+            <div className="mt-4">
+              <div className="rounded-md border border-[#DDE5DC] bg-[#F1F5EF] p-4">
                 <div className="flex items-start gap-3">
-                  <FileText
-                    size={18}
-                    className="mt-0.5 min-w-5 text-sky-600"
-                  />
+                  <div className="flex h-8 w-8 min-w-8 items-center justify-center rounded-md bg-[#E1EBE3] text-[#3F6655]">
+                    <FileText
+                      size={15}
+                      strokeWidth={1.7}
+                    />
+                  </div>
 
                   <div>
-                    <p className="font-semibold text-slate-900">
+                    <p className="text-[13px] font-medium text-[#26352F]">
                       Información importante
                     </p>
 
-                    <p className="mt-1.5 text-sm leading-6 text-slate-600">
-                      La disponibilidad mostrada en el calendario es orientativa. La reserva se confirma una vez coordinados los detalles del servicio.
+                    <p className="mt-1.5 text-[12px] font-normal leading-5 text-[#66736D]">
+                      La disponibilidad mostrada en
+                      el calendario es orientativa.
+                      La reserva se confirma una vez
+                      coordinados los detalles del
+                      servicio.
                     </p>
 
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Antes de confirmar se acordarán las fechas, ubicación, necesidades del hogar o las mascotas y cualquier información necesaria para el servicio.
+                    <p className="mt-2 text-[12px] font-normal leading-5 text-[#66736D]">
+                      Antes de confirmar se acordarán
+                      las fechas, ubicación,
+                      necesidades del hogar o las
+                      mascotas y cualquier
+                      información necesaria para el
+                      servicio.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* BOTÓN */}
+
             <button
               type="button"
               onClick={() =>
@@ -708,7 +740,7 @@ Quisiera recibir más información.`;
                   false
                 )
               }
-              className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="mt-5 w-full rounded-md bg-[#3F6655] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[#345548] active:scale-[0.99]"
             >
               Entendido
             </button>
@@ -720,4 +752,3 @@ Quisiera recibir más información.`;
 };
 
 export default Disponibilidad;
-            

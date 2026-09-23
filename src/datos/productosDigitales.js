@@ -61,7 +61,7 @@ export const productosDigitales = [
 
     edadRecomendada: "Menores de 7 años",
 
-    nivel: "Principiante - Caminos abiertos",
+    nivel: "Principiante",
 
     entrega: "Descarga digital",
 

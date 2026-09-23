@@ -346,7 +346,7 @@ const DetalleProducto = () => {
 
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                       <p className="text-xs font-normal text-slate-600">
-                        Ahorrás{" "}
+                        Ahorro{" "}
                         <span className="font-medium text-slate-900">
                           {formatearPrecio(
                             ahorro
@@ -435,41 +435,7 @@ const DetalleProducto = () => {
                       producto.descripcion
                     )}
                 </p>
-              </div>
-
-              {/* DATOS RÁPIDOS */}
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                {producto.formato && (
-                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-normal text-slate-600">
-                    {producto.formato}
-                  </span>
-                )}
-
-                {producto.tamano && (
-                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-normal text-slate-600">
-                    {producto.tamano}
-                  </span>
-                )}
-
-                {producto.paginas > 0 && (
-                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-normal text-slate-600">
-                    {producto.paginas} páginas
-                  </span>
-                )}
-
-                {producto.laminas > 0 && (
-                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-normal text-slate-600">
-                    {producto.laminas} actividades
-                  </span>
-                )}
-
-                {producto.entrega && (
-                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-normal text-slate-600">
-                    {producto.entrega}
-                  </span>
-                )}
-              </div>
+              </div>           
 
               {/* =================================================
                   QUÉ INCLUYE
@@ -545,40 +511,38 @@ const DetalleProducto = () => {
                 </div>
               )}
 
-                            {/* =================================================
-                  INFORMACIÓN ADICIONAL
-              ================================================== */}
+                {/* =================================================
+    INFORMACIÓN ADICIONAL
+================================================== */}
 
-              {(producto.edadRecomendada ||
-                producto.nivel) && (
-                <div className="mt-6 grid gap-3 border-t border-slate-200 pt-5 sm:grid-cols-2">
-                  {producto.edadRecomendada && (
-                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">
-                        Edad recomendada
-                      </p>
+{(producto.edadRecomendada ||
+  producto.nivel) && (
+  <div className="mt-6 grid grid-cols-2 gap-3 border-t border-slate-200 pt-5">
+    {producto.edadRecomendada && (
+      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">
+          Edad recomendada
+        </p>
 
-                      <p className="mt-1 text-xs font-normal text-slate-700">
-                        {
-                          producto.edadRecomendada
-                        }
-                      </p>
-                    </div>
-                  )}
+        <p className="mt-1 text-xs font-normal text-slate-700">
+          {producto.edadRecomendada}
+        </p>
+      </div>
+    )}
 
-                  {producto.nivel && (
-                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">
-                        Nivel
-                      </p>
+    {producto.nivel && (
+      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">
+          Nivel
+        </p>
 
-                      <p className="mt-1 text-xs font-normal text-slate-700">
-                        {producto.nivel}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+        <p className="mt-1 text-xs font-normal text-slate-700">
+          {producto.nivel}
+        </p>
+      </div>
+    )}
+  </div>
+)}            
 
               {/* =====================================================
                   COMPRA

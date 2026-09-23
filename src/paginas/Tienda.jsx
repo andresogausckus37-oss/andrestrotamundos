@@ -438,12 +438,12 @@ const Tienda = () => {
           PRODUCTOS
       ====================================================== */}
 
-      <section className="px-4 py-8 sm:px-5 sm:py-10">
+      <section className="px-4 mb-20 py-8 sm:px-5 sm:py-10">
         <div className="mx-auto max-w-4xl">
           {/* CABECERA */}
 
           <div className="mb-5">
-            <h2 className="text-xl font-medium tracking-tight text-slate-900 sm:text-2xl">
+            <h2 className="text-xl font-medium text-center tracking-tight text-slate-900 sm:text-2xl">
               {filtroActivo === "hogar"
                 ? t.hogarMascotas
                 : t.imprimiblesDestacados}
@@ -537,7 +537,7 @@ const Tienda = () => {
                         {/* BADGES */}
 
                         <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-slate-600 sm:px-2 sm:py-1 sm:text-[10px]">
+                          <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1 py-0.5 text-[8px] font-medium uppercase tracking-wide text-slate-600 sm:px-2 sm:py-1 sm:text-[10px]">
                             <Download
                               size={10}
                               strokeWidth={1.8}

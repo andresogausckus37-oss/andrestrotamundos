@@ -13,24 +13,6 @@ const iconos = {
   heart: Heart,
 };
 
-const estilos = [
-  {
-    icono: "bg-sky-100 text-sky-700",
-    numero: "text-sky-600",
-    borde: "hover:border-sky-200",
-  },
-  {
-    icono: "bg-orange-100 text-orange-700",
-    numero: "text-orange-600",
-    borde: "hover:border-orange-200",
-  },
-  {
-    icono: "bg-emerald-100 text-emerald-700",
-    numero: "text-emerald-600",
-    borde: "hover:border-emerald-200",
-  },
-];
-
 const ComoFunciona = () => {
   const irADisponibilidad = () => {
     document
@@ -43,93 +25,94 @@ const ComoFunciona = () => {
   return (
     <section
       id="mi-proceso"
-      className="bg-slate-50 px-5 py-14 md:py-16"
+      className="bg-[#F1F5EF] px-5 py-12 md:py-14"
     >
       <div className="contenedor">
+
         {/* ENCABEZADO */}
 
-        <div className="mx-auto mb-7 max-w-2xl text-center">
-          <p className="eyebrow">
+        <div className="mx-auto mb-7 max-w-xl text-center">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#C9785C]">
             Mi proceso
           </p>
 
-          <h2 className="titulo-seccion">
+          <h2 className="mt-1.5 text-2xl font-medium tracking-[-0.02em] text-[#26352F] md:text-[28px]">
             Cómo funciona
           </h2>
 
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Un proceso simple y claro para organizar el cuidado de tu hogar y tus mascotas.
+          <p className="mt-2.5 text-sm font-normal leading-6 text-[#66736D]">
+            Un proceso simple y claro para organizar el cuidado
+            de tu hogar y tus mascotas.
           </p>
         </div>
 
         {/* PASOS */}
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="relative grid gap-3 md:grid-cols-3 md:gap-4">
           {pasos.map((paso, index) => {
-            const Icono =
-              iconos[paso.icono];
-
-            const estilo =
-              estilos[index];
+            const Icono = iconos[paso.icono];
 
             const titulo =
-              typeof paso.titulo ===
-              "string"
+              typeof paso.titulo === "string"
                 ? paso.titulo
                 : paso.titulo?.es;
 
             const descripcion =
-              typeof paso.descripcion ===
-              "string"
+              typeof paso.descripcion === "string"
                 ? paso.descripcion
                 : paso.descripcion?.es;
 
             return (
               <article
                 key={paso.numero}
-                className={`card relative overflow-hidden p-5 transition hover:-translate-y-0.5 hover:shadow-suave ${estilo.borde}`}
+                className="group relative rounded-md border border-[#DDE5DC] bg-[#FFFEFC] p-4 transition duration-200 hover:border-[#BFCFC3]"
               >
+                {/* NÚMERO + ICONO */}
+
                 <div className="mb-3 flex items-center justify-between">
-                  <span
-                    className={`text-md font-semibold tracking-[0.18em] ${estilo.numero}`}
-                  >
+                  <span className="text-[11px] font-medium tracking-[0.12em] text-[#C9785C]">
                     {paso.numero}
                   </span>
 
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${estilo.icono}`}
-                  >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#E8F0EA] text-[#3F6655] transition group-hover:bg-[#DFEADF]">
                     <Icono
-                      size={18}
+                      size={16}
+                      strokeWidth={1.7}
                     />
                   </div>
                 </div>
 
-                <h3 className="text-md font-semibold text-slate-900 sm:text-base">
+                {/* TEXTO */}
+
+                <h3 className="text-[15px] font-medium text-[#26352F]">
                   {titulo}
                 </h3>
 
-                <p className="mt-2 text-sm leading-5 text-slate-600">
+                <p className="mt-1.5 text-[13px] font-normal leading-5 text-[#66736D]">
                   {descripcion}
                 </p>
+
+                {/* DETALLE INFERIOR */}
+
+                <div className="mt-4 h-px w-8 bg-[#C9785C]/40" />
               </article>
             );
           })}
         </div>
 
-        {/* BOTÓN DISPONIBILIDAD */}
+        {/* DISPONIBILIDAD */}
 
         <div className="mt-5 flex justify-center">
           <button
             type="button"
-            onClick={
-              irADisponibilidad
-            }
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700"
+            onClick={irADisponibilidad}
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-[#3F6655] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[#345548] active:scale-[0.98]"
           >
             <CalendarDays
-              size={16}
+              size={15}
+              strokeWidth={1.8}
             />
+
             Ver disponibilidad
           </button>
         </div>
