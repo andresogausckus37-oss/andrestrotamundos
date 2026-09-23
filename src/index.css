@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&display=swap");
 
 @import url("https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap");
 
@@ -16,7 +16,7 @@
     min-width: 320px;
     min-height: 100vh;
 
-    @apply bg-white font-sans text-slate-900 antialiased;
+    @apply bg-white font-sans font-normal text-slate-900 antialiased;
   }
 
   * {
@@ -51,26 +51,26 @@
   }
 
   .titulo-seccion {
-    @apply text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl;
+    @apply text-3xl font-medium tracking-tight text-slate-900 md:text-4xl;
   }
 
   .subtitulo-seccion {
-    @apply mt-4 text-sm leading-6 text-slate-600 md:text-base;
+    @apply mt-4 text-sm font-normal leading-6 text-slate-600 md:text-base;
   }
 
   .eyebrow {
-    @apply mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-sky-600;
+    @apply mb-3 text-xs font-medium uppercase tracking-[0.2em] text-violet-700;
   }
 
   .card {
-    @apply rounded-card border border-slate-200 bg-white shadow-sm;
+    @apply rounded-sm border border-slate-200 bg-white;
   }
 
   .boton-principal {
-    @apply inline-flex items-center justify-center rounded-xl bg-sky-600 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-sky-700;
+    @apply inline-flex items-center justify-center rounded-md bg-orange-700 px-6 py-3.5 text-sm font-medium text-white transition hover:bg-orange-800;
   }
 
   .boton-secundario {
-    @apply inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50;
+    @apply inline-flex items-center justify-center rounded-sm border border-slate-300 bg-white px-6 py-3.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50;
   }
 }

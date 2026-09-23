@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { conectarMongoDB } from "../../lib/mongodb.js";
 import { CONFIGURACION_TRANSFERENCIA } from "../../lib/configuracionTransferencia.js";
+import { enviarNotificacionTelegram } from "../../lib/telegram.js";
 import { productosDigitales } from "../../src/datos/productosDigitales.js";
 
 const obtenerPrecioFinal = (producto) => {
@@ -21,6 +22,13 @@ const obtenerPrecioFinal = (producto) => {
 
   return precio;
 };
+
+const formatearPesos = (valor) =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 2,
+  }).format(valor);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -244,6 +252,27 @@ export default async function handler(req, res) {
 
         historialDescargas: [],
       });
+
+    /* TELEGRAM */
+
+    const listaProductos =
+      productosPedido
+        .map(
+          (item) =>
+            `• ${item.nombre}`
+        )
+        .join("\n");
+
+    await enviarNotificacionTelegram({
+      texto:
+        `<b>Nuevo pedido por transferencia</b>\n\n` +
+        `<b>Cliente:</b> ${nombre}\n` +
+        `<b>Email:</b> ${email}\n\n` +
+        `<b>Productos:</b>\n${listaProductos}\n\n` +
+        `<b>Total:</b> ${formatearPesos(total)}\n\n` +
+        `<b>Estado:</b> Esperando transferencia\n` +
+        `<b>Pedido:</b> ${pedidoId}`,
+    });
 
     /* RESPUESTA */
 

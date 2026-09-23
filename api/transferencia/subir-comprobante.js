@@ -1,11 +1,19 @@
 import { put } from "@vercel/blob";
 import { conectarMongoDB } from "../../lib/mongodb.js";
+import { enviarNotificacionTelegram } from "../../lib/telegram.js";
 
 export const config = {
   api: {
     bodyParser: false,
   },
 };
+
+const formatearPesos = (valor) =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 2,
+  }).format(valor);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -48,9 +56,11 @@ export default async function handler(req, res) {
     const db =
       await conectarMongoDB();
 
-    const pedido = await db
-      .collection("pedidos")
-      .findOne({
+    const pedidos =
+      db.collection("pedidos");
+
+    const pedido =
+      await pedidos.findOne({
         pedidoId,
         metodoPago: "transferencia",
       });
@@ -71,9 +81,9 @@ export default async function handler(req, res) {
       });
     }
 
-    /* =====================================================
-       GUARDAR COMPROBANTE PRIVADO
-    ===================================================== */
+    /* =========================
+       GUARDAR COMPROBANTE
+    ========================= */
 
     const extensiones = {
       "image/jpeg": "jpg",
@@ -98,47 +108,89 @@ export default async function handler(req, res) {
       }
     );
 
-    /* =====================================================
+    /* =========================
        ACTUALIZAR PEDIDO
-    ===================================================== */
+    ========================= */
 
-    const fecha =
-      new Date();
+    const fecha = new Date();
 
-    await db
-      .collection("pedidos")
-      .updateOne(
-        {
-          pedidoId,
-          metodoPago: "transferencia",
+    await pedidos.updateOne(
+      {
+        pedidoId,
+        metodoPago: "transferencia",
+      },
+      {
+        $set: {
+          estado:
+            "comprobante_recibido",
+
+          comprobante: {
+            pathname:
+              blob.pathname,
+
+            contentType:
+              tipoContenido,
+
+            subidoEn:
+              fecha,
+          },
         },
-        {
-          $set: {
+
+        $push: {
+          historialEstados: {
             estado:
               "comprobante_recibido",
 
-            comprobante: {
-              pathname:
-                blob.pathname,
-
-              contentType:
-                tipoContenido,
-
-              subidoEn:
-                fecha,
-            },
+            fecha,
           },
+        },
+      }
+    );
 
-          $push: {
-            historialEstados: {
-              estado:
-                "comprobante_recibido",
+    /* =========================
+       NOTIFICACIÓN TELEGRAM
+    ========================= */
 
-              fecha,
+    const productos =
+      pedido.productos?.length
+        ? pedido.productos
+        : [
+            {
+              nombre:
+                pedido.nombreProducto,
             },
-          },
-        }
-      );
+          ];
+
+    const listaProductos =
+      productos
+        .map(
+          (producto) =>
+            `• ${producto.nombre}`
+        )
+        .join("\n");
+
+    await enviarNotificacionTelegram({
+      texto:
+        `<b>Comprobante recibido</b>\n\n` +
+        `<b>Cliente:</b> ${pedido.nombreComprador}\n` +
+        `<b>Email:</b> ${pedido.emailComprador}\n\n` +
+        `<b>Productos:</b>\n${listaProductos}\n\n` +
+        `<b>Total:</b> ${formatearPesos(
+          pedido.precio
+        )}\n\n` +
+        `<b>Acción:</b> Revisar comprobante\n` +
+        `<b>Pedido:</b> ${pedidoId}`,
+
+      botonTexto:
+        "Revisar en Admin",
+
+      botonUrl:
+        "https://andreshousesitter.com/admin",
+    });
+
+    /* =========================
+       RESPUESTA
+    ========================= */
 
     return res.status(200).json({
       recibido: true,
