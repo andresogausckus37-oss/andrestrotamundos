@@ -48,30 +48,24 @@ export default function PagoTransferencia() {
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState("");
 
-  const [estadoPedido, setEstadoPedido] =
-    useState(null);
+  const [estadoPedido, setEstadoPedido] = useState(null);
 
   const [historialEstados, setHistorialEstados] =
     useState([]);
 
   const [productos, setProductos] = useState([]);
 
-  const [
-    descargaHabilitada,
-    setDescargaHabilitada,
-  ] = useState(false);
+  const [descargaHabilitada, setDescargaHabilitada] =
+    useState(false);
 
-  const [descargando, setDescargando] =
-    useState(null);
+  const [descargando, setDescargando] = useState(null);
 
-  const [descargados, setDescargados] =
-    useState([]);
+  const [descargados, setDescargados] = useState([]);
 
   const [errorDescarga, setErrorDescarga] =
     useState("");
 
-  const pedidoId =
-    searchParams.get("pedidoId");
+  const pedidoId = searchParams.get("pedidoId");
 
   const datosCuenta = {
     medio: "Mercado Pago",
@@ -80,7 +74,9 @@ export default function PagoTransferencia() {
     cvu: "0000003100023252705282",
   };
 
-  /* CONSULTAR ESTADO */
+  /* =========================================
+     CONSULTAR ESTADO DEL PEDIDO
+  ========================================= */
 
   const consultarEstado = async () => {
     if (!pedidoId) return;
@@ -111,8 +107,7 @@ export default function PagoTransferencia() {
       if (
         datos.historialEstados?.some(
           (item) =>
-            item.estado ===
-            "comprobante_recibido"
+            item.estado === "comprobante_recibido"
         )
       ) {
         setEnviado(true);
@@ -125,6 +120,10 @@ export default function PagoTransferencia() {
     }
   };
 
+  /* =========================================
+     ACTUALIZACIÓN AUTOMÁTICA
+  ========================================= */
+
   useEffect(() => {
     if (!pedidoId) return;
 
@@ -135,11 +134,12 @@ export default function PagoTransferencia() {
       5000
     );
 
-    return () =>
-      clearInterval(intervalo);
+    return () => clearInterval(intervalo);
   }, [pedidoId]);
 
-  /* COPIAR */
+  /* =========================================
+     COPIAR DATOS
+  ========================================= */
 
   const copiar = async (valor, campo) => {
     try {
@@ -158,7 +158,9 @@ export default function PagoTransferencia() {
     }
   };
 
-  /* ARCHIVO */
+  /* =========================================
+     SELECCIONAR ARCHIVO
+  ========================================= */
 
   const seleccionarArchivo = (event) => {
     const seleccionado =
@@ -203,7 +205,9 @@ export default function PagoTransferencia() {
     setArchivo(seleccionado);
   };
 
-  /* SUBIR COMPROBANTE */
+  /* =========================================
+     SUBIR COMPROBANTE
+  ========================================= */
 
   const subirComprobante = async () => {
     if (!pedidoId) {
@@ -232,16 +236,14 @@ export default function PagoTransferencia() {
           method: "POST",
 
           headers: {
-            "Content-Type":
-              archivo.type,
+            "Content-Type": archivo.type,
           },
 
           body: archivo,
         }
       );
 
-      const datos =
-        await respuesta.json();
+      const datos = await respuesta.json();
 
       if (
         !respuesta.ok ||
@@ -272,11 +274,11 @@ export default function PagoTransferencia() {
     }
   };
 
-  /* DESCARGAR PRODUCTO */
+  /* =========================================
+     DESCARGAR PRODUCTO
+  ========================================= */
 
-  const descargarProducto = async (
-    producto
-  ) => {
+  const descargarProducto = async (producto) => {
     if (
       !pedidoId ||
       !producto?.productoId ||
@@ -302,8 +304,7 @@ export default function PagoTransferencia() {
           "No se pudo descargar el producto.";
 
         try {
-          const datos =
-            await respuesta.json();
+          const datos = await respuesta.json();
 
           mensaje =
             datos.error || mensaje;
@@ -316,8 +317,7 @@ export default function PagoTransferencia() {
 
       const blob = await respuesta.blob();
 
-      const url =
-        URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
 
       const enlace =
         document.createElement("a");
@@ -350,7 +350,9 @@ export default function PagoTransferencia() {
     }
   };
 
-  /* ESTADOS */
+  /* =========================================
+     INFORMACIÓN DE ESTADOS
+  ========================================= */
 
   const buscarEstado = (id) =>
     historialEstados.find(
@@ -361,8 +363,7 @@ export default function PagoTransferencia() {
     0,
     ...historialEstados.map((item) =>
       PASOS.findIndex(
-        (paso) =>
-          paso.id === item.estado
+        (paso) => paso.id === item.estado
       )
     )
   );
@@ -380,6 +381,31 @@ export default function PagoTransferencia() {
       }
     ).format(new Date(fecha));
   };
+
+  /* =========================================
+     ESTADOS CON ANIMACIÓN DE ESPERA
+  ========================================= */
+
+  const comprobanteRecibido =
+    estadoPedido === "comprobante_recibido";
+
+  const verificandoPago =
+    estadoPedido === "verificando_pago";
+
+  const mostrarEspera =
+    comprobanteRecibido || verificandoPago;
+
+  const tituloEspera = comprobanteRecibido
+    ? "Comprobante recibido"
+    : "Verificando pago";
+
+  const mensajeEspera = comprobanteRecibido
+    ? "Estamos revisando tu comprobante..."
+    : "Estamos verificando tu pago...";
+
+  const descargaLista =
+    estadoPedido === "descarga_habilitada" ||
+    descargaHabilitada;
 
   return (
     <main className="min-h-screen bg-[#f6f7fb] px-4 pb-20 pt-7 sm:px-6 sm:pt-10">
@@ -401,19 +427,27 @@ export default function PagoTransferencia() {
           </h1>
 
           <p className="mt-2 max-w-xl text-[14px] font-normal leading-6 text-slate-500">
-            Realiza la transferencia con los datos
-            indicados y luego envía tu comprobante.
-            Te mostraremos el progreso del pedido
-            automáticamente.
+            Realiza la transferencia con los datos indicados y luego
+            envía tu comprobante. Te mostraremos el progreso de tu
+            pedido automáticamente.
           </p>
+
+          {pedidoId && (
+            <p className="mt-2 text-[11px] font-normal text-slate-400">
+              Pedido #{pedidoId}
+            </p>
+          )}
         </div>
 
-        {/* DATOS */}
+        {/* DATOS PARA TRANSFERIR */}
 
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
           <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-              <Landmark size={19} strokeWidth={1.8} />
+              <Landmark
+                size={19}
+                strokeWidth={1.8}
+              />
             </div>
 
             <div>
@@ -428,6 +462,8 @@ export default function PagoTransferencia() {
           </div>
 
           <div className="p-4 sm:p-5">
+            {/* TITULAR */}
+
             <div className="mb-4">
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">
                 Titular
@@ -439,7 +475,6 @@ export default function PagoTransferencia() {
             </div>
 
             <div className="space-y-2.5">
-
               {/* ALIAS */}
 
               <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50/80 px-3.5 py-3">
@@ -514,238 +549,320 @@ export default function PagoTransferencia() {
                 </button>
               </div>
             </div>
+
+            <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/70 px-3.5 py-3">
+              <p className="text-[11px] font-normal leading-5 text-amber-800">
+                Verifica los datos antes de realizar la transferencia.
+                Luego sube el comprobante para que podamos confirmar
+                tu pago.
+              </p>
+            </div>
           </div>
         </section>
 
         {/* COMPROBANTE */}
 
-        <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-          <div className="flex items-start gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-              <Upload size={18} strokeWidth={1.8} />
-            </div>
-
-            <div>
-              <h2 className="text-[15px] font-medium text-slate-900">
-                Sube tu comprobante
-              </h2>
-
-              <p className="mt-1 text-[12px] font-normal leading-5 text-slate-500">
-                Selecciona el comprobante desde
-                la galería o los archivos de tu
-                dispositivo.
-              </p>
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-5">
-            {!enviado ? (
-              <>
-                <input
-                  ref={inputArchivoRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  onChange={seleccionarArchivo}
-                  className="hidden"
+        {!descargaLista && (
+          <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+            <div className="flex items-start gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                <Upload
+                  size={18}
+                  strokeWidth={1.8}
                 />
+              </div>
 
-                {!archivo ? (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-7 text-center transition hover:border-violet-300 hover:bg-violet-50/30">
-                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
-                      <Upload
-                        size={19}
-                        strokeWidth={1.8}
-                      />
-                    </div>
+              <div>
+                <h2 className="text-[15px] font-medium text-slate-900">
+                  {enviado
+                    ? "Estado del comprobante"
+                    : "Sube tu comprobante"}
+                </h2>
 
-                    <p className="mt-3 text-[13px] font-medium text-slate-700">
-                      Selecciona tu comprobante
-                    </p>
+                <p className="mt-1 text-[12px] font-normal leading-5 text-slate-500">
+                  {enviado
+                    ? "Te avisaremos aquí cuando finalice la verificación."
+                    : "Selecciona el comprobante desde la galería o los archivos de tu dispositivo."}
+                </p>
+              </div>
+            </div>
 
-                    <p className="mt-1 text-[11px] font-normal text-slate-400">
-                      JPG, PNG, WEBP o PDF · Máx. 8 MB
-                    </p>
+            <div className="p-4 sm:p-5">
+              {!enviado ? (
+                <>
+                  <input
+                    ref={inputArchivoRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={seleccionarArchivo}
+                    className="hidden"
+                  />
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        inputArchivoRef.current?.click()
-                      }
-                      className="mt-4 rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-medium text-white transition hover:bg-slate-800 active:scale-[0.98]"
-                    >
-                      Seleccionar archivo
-                    </button>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
-                        <FileText
-                          size={18}
+                  {!archivo ? (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-7 text-center transition hover:border-violet-300 hover:bg-violet-50/30">
+                      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+                        <Upload
+                          size={19}
                           strokeWidth={1.8}
                         />
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-medium text-slate-800">
-                          {archivo.name}
-                        </p>
+                      <p className="mt-3 text-[13px] font-medium text-slate-700">
+                        Selecciona tu comprobante
+                      </p>
 
-                        <p className="mt-0.5 text-[10px] font-normal text-slate-400">
-                          {(
-                            archivo.size /
-                            1024 /
-                            1024
-                          ).toFixed(2)}{" "}
-                          MB
-                        </p>
+                      <p className="mt-1 text-[11px] font-normal text-slate-400">
+                        JPG, PNG, WEBP o PDF · Máx. 8 MB
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          inputArchivoRef.current?.click()
+                        }
+                        className="mt-4 rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-medium text-white transition hover:bg-slate-800 active:scale-[0.98]"
+                      >
+                        Seleccionar archivo
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                          <FileText
+                            size={18}
+                            strokeWidth={1.8}
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-medium text-slate-800">
+                            {archivo.name}
+                          </p>
+
+                          <p className="mt-0.5 text-[10px] font-normal text-slate-400">
+                            {(
+                              archivo.size /
+                              1024 /
+                              1024
+                            ).toFixed(2)}{" "}
+                            MB
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={subiendo}
+                          onClick={() =>
+                            inputArchivoRef.current?.click()
+                          }
+                          className="text-[11px] font-medium text-slate-500 transition hover:text-violet-600 disabled:opacity-50"
+                        >
+                          Cambiar
+                        </button>
                       </div>
 
                       <button
                         type="button"
                         disabled={subiendo}
-                        onClick={() =>
-                          inputArchivoRef.current?.click()
-                        }
-                        className="text-[11px] font-medium text-slate-500 transition hover:text-violet-600"
+                        onClick={subirComprobante}
+                        className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-[12px] font-medium text-white transition hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Cambiar
+                        {subiendo ? (
+                          <>
+                            <Loader2
+                              size={15}
+                              className="animate-spin"
+                            />
+                            Enviando comprobante...
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={15} />
+                            Enviar comprobante
+                          </>
+                        )}
                       </button>
                     </div>
+                  )}
 
-                    <button
-                      type="button"
-                      disabled={subiendo}
-                      onClick={subirComprobante}
-                      className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-[12px] font-medium text-white transition hover:bg-violet-700 active:scale-[0.99] disabled:opacity-60"
-                    >
-                      {subiendo ? (
-                        <>
-                          <Loader2
-                            size={15}
-                            className="animate-spin"
-                          />
-                          Enviando comprobante...
-                        </>
-                      ) : (
-                        <>
-                          <Upload size={15} />
-                          Enviar comprobante
-                        </>
-                      )}
-                    </button>
+                  {error && (
+                    <p className="mt-2.5 text-[11px] font-medium text-red-600">
+                      {error}
+                    </p>
+                  )}
+                </>
+              ) : mostrarEspera ? (
+                /* ESTADO ANIMADO */
+
+                <div
+                  key={estadoPedido}
+                  className="rounded-xl border border-violet-100 bg-violet-50/40 px-5 py-7 text-center"
+                >
+                  {/* CÍRCULO CARGANDO */}
+
+                  <div className="relative mx-auto flex h-16 w-16 items-center justify-center">
+                    <span className="absolute h-16 w-16 animate-ping rounded-full bg-violet-200 opacity-30" />
+
+                    <span className="absolute h-14 w-14 rounded-full border border-violet-100 bg-white shadow-sm" />
+
+                    <Loader2
+                      size={26}
+                      strokeWidth={1.8}
+                      className="relative z-10 animate-spin text-violet-600"
+                    />
                   </div>
-                )}
 
-                {error && (
-                  <p className="mt-2.5 text-[11px] font-medium text-red-600">
-                    {error}
+                  {/* MENSAJE */}
+
+                  <p className="mt-4 text-[16px] font-medium tracking-[-0.01em] text-slate-900">
+                    {tituloEspera}
                   </p>
-                )}
-              </>
-            ) : (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                    <Check size={17} />
+
+                  <p className="mt-1.5 text-[12px] font-normal leading-5 text-slate-500">
+                    {mensajeEspera}
+                  </p>
+
+                  {/* PUNTOS ANIMADOS */}
+
+                  <div className="mt-3 flex items-center justify-center gap-1.5">
+                    <span
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400"
+                      style={{
+                        animationDelay: "0ms",
+                      }}
+                    />
+
+                    <span
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400"
+                      style={{
+                        animationDelay: "150ms",
+                      }}
+                    />
+
+                    <span
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400"
+                      style={{
+                        animationDelay: "300ms",
+                      }}
+                    />
                   </div>
 
-                  <div>
-                    <p className="text-[13px] font-medium text-emerald-800">
-                      Comprobante recibido
-                    </p>
+                  <p className="mt-3 text-[10px] font-normal text-slate-400">
+                    No necesitas actualizar la página.
+                  </p>
+                </div>
+              ) : (
+                /* COMPROBANTE YA PROCESADO */
 
-                    <p className="mt-0.5 text-[11px] font-normal text-emerald-700">
-                      Lo recibimos correctamente.
-                      Tu pago será verificado.
-                    </p>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                      <Check
+                        size={17}
+                        strokeWidth={2}
+                      />
+                    </div>
+
+                    <div>
+                      <p className="text-[13px] font-medium text-emerald-800">
+                        Comprobante procesado
+                      </p>
+
+                      <p className="mt-0.5 text-[11px] font-normal leading-5 text-emerald-700">
+                        Tu comprobante fue recibido correctamente.
+                        Puedes seguir el estado de tu compra debajo.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </section>
+              )}
+            </div>
+          </section>
+        )}
 
-                {/* SEGUIMIENTO */}
+        {/* SEGUIMIENTO DEL PEDIDO */}
 
         <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
           <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
             <h2 className="text-[15px] font-medium text-slate-900">
-              Seguimiento de tu pedido
+              Estado de tu compra
             </h2>
 
-            <div className="mt-1.5 flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-50" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
-              </span>
-
-              <p className="text-[11px] font-normal text-slate-500">
-                El estado se actualiza automáticamente
-              </p>
-            </div>
+            <p className="mt-1 text-[12px] font-normal leading-5 text-slate-500">
+              El estado se actualiza automáticamente.
+            </p>
           </div>
 
           <div className="p-4 sm:p-5">
-            <div>
+            <div className="space-y-0">
               {PASOS.map((paso, index) => {
-                const registro =
-                  buscarEstado(paso.id);
+                const registro = buscarEstado(paso.id);
 
                 const completado =
-                  Boolean(registro);
+                  Boolean(registro) ||
+                  index < indiceActual;
 
                 const actual =
-                  index === indiceActual &&
-                  estadoPedido !== "aprobado";
+                  paso.id === estadoPedido;
+
+                const ultimo =
+                  index === PASOS.length - 1;
 
                 return (
                   <div
                     key={paso.id}
-                    className="relative flex gap-3.5 pb-5 last:pb-0"
+                    className="relative flex gap-3"
                   >
-                    {index <
-                      PASOS.length - 1 && (
+                    {/* LÍNEA VERTICAL */}
+
+                    {!ultimo && (
                       <div
-                        className={`absolute left-[11px] top-6 h-full w-px transition-colors duration-500 ${
+                        className={`absolute left-[14px] top-7 h-[calc(100%-4px)] w-px ${
                           completado
-                            ? "bg-emerald-300"
+                            ? "bg-emerald-200"
                             : "bg-slate-200"
                         }`}
                       />
                     )}
 
-                    <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center">
+                    {/* CÍRCULO */}
+
+                    <div
+                      className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all ${
+                        completado
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                          : actual
+                            ? "border-violet-200 bg-violet-50 text-violet-600"
+                            : "border-slate-200 bg-white text-slate-300"
+                      }`}
+                    >
                       {completado ? (
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_0_4px_rgba(16,185,129,0.08)]">
-                          <Check
-                            size={13}
-                            strokeWidth={2}
-                          />
-                        </div>
+                        <Check
+                          size={13}
+                          strokeWidth={2.2}
+                        />
                       ) : actual ? (
-                        <div className="relative flex h-6 w-6 items-center justify-center">
-                          <span className="absolute h-6 w-6 animate-ping rounded-full bg-violet-300 opacity-30" />
-
-                          <span className="absolute h-6 w-6 rounded-full bg-violet-100" />
-
-                          <Loader2
-                            size={15}
-                            strokeWidth={2}
-                            className="relative z-10 animate-spin text-violet-600"
-                          />
-                        </div>
+                        <Loader2
+                          size={13}
+                          strokeWidth={2}
+                          className="animate-spin"
+                        />
                       ) : (
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
-                          <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-                        </div>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
                       )}
                     </div>
 
-                    <div className="-mt-0.5 min-w-0 flex-1">
-                      <div className="flex min-h-6 items-center justify-between gap-3">
+                    {/* INFORMACIÓN */}
+
+                    <div
+                      className={`min-w-0 flex-1 ${
+                        ultimo ? "pb-0" : "pb-5"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                         <p
-                          className={`text-[13px] font-medium transition-colors duration-300 ${
+                          className={`text-[12px] font-medium ${
                             completado
                               ? "text-slate-800"
                               : actual
@@ -757,167 +874,188 @@ export default function PagoTransferencia() {
                         </p>
 
                         {registro?.fecha && (
-                          <p className="shrink-0 text-[10px] font-normal text-slate-400">
+                          <span className="text-[9px] font-normal text-slate-400">
                             {formatearFecha(
                               registro.fecha
                             )}
-                          </p>
+                          </span>
                         )}
                       </div>
 
                       {actual &&
-                        !completado && (
-                          <div className="mt-1.5 flex items-center gap-2">
-                            <div className="flex gap-1">
-                              <span
-                                className="h-1 w-1 animate-bounce rounded-full bg-violet-400"
-                                style={{
-                                  animationDelay:
-                                    "0ms",
-                                }}
-                              />
-
-                              <span
-                                className="h-1 w-1 animate-bounce rounded-full bg-violet-400"
-                                style={{
-                                  animationDelay:
-                                    "150ms",
-                                }}
-                              />
-
-                              <span
-                                className="h-1 w-1 animate-bounce rounded-full bg-violet-400"
-                                style={{
-                                  animationDelay:
-                                    "300ms",
-                                }}
-                              />
-                            </div>
-
-                            <p className="text-[10px] font-normal text-violet-500">
-                              Esperando actualización
-                            </p>
-                          </div>
+                        (paso.id ===
+                          "comprobante_recibido" ||
+                          paso.id ===
+                            "verificando_pago") && (
+                          <p className="mt-1 text-[10px] font-normal leading-4 text-slate-400">
+                            Procesando...
+                          </p>
                         )}
                     </div>
                   </div>
                 );
               })}
             </div>
-
-            {pedidoId && (
-              <div className="mt-5 border-t border-slate-100 pt-4">
-                <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
-                  <span className="text-[10px] font-normal text-slate-400">
-                    Número de pedido
-                  </span>
-
-                  <span className="truncate text-[10px] font-medium text-slate-600">
-                    {pedidoId}
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
         </section>
 
-        {/* DESCARGAS */}
+        {/* =====================================
+            DESCARGA HABILITADA
+        ===================================== */}
 
-        {descargaHabilitada &&
-          productos.length > 0 && (
-            <section className="mt-4 overflow-hidden rounded-2xl border border-emerald-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-              <div className="border-b border-emerald-100 bg-emerald-50/40 px-4 py-4 sm:px-5">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                    <Check size={14} />
-                  </div>
+        {descargaLista && (
+          <section className="mt-4 overflow-hidden rounded-2xl border border-emerald-200/80 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.05)]">
+            {/* CABECERA FINAL */}
 
-                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-emerald-600">
-                    Pago confirmado
-                  </p>
+            <div className="border-b border-emerald-100 bg-gradient-to-b from-emerald-50/80 to-white px-5 py-7 text-center sm:px-7 sm:py-8">
+              {/* CHECK */}
+
+              <div className="relative mx-auto flex h-16 w-16 items-center justify-center">
+                <span className="absolute h-16 w-16 rounded-full bg-emerald-100/60" />
+
+                <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm">
+                  <Check
+                    size={24}
+                    strokeWidth={2.2}
+                  />
+                </span>
+              </div>
+
+              {/* TÍTULO */}
+
+              <p className="mt-4 text-[11px] font-medium uppercase tracking-[0.12em] text-emerald-600">
+                Descarga habilitada
+              </p>
+
+              <h2 className="mt-2 text-[22px] font-medium tracking-[-0.02em] text-slate-900 sm:text-[25px]">
+                ¡Gracias por tu compra!
+              </h2>
+
+              <p className="mx-auto mt-2 max-w-md text-[13px] font-normal leading-6 text-slate-500">
+                Tu pago fue confirmado correctamente.
+                Tu material digital ya está listo para
+                descargar.
+              </p>
+
+              {pedidoId && (
+                <div className="mt-4 inline-flex rounded-full border border-emerald-100 bg-white px-3 py-1.5 shadow-sm">
+                  <span className="text-[10px] font-medium text-slate-500">
+                    Pedido #{pedidoId}
+                  </span>
                 </div>
+              )}
+            </div>
 
-                <h2 className="mt-3 text-[17px] font-medium text-slate-900">
-                  Tus descargas están listas
-                </h2>
+            {/* MATERIAL DE DESCARGA */}
 
-                <p className="mt-1 text-[12px] font-normal leading-5 text-slate-500">
-                  Tu pago fue aprobado. Ya puedes
-                  descargar tus productos.
+            <div className="p-4 sm:p-5">
+              <div className="mb-4">
+                <h3 className="text-[14px] font-medium text-slate-900">
+                  Tu material
+                </h3>
+
+                <p className="mt-1 text-[11px] font-normal leading-5 text-slate-500">
+                  Descarga los archivos incluidos en
+                  tu compra.
                 </p>
               </div>
 
-              <div className="p-4 sm:p-5">
+              {/* PRODUCTOS */}
+
+              {productos.length > 0 ? (
                 <div className="space-y-2.5">
                   {productos.map((producto) => {
-                    const descargado =
-                      descargados.includes(
-                        producto.productoId
-                      );
-
                     const estaDescargando =
                       descargando ===
                       producto.productoId;
 
+                    const yaDescargado =
+                      descargados.includes(
+                        producto.productoId
+                      );
+
                     return (
                       <div
                         key={producto.productoId}
-                        className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/40 p-3.5 sm:flex-row sm:items-center sm:justify-between"
+                        className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5"
                       >
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          {/* ICONO PDF */}
+
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-white text-violet-600 shadow-sm">
                             <FileText
-                              size={18}
-                              strokeWidth={1.7}
+                              size={19}
+                              strokeWidth={1.8}
                             />
                           </div>
 
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium leading-5 text-slate-800">
-                              {producto.nombre}
+                          {/* DATOS */}
+
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-[12px] font-medium leading-5 text-slate-800">
+                              {producto.nombre ||
+                                "Producto digital"}
                             </p>
 
-                            <p className="mt-0.5 text-[10px] font-normal text-slate-400">
-                              Documento PDF
-                            </p>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="text-[9px] font-medium uppercase tracking-wide text-slate-400">
+                                PDF
+                              </span>
+
+                              <span className="h-1 w-1 rounded-full bg-slate-300" />
+
+                              <span className="text-[9px] font-normal text-slate-400">
+                                Descarga digital
+                              </span>
+                            </div>
                           </div>
+
+                          {/* CHECK DESCARGADO */}
+
+                          {yaDescargado && (
+                            <div
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
+                              title="Descargado"
+                            >
+                              <Check
+                                size={14}
+                                strokeWidth={2}
+                              />
+                            </div>
+                          )}
                         </div>
+
+                        {/* BOTÓN */}
 
                         <button
                           type="button"
-                          disabled={
-                            descargado ||
-                            estaDescargando
-                          }
+                          disabled={estaDescargando}
                           onClick={() =>
                             descargarProducto(
                               producto
                             )
                           }
-                          className={`flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-medium transition active:scale-[0.98] ${
-                            descargado
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
-                          }`}
+                          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-[12px] font-medium text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {estaDescargando ? (
                             <>
                               <Loader2
-                                size={14}
+                                size={15}
                                 className="animate-spin"
                               />
-                              Descargando...
+
+                              Preparando descarga...
                             </>
-                          ) : descargado ? (
+                          ) : yaDescargado ? (
                             <>
-                              <Check size={14} />
-                              Descargado
+                              <Download size={15} />
+
+                              Descargar nuevamente
                             </>
                           ) : (
                             <>
-                              <Download
-                                size={14}
-                              />
+                              <Download size={15} />
+
                               Descargar PDF
                             </>
                           )}
@@ -926,21 +1064,58 @@ export default function PagoTransferencia() {
                     );
                   })}
                 </div>
+              ) : (
+                /* SI EL BACKEND TODAVÍA NO DEVOLVIÓ
+                   LOS PRODUCTOS */
 
-                {errorDescarga && (
-                  <p className="mt-3 text-[11px] font-medium text-red-600">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-5 text-center">
+                  <Loader2
+                    size={19}
+                    className="mx-auto animate-spin text-slate-400"
+                  />
+
+                  <p className="mt-2 text-[11px] font-normal text-slate-500">
+                    Preparando tu material...
+                  </p>
+                </div>
+              )}
+
+              {/* ERROR DE DESCARGA */}
+
+              {errorDescarga && (
+                <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3.5 py-3">
+                  <p className="text-[11px] font-medium leading-5 text-red-600">
                     {errorDescarga}
                   </p>
-                )}
+                </div>
+              )}
+
+              {/* MENSAJE FINAL */}
+
+              <div className="mt-5 border-t border-slate-100 pt-4 text-center">
+                <p className="text-[12px] font-medium text-slate-700">
+                  Esperamos que disfrutes tu compra.
+                </p>
+
+                <p className="mx-auto mt-1 max-w-md text-[10px] font-normal leading-5 text-slate-400">
+                  Guarda los archivos en tu dispositivo
+                  para tenerlos disponibles cuando los
+                  necesites.
+                </p>
               </div>
-            </section>
-          )}
+            </div>
+          </section>
+        )}
 
-        {/* RECOMENDADOS */}
+        {/* PIE */}
 
-        <section className="mt-10 min-h-[220px] border-t border-slate-200 pt-6">
-          {/* Productos recomendados */}
-        </section>
+        <div className="mt-6 text-center">
+          <p className="text-[10px] font-normal leading-5 text-slate-400">
+            Si tienes algún inconveniente con tu pago o
+            descarga, ponte en contacto con nosotros
+            indicando tu número de pedido.
+          </p>
+        </div>
       </div>
     </main>
   );

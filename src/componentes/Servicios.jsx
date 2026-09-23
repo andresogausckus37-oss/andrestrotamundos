@@ -17,23 +17,6 @@ const iconos = {
   building: Building2,
 };
 
-const colores = {
-  mascotas: {
-    icono: "bg-emerald-100 text-emerald-700",
-    badge: "bg-emerald-100 text-emerald-700",
-  },
-
-  casa: {
-    icono: "bg-sky-100 text-sky-700",
-    badge: "bg-sky-100 text-sky-700",
-  },
-
-  voluntariado: {
-    icono: "bg-amber-100 text-amber-700",
-    badge: "bg-amber-100 text-amber-700",
-  },
-};
-
 const textoEs = (valor) => {
   if (typeof valor === "string") {
     return valor;
@@ -80,7 +63,8 @@ const Servicios = () => {
           </h2>
 
           <p className="subtitulo-seccion">
-            Opciones de cuidado adaptadas a las necesidades de cada hogar y mascota.
+            Opciones de cuidado adaptadas a las
+            necesidades de cada hogar y mascota.
           </p>
         </div>
 
@@ -95,9 +79,6 @@ const Servicios = () => {
             .map((servicio) => {
               const Icono =
                 iconos[servicio.icono];
-
-              const color =
-                colores[servicio.id];
 
               const titulo =
                 textoEs(servicio.titulo);
@@ -115,10 +96,18 @@ const Servicios = () => {
                   servicio.adicionales
                 );
 
+              const abierto =
+                activeService ===
+                servicio.id;
+
               return (
                 <article
                   key={servicio.id}
-                  className="card overflow-hidden transition hover:-translate-y-0.5 hover:shadow-suave"
+                  className={`overflow-hidden rounded-md border bg-white transition-colors duration-200 ${
+                    abierto
+                      ? "border-slate-300"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
                 >
                   {/* PARTE VISIBLE */}
 
@@ -126,29 +115,31 @@ const Servicios = () => {
                     type="button"
                     onClick={() =>
                       setActiveService(
-                        activeService ===
-                          servicio.id
+                        abierto
                           ? null
                           : servicio.id
                       )
                     }
-                    className="flex w-full items-start gap-3 p-6 text-left sm:p-5"
+                    className="flex w-full items-start gap-4 p-5 text-left sm:p-6"
                   >
-                    <div
-                      className={`flex h-11 w-11 min-w-11 items-center justify-center rounded-xl ${color.icono}`}
-                    >
-                      <Icono size={22} />
+                    {/* ICONO */}
+
+                    <div className="flex h-10 w-10 min-w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-700">
+                      <Icono
+                        size={20}
+                        strokeWidth={1.7}
+                      />
                     </div>
 
+                    {/* INFORMACIÓN */}
+
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                        <h3 className="text-base font-medium text-slate-900 sm:text-lg">
                           {titulo}
                         </h3>
 
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${color.badge}`}
-                        >
+                        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-600">
                           {servicio.modalidad ===
                           "intercambio"
                             ? "Intercambio"
@@ -156,51 +147,56 @@ const Servicios = () => {
                         </span>
                       </div>
 
-                      <p className="mt-1.5 text-sm leading-5 text-slate-600">
+                      <p className="mt-2 text-sm font-normal leading-6 text-slate-600">
                         {descripcion}
                       </p>
                     </div>
 
-                    {activeService ===
-                    servicio.id ? (
+                    {/* FLECHA */}
+
+                    {abierto ? (
                       <ChevronUp
                         size={18}
-                        className="mt-1 min-w-5 text-slate-400"
+                        strokeWidth={1.7}
+                        className="mt-1 min-w-5 text-slate-500"
                       />
                     ) : (
                       <ChevronDown
                         size={18}
-                        className="mt-1 min-w-5 text-slate-400"
+                        strokeWidth={1.7}
+                        className="mt-1 min-w-5 text-slate-500"
                       />
                     )}
                   </button>
 
                   {/* DETALLE */}
 
-                  {activeService ===
-                    servicio.id && (
-                    <div className="border-t border-slate-200 px-4 pb-5 pt-4 sm:px-5">
-                      <div className="grid gap-5 sm:grid-cols-2">
+                  {abierto && (
+                    <div className="border-t border-slate-200 px-5 pb-5 pt-5 sm:px-6 sm:pb-6">
+                      <div className="grid gap-6 sm:grid-cols-2">
                         {/* INCLUIDO */}
 
                         <div>
-                          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+                          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-700">
                             {servicio.modalidad ===
                             "intercambio"
                               ? "Incluido en el intercambio"
                               : "Servicio base"}
                           </p>
 
-                          <ul className="space-y-2">
+                          <ul className="space-y-2.5">
                             {incluye.map(
                               (item) => (
                                 <li
                                   key={item}
-                                  className="flex items-start gap-2 text-sm leading-6 text-slate-600"
+                                  className="flex items-start gap-2.5 text-sm font-normal leading-6 text-slate-600"
                                 >
                                   <CheckCircle2
-                                    size={14}
-                                    className="mt-1 min-w-4 text-emerald-600"
+                                    size={15}
+                                    strokeWidth={
+                                      1.8
+                                    }
+                                    className="mt-1 min-w-4 text-slate-500"
                                   />
 
                                   <span>
@@ -215,20 +211,18 @@ const Servicios = () => {
                         {/* ADICIONALES */}
 
                         <div>
-                          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-orange-700">
+                          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.12em] text-orange-700">
                             Adicionales
                           </p>
 
-                          <ul className="space-y-2">
+                          <ul className="space-y-2.5">
                             {adicionales.map(
                               (item) => (
                                 <li
                                   key={item}
-                                  className="flex items-start gap-2 text-sm leading-6 text-slate-600"
+                                  className="flex items-start gap-2.5 text-sm font-normal leading-6 text-slate-600"
                                 >
-                                  <span className="mt-1 text-orange-500">
-                                    •
-                                  </span>
+                                  <span className="mt-[7px] h-1 w-1 min-w-1 rounded-full bg-orange-700" />
 
                                   <span>
                                     {item}
@@ -247,10 +241,11 @@ const Servicios = () => {
                         onClick={
                           irADisponibilidad
                         }
-                        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-100 px-4 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-200"
+                        className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-800"
                       >
                         <CalendarDays
                           size={16}
+                          strokeWidth={1.8}
                         />
 
                         Ver disponibilidad
