@@ -364,9 +364,7 @@ export default function Checkout() {
         {/* ENCABEZADO */}
 
         <div className="mb-5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">
-            Compra segura
-          </p>
+          
 
           <h1 className="mt-1 text-xl font-medium tracking-tight text-slate-900 sm:text-2xl">
             Finalizar compra
@@ -390,12 +388,12 @@ export default function Checkout() {
                   producto.imagenes.portada
                 }
                 alt={producto.nombre}
-                className="h-20 w-16 shrink-0 rounded-md border border-slate-200 object-cover"
+                className="h-20 w-20 shrink-0 rounded-md border border-slate-200 object-cover"
               />
             )}
 
             <div className="min-w-0 flex-1">
-              <h2 className="text-xs font-medium leading-5 text-slate-900 sm:text-sm">
+              <h2 className="text-sm font-medium leading-5 text-slate-900 sm:text-sm">
                 {producto.nombre}
               </h2>
 
@@ -429,7 +427,7 @@ export default function Checkout() {
         {productoVentaCruzada && (
           <section className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-4">
             <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.12em] text-orange-700">
-              Completa tu compra
+              También te recomendamos
             </p>
 
             <div className="flex items-center gap-3">
@@ -444,12 +442,12 @@ export default function Checkout() {
                     productoVentaCruzada
                       .nombre
                   }
-                  className="h-16 w-14 shrink-0 rounded-md border border-orange-200 bg-white object-cover"
+                  className="h-20 w-20 shrink-0 rounded-md border border-orange-200 bg-white object-cover"
                 />
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium leading-4 text-slate-900">
+                <p className="text-[13px] font-medium leading-4 text-slate-900">
                   {
                     productoVentaCruzada.nombre
                   }
@@ -458,7 +456,7 @@ export default function Checkout() {
                 {/* PRECIO */}
 
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-slate-900">
+                  <span className="text-md font-medium text-slate-900">
                     {formatearPrecio(
                       precioVentaCruzada
                     )}
@@ -471,7 +469,7 @@ export default function Checkout() {
                         .precioARS
                     ) >
                       precioVentaCruzada && (
-                      <span className="text-[10px] font-normal text-slate-400 line-through">
+                      <span className="text-[12px] font-normal text-slate-400 line-through">
                         {formatearPrecio(
                           productoVentaCruzada
                             .precioARS
@@ -545,11 +543,11 @@ export default function Checkout() {
             </div>
 
             <div>
-              <h2 className="text-sm font-medium text-slate-900">
+              <h2 className="text-md font-medium text-slate-900">
                 Tus datos
               </h2>
 
-              <p className="mt-0.5 text-[10px] font-normal text-slate-500">
+              <p className="mt-0.5 text-[13px] font-normal text-slate-500">
                 Usaremos tu correo para
                 identificar la compra.
               </p>
@@ -558,7 +556,7 @@ export default function Checkout() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label>
-              <span className="mb-1.5 block text-[11px] font-medium text-slate-700">
+              <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
                 Nombre
               </span>
 
@@ -584,11 +582,11 @@ export default function Checkout() {
             </label>
 
             <label>
-              <span className="mb-1.5 block text-[11px] font-medium text-slate-700">
+              <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
                 Correo electrónico
               </span>
 
-              <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 transition-colors focus-within:border-slate-500">
+              <div className="flex items-center mb-6 gap-2 rounded-md border border-slate-300 bg-white px-3 transition-colors focus-within:border-slate-500">
                 <Mail
                   size={15}
                   strokeWidth={1.8}
@@ -622,12 +620,12 @@ export default function Checkout() {
             </div>
 
             <div>
-              <h2 className="text-sm font-medium text-slate-900">
+              <h2 className="text-md font-medium text-slate-900">
                 Método de pago
               </h2>
 
-              <p className="mt-0.5 text-[10px] font-normal text-slate-500">
-                Selecciona la opción que prefieras.
+              <p className="mt-0.5 text-[13px] font-normal text-slate-500">
+                Selecciona cómo abonarás tu compra.
               </p>
             </div>
           </div>
@@ -696,7 +694,7 @@ export default function Checkout() {
 
                   {/* DESCRIPCIÓN */}
 
-                  <p className="mt-2 max-w-xl text-[11px] font-normal leading-5 text-slate-600 sm:text-xs">
+                  <p className="-mt-6 max-w-xl text-[11px] font-normal leading-5 text-slate-600 sm:text-xs">
                     Tarjetas de crédito, débito,
                     dinero disponible y otros
                     medios habilitados por Mercado
@@ -819,9 +817,9 @@ export default function Checkout() {
 
                   <p className="mt-2 text-[11px] font-normal leading-5 text-slate-600 sm:text-xs">
                     Paga mediante transferencia y
-                    obtén un{" "}
-                    {DESCUENTO_TRANSFERENCIA}% de
-                    descuento adicional.
+                    ahorra un{" "}
+                    {DESCUENTO_TRANSFERENCIA}% 
+                     adicional 🔥
                   </p>
 
                   {/* TOTAL TRANSFERENCIA */}
@@ -917,7 +915,7 @@ export default function Checkout() {
             type="button"
             onClick={continuarPago}
             disabled={procesando}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#204850] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <LockKeyhole
               size={16}

@@ -408,42 +408,32 @@ export default function PagoTransferencia() {
     descargaHabilitada;
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-4 pb-20 pt-7 sm:px-6 sm:pt-10">
+    <main className="min-h-screen bg-[#F7FAFA] px-4 pb-20 pt-7 sm:px-6 sm:pt-10">
       <div className="mx-auto max-w-3xl">
 
         {/* ENCABEZADO */}
 
         <div className="mb-6 sm:mb-7">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+          
 
-            <p className="text-[11px] font-medium tracking-wide text-indigo-700">
-              Transferencia bancaria
-            </p>
-          </div>
-
-          <h1 className="text-[26px] font-medium leading-tight tracking-[-0.02em] text-slate-900 sm:text-[32px]">
+          <h1 className="text-[26px] font-medium leading-tight tracking-[-0.02em] text-[#263238] sm:text-[32px]">
             Completa tu pago
           </h1>
 
-          <p className="mt-2 max-w-xl text-[14px] font-normal leading-6 text-slate-500">
+          <p className="mt-2 max-w-xl text-[14px] font-normal leading-6 text-[#687477]">
             Realiza la transferencia con los datos indicados y luego
             envía tu comprobante. Te mostraremos el progreso de tu
             pedido automáticamente.
           </p>
 
-          {pedidoId && (
-            <p className="mt-2 text-[11px] font-normal text-slate-400">
-              Pedido #{pedidoId}
-            </p>
-          )}
+          
         </div>
 
         {/* DATOS PARA TRANSFERIR */}
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-          <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+        <section className="overflow-hidden rounded-2xl border border-[#DCE5E4] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+          <div className="flex items-center gap-3 border-b border-[#E7ECEB] px-4 py-4 sm:px-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF5F5] text-[#285861]">
               <Landmark
                 size={19}
                 strokeWidth={1.8}
@@ -451,11 +441,11 @@ export default function PagoTransferencia() {
             </div>
 
             <div>
-              <h2 className="text-[15px] font-medium text-slate-900">
+              <h2 className="text-[15px] font-medium text-[#263238]">
                 Datos para transferir
               </h2>
 
-              <p className="mt-0.5 text-[12px] font-normal text-slate-500">
+              <p className="mt-0.5 text-[12px] font-normal text-[#687477]">
                 {datosCuenta.medio}
               </p>
             </div>
@@ -465,28 +455,28 @@ export default function PagoTransferencia() {
             {/* TITULAR */}
 
             <div className="mb-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8A999B]">
                 Titular
               </p>
 
-              <p className="mt-1 text-[14px] font-medium text-slate-800">
+              <p className="mt-1 text-[14px] font-medium text-[#334346]">
                 {datosCuenta.titular}
               </p>
             </div>
 
-            <div className="space-y-2.5">
+            {/* ALIAS + CVU EN UNA FILA */}
+
+            <div className="grid grid-cols-2 gap-2.5">
               {/* ALIAS */}
 
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50/80 px-3.5 py-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-400">
-                    Alias
-                  </p>
+              <div className="min-w-0 rounded-xl border border-[#E7ECEB] bg-[#F7FAFA] px-3 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#8A999B]">
+                  Alias
+                </p>
 
-                  <p className="mt-1 truncate text-[14px] font-medium text-slate-800">
-                    {datosCuenta.alias}
-                  </p>
-                </div>
+                <p className="mt-1 truncate text-[13px] font-medium text-[#334346]">
+                  {datosCuenta.alias}
+                </p>
 
                 <button
                   type="button"
@@ -496,7 +486,7 @@ export default function PagoTransferencia() {
                       "alias"
                     )
                   }
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 active:scale-[0.97]"
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#DCE5E4] bg-white px-2 py-2 text-[11px] font-medium text-slate-600 transition hover:border-[#8EAAAC] hover:text-[#285861] active:scale-[0.97]"
                 >
                   {copiado === "alias" ? (
                     <>
@@ -514,16 +504,14 @@ export default function PagoTransferencia() {
 
               {/* CVU */}
 
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50/80 px-3.5 py-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-400">
-                    CVU
-                  </p>
+              <div className="min-w-0 rounded-xl border border-[#E7ECEB] bg-[#F7FAFA] px-3 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#8A999B]">
+                  CVU
+                </p>
 
-                  <p className="mt-1 break-all text-[14px] font-medium text-slate-800">
-                    {datosCuenta.cvu}
-                  </p>
-                </div>
+                <p className="mt-1 truncate text-[12px] font-medium text-[#334346] sm:text-[14px]">
+                  {datosCuenta.cvu}
+                </p>
 
                 <button
                   type="button"
@@ -533,7 +521,7 @@ export default function PagoTransferencia() {
                       "cvu"
                     )
                   }
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 active:scale-[0.97]"
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#DCE5E4] bg-white px-2 py-2 text-[11px] font-medium text-slate-600 transition hover:border-[#8EAAAC] hover:text-[#285861] active:scale-[0.97]"
                 >
                   {copiado === "cvu" ? (
                     <>
@@ -550,8 +538,8 @@ export default function PagoTransferencia() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/70 px-3.5 py-3">
-              <p className="text-[11px] font-normal leading-5 text-amber-800">
+            <div className="mt-4 rounded-xl border border-[#E4DDD3] bg-[#F7F2EB] px-3.5 py-3">
+              <p className="text-[11px] font-normal leading-5 text-[#756451]">
                 Verifica los datos antes de realizar la transferencia.
                 Luego sube el comprobante para que podamos confirmar
                 tu pago.
@@ -560,12 +548,12 @@ export default function PagoTransferencia() {
           </div>
         </section>
 
-        {/* COMPROBANTE */}
+                {/* COMPROBANTE */}
 
         {!descargaLista && (
-          <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-            <div className="flex items-start gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+          <section className="mt-4 overflow-hidden rounded-2xl border border-[#DCE5E4] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+            <div className="flex items-start gap-3 border-b border-[#E7ECEB] px-4 py-4 sm:px-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F7F2EB] text-[#B59672]">
                 <Upload
                   size={18}
                   strokeWidth={1.8}
@@ -573,13 +561,13 @@ export default function PagoTransferencia() {
               </div>
 
               <div>
-                <h2 className="text-[15px] font-medium text-slate-900">
+                <h2 className="text-[15px] font-medium text-[#263238]">
                   {enviado
                     ? "Estado del comprobante"
                     : "Sube tu comprobante"}
                 </h2>
 
-                <p className="mt-1 text-[12px] font-normal leading-5 text-slate-500">
+                <p className="mt-1 text-[12px] font-normal leading-5 text-[#687477]">
                   {enviado
                     ? "Te avisaremos aquí cuando finalice la verificación."
                     : "Selecciona el comprobante desde la galería o los archivos de tu dispositivo."}
@@ -599,19 +587,19 @@ export default function PagoTransferencia() {
                   />
 
                   {!archivo ? (
-                    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-7 text-center transition hover:border-violet-300 hover:bg-violet-50/30">
-                      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+                    <div className="rounded-xl border border-dashed border-[#C8D5D4] bg-[#F7FAFA] px-4 py-7 text-center transition hover:border-[#8EAAAC] hover:bg-[#EEF5F5]">
+                      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#8A999B] shadow-sm">
                         <Upload
                           size={19}
                           strokeWidth={1.8}
                         />
                       </div>
 
-                      <p className="mt-3 text-[13px] font-medium text-slate-700">
+                      <p className="mt-3 text-[13px] font-medium text-[#334346]">
                         Selecciona tu comprobante
                       </p>
 
-                      <p className="mt-1 text-[11px] font-normal text-slate-400">
+                      <p className="mt-1 text-[11px] font-normal text-[#8A999B]">
                         JPG, PNG, WEBP o PDF · Máx. 8 MB
                       </p>
 
@@ -620,15 +608,15 @@ export default function PagoTransferencia() {
                         onClick={() =>
                           inputArchivoRef.current?.click()
                         }
-                        className="mt-4 rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-medium text-white transition hover:bg-slate-800 active:scale-[0.98]"
+                        className="mt-4 rounded-xl bg-[#285861] px-4 py-2.5 text-[12px] font-medium text-white transition hover:bg-[#204850] active:scale-[0.98]"
                       >
                         Seleccionar archivo
                       </button>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                    <div className="rounded-xl border border-[#DCE5E4] bg-[#F7FAFA] p-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#EEF5F5] text-[#285861]">
                           <FileText
                             size={18}
                             strokeWidth={1.8}
@@ -636,11 +624,11 @@ export default function PagoTransferencia() {
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium text-slate-800">
+                          <p className="truncate text-[13px] font-medium text-[#334346]">
                             {archivo.name}
                           </p>
 
-                          <p className="mt-0.5 text-[10px] font-normal text-slate-400">
+                          <p className="mt-0.5 text-[10px] font-normal text-[#8A999B]">
                             {(
                               archivo.size /
                               1024 /
@@ -656,7 +644,7 @@ export default function PagoTransferencia() {
                           onClick={() =>
                             inputArchivoRef.current?.click()
                           }
-                          className="text-[11px] font-medium text-slate-500 transition hover:text-violet-600 disabled:opacity-50"
+                          className="text-[11px] font-medium text-[#687477] transition hover:text-[#285861] disabled:opacity-50"
                         >
                           Cambiar
                         </button>
@@ -666,7 +654,7 @@ export default function PagoTransferencia() {
                         type="button"
                         disabled={subiendo}
                         onClick={subirComprobante}
-                        className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-[12px] font-medium text-white transition hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#285861] px-4 py-3 text-[12px] font-medium text-white transition hover:bg-[#204850] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {subiendo ? (
                           <>
@@ -697,29 +685,29 @@ export default function PagoTransferencia() {
 
                 <div
                   key={estadoPedido}
-                  className="rounded-xl border border-violet-100 bg-violet-50/40 px-5 py-7 text-center"
+                  className="rounded-xl border border-[#D9E6E7] bg-[#EEF5F5] px-5 py-7 text-center"
                 >
                   {/* CÍRCULO CARGANDO */}
 
                   <div className="relative mx-auto flex h-16 w-16 items-center justify-center">
-                    <span className="absolute h-16 w-16 animate-ping rounded-full bg-violet-200 opacity-30" />
+                    <span className="absolute h-16 w-16 animate-ping rounded-full bg-[#B9CCCD] opacity-30" />
 
-                    <span className="absolute h-14 w-14 rounded-full border border-violet-100 bg-white shadow-sm" />
+                    <span className="absolute h-14 w-14 rounded-full border border-[#D9E6E7] bg-white shadow-sm" />
 
                     <Loader2
                       size={26}
                       strokeWidth={1.8}
-                      className="relative z-10 animate-spin text-violet-600"
+                      className="relative z-10 animate-spin text-[#285861]"
                     />
                   </div>
 
                   {/* MENSAJE */}
 
-                  <p className="mt-4 text-[16px] font-medium tracking-[-0.01em] text-slate-900">
+                  <p className="mt-4 text-[16px] font-medium tracking-[-0.01em] text-[#263238]">
                     {tituloEspera}
                   </p>
 
-                  <p className="mt-1.5 text-[12px] font-normal leading-5 text-slate-500">
+                  <p className="mt-1.5 text-[12px] font-normal leading-5 text-[#687477]">
                     {mensajeEspera}
                   </p>
 
@@ -727,33 +715,34 @@ export default function PagoTransferencia() {
 
                   <div className="mt-3 flex items-center justify-center gap-1.5">
                     <span
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400"
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#6F9398]"
                       style={{
                         animationDelay: "0ms",
                       }}
                     />
 
                     <span
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400"
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#6F9398]"
                       style={{
                         animationDelay: "150ms",
                       }}
                     />
 
                     <span
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400"
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#6F9398]"
                       style={{
                         animationDelay: "300ms",
                       }}
                     />
                   </div>
 
-                  <p className="mt-3 text-[10px] font-normal text-slate-400">
+                  <p className="mt-3 text-[10px] font-normal text-[#8A999B]">
                     No necesitas actualizar la página.
                   </p>
                 </div>
               ) : (
-                /* COMPROBANTE YA PROCESADO */
+                /* COMPROBANTE YA PROCESADO
+                   VERDE ORIGINAL */
 
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
                   <div className="flex items-center gap-3">
@@ -783,13 +772,13 @@ export default function PagoTransferencia() {
 
         {/* SEGUIMIENTO DEL PEDIDO */}
 
-        <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-          <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
-            <h2 className="text-[15px] font-medium text-slate-900">
+        <section className="mt-4 overflow-hidden rounded-2xl border border-[#DCE5E4] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+          <div className="border-b border-[#E7ECEB] px-4 py-4 sm:px-5">
+            <h2 className="text-[15px] font-medium text-[#263238]">
               Estado de tu compra
             </h2>
 
-            <p className="mt-1 text-[12px] font-normal leading-5 text-slate-500">
+            <p className="mt-1 text-[12px] font-normal leading-5 text-[#687477]">
               El estado se actualiza automáticamente.
             </p>
           </div>
@@ -833,7 +822,7 @@ export default function PagoTransferencia() {
                         completado
                           ? "border-emerald-200 bg-emerald-50 text-emerald-600"
                           : actual
-                            ? "border-violet-200 bg-violet-50 text-violet-600"
+                            ? "border-[#B9CCCD] bg-[#EEF5F5] text-[#285861]"
                             : "border-slate-200 bg-white text-slate-300"
                       }`}
                     >
@@ -864,17 +853,17 @@ export default function PagoTransferencia() {
                         <p
                           className={`text-[12px] font-medium ${
                             completado
-                              ? "text-slate-800"
+                              ? "text-[#334346]"
                               : actual
-                                ? "text-violet-700"
-                                : "text-slate-400"
+                                ? "text-[#285861]"
+                                : "text-[#8A999B]"
                           }`}
                         >
                           {paso.nombre}
                         </p>
 
                         {registro?.fecha && (
-                          <span className="text-[9px] font-normal text-slate-400">
+                          <span className="text-[9px] font-normal text-[#8A999B]">
                             {formatearFecha(
                               registro.fecha
                             )}
@@ -887,7 +876,7 @@ export default function PagoTransferencia() {
                           "comprobante_recibido" ||
                           paso.id ===
                             "verificando_pago") && (
-                          <p className="mt-1 text-[10px] font-normal leading-4 text-slate-400">
+                          <p className="mt-1 text-[10px] font-normal leading-4 text-[#8A999B]">
                             Procesando...
                           </p>
                         )}
@@ -899,8 +888,9 @@ export default function PagoTransferencia() {
           </div>
         </section>
 
-        {/* =====================================
+                {/* =====================================
             DESCARGA HABILITADA
+            SE CONSERVA EL VERDE ORIGINAL
         ===================================== */}
 
         {descargaLista && (
@@ -977,12 +967,12 @@ export default function PagoTransferencia() {
                     return (
                       <div
                         key={producto.productoId}
-                        className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5"
+                        className="rounded-xl border border-[#DCE5E4] bg-[#F7FAFA] p-3.5"
                       >
                         <div className="flex items-center gap-3">
                           {/* ICONO PDF */}
 
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-white text-violet-600 shadow-sm">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#D9E6E7] bg-white text-[#285861] shadow-sm">
                             <FileText
                               size={19}
                               strokeWidth={1.8}
@@ -992,25 +982,26 @@ export default function PagoTransferencia() {
                           {/* DATOS */}
 
                           <div className="min-w-0 flex-1">
-                            <p className="line-clamp-2 text-[12px] font-medium leading-5 text-slate-800">
+                            <p className="line-clamp-2 text-[12px] font-medium leading-5 text-[#334346]">
                               {producto.nombre ||
                                 "Producto digital"}
                             </p>
 
                             <div className="mt-1 flex items-center gap-2">
-                              <span className="text-[9px] font-medium uppercase tracking-wide text-slate-400">
+                              <span className="text-[9px] font-medium uppercase tracking-wide text-[#8A999B]">
                                 PDF
                               </span>
 
                               <span className="h-1 w-1 rounded-full bg-slate-300" />
 
-                              <span className="text-[9px] font-normal text-slate-400">
+                              <span className="text-[9px] font-normal text-[#8A999B]">
                                 Descarga digital
                               </span>
                             </div>
                           </div>
 
-                          {/* CHECK DESCARGADO */}
+                          {/* CHECK DESCARGADO
+                              VERDE ORIGINAL */}
 
                           {yaDescargado && (
                             <div
@@ -1035,7 +1026,7 @@ export default function PagoTransferencia() {
                               producto
                             )
                           }
-                          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-[12px] font-medium text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#285861] px-4 py-3 text-[12px] font-medium text-white transition hover:bg-[#204850] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {estaDescargando ? (
                             <>
@@ -1050,7 +1041,7 @@ export default function PagoTransferencia() {
                             <>
                               <Download size={15} />
 
-                              Descargar nuevamente
+                              Producto ya descargado
                             </>
                           ) : (
                             <>
@@ -1068,13 +1059,13 @@ export default function PagoTransferencia() {
                 /* SI EL BACKEND TODAVÍA NO DEVOLVIÓ
                    LOS PRODUCTOS */
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-5 text-center">
+                <div className="rounded-xl border border-[#DCE5E4] bg-[#F7FAFA] px-4 py-5 text-center">
                   <Loader2
                     size={19}
-                    className="mx-auto animate-spin text-slate-400"
+                    className="mx-auto animate-spin text-[#8A999B]"
                   />
 
-                  <p className="mt-2 text-[11px] font-normal text-slate-500">
+                  <p className="mt-2 text-[11px] font-normal text-[#687477]">
                     Preparando tu material...
                   </p>
                 </div>
@@ -1090,19 +1081,7 @@ export default function PagoTransferencia() {
                 </div>
               )}
 
-              {/* MENSAJE FINAL */}
-
-              <div className="mt-5 border-t border-slate-100 pt-4 text-center">
-                <p className="text-[12px] font-medium text-slate-700">
-                  Esperamos que disfrutes tu compra.
-                </p>
-
-                <p className="mx-auto mt-1 max-w-md text-[10px] font-normal leading-5 text-slate-400">
-                  Guarda los archivos en tu dispositivo
-                  para tenerlos disponibles cuando los
-                  necesites.
-                </p>
-              </div>
+              
             </div>
           </section>
         )}
@@ -1110,7 +1089,7 @@ export default function PagoTransferencia() {
         {/* PIE */}
 
         <div className="mt-6 text-center">
-          <p className="text-[10px] font-normal leading-5 text-slate-400">
+          <p className="text-[10px] font-normal leading-5 text-[#8A999B]">
             Si tienes algún inconveniente con tu pago o
             descarga, ponte en contacto con nosotros
             indicando tu número de pedido.

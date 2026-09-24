@@ -77,13 +77,13 @@ const DetalleProducto = () => {
 
   if (!producto) {
     return (
-      <main className="flex min-h-[70vh] items-center justify-center bg-white px-4">
+      <main className="flex min-h-[70vh] items-center justify-center bg-[#FCFDFC] px-4">
         <div className="max-w-sm text-center">
-          <h1 className="text-xl font-medium text-slate-900">
+          <h1 className="text-xl font-medium text-[#263238]">
             Producto no encontrado
           </h1>
 
-          <p className="mt-2 text-sm font-normal leading-6 text-slate-600">
+          <p className="mt-2 text-sm font-normal leading-6 text-[#687477]">
             El producto que buscas no está disponible.
           </p>
 
@@ -92,7 +92,7 @@ const DetalleProducto = () => {
             onClick={() =>
               navigate("/tienda/digitales")
             }
-            className="mt-5 rounded-md bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+            className="mt-5 rounded-md bg-[#285861] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#204850]"
           >
             Volver a la tienda
           </button>
@@ -172,19 +172,21 @@ const DetalleProducto = () => {
 
   return (
     <>
-      <main className="min-h-screen bg-white px-4 pb-12 pt-4 sm:px-5 sm:pt-6">
+      <main className="min-h-screen bg-[#FCFDFC] px-4 pb-12 pt-4 sm:px-5 sm:pt-6">
         <div className="mx-auto max-w-6xl">
+
           {/* VOLVER */}
 
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="mb-5 inline-flex items-center gap-2 text-sm font-normal text-slate-600 transition-colors hover:text-slate-900"
+            className="mb-5 inline-flex items-center gap-2 text-sm font-normal text-[#687477] transition-colors hover:text-[#285861]"
           >
             <ArrowLeft
               size={17}
               strokeWidth={1.8}
             />
+
             Volver
           </button>
 
@@ -193,14 +195,16 @@ const DetalleProducto = () => {
           ====================================================== */}
 
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+
             {/* =====================================================
                 GALERÍA
             ====================================================== */}
 
             <section>
+
               {/* IMAGEN PRINCIPAL */}
 
-              <div className="relative mx-auto max-w-[420px] overflow-hidden rounded-md border border-slate-200 bg-white">
+              <div className="relative mx-auto max-w-[420px] overflow-hidden rounded-md border border-[#DCE5E4] bg-white">
                 <button
                   type="button"
                   onClick={() =>
@@ -234,7 +238,7 @@ const DetalleProducto = () => {
                       ))}
                   </div>
 
-                  <div className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white/95 text-slate-600 transition-colors group-hover:text-slate-900">
+                  <div className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-md border border-[#DCE5E4] bg-white/95 text-[#687477] transition-colors group-hover:border-[#8EAAAC] group-hover:text-[#285861]">
                     <Expand
                       size={16}
                       strokeWidth={1.8}
@@ -257,8 +261,8 @@ const DetalleProducto = () => {
                         }
                         className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-white p-1 transition-colors ${
                           imagenActiva === index
-                            ? "border-slate-900"
-                            : "border-slate-200 hover:border-slate-400"
+                            ? "border-[#285861]"
+                            : "border-[#DCE5E4] hover:border-[#8EAAAC]"
                         }`}
                         aria-label={`Ver imagen ${
                           index + 1
@@ -279,16 +283,16 @@ const DetalleProducto = () => {
 
               {/* CALIDAD */}
 
-              <div className="mx-auto mt-4 flex max-w-[420px] items-center gap-2.5 border-t border-slate-200 pt-4">
+              <div className="mx-auto mt-4 flex max-w-[420px] items-center gap-2.5 border-t border-[#DCE5E4] pt-4">
                 <Check
                   size={15}
                   strokeWidth={1.8}
-                  className="shrink-0 text-slate-500"
+                  className="shrink-0 text-[#285861]"
                 />
 
-                <p className="text-xs font-normal leading-5 text-slate-600">
+                <p className="text-xs font-normal leading-5 text-[#687477]">
                   El archivo final se entrega en{" "}
-                  <span className="font-medium text-slate-900">
+                  <span className="font-medium text-[#263238]">
                     alta calidad
                   </span>
                   .
@@ -301,9 +305,10 @@ const DetalleProducto = () => {
             ====================================================== */}
 
             <section className="lg:pt-1">
+
               {/* TÍTULO */}
 
-              <h1 className="max-w-2xl text-2xl font-medium leading-tight tracking-tight text-slate-900 sm:text-3xl">
+              <h1 className="max-w-2xl text-2xl font-medium leading-tight tracking-tight text-[#263238] sm:text-3xl">
                 {textoEs(producto.nombre)}
               </h1>
 
@@ -319,11 +324,11 @@ const DetalleProducto = () => {
                   PRECIO
               ================================================== */}
 
-              <div className="mt-5 border-y border-slate-200 py-4">
+              <div className="mt-5 border-y border-[#DCE5E4] py-4">
                 {tieneOferta ? (
                   <>
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="text-3xl font-medium tracking-tight text-slate-950">
+                      <span className="text-3xl font-medium tracking-tight text-[#263238]">
                         {formatearPrecio(
                           precioFinal
                         )}
@@ -340,14 +345,15 @@ const DetalleProducto = () => {
                           size={14}
                           strokeWidth={1.8}
                         />
+
                         {descuento}% OFF
                       </span>
                     </div>
 
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <p className="text-xs font-normal text-slate-600">
+                      <p className="text-xs font-normal text-[#687477]">
                         Ahorro{" "}
-                        <span className="font-medium text-slate-900">
+                        <span className="font-medium text-[#263238]">
                           {formatearPrecio(
                             ahorro
                           )}
@@ -368,7 +374,7 @@ const DetalleProducto = () => {
                     </div>
                   </>
                 ) : (
-                  <span className="text-3xl font-medium tracking-tight text-slate-950">
+                  <span className="text-3xl font-medium tracking-tight text-[#263238]">
                     {formatearPrecio(
                       producto.precioARS
                     )}
@@ -382,15 +388,15 @@ const DetalleProducto = () => {
                     <Landmark
                       size={15}
                       strokeWidth={1.7}
-                      className="shrink-0 text-slate-500"
+                      className="shrink-0 text-[#285861]"
                     />
 
-                    <p className="text-xs font-normal text-slate-600 sm:text-sm">
-                      <span className="font-medium text-slate-900">
+                    <p className="text-xs font-normal text-[#687477] sm:text-sm">
+                      <span className="font-medium text-[#285861]">
                         {DESCUENTO_TRANSFERENCIA}% OFF
                       </span>{" "}
                       con transferencia ·{" "}
-                      <span className="font-medium text-slate-900">
+                      <span className="font-medium text-[#263238]">
                         {formatearPrecio(
                           precioTransferencia
                         )}
@@ -402,11 +408,11 @@ const DetalleProducto = () => {
                     <CreditCard
                       size={15}
                       strokeWidth={1.7}
-                      className="shrink-0 text-slate-500"
+                      className="shrink-0 text-[#B59672]"
                     />
 
-                    <p className="text-xs font-normal text-slate-600 sm:text-sm">
-                      <span className="font-medium text-slate-900">
+                    <p className="text-xs font-normal text-[#687477] sm:text-sm">
+                      <span className="font-medium text-[#263238]">
                         {CUOTAS_SIN_INTERES} x{" "}
                         {formatearPrecio(
                           precioCuota
@@ -423,11 +429,11 @@ const DetalleProducto = () => {
               ================================================== */}
 
               <div className="mt-6">
-                <h2 className="text-base font-medium text-slate-900">
+                <h2 className="text-base font-medium text-[#263238]">
                   Sobre este producto
                 </h2>
 
-                <p className="mt-2 max-w-2xl text-sm font-normal leading-6 text-slate-600">
+                <p className="mt-2 max-w-2xl text-sm font-normal leading-6 text-[#687477]">
                   {textoEs(
                     producto.descripcionLarga
                   ) ||
@@ -435,7 +441,7 @@ const DetalleProducto = () => {
                       producto.descripcion
                     )}
                 </p>
-              </div>           
+              </div>
 
               {/* =================================================
                   QUÉ INCLUYE
@@ -444,8 +450,8 @@ const DetalleProducto = () => {
               {listaEs(
                 producto.incluye
               ).length > 0 && (
-                <div className="mt-6 border-t border-slate-200 pt-5">
-                  <h2 className="text-base font-medium text-slate-900">
+                <div className="mt-6 rounded-md border border-[#D9E6E7] bg-[#EEF5F5] p-4">
+                  <h2 className="text-base font-medium text-[#285861]">
                     Qué incluye
                   </h2>
 
@@ -461,10 +467,10 @@ const DetalleProducto = () => {
                           <Check
                             size={15}
                             strokeWidth={1.8}
-                            className="mt-0.5 shrink-0 text-slate-500"
+                            className="mt-0.5 shrink-0 text-[#285861]"
                           />
 
-                          <p className="text-xs font-normal leading-5 text-slate-600">
+                          <p className="text-xs font-normal leading-5 text-[#536468]">
                             {item}
                           </p>
                         </div>
@@ -481,8 +487,8 @@ const DetalleProducto = () => {
               {listaEs(
                 producto.beneficios
               ).length > 0 && (
-                <div className="mt-6 border-t border-slate-200 pt-5">
-                  <h2 className="text-base font-medium text-slate-900">
+                <div className="mt-4 rounded-md border border-[#E4DDD3] bg-[#F7F2EB] p-4">
+                  <h2 className="text-base font-medium text-[#756451]">
                     Beneficios
                   </h2>
 
@@ -498,10 +504,10 @@ const DetalleProducto = () => {
                           <Check
                             size={15}
                             strokeWidth={1.8}
-                            className="mt-0.5 shrink-0 text-slate-500"
+                            className="mt-0.5 shrink-0 text-[#B59672]"
                           />
 
-                          <p className="text-xs font-normal leading-5 text-slate-600">
+                          <p className="text-xs font-normal leading-5 text-[#685E52]">
                             {item}
                           </p>
                         </div>
@@ -511,57 +517,65 @@ const DetalleProducto = () => {
                 </div>
               )}
 
-                {/* =================================================
-    INFORMACIÓN ADICIONAL
-================================================== */}
+              {/* =================================================
+                  INFORMACIÓN ADICIONAL
+              ================================================== */}
 
-{(producto.edadRecomendada ||
-  producto.nivel) && (
-  <div className="mt-6 grid grid-cols-2 gap-3 border-t border-slate-200 pt-5">
-    {producto.edadRecomendada && (
-      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">
-          Edad recomendada
-        </p>
+              {(producto.edadRecomendada ||
+                producto.nivel) && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
 
-        <p className="mt-1 text-xs font-normal text-slate-700">
-          {producto.edadRecomendada}
-        </p>
-      </div>
-    )}
+                  {/* EDAD RECOMENDADA */}
 
-    {producto.nivel && (
-      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">
-          Nivel
-        </p>
+                  {producto.edadRecomendada && (
+                    <div className="rounded-md border border-[#D9E6E7] bg-[#EEF5F5] px-3 py-3">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#285861]">
+                        Edad recomendada
+                      </p>
 
-        <p className="mt-1 text-xs font-normal text-slate-700">
-          {producto.nivel}
-        </p>
-      </div>
-    )}
-  </div>
-)}            
+                      <p className="mt-1 text-xs font-normal text-[#536468]">
+                        {
+                          producto.edadRecomendada
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {/* NIVEL */}
+
+                  {producto.nivel && (
+                    <div className="rounded-md border border-[#E4DDD3] bg-[#F7F2EB] px-3 py-3">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8A7966]">
+                        Nivel
+                      </p>
+
+                      <p className="mt-1 text-xs font-normal text-[#685E52]">
+                        {producto.nivel}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* =====================================================
                   COMPRA
               ====================================================== */}
 
-              <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <div className="mt-6 rounded-md border border-[#D9E6E7] bg-[#F7FAFA] p-4">
                 <div className="flex items-start gap-3">
-                  <Download
-                    size={17}
-                    strokeWidth={1.8}
-                    className="mt-0.5 shrink-0 text-slate-600"
-                  />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#EEF5F5] text-[#285861]">
+                    <Download
+                      size={16}
+                      strokeWidth={1.8}
+                    />
+                  </div>
 
                   <div>
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-medium text-[#263238]">
                       Descarga digital
                     </p>
 
-                    <p className="mt-1 text-xs font-normal leading-5 text-slate-600">
+                    <p className="mt-1 text-xs font-normal leading-5 text-[#687477]">
                       Descarga automática luego de
                       confirmar el pago.
                     </p>
@@ -571,7 +585,7 @@ const DetalleProducto = () => {
                 <button
                   type="button"
                   onClick={irAlCheckout}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#204850]"
                 >
                   <ShoppingBag
                     size={16}
@@ -588,13 +602,13 @@ const DetalleProducto = () => {
 
               {resenasDelProducto.length >
                 0 && (
-                <div className="mt-8 border-t border-slate-200 pt-6">
+                <div className="mb-20 mt-8 border-t border-[#DCE5E4] pt-6">
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <h2 className="text-base font-medium text-slate-900">
+                    <h2 className="text-base font-medium text-[#263238]">
                       Reseñas
                     </h2>
 
-                    <span className="text-xs font-normal text-slate-500">
+                    <span className="text-xs font-normal text-[#687477]">
                       {
                         resenasDelProducto.length
                       }{" "}
@@ -610,9 +624,10 @@ const DetalleProducto = () => {
                       (resena) => (
                         <article
                           key={resena.id}
-                          className="rounded-md border border-slate-200 bg-white p-4"
+                          className="rounded-md border border-[#DCE5E4] bg-white p-4"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
+
                             {/* ESTRELLAS */}
 
                             <div className="flex text-[13px] leading-none text-amber-500">
@@ -639,13 +654,13 @@ const DetalleProducto = () => {
                             {/* COMPRA VERIFICADA */}
 
                             {resena.compraVerificada && (
-                              <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-medium uppercase tracking-[0.06em] text-slate-600">
+                              <span className="rounded-md border border-[#D9E6E7] bg-[#EEF5F5] px-2 py-1 text-[9px] font-medium uppercase tracking-[0.06em] text-[#285861]">
                                 Compra verificada
                               </span>
                             )}
                           </div>
 
-                          <p className="mt-3 text-xs font-normal leading-5 text-slate-600">
+                          <p className="mt-3 text-xs font-normal leading-5 text-[#687477]">
                             “{resena.texto}”
                           </p>
                         </article>
@@ -665,7 +680,8 @@ const DetalleProducto = () => {
 
       {previewAbierto &&
         imagenActual && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/85 p-4">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#172A2D]/90 p-4">
+
             {/* CERRAR */}
 
             <button
@@ -673,7 +689,7 @@ const DetalleProducto = () => {
               onClick={() =>
                 setPreviewAbierto(false)
               }
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white text-slate-700 transition-colors hover:bg-slate-100"
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white text-[#536468] transition-colors hover:bg-[#EEF5F5] hover:text-[#285861]"
               aria-label="Cerrar vista previa"
             >
               <X
