@@ -283,20 +283,10 @@ const DetalleProducto = () => {
 
               {/* CALIDAD */}
 
-              <div className="mx-auto mt-4 flex max-w-[420px] items-center gap-2.5 border-t border-[#DCE5E4] pt-4">
-                <Check
-                  size={15}
-                  strokeWidth={1.8}
-                  className="shrink-0 text-[#285861]"
-                />
+              <div className="mx-auto ---mt-1 flex max-w-[420px] items-center gap-2.5 border-t border-[#DCE5E4] -pt-2">
+                
 
-                <p className="text-xs font-normal leading-5 text-[#687477]">
-                  El archivo final se entrega en{" "}
-                  <span className="font-medium text-[#263238]">
-                    alta calidad
-                  </span>
-                  .
-                </p>
+                
               </div>
             </section>
 
@@ -308,7 +298,7 @@ const DetalleProducto = () => {
 
               {/* TÍTULO */}
 
-              <h1 className="max-w-2xl text-2xl font-medium leading-tight tracking-tight text-[#263238] sm:text-3xl">
+              <h1 className="max-w-2xl text-2xl font-medium -mb-4 leading-tight tracking-tight text-[#263238] sm:text-3xl">
                 {textoEs(producto.nombre)}
               </h1>
 
@@ -447,35 +437,31 @@ const DetalleProducto = () => {
                   QUÉ INCLUYE
               ================================================== */}
 
-              {listaEs(
-                producto.incluye
-              ).length > 0 && (
-                <div className="mt-6 rounded-md border border-[#D9E6E7] bg-[#EEF5F5] p-4">
+              {listaEs(producto.incluye).length > 0 && (
+                <div className="mt-6">
                   <h2 className="text-base font-medium text-[#285861]">
                     Qué incluye
                   </h2>
 
-                  <div className="mt-3 grid gap-x-5 gap-y-2 sm:grid-cols-2">
-                    {listaEs(
-                      producto.incluye
-                    ).map(
-                      (item, index) => (
-                        <div
-                          key={index}
-                          className="flex items-start gap-2.5"
-                        >
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {listaEs(producto.incluye).map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2.5 rounded-lg border border-[#285861]/15 bg-[#285861]/[0.06] px-3 py-1"
+                      >
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white">
                           <Check
                             size={15}
-                            strokeWidth={1.8}
-                            className="mt-0.5 shrink-0 text-[#285861]"
+                            strokeWidth={2}
+                            className="text-[#285861]"
                           />
-
-                          <p className="text-xs font-normal leading-5 text-[#536468]">
-                            {item}
-                          </p>
                         </div>
-                      )
-                    )}
+
+                        <p className="text-xs font-normal leading-4 text-[#46585C]">
+                          {item}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -484,78 +470,71 @@ const DetalleProducto = () => {
                   BENEFICIOS
               ================================================== */}
 
-              {listaEs(
-                producto.beneficios
-              ).length > 0 && (
-                <div className="mt-4 rounded-md border border-[#E4DDD3] bg-[#F7F2EB] p-4">
-                  <h2 className="text-base font-medium text-[#756451]">
-                    Beneficios
-                  </h2>
+              {listaEs(producto.beneficios).length > 0 && (
+  <div className="mt-5">
+    <h2 className="text-base font-medium text-[#756451]">
+      Beneficios
+    </h2>
 
-                  <div className="mt-3 grid gap-x-5 gap-y-2 sm:grid-cols-2">
-                    {listaEs(
-                      producto.beneficios
-                    ).map(
-                      (item, index) => (
-                        <div
-                          key={index}
-                          className="flex items-start gap-2.5"
-                        >
-                          <Check
-                            size={15}
-                            strokeWidth={1.8}
-                            className="mt-0.5 shrink-0 text-[#B59672]"
-                          />
+    <div className="mt-3 grid grid-cols-2 gap-3">
+      {listaEs(producto.beneficios).map((item, index) => (
+        <div
+          key={index}
+          className="flex items-center gap-2.5 rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1"
+        >
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white">
+            <Check
+              size={15}
+              strokeWidth={2}
+              className="text-[#8B684D]"
+            />
+          </div>
 
-                          <p className="text-xs font-normal leading-5 text-[#685E52]">
-                            {item}
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
+          <p className="text-xs font-normal leading-4 text-[#68584D]">
+            {item}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
               {/* =================================================
                   INFORMACIÓN ADICIONAL
               ================================================== */}
 
-              {(producto.edadRecomendada ||
-                producto.nivel) && (
-                <div className="mt-4 grid grid-cols-2 gap-3">
+        {(producto.edadRecomendada || producto.nivel) && (
+  <div className="mt-4 grid grid-cols-2 gap-3">
 
-                  {/* EDAD RECOMENDADA */}
+    {/* EDAD RECOMENDADA */}
 
-                  {producto.edadRecomendada && (
-                    <div className="rounded-md border border-[#D9E6E7] bg-[#EEF5F5] px-3 py-3">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#285861]">
-                        Edad recomendada
-                      </p>
+    {producto.edadRecomendada && (
+      <div className="rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1">
+        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8B684D]">
+          Edad recomendada
+        </p>
 
-                      <p className="mt-1 text-xs font-normal text-[#536468]">
-                        {
-                          producto.edadRecomendada
-                        }
-                      </p>
-                    </div>
-                  )}
+        <p className="mt-1 text-xs font-normal text-[#68584D]">
+          {producto.edadRecomendada}
+        </p>
+      </div>
+    )}
 
-                  {/* NIVEL */}
+    {/* NIVEL */}
 
-                  {producto.nivel && (
-                    <div className="rounded-md border border-[#E4DDD3] bg-[#F7F2EB] px-3 py-3">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8A7966]">
-                        Nivel
-                      </p>
+    {producto.nivel && (
+      <div className="rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1">
+        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8B684D]">
+          Nivel
+        </p>
 
-                      <p className="mt-1 text-xs font-normal text-[#685E52]">
-                        {producto.nivel}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+        <p className="mt-1 text-xs font-normal text-[#68584D]">
+          {producto.nivel}
+        </p>
+      </div>
+    )}
+  </div>
+)}      
 
               {/* =====================================================
                   COMPRA
