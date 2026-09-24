@@ -32,7 +32,110 @@ import PagoTransferencia from "./paginas/PagoTransferencia";
 import LoginAdmin from "./paginas/LoginAdmin";
 import Admin from "./paginas/Admin";
 
-/* SCROLL ARRIBA AL CAMBIAR DE PÁGINA */
+import { productosDigitales } from "./datos/productosDigitales";
+
+/* =========================
+   REGISTRAR NUEVA VISITA
+========================= */
+
+const RegistrarVisita = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const ruta = location.pathname;
+
+    /* NO REGISTRAR ADMIN */
+
+    if (ruta.startsWith("/admin")) {
+      return;
+    }
+
+    /* UNA SOLA VEZ POR SESIÓN */
+
+    if (
+      sessionStorage.getItem(
+        "visita_notificada"
+      )
+    ) {
+      return;
+    }
+
+    let pagina = ruta;
+
+    if (ruta === "/") {
+      pagina = "Inicio";
+    } else if (ruta === "/tienda") {
+      pagina = "Tienda";
+    } else if (
+      ruta === "/tienda/digitales"
+    ) {
+      pagina = "Imprimibles digitales";
+    } else if (
+      ruta.startsWith("/tienda/")
+    ) {
+      const productoId =
+        decodeURIComponent(
+          ruta.replace("/tienda/", "")
+        );
+
+      const producto =
+        productosDigitales.find(
+          (item) =>
+            item.id === productoId
+        );
+
+      pagina =
+        producto?.nombre ||
+        "Detalle de producto";
+    } else if (
+      ruta.startsWith("/checkout/")
+    ) {
+      pagina = "Checkout";
+    } else if (
+      ruta.startsWith("/pago/")
+    ) {
+      pagina = "Pago";
+    } else if (
+      ruta === "/recomendados"
+    ) {
+      pagina = "Recomendados";
+    }
+
+    /* MARCAR ANTES DEL FETCH PARA
+       EVITAR NOTIFICACIONES DUPLICADAS */
+
+    sessionStorage.setItem(
+      "visita_notificada",
+      "true"
+    );
+
+    fetch("/api/visitas", {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body: JSON.stringify({
+        pagina,
+        ruta,
+      }),
+    }).catch((error) => {
+      console.error(
+        "Error registrando visita:",
+        error
+      );
+    });
+  }, [location.pathname]);
+
+  return null;
+};
+
+/* =========================
+   SCROLL ARRIBA
+========================= */
+
 const ScrollToTop = () => {
   const location = useLocation();
 
@@ -50,28 +153,36 @@ const ScrollToTop = () => {
   return null;
 };
 
-/* HOME */
+/* =========================
+   HOME
+========================= */
+
 const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({
-      behavior: "smooth",
-    });
+    document
+      .getElementById(id)
+      ?.scrollIntoView({
+        behavior: "smooth",
+      });
   };
 
   useEffect(() => {
-    const seccion = location.state?.scrollTo;
+    const seccion =
+      location.state?.scrollTo;
 
     if (!seccion) {
       return;
     }
 
     requestAnimationFrame(() => {
-      document.getElementById(seccion)?.scrollIntoView({
-        behavior: "smooth",
-      });
+      document
+        .getElementById(seccion)
+        ?.scrollIntoView({
+          behavior: "smooth",
+        });
     });
 
     navigate("/", {
@@ -99,27 +210,54 @@ const Home = () => {
   );
 };
 
-/* CONTENIDO GLOBAL */
+/* =========================
+   CONTENIDO GLOBAL
+========================= */
+
 const ContenidoApp = () => {
   const location = useLocation();
 
-  const esHome = location.pathname === "/";
+  const esHome =
+    location.pathname === "/";
 
   return (
     <>
+      <RegistrarVisita />
+
       <Navbar />
 
       <ScrollToTop />
 
-      <div className={esHome ? "" : "pt-20"}>
+      <div
+        className={
+          esHome ? "" : "pt-20"
+        }
+      >
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
-          <Route path="/tienda" element={<Tienda />} />
+          <Route
+            path="/tienda"
+            element={<Tienda />}
+          />
 
-          <Route path="/pago/exitoso" element={<PagoExitoso />} />
-<Route path="/pago/pendiente" element={<PagoPendiente />} />
-<Route path="/pago/fallido" element={<PagoFallido />} />
+          <Route
+            path="/pago/exitoso"
+            element={<PagoExitoso />}
+          />
+
+          <Route
+            path="/pago/pendiente"
+            element={<PagoPendiente />}
+          />
+
+          <Route
+            path="/pago/fallido"
+            element={<PagoFallido />}
+          />
 
           <Route
             path="/recomendados"
@@ -142,24 +280,24 @@ const ContenidoApp = () => {
           />
 
           <Route
-  path="/checkout/:id"
-  element={<Checkout />}
-/>
+            path="/checkout/:id"
+            element={<Checkout />}
+          />
 
           <Route
-  path="/pago/transferencia"
-  element={<PagoTransferencia />}
-/>
+            path="/pago/transferencia"
+            element={<PagoTransferencia />}
+          />
 
           <Route
-  path="/admin/login"
-  element={<LoginAdmin />}
-/>
+            path="/admin/login"
+            element={<LoginAdmin />}
+          />
 
           <Route
-  path="/admin"
-  element={<Admin />}
-/>
+            path="/admin"
+            element={<Admin />}
+          />
 
           <Route
             path="/generador-laminas"
@@ -168,7 +306,9 @@ const ContenidoApp = () => {
 
           <Route
             path="/optimizador-imagenes"
-            element={<OptimizadorImagenes />}
+            element={
+              <OptimizadorImagenes />
+            }
           />
         </Routes>
 
