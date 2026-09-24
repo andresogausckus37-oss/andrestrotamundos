@@ -368,12 +368,7 @@ export default function Checkout() {
 
           <h1 className="mt-1 text-xl font-medium tracking-tight text-slate-900 sm:text-2xl">
             Finalizar compra
-          </h1>
-
-          <p className="mt-1.5 text-xs font-normal leading-5 text-slate-600">
-            Revisa tu pedido, completa tus datos
-            y selecciona cómo quieres pagar.
-          </p>
+          </h1>         
         </div>
 
         {/* =====================================================
@@ -538,24 +533,21 @@ export default function Checkout() {
 
         <section className="rounded-md border border-slate-200 bg-white p-4">
           <div className="mb-4 flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-xs font-medium text-white">
-              1
-            </div>
-
             <div>
               <h2 className="text-md font-medium text-slate-900">
                 Tus datos
               </h2>
 
               <p className="mt-0.5 text-[13px] font-normal text-slate-500">
-                Usaremos tu correo para
-                identificar la compra.
+                Usaremos tu correo para identificar la compra.
               </p>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label>
+          <div className="grid grid-cols-2 gap-3">
+            {/* NOMBRE */}
+
+            <label className="min-w-0">
               <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
                 Nombre
               </span>
@@ -571,22 +563,22 @@ export default function Checkout() {
                   type="text"
                   value={nombre}
                   onChange={(e) =>
-                    setNombre(
-                      e.target.value
-                    )
+                    setNombre(e.target.value)
                   }
                   placeholder="Tu nombre"
-                  className="w-full bg-transparent py-2.5 text-xs font-normal text-slate-900 outline-none placeholder:text-slate-400"
+                  className="min-w-0 w-full bg-transparent py-2.5 text-xs font-normal text-slate-900 outline-none placeholder:text-slate-400"
                 />
               </div>
             </label>
 
-            <label>
+            {/* CORREO */}
+
+            <label className="min-w-0">
               <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
                 Correo electrónico
               </span>
 
-              <div className="flex items-center mb-6 gap-2 rounded-md border border-slate-300 bg-white px-3 transition-colors focus-within:border-slate-500">
+              <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 transition-colors focus-within:border-slate-500">
                 <Mail
                   size={15}
                   strokeWidth={1.8}
@@ -597,12 +589,10 @@ export default function Checkout() {
                   type="email"
                   value={email}
                   onChange={(e) =>
-                    setEmail(
-                      e.target.value
-                    )
+                    setEmail(e.target.value)
                   }
                   placeholder="tu@email.com"
-                  className="w-full bg-transparent py-2.5 text-xs font-normal text-slate-900 outline-none placeholder:text-slate-400"
+                  className="min-w-0 w-full bg-transparent py-2.5 text-xs font-normal text-slate-900 outline-none placeholder:text-slate-400"
                 />
               </div>
             </label>
@@ -615,9 +605,7 @@ export default function Checkout() {
 
         <section className="mt-5">
           <div className="mb-3 flex items-center gap-2.5 px-1">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-xs font-medium text-white">
-              2
-            </div>
+            
 
             <div>
               <h2 className="text-md font-medium text-slate-900">
@@ -694,7 +682,7 @@ export default function Checkout() {
 
                   {/* DESCRIPCIÓN */}
 
-                  <p className="-mt-6 max-w-xl text-[11px] font-normal leading-5 text-slate-600 sm:text-xs">
+                  <p className="-mt-7 max-w-xl text-[12px] font-normal leading-5 text-slate-600 sm:text-xs">
                     Tarjetas de crédito, débito,
                     dinero disponible y otros
                     medios habilitados por Mercado
@@ -704,17 +692,17 @@ export default function Checkout() {
                   {/* TARJETAS / MEDIOS DE PAGO */}
 
 <div className="mt-3 border-t border-slate-200 pt-3">
-  <p className="text-[10px] font-normal text-slate-500">
+  <p className="text-[11px] font-normal text-slate-500">
     Hasta 3 cuotas sin interés con medios seleccionados.
   </p>
 
-  <div className="mt-2 flex flex-wrap items-center gap-2">
+  <div className="mt-2 flex flex-wrap items-center gap-1">
     {/* VISA */}
     <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
       <img
         src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/visa%20"
         alt="Visa"
-        className="h-8 w-auto max-w-[48px] object-contain"
+        className="h-14 w-auto max-w-[48px] object-contain"
       />
     </div>
 
@@ -723,7 +711,7 @@ export default function Checkout() {
       <img
         src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/mastercard"
         alt="Mastercard"
-        className="h-10 w-auto max-w-[48px] object-contain"
+        className="h-12 w-auto max-w-[48px] object-cover"
       />
     </div>
 
@@ -742,6 +730,33 @@ export default function Checkout() {
         src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/nx"
         alt="Naranja X"
         className="h-8 w-auto max-w-[48px] object-contain"
+      />
+    </div>
+
+    {/* MAESTRO */}
+    <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+      <img
+        src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/maestro"
+        alt="Maestro"
+        className="h-8 w-auto max-w-[40px] object-contain"
+      />
+    </div>
+
+    {/* NATIVA */}
+    <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+      <img
+        src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/nativa"
+        alt="Nativa"
+        className="h-10 w-auto max-w-[48px] rounded-sm object-contain"
+      />
+    </div>
+
+    {/* SHOPPING */}
+    <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+      <img
+        src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/shopping%20"
+        alt="Shopping"
+        className="h-8 w-auto max-w-[40px] rounded-sm object-contain"
       />
     </div>
   </div>
@@ -815,9 +830,9 @@ export default function Checkout() {
                     </span>
                   </div>
 
-                  <p className="mt-2 text-[11px] font-normal leading-5 text-slate-600 sm:text-xs">
+                  <p className="mt-2 text-[12px] font-normal leading-5 text-slate-600 sm:text-xs">
                     Paga mediante transferencia y
-                    ahorra un{" "}
+                    ahorra{" "}
                     {DESCUENTO_TRANSFERENCIA}% 
                      adicional 🔥
                   </p>
@@ -932,7 +947,7 @@ export default function Checkout() {
 
           {/* SEGURIDAD */}
 
-          <div className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2">
+          <div className="mb-20 mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2">
             <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
               <ShieldCheck
                 size={13}
