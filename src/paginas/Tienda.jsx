@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CalificacionProducto from "../componentes/CalificacionProducto";
 
 import {
@@ -31,6 +31,88 @@ const CUOTAS_SIN_INTERES = 3;
 
 const Tienda = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+  document.title =
+    "Imprimibles y Juegos para Imprimir | Andrés Imprimibles";
+
+  const descripcion =
+    "Descubre juegos, actividades y productos digitales imprimibles. Laberintos, crucigramas, sopas de letras y recursos para el hogar y las mascotas.";
+
+  const url =
+    "https://andreshousesitter.com/tienda";
+
+  const actualizarMeta = (selector, atributo, contenido) => {
+    let elemento = document.querySelector(selector);
+
+    if (!elemento) {
+      elemento = document.createElement("meta");
+
+      if (atributo === "name") {
+        elemento.setAttribute(
+          "name",
+          selector.match(/name="([^"]+)"/)?.[1] || ""
+        );
+      } else {
+        elemento.setAttribute(
+          "property",
+          selector.match(/property="([^"]+)"/)?.[1] || ""
+        );
+      }
+
+      document.head.appendChild(elemento);
+    }
+
+    elemento.setAttribute("content", contenido);
+  };
+
+  actualizarMeta(
+    'meta[name="description"]',
+    "name",
+    descripcion
+  );
+
+  actualizarMeta(
+    'meta[property="og:title"]',
+    "property",
+    "Imprimibles y Juegos para Imprimir | Andrés Imprimibles"
+  );
+
+  actualizarMeta(
+    'meta[property="og:description"]',
+    "property",
+    descripcion
+  );
+
+  actualizarMeta(
+    'meta[property="og:url"]',
+    "property",
+    url
+  );
+
+  let canonical =
+    document.querySelector('link[rel="canonical"]');
+
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.setAttribute("rel", "canonical");
+    document.head.appendChild(canonical);
+  }
+
+  canonical.setAttribute("href", url);
+
+  return () => {
+    document.title =
+      "Cuidado de Casas y Mascotas | Andres House Sitter";
+
+    document
+      .querySelector('link[rel="canonical"]')
+      ?.setAttribute(
+        "href",
+        "https://andreshousesitter.com/"
+      );
+  };
+}, []);
 
   const [filtroActivo, setFiltroActivo] =
     useState("todos");

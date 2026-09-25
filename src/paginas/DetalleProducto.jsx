@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useNavigate,
   useParams,
@@ -43,18 +43,6 @@ const DetalleProducto = () => {
       (p) => p.id === id
     );
 
-  const formatearPrecio = (precioARS) => {
-    if (!precioARS) {
-      return "Precio a definir";
-    }
-
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: "ARS",
-      maximumFractionDigits: 0,
-    }).format(precioARS);
-  };
-
   const textoEs = (valor) => {
     if (typeof valor === "string") {
       return valor;
@@ -70,6 +58,221 @@ const DetalleProducto = () => {
 
     return valor?.es || [];
   };
+
+  /* =========================================================
+   SEO DEL PRODUCTO
+========================================================= */
+
+useEffect(() => {
+  if (!producto) {
+    return;
+  }
+
+  const nombre = textoEs(producto.nombre);
+  const descripcion = textoEs(producto.descripcion);
+
+  const url =
+    `https://andreshousesitter.com/tienda/${producto.id}`;
+
+  const imagen =
+    producto.imagenes?.portada || "";
+
+  document.title =
+    `${nombre} | Andrés Imprimibles`;
+
+  const actualizarMeta = (
+    selector,
+    atributo,
+    contenido
+  ) => {
+    let elemento =
+      document.querySelector(selector);
+
+    if (!elemento) {
+      elemento =
+        document.createElement("meta");
+
+      const nombreMeta =
+        selector.match(
+          /(?:name|property)="([^"]+)"/
+        )?.[1];
+
+      elemento.setAttribute(
+        atributo,
+        nombreMeta
+      );
+
+      document.head.appendChild(elemento);
+    }
+
+    elemento.setAttribute(
+      "content",
+      contenido
+    );
+  };
+
+  actualizarMeta(
+    'meta[name="description"]',
+    "name",
+    descripcion
+  );
+
+  actualizarMeta(
+    'meta[property="og:title"]',
+    "property",
+    nombre
+  );
+
+  actualizarMeta(
+    'meta[property="og:description"]',
+    "property",
+    descripcion
+  );
+
+  actualizarMeta(
+    'meta[property="og:url"]',
+    "property",
+    url
+  );
+
+  actualizarMeta(
+    'meta[property="og:type"]',
+    "property",
+    "product"
+  );
+
+  if (imagen) {
+    actualizarMeta(
+      'meta[property="og:image"]',
+      "property",
+      imagen
+    );
+
+    actualizarMeta(
+      'meta[name="twitter:image"]',
+      "name",
+      imagen
+    );
+  }
+
+  actualizarMeta(
+    'meta[name="twitter:title"]',
+    "name",
+    nombre
+  );
+
+  actualizarMeta(
+    'meta[name="twitter:description"]',
+    "name",
+    descripcion
+  );
+
+  let canonical =
+    document.querySelector(
+      'link[rel="canonical"]'
+    );
+
+  if (!canonical) {
+    canonical =
+      document.createElement("link");
+
+    canonical.setAttribute(
+      "rel",
+      "canonical"
+    );
+
+    document.head.appendChild(
+      canonical
+    );
+  }
+
+  canonical.setAttribute(
+    "href",
+    url
+  );
+
+  /* DATOS ESTRUCTURADOS DEL PRODUCTO */
+
+const precio =
+  producto.oferta?.activa &&
+  producto.oferta?.precioARS > 0
+    ? producto.oferta.precioARS
+    : producto.precioARS;
+
+const schemaProducto = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: nombre,
+  description: descripcion,
+  image: imagen ? [imagen] : undefined,
+  sku: producto.id,
+
+  offers: {
+    "@type": "Offer",
+    url,
+    priceCurrency: "ARS",
+    price: precio,
+    availability:
+      "https://schema.org/InStock",
+    itemCondition:
+      "https://schema.org/NewCondition",
+  },
+};
+
+let scriptSchema =
+  document.getElementById(
+    "schema-producto"
+  );
+
+if (!scriptSchema) {
+  scriptSchema =
+    document.createElement("script");
+
+  scriptSchema.type =
+    "application/ld+json";
+
+  scriptSchema.id =
+    "schema-producto";
+
+  document.head.appendChild(
+    scriptSchema
+  );
+}
+
+scriptSchema.textContent =
+  JSON.stringify(schemaProducto);
+
+  return () => {
+    document.title =
+      "Cuidado de Casas y Mascotas | Andres House Sitter";
+
+    document
+  .getElementById("schema-producto")
+  ?.remove();
+
+    document
+      .querySelector(
+        'link[rel="canonical"]'
+      )
+      ?.setAttribute(
+        "href",
+        "https://andreshousesitter.com/"
+      );
+  };
+}, [producto]);
+
+  const formatearPrecio = (precioARS) => {
+    if (!precioARS) {
+      return "Precio a definir";
+    }
+
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0,
+    }).format(precioARS);
+  };
+
 
   /* =========================================================
      PRODUCTO NO ENCONTRADO
