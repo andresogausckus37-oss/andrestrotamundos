@@ -152,8 +152,8 @@ destacado: false,
     "Una colección de 25 sopas de letras imprimibles especialmente pensadas para adultos. Incluye 5 temáticas diferentes con desafíos de nivel avanzado para ejercitar la concentración, la memoria y el vocabulario mientras disfrutás de un momento de entretenimiento. Cada sopa de letras incluye su solución correspondiente y está preparada en formato A4 para imprimir fácilmente en casa o en una imprenta. Ideal para el tiempo libre, viajes, momentos de descanso o para regalar a amantes de los puzzles.",
 
   tipo: "digital",
-  categoria: "sopas-de-letras",
-  linea: "juegos",
+categoria: "sopa-de-letras",
+linea: "juegos",
 
   precioARS: 3499,
 

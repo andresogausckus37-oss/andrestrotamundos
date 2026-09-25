@@ -940,14 +940,7 @@ export default function PagoTransferencia() {
 
             <div className="p-4 sm:p-5">
               <div className="mb-4">
-                <h3 className="text-[14px] font-medium text-slate-900">
-                  Tu material
-                </h3>
-
-                <p className="mt-1 text-[11px] font-normal leading-5 text-slate-500">
-                  Descarga los archivos incluidos en
-                  tu compra.
-                </p>
+                
               </div>
 
               {/* PRODUCTOS */}
@@ -982,7 +975,7 @@ export default function PagoTransferencia() {
                           {/* DATOS */}
 
                           <div className="min-w-0 flex-1">
-                            <p className="line-clamp-2 text-[12px] font-medium leading-5 text-[#334346]">
+                            <p className="line-clamp-2 text-[15px] font-medium leading-5 text-[#334346]">
                               {producto.nombre ||
                                 "Producto digital"}
                             </p>
@@ -1089,7 +1082,7 @@ export default function PagoTransferencia() {
         {/* PIE */}
 
         <div className="mt-6 text-center">
-          <p className="text-[10px] font-normal leading-5 text-[#8A999B]">
+          <p className="text-[12px] font-normal leading-5 text-[#8A999B]">
             Si tienes algún inconveniente con tu pago o
             descarga, ponte en contacto con nosotros
             indicando tu número de pedido.

@@ -160,6 +160,7 @@ const Tienda = () => {
         id: "sopa-de-letras",
         nombre: t.sopaLetras,
       },
+
       {
         id: "unir-los-puntos",
         nombre: t.unirPuntos,
