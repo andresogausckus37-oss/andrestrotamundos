@@ -9,7 +9,7 @@ const ARCHIVOS_PRODUCTOS = {
     "50-crucigramas-reino-animal-con-soluciones.pdf",
 
   "25-sopas-de-letras-para-adultos":
-  "25-sopas-de-letras-adultos.pdf",
+  "25-sopas-de-letras-para-adultos.pdf",
 };
 
 export default async function handler(req, res) {
