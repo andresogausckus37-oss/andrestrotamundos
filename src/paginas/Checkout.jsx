@@ -443,29 +443,20 @@ export default function Checkout() {
       const datos = await respuesta.json();
 
       if (
-        !respuesta.ok ||
-        !datos.pedidoId ||
-        !datos.paypalOrderId
-      ) {
-        throw new Error(
-          datos.error ||
-            "No se pudo iniciar el pago con PayPal."
-        );
+  !respuesta.ok ||
+  !datos.pedidoId ||
+  !datos.paypalOrderId ||
+  !datos.approveUrl
+) {
+  throw new Error(
+    datos.error ||
+      "No se pudo iniciar el pago con PayPal."
+  );
       }
 
-      console.log(
-        "Pedido:",
-        datos.pedidoId
-      );
-
-      console.log(
-        "Orden PayPal:",
-        datos.paypalOrderId
-      );
-
-      setError(
-        "Orden PayPal creada correctamente."
-      );
+window.location.href =
+  datos.approveUrl;
+      
     } catch (error) {
       console.error(
         "Error iniciando PayPal:",

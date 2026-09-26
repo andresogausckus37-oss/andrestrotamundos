@@ -281,6 +281,21 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           intent: "CAPTURE",
 
+                    payment_source: {
+            paypal: {
+              experience_context: {
+                shipping_preference:
+                  "NO_SHIPPING",
+
+                return_url:
+                  "https://andreshousesitter.com/pago-exitoso",
+
+                cancel_url:
+                  "https://andreshousesitter.com/checkout",
+              },
+            },
+          },
+
           purchase_units: [
             {
               reference_id: pedidoId,
@@ -343,6 +358,25 @@ export default async function handler(req, res) {
         });
     }
 
+    const enlaceAprobacion =
+  datosPayPal.links?.find(
+    (link) =>
+      link.rel === "payer-action" ||
+      link.rel === "approve"
+  )?.href;
+
+if (!enlaceAprobacion) {
+  console.error(
+    "PayPal no devolvió enlace de aprobación:",
+    datosPayPal
+  );
+
+  return res.status(500).json({
+    error:
+      "PayPal no devolvió el enlace de aprobación.",
+  });
+}
+
     /* =====================================================
        GUARDAR PEDIDO
     ===================================================== */
@@ -393,11 +427,15 @@ export default async function handler(req, res) {
     ===================================================== */
 
     return res.status(201).json({
-      pedidoId,
+  pedidoId,
 
-      paypalOrderId:
-        datosPayPal.id,
-    });
+  paypalOrderId:
+    datosPayPal.id,
+
+  approveUrl:
+    enlaceAprobacion,
+});
+    
   } catch (error) {
     console.error(
       "Error creando orden PayPal:",
@@ -409,4 +447,3 @@ export default async function handler(req, res) {
         "Error interno al crear el pago con PayPal.",
     });
   }
-}
