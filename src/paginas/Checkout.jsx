@@ -27,6 +27,7 @@ import { resenasProductos } from "../datos/resenasProductos";
 import {
   MERCADO_ARGENTINA,
   MERCADO_INTERNACIONAL,
+  obtenerMercadoPorPais,
   obtenerPrecioMercado,
   formatearPrecioMercado,
 } from "../utilidades/mercado";
@@ -127,13 +128,40 @@ export default function Checkout() {
   ========================================================= */
 
   useEffect(() => {
-    // PRUEBA TEMPORAL PAYPAL EN REPLIT
-    setMercado(
-      MERCADO_INTERNACIONAL
-    );
+    const detectarMercado = async () => {
+      try {
+        const respuesta = await fetch(
+          "/api/visitas?accion=mercado"
+        );
 
-    setPais(null);
-    setCargandoMercado(false);
+        if (!respuesta.ok) {
+          throw new Error(
+            "No se pudo detectar el mercado."
+          );
+        }
+
+        const datos = await respuesta.json();
+
+        setPais(datos.pais || null);
+        setMercado(
+          datos.mercado === MERCADO_ARGENTINA
+            ? MERCADO_ARGENTINA
+            : MERCADO_INTERNACIONAL
+        );
+      } catch (error) {
+        console.error(
+          "Error detectando mercado:",
+          error
+        );
+
+        setPais("AR");
+        setMercado(MERCADO_ARGENTINA);
+      } finally {
+        setCargandoMercado(false);
+      }
+    };
+
+    detectarMercado();
   }, []);
 
   /* =========================================================
@@ -144,14 +172,11 @@ export default function Checkout() {
     if (!mercado) return;
 
     if (
-      mercado ===
-      MERCADO_INTERNACIONAL
+      mercado === MERCADO_INTERNACIONAL
     ) {
       setMetodoPago("paypal");
     } else {
-      setMetodoPago(
-        "mercadopago"
-      );
+      setMetodoPago("mercadopago");
     }
   }, [mercado]);
 
