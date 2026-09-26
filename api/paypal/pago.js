@@ -442,9 +442,9 @@ export default async function handler(req, res) {
                   "NO_SHIPPING",
 
                 return_url:
-  `https://andreshousesitter.com/pago-exitoso?metodo=paypal&pedidoId=${encodeURIComponent(
-    pedidoId
-  )}`,
+                `https://andreshousesitter.com/pago/exitoso?metodo=paypal&pedidoId=${encodeURIComponent(
+                  pedidoId
+                )}`,
 
                 cancel_url:
                   "https://andreshousesitter.com/checkout",
