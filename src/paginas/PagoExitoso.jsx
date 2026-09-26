@@ -27,17 +27,20 @@ export default function PagoExitoso() {
     useState("");
 
   const metodo =
-  searchParams.get("metodo");
+    searchParams.get("metodo");
 
-const pedidoId =
-  metodo === "paypal"
-    ? searchParams.get("pedidoId")
-    : searchParams.get(
-        "external_reference"
-      );
+  const pedidoId =
+    metodo === "paypal"
+      ? searchParams.get("pedidoId")
+      : searchParams.get(
+          "external_reference"
+        );
 
-const paypalOrderId =
-  searchParams.get("token");
+  const paypalOrderId =
+    searchParams.get("token");
+
+  const esPayPal =
+    metodo === "paypal";
 
   useEffect(() => {
     if (!pedidoId) {
@@ -50,45 +53,48 @@ const paypalOrderId =
 
     const maxIntentos = 10;
 
-        const verificarPago = async () => {
-          try {
-            let respuesta;
+    const verificarPago = async () => {
+      try {
+        let respuesta;
 
-            if (metodo === "paypal") {
-              if (!paypalOrderId) {
-                throw new Error(
-                  "Falta la orden de PayPal."
-                );
-              }
+        if (esPayPal) {
+          if (!paypalOrderId) {
+            throw new Error(
+              "Falta la orden de PayPal."
+            );
+          }
 
-              respuesta = await fetch(
-                "/api/paypal/pago?accion=capturar",
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type":
-                      "application/json",
-                  },
-                  body: JSON.stringify({
-                    pedidoId,
-                    paypalOrderId,
-                  }),
-                }
-              );
-            } else {
-              respuesta = await fetch(
-                `/api/mercadopago/verificar-pago?pedidoId=${encodeURIComponent(
-                  pedidoId
-                )}`
-              );
+          respuesta = await fetch(
+            "/api/paypal/pago?accion=capturar",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                pedidoId,
+                paypalOrderId,
+              }),
             }
+          );
+        } else {
+          respuesta = await fetch(
+            `/api/mercadopago/verificar-pago?pedidoId=${encodeURIComponent(
+              pedidoId
+            )}`
+          );
+        }
 
         const datos =
           await respuesta.json();
 
         if (!respuesta.ok) {
           throw new Error(
-            "No se pudo verificar el pago"
+            datos?.error ||
+              "No se pudo verificar el pago"
           );
         }
 
@@ -103,24 +109,31 @@ const paypalOrderId =
           return;
         }
 
+        /*
+         * PayPal no necesita reintentar
+         * la captura desde esta página.
+         */
+
+        if (esPayPal) {
+          setEstado("pendiente");
+          return;
+        }
+
+        /*
+         * Mercado Pago puede demorar
+         * algunos segundos en acreditar.
+         */
+
         intentos++;
 
-        if (metodo === "paypal") {
-  setEstado("pendiente");
-  return;
-}
-
-intentos++;
-
-if (intentos < maxIntentos) {
-  timeoutId = setTimeout(
-    verificarPago,
-    2000
-  );
-} else {
-  setEstado("pendiente");
-}
-            
+        if (intentos < maxIntentos) {
+          timeoutId = setTimeout(
+            verificarPago,
+            2000
+          );
+        } else {
+          setEstado("pendiente");
+        }
       } catch (error) {
         console.error(
           "Error verificando pago:",
@@ -138,7 +151,11 @@ if (intentos < maxIntentos) {
         clearTimeout(timeoutId);
       }
     };
-  }, [pedidoId, metodo, paypalOrderId]);
+  }, [
+    pedidoId,
+    esPayPal,
+    paypalOrderId,
+  ]);
 
   /* =====================================================
      DESCARGAR SIN SALIR DE LA PÁGINA
@@ -253,49 +270,50 @@ if (intentos < maxIntentos) {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-8 sm:pt-10">
+    <main className="min-h-screen bg-slate-50 px-4 pb-20 pt-10 sm:pt-14">
       <div className="mx-auto max-w-3xl">
 
         {/* ENCABEZADO */}
 
-        <div className="mb-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Estado del pedido
-          </p>
-
-          <h1 className="mt-0.5 text-xl font-bold text-slate-900 sm:text-2xl">
+        <div className="mb-8">
+          <h1 className="text-2xl font-medium text-slate-900 sm:text-3xl">
             ¡Gracias por tu compra!
           </h1>
 
-          <p className="mt-1 text-xs text-slate-500">
-            Estamos procesando tu pedido y
-            verificando el estado del pago.
-          </p>
+          {!esPayPal &&
+            estado === "verificando" && (
+              <p className="mt-3 text-sm font-normal leading-6 text-slate-500 sm:text-base">
+                Estamos procesando tu pedido y
+                verificando el estado del pago.
+              </p>
+            )}
         </div>
 
         {/* VERIFICANDO */}
 
         {estado === "verificando" && (
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-600">
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-600">
                 <LoaderCircle
-                  size={17}
+                  size={20}
                   className="animate-spin"
                 />
               </div>
 
               <div>
-                <h2 className="text-sm font-bold text-slate-900">
+                <h2 className="text-base font-medium text-slate-900 sm:text-lg">
                   Verificando tu pago
                 </h2>
 
-                <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                  Estamos esperando la
-                  confirmación de Mercado Pago.
-                  Esto normalmente demora solo
-                  unos segundos.
-                </p>
+                {!esPayPal && (
+                  <p className="mt-2 text-sm font-normal leading-6 text-slate-500">
+                    Estamos esperando la
+                    confirmación de Mercado Pago.
+                    Esto normalmente demora solo
+                    unos segundos.
+                  </p>
+                )}
               </div>
             </div>
           </section>
@@ -305,18 +323,18 @@ if (intentos < maxIntentos) {
 
         {estado === "aprobado" && (
           <>
-            <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                  <Check size={17} />
+            <section className="rounded-xl border border-emerald-200 bg-white p-6 shadow-sm sm:p-7">
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                  <Check size={20} />
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">
+                  <h2 className="text-base font-medium text-slate-900 sm:text-lg">
                     Pago confirmado
                   </h2>
 
-                  <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                  <p className="mt-2 text-sm font-normal leading-6 text-slate-500 sm:text-base">
                     Tu pago fue acreditado
                     correctamente. Tu compra ya
                     está disponible para
@@ -328,19 +346,19 @@ if (intentos < maxIntentos) {
 
             {/* DESCARGAS */}
 
-            <section className="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3">
-                <h2 className="text-sm font-bold text-slate-900">
+            <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+              <div className="mb-5">
+                <h2 className="text-base font-medium text-slate-900 sm:text-lg">
                   Tus descargas
                 </h2>
 
-                <p className="mt-0.5 text-[10px] text-slate-500">
+                <p className="mt-2 text-sm font-normal leading-6 text-slate-500">
                   Descarga los archivos incluidos
                   en tu compra.
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {productos.map(
                   (producto) => {
                     const estaDescargando =
@@ -357,15 +375,15 @@ if (intentos < maxIntentos) {
                         key={
                           producto.productoId
                         }
-                        className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-2.5"
+                        className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 p-4"
                       >
                         <div className="min-w-0">
-                          <p className="text-[11px] font-bold leading-4 text-slate-800">
+                          <p className="text-sm font-medium leading-5 text-slate-800 sm:text-base">
                             {producto.nombre ||
                               "Producto digital"}
                           </p>
 
-                          <p className="mt-0.5 text-[9px] text-slate-400">
+                          <p className="mt-1 text-xs font-normal text-slate-400 sm:text-sm">
                             Archivo PDF
                           </p>
                         </div>
@@ -381,18 +399,18 @@ if (intentos < maxIntentos) {
                               producto
                             )
                           }
-                          className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-bold transition ${
+                          className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                             estaDescargado
                               ? "cursor-default bg-emerald-100 text-emerald-700"
                               : estaDescargando
                                 ? "cursor-wait bg-slate-200 text-slate-500"
-                                : "bg-slate-900 text-white hover:bg-slate-800"
+                                : "bg-[#285861] text-white hover:bg-[#204850]"
                           }`}
                         >
                           {estaDescargando ? (
                             <>
                               <LoaderCircle
-                                size={12}
+                                size={15}
                                 className="animate-spin"
                               />
                               Descargando
@@ -400,14 +418,14 @@ if (intentos < maxIntentos) {
                           ) : estaDescargado ? (
                             <>
                               <Check
-                                size={12}
+                                size={15}
                               />
                               Descargado
                             </>
                           ) : (
                             <>
                               <Download
-                                size={12}
+                                size={15}
                               />
                               Descargar
                             </>
@@ -420,15 +438,15 @@ if (intentos < maxIntentos) {
               </div>
 
               {errorDescarga && (
-                <p className="mt-2 text-[10px] text-red-600">
+                <p className="mt-4 text-sm font-normal text-red-600">
                   {errorDescarga}
                 </p>
               )}
 
-              <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-3 text-[9px] text-slate-400">
+              <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs font-normal text-slate-400 sm:text-sm">
                 <ShieldCheck
-                  size={12}
-                  className="text-emerald-600"
+                  size={15}
+                  className="shrink-0 text-emerald-600"
                 />
 
                 Descarga protegida vinculada a
@@ -441,12 +459,12 @@ if (intentos < maxIntentos) {
         {/* PENDIENTE */}
 
         {estado === "pendiente" && (
-          <section className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-slate-900">
+          <section className="rounded-xl border border-amber-200 bg-white p-6 shadow-sm sm:p-7">
+            <h2 className="text-base font-medium text-slate-900 sm:text-lg">
               Pago pendiente
             </h2>
 
-            <p className="mt-1 text-[11px] leading-4 text-slate-500">
+            <p className="mt-2 text-sm font-normal leading-6 text-slate-500 sm:text-base">
               Tu pago fue recibido, pero todavía
               estamos esperando la confirmación.
               Cuando se acredite podremos
@@ -458,12 +476,12 @@ if (intentos < maxIntentos) {
         {/* ERROR */}
 
         {estado === "error" && (
-          <section className="rounded-xl border border-red-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-slate-900">
+          <section className="rounded-xl border border-red-200 bg-white p-6 shadow-sm sm:p-7">
+            <h2 className="text-base font-medium text-slate-900 sm:text-lg">
               No pudimos verificar tu compra
             </h2>
 
-            <p className="mt-1 text-[11px] leading-4 text-slate-500">
+            <p className="mt-2 text-sm font-normal leading-6 text-slate-500 sm:text-base">
               No pudimos consultar el estado del
               pedido en este momento.
             </p>
@@ -472,7 +490,7 @@ if (intentos < maxIntentos) {
 
         {/* ESPACIO PARA PRODUCTOS RECOMENDADOS */}
 
-        <section className="mt-8 min-h-[220px] border-t border-slate-200 pt-5">
+        <section className="mt-12 min-h-[220px] border-t border-slate-200 pt-8">
           {/*
             Aquí agregaremos posteriormente
             los productos recomendados.
