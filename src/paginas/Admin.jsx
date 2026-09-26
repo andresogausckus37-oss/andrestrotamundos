@@ -34,9 +34,9 @@ const cargarPedidos = async () => {
 try {
 setError("");
 
-const respuesta = await fetch(  
-    "/api/admin/pedidos-pendientes"  
-  );  
+const respuesta = await fetch(
+  "/api/admin/pedidos?accion=listar"
+);  
 
   if (respuesta.status === 401) {  
     navigate("/admin/login");  
@@ -85,8 +85,8 @@ try {
 setProcesandoPedido(pedidoId);
 setError("");
 
-const respuesta = await fetch(  
-    "/api/admin/avanzar-estado",  
+const respuesta = await fetch(
+  "/api/admin/pedidos?accion=avanzar",  
     {  
       method: "POST",  
 
@@ -237,11 +237,12 @@ return (
       </div>  
     ) : (  
       <div className="space-y-4">  
-        {pedidos.map((pedido) => {  
-          const comprobanteUrl =  
-            `/api/admin/comprobante?pedidoId=${encodeURIComponent(  
-              pedido.pedidoId  
-            )}`;  
+        {pedidos.map((pedido) => {
+        
+          const comprobanteUrl =
+  `/api/admin/pedidos?accion=comprobante&pedidoId=${encodeURIComponent(
+    pedido.pedidoId
+  )}`;  
 
           return (  
             <section  
