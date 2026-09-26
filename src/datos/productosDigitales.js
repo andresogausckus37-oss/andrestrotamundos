@@ -152,8 +152,12 @@ destacado: false,
     "Una colección de 25 sopas de letras imprimibles especialmente pensadas para adultos. Incluye 5 temáticas diferentes con desafíos de nivel avanzado para ejercitar la concentración, la memoria y el vocabulario mientras disfrutás de un momento de entretenimiento. Cada sopa de letras incluye su solución correspondiente y está preparada en formato A4 para imprimir fácilmente en casa o en una imprenta. Ideal para el tiempo libre, viajes, momentos de descanso o para regalar a amantes de los puzzles.",
 
   tipo: "digital",
-categoria: "sopa-de-letras",
-linea: "juegos",
+  categoria: "sopa-de-letras",
+  linea: "juegos",
+
+  /* =========================
+     PRECIO ARGENTINA
+  ========================= */
 
   precioARS: 3499,
 
@@ -165,9 +169,27 @@ linea: "juegos",
     etiqueta: "Oferta lanzamiento",
   },
 
+  /* =========================
+     PRECIO INTERNACIONAL
+  ========================= */
+
+  precioUSD: 3.49,
+
+  descuentoUSD: 0,
+
+  ofertaUSD: {
+    activa: true,
+    precioUSD: 2.49,
+    etiqueta: "Oferta lanzamiento",
+  },
+
   imagenes: {
-    portada: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/25%20sopas%20de%20letras/1",
-    preview: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/25%20sopas%20de%20letras/2",
+    portada:
+      "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/25%20sopas%20de%20letras/1",
+
+    preview:
+      "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/25%20sopas%20de%20letras/2",
+
     previewsIndividuales: [
       "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/25%20sopas%20de%20letras/3",
       "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/25%20sopas%20de%20letras/4",
