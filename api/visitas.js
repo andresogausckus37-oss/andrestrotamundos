@@ -10,7 +10,45 @@ const obtenerDispositivo = (userAgent = "") => {
   return "Computadora";
 };
 
+const obtenerCodigoPais = (req) => {
+  return String(
+    req.headers["x-vercel-ip-country"] || ""
+  ).toUpperCase();
+};
+
 export default async function handler(req, res) {
+  /* =====================================================
+     DETECTAR MERCADO
+  ===================================================== */
+
+  if (
+    req.method === "GET" &&
+    req.query?.accion === "mercado"
+  ) {
+    const codigoPais =
+      obtenerCodigoPais(req);
+
+    const mercado =
+      codigoPais === "AR"
+        ? "AR"
+        : "INTERNACIONAL";
+
+    const moneda =
+      mercado === "AR"
+        ? "ARS"
+        : "USD";
+
+    return res.status(200).json({
+      pais: codigoPais || null,
+      mercado,
+      moneda,
+    });
+  }
+
+  /* =====================================================
+     REGISTRAR VISITA
+  ===================================================== */
+
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Método no permitido",
@@ -43,14 +81,13 @@ export default async function handler(req, res) {
         req.headers["user-agent"] || ""
       );
 
-    /* PAÍS
-       Vercel agrega este header automáticamente.
-    */
+    /* PAÍS */
 
     const codigoPais =
-      req.headers["x-vercel-ip-country"];
+      obtenerCodigoPais(req);
 
-    let pais = codigoPais || "Desconocido";
+    let pais =
+      codigoPais || "Desconocido";
 
     try {
       if (codigoPais) {
@@ -63,11 +100,14 @@ export default async function handler(req, res) {
           );
 
         pais =
-          nombresPaises.of(codigoPais) ||
-          codigoPais;
+          nombresPaises.of(
+            codigoPais
+          ) || codigoPais;
       }
     } catch {
-      pais = codigoPais || "Desconocido";
+      pais =
+        codigoPais ||
+        "Desconocido";
     }
 
     /* HORA ARGENTINA */
@@ -110,7 +150,8 @@ export default async function handler(req, res) {
             chat_id: chatId,
             text: texto,
             parse_mode: "HTML",
-            disable_web_page_preview: true,
+            disable_web_page_preview:
+              true,
           }),
         }
       );

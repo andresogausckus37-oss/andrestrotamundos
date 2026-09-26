@@ -447,7 +447,9 @@ export default async function handler(req, res) {
                 )}`,
 
                 cancel_url:
-                  "https://andreshousesitter.com/checkout",
+  `https://andreshousesitter.com/checkout/${encodeURIComponent(
+    producto.id
+  )}`,
               },
             },
           },
