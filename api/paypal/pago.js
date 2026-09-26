@@ -447,3 +447,4 @@ if (!enlaceAprobacion) {
         "Error interno al crear el pago con PayPal.",
     });
   }
+}
