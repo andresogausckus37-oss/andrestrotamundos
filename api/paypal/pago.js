@@ -113,6 +113,146 @@ const obtenerMercado = (req, res) => {
 };
 
 /* =====================================================
+   CAPTURAR ORDEN PAYPAL
+===================================================== */
+
+const capturarOrdenPayPal = async (req, res) => {
+  const pedidoId =
+    req.body?.pedidoId;
+
+  const paypalOrderId =
+    req.body?.paypalOrderId;
+
+  if (!pedidoId || !paypalOrderId) {
+    return res.status(400).json({
+      error:
+        "Faltan datos para verificar el pago.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const pedido = await db
+    .collection("pedidos")
+    .findOne({ pedidoId });
+
+  if (!pedido) {
+    return res.status(404).json({
+      error: "Pedido no encontrado.",
+    });
+  }
+
+  if (
+    pedido.metodoPago !== "paypal" ||
+    pedido.paypalOrderId !== paypalOrderId
+  ) {
+    return res.status(400).json({
+      error: "La orden PayPal no es válida.",
+    });
+  }
+
+  if (pedido.estado === "aprobado") {
+    return res.status(200).json({
+      aprobado: true,
+      productos: pedido.productos || [],
+    });
+  }
+
+  const accessToken =
+    await obtenerAccessToken();
+
+  const respuestaPayPal = await fetch(
+    `${obtenerBaseUrlPayPal()}/v2/checkout/orders/${encodeURIComponent(
+      paypalOrderId
+    )}/capture`,
+    {
+      method: "POST",
+
+      headers: {
+        Authorization:
+          `Bearer ${accessToken}`,
+
+        "Content-Type":
+          "application/json",
+
+        "PayPal-Request-Id":
+          `capture-${pedidoId}`,
+      },
+    }
+  );
+
+  const datosPayPal =
+    await respuestaPayPal.json();
+
+  if (!respuestaPayPal.ok) {
+    console.error(
+      "Error capturando PayPal:",
+      datosPayPal
+    );
+
+    return res
+      .status(respuestaPayPal.status)
+      .json({
+        error:
+          "No se pudo confirmar el pago con PayPal.",
+      });
+  }
+
+  const captura =
+    datosPayPal.purchase_units?.[0]
+      ?.payments?.captures?.[0];
+
+  const montoEsperado =
+    Number(pedido.precio).toFixed(2);
+
+  const pagoValido =
+    datosPayPal.id === paypalOrderId &&
+    datosPayPal.status === "COMPLETED" &&
+    captura?.status === "COMPLETED" &&
+    captura?.amount?.currency_code === "USD" &&
+    captura?.amount?.value === montoEsperado;
+
+  if (!pagoValido) {
+    console.error(
+      "Captura PayPal no válida:",
+      datosPayPal
+    );
+
+    return res.status(400).json({
+      error:
+        "El pago de PayPal no pudo ser validado.",
+    });
+  }
+
+  await db
+    .collection("pedidos")
+    .updateOne(
+      { pedidoId },
+      {
+        $set: {
+          estado: "aprobado",
+          pagadoEn: new Date(),
+          paypalCaptureId:
+            captura.id,
+          paypalEstado:
+            datosPayPal.status,
+          paypalPayerId:
+            datosPayPal.payer?.payer_id ||
+            null,
+          paypalEmail:
+            datosPayPal.payer
+              ?.email_address || null,
+        },
+      }
+    );
+
+  return res.status(200).json({
+    aprobado: true,
+    productos: pedido.productos || [],
+  });
+};
+
+/* =====================================================
    HANDLER
 ===================================================== */
 
@@ -123,7 +263,21 @@ export default async function handler(req, res) {
     });
   }
 
+  const accion = req.query?.accion;
+
   try {
+    if (accion === "capturar") {
+      return await capturarOrdenPayPal(
+        req,
+        res
+      );
+    }
+
+    if (accion !== "crear") {
+      return res.status(400).json({
+        error: "Acción no válida.",
+      });
+    }
     const email = req.body?.email?.trim();
 
     const productoId =
@@ -288,7 +442,9 @@ export default async function handler(req, res) {
                   "NO_SHIPPING",
 
                 return_url:
-                  "https://andreshousesitter.com/pago-exitoso",
+  `https://andreshousesitter.com/pago-exitoso?metodo=paypal&pedidoId=${encodeURIComponent(
+    pedidoId
+  )}`,
 
                 cancel_url:
                   "https://andreshousesitter.com/checkout",

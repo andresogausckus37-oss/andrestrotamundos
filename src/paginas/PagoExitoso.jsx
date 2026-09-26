@@ -26,8 +26,18 @@ export default function PagoExitoso() {
   const [errorDescarga, setErrorDescarga] =
     useState("");
 
-  const pedidoId =
-    searchParams.get("external_reference");
+  const metodo =
+  searchParams.get("metodo");
+
+const pedidoId =
+  metodo === "paypal"
+    ? searchParams.get("pedidoId")
+    : searchParams.get(
+        "external_reference"
+      );
+
+const paypalOrderId =
+  searchParams.get("token");
 
   useEffect(() => {
     if (!pedidoId) {
@@ -40,13 +50,38 @@ export default function PagoExitoso() {
 
     const maxIntentos = 10;
 
-    const verificarPago = async () => {
-      try {
-        const respuesta = await fetch(
-          `/api/mercadopago/verificar-pago?pedidoId=${encodeURIComponent(
-            pedidoId
-          )}`
-        );
+        const verificarPago = async () => {
+          try {
+            let respuesta;
+
+            if (metodo === "paypal") {
+              if (!paypalOrderId) {
+                throw new Error(
+                  "Falta la orden de PayPal."
+                );
+              }
+
+              respuesta = await fetch(
+                "/api/paypal/pago?accion=capturar",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type":
+                      "application/json",
+                  },
+                  body: JSON.stringify({
+                    pedidoId,
+                    paypalOrderId,
+                  }),
+                }
+              );
+            } else {
+              respuesta = await fetch(
+                `/api/mercadopago/verificar-pago?pedidoId=${encodeURIComponent(
+                  pedidoId
+                )}`
+              );
+            }
 
         const datos =
           await respuesta.json();
@@ -70,14 +105,22 @@ export default function PagoExitoso() {
 
         intentos++;
 
-        if (intentos < maxIntentos) {
-          timeoutId = setTimeout(
-            verificarPago,
-            2000
-          );
-        } else {
-          setEstado("pendiente");
-        }
+        if (metodo === "paypal") {
+  setEstado("pendiente");
+  return;
+}
+
+intentos++;
+
+if (intentos < maxIntentos) {
+  timeoutId = setTimeout(
+    verificarPago,
+    2000
+  );
+} else {
+  setEstado("pendiente");
+}
+            
       } catch (error) {
         console.error(
           "Error verificando pago:",
@@ -95,7 +138,7 @@ export default function PagoExitoso() {
         clearTimeout(timeoutId);
       }
     };
-  }, [pedidoId]);
+  }, [pedidoId, metodo, paypalOrderId]);
 
   /* =====================================================
      DESCARGAR SIN SALIR DE LA PÁGINA
