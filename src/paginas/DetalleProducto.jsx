@@ -21,6 +21,13 @@ import {
   useParams,
 } from "react-router-dom";
 
+import {
+  MERCADO_ARGENTINA,
+  MERCADO_INTERNACIONAL,
+  obtenerPrecioMercado,
+  formatearPrecioMercado,
+} from "../utilidades/mercado";
+
 /* =========================================================
    CONFIGURACIÓN COMERCIAL
 ========================================================= */
@@ -37,6 +44,12 @@ const DetalleProducto = () => {
 
   const [imagenActiva, setImagenActiva] =
     useState(0);
+
+  const [mercado, setMercado] =
+    useState(MERCADO_ARGENTINA);
+
+  const [cargandoMercado, setCargandoMercado] =
+    useState(true);
 
   const producto =
     productosDigitales.find(
@@ -60,219 +73,358 @@ const DetalleProducto = () => {
   };
 
   /* =========================================================
-   SEO DEL PRODUCTO
-========================================================= */
+     DETECTAR MERCADO
+  ========================================================= */
 
-useEffect(() => {
-  if (!producto) {
-    return;
-  }
+  useEffect(() => {
+    let cancelado = false;
 
-  const nombre = textoEs(producto.nombre);
-  const descripcion = textoEs(producto.descripcion);
+    const detectarMercado = async () => {
+      try {
+        const parametros =
+          new URLSearchParams(
+            window.location.search
+          );
 
-  const url =
-    `https://andreshousesitter.com/tienda/${producto.id}`;
+        const mercadoPrueba =
+          parametros
+            .get("mercado")
+            ?.toLowerCase();
 
-  const imagen =
-    producto.imagenes?.portada || "";
+        if (
+          mercadoPrueba ===
+          "internacional"
+        ) {
+          if (!cancelado) {
+            setMercado(
+              MERCADO_INTERNACIONAL
+            );
 
-  document.title =
-    `${nombre} | Andrés Imprimibles`;
+            setCargandoMercado(false);
+          }
 
-  const actualizarMeta = (
-    selector,
-    atributo,
-    contenido
-  ) => {
-    let elemento =
-      document.querySelector(selector);
+          return;
+        }
 
-    if (!elemento) {
-      elemento =
-        document.createElement("meta");
+        if (
+          mercadoPrueba ===
+          "argentina"
+        ) {
+          if (!cancelado) {
+            setMercado(
+              MERCADO_ARGENTINA
+            );
 
-      const nombreMeta =
-        selector.match(
-          /(?:name|property)="([^"]+)"/
-        )?.[1];
+            setCargandoMercado(false);
+          }
 
-      elemento.setAttribute(
-        atributo,
-        nombreMeta
-      );
+          return;
+        }
 
-      document.head.appendChild(elemento);
-    }
+        const respuesta = await fetch(
+          "/api/visitas?accion=mercado"
+        );
 
-    elemento.setAttribute(
-      "content",
-      contenido
-    );
-  };
+        if (!respuesta.ok) {
+          throw new Error(
+            "No se pudo detectar el mercado."
+          );
+        }
 
-  actualizarMeta(
-    'meta[name="description"]',
-    "name",
-    descripcion
-  );
+        const datos =
+          await respuesta.json();
 
-  actualizarMeta(
-    'meta[property="og:title"]',
-    "property",
-    nombre
-  );
+        if (cancelado) {
+          return;
+        }
 
-  actualizarMeta(
-    'meta[property="og:description"]',
-    "property",
-    descripcion
-  );
+        setMercado(
+          datos.mercado ===
+            MERCADO_INTERNACIONAL
+            ? MERCADO_INTERNACIONAL
+            : MERCADO_ARGENTINA
+        );
+      } catch (error) {
+        console.error(
+          "Error detectando mercado:",
+          error
+        );
 
-  actualizarMeta(
-    'meta[property="og:url"]',
-    "property",
-    url
-  );
+        if (!cancelado) {
+          setMercado(
+            MERCADO_ARGENTINA
+          );
+        }
+      } finally {
+        if (!cancelado) {
+          setCargandoMercado(false);
+        }
+      }
+    };
 
-  actualizarMeta(
-    'meta[property="og:type"]',
-    "property",
-    "product"
-  );
+    detectarMercado();
 
-  if (imagen) {
-    actualizarMeta(
-      'meta[property="og:image"]',
-      "property",
-      imagen
-    );
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
-    actualizarMeta(
-      'meta[name="twitter:image"]',
-      "name",
-      imagen
-    );
-  }
+  /* =========================================================
+     PRECIO SEGÚN MERCADO
+  ========================================================= */
 
-  actualizarMeta(
-    'meta[name="twitter:title"]',
-    "name",
-    nombre
-  );
-
-  actualizarMeta(
-    'meta[name="twitter:description"]',
-    "name",
-    descripcion
-  );
-
-  let canonical =
-    document.querySelector(
-      'link[rel="canonical"]'
-    );
-
-  if (!canonical) {
-    canonical =
-      document.createElement("link");
-
-    canonical.setAttribute(
-      "rel",
-      "canonical"
-    );
-
-    document.head.appendChild(
-      canonical
-    );
-  }
-
-  canonical.setAttribute(
-    "href",
-    url
-  );
-
-  /* DATOS ESTRUCTURADOS DEL PRODUCTO */
-
-const precio =
-  producto.oferta?.activa &&
-  producto.oferta?.precioARS > 0
-    ? producto.oferta.precioARS
-    : producto.precioARS;
-
-const schemaProducto = {
-  "@context": "https://schema.org",
-  "@type": "Product",
-  name: nombre,
-  description: descripcion,
-  image: imagen ? [imagen] : undefined,
-  sku: producto.id,
-
-  offers: {
-    "@type": "Offer",
-    url,
-    priceCurrency: "ARS",
-    price: precio,
-    availability:
-      "https://schema.org/InStock",
-    itemCondition:
-      "https://schema.org/NewCondition",
-  },
-};
-
-let scriptSchema =
-  document.getElementById(
-    "schema-producto"
-  );
-
-if (!scriptSchema) {
-  scriptSchema =
-    document.createElement("script");
-
-  scriptSchema.type =
-    "application/ld+json";
-
-  scriptSchema.id =
-    "schema-producto";
-
-  document.head.appendChild(
-    scriptSchema
-  );
-}
-
-scriptSchema.textContent =
-  JSON.stringify(schemaProducto);
-
-  return () => {
-    document.title =
-      "Cuidado de Casas y Mascotas | Andres House Sitter";
-
-    document
-  .getElementById("schema-producto")
-  ?.remove();
-
-    document
-      .querySelector(
-        'link[rel="canonical"]'
-      )
-      ?.setAttribute(
-        "href",
-        "https://andreshousesitter.com/"
-      );
-  };
-}, [producto]);
-
-  const formatearPrecio = (precioARS) => {
-    if (!precioARS) {
+  const formatearPrecio = (precio) => {
+    if (
+      precio === null ||
+      precio === undefined ||
+      Number(precio) <= 0
+    ) {
       return "Precio a definir";
     }
 
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: "ARS",
-      maximumFractionDigits: 0,
-    }).format(precioARS);
+    return formatearPrecioMercado(
+      Number(precio),
+      mercado
+    );
   };
 
+  /* =========================================================
+     SEO DEL PRODUCTO
+  ========================================================= */
+
+  useEffect(() => {
+    if (!producto || cargandoMercado) {
+      return;
+    }
+
+    const nombre =
+      textoEs(producto.nombre);
+
+    const descripcion =
+      textoEs(producto.descripcion);
+
+    const url =
+      `https://andreshousesitter.com/tienda/${producto.id}`;
+
+    const imagen =
+      producto.imagenes?.portada || "";
+
+    document.title =
+      `${nombre} | Andrés Imprimibles`;
+
+    const actualizarMeta = (
+      selector,
+      atributo,
+      contenido
+    ) => {
+      let elemento =
+        document.querySelector(
+          selector
+        );
+
+      if (!elemento) {
+        elemento =
+          document.createElement(
+            "meta"
+          );
+
+        const nombreMeta =
+          selector.match(
+            /(?:name|property)="([^"]+)"/
+          )?.[1];
+
+        elemento.setAttribute(
+          atributo,
+          nombreMeta
+        );
+
+        document.head.appendChild(
+          elemento
+        );
+      }
+
+      elemento.setAttribute(
+        "content",
+        contenido
+      );
+    };
+
+    actualizarMeta(
+      'meta[name="description"]',
+      "name",
+      descripcion
+    );
+
+    actualizarMeta(
+      'meta[property="og:title"]',
+      "property",
+      nombre
+    );
+
+    actualizarMeta(
+      'meta[property="og:description"]',
+      "property",
+      descripcion
+    );
+
+    actualizarMeta(
+      'meta[property="og:url"]',
+      "property",
+      url
+    );
+
+    actualizarMeta(
+      'meta[property="og:type"]',
+      "property",
+      "product"
+    );
+
+    if (imagen) {
+      actualizarMeta(
+        'meta[property="og:image"]',
+        "property",
+        imagen
+      );
+
+      actualizarMeta(
+        'meta[name="twitter:image"]',
+        "name",
+        imagen
+      );
+    }
+
+    actualizarMeta(
+      'meta[name="twitter:title"]',
+      "name",
+      nombre
+    );
+
+    actualizarMeta(
+      'meta[name="twitter:description"]',
+      "name",
+      descripcion
+    );
+
+    let canonical =
+      document.querySelector(
+        'link[rel="canonical"]'
+      );
+
+    if (!canonical) {
+      canonical =
+        document.createElement(
+          "link"
+        );
+
+      canonical.setAttribute(
+        "rel",
+        "canonical"
+      );
+
+      document.head.appendChild(
+        canonical
+      );
+    }
+
+    canonical.setAttribute(
+      "href",
+      url
+    );
+
+    /* =====================================================
+       DATOS ESTRUCTURADOS DEL PRODUCTO
+    ===================================================== */
+
+    const precio =
+      obtenerPrecioMercado(
+        producto,
+        mercado
+      );
+
+    const moneda =
+      mercado ===
+      MERCADO_ARGENTINA
+        ? "ARS"
+        : "USD";
+
+    const schemaProducto = {
+      "@context":
+        "https://schema.org",
+
+      "@type": "Product",
+
+      name: nombre,
+      description: descripcion,
+
+      image: imagen
+        ? [imagen]
+        : undefined,
+
+      sku: producto.id,
+
+      offers: {
+        "@type": "Offer",
+        url,
+        priceCurrency: moneda,
+        price: precio,
+        availability:
+          "https://schema.org/InStock",
+        itemCondition:
+          "https://schema.org/NewCondition",
+      },
+    };
+
+    let scriptSchema =
+      document.getElementById(
+        "schema-producto"
+      );
+
+    if (!scriptSchema) {
+      scriptSchema =
+        document.createElement(
+          "script"
+        );
+
+      scriptSchema.type =
+        "application/ld+json";
+
+      scriptSchema.id =
+        "schema-producto";
+
+      document.head.appendChild(
+        scriptSchema
+      );
+    }
+
+    scriptSchema.textContent =
+      JSON.stringify(
+        schemaProducto
+      );
+
+    return () => {
+      document.title =
+        "Cuidado de Casas y Mascotas | Andres House Sitter";
+
+      document
+        .getElementById(
+          "schema-producto"
+        )
+        ?.remove();
+
+      document
+        .querySelector(
+          'link[rel="canonical"]'
+        )
+        ?.setAttribute(
+          "href",
+          "https://andreshousesitter.com/"
+        );
+    };
+  }, [
+    producto,
+    mercado,
+    cargandoMercado,
+  ]);
 
   /* =========================================================
      PRODUCTO NO ENCONTRADO
@@ -308,35 +460,68 @@ scriptSchema.textContent =
      PRECIO
   ========================================================= */
 
+  const precioNormal =
+    mercado === MERCADO_ARGENTINA
+      ? Number(producto.precioARS)
+      : Number(producto.precioUSD);
+
   const tieneOferta =
-    producto.oferta?.activa === true &&
-    Number(producto.oferta?.precioARS) > 0;
+    mercado === MERCADO_ARGENTINA
+      ? producto.oferta?.activa ===
+          true &&
+        Number(
+          producto.oferta
+            ?.precioARS
+        ) > 0
+      : producto.ofertaUSD
+          ?.activa === true &&
+        Number(
+          producto.ofertaUSD
+            ?.precioUSD
+        ) > 0;
 
-  const precioFinal = tieneOferta
-    ? Number(producto.oferta.precioARS)
-    : Number(producto.precioARS);
+  const precioFinal =
+    obtenerPrecioMercado(
+      producto,
+      mercado
+    );
 
-  const ahorro = tieneOferta
-    ? Number(producto.precioARS) -
-      precioFinal
-    : 0;
+  const ahorro =
+    tieneOferta &&
+    precioNormal > precioFinal
+      ? precioNormal -
+        precioFinal
+      : 0;
 
   const descuento =
     tieneOferta &&
-    Number(producto.precioARS) > 0
+    precioNormal > 0
       ? Math.round(
           (ahorro /
-            Number(producto.precioARS)) *
+            precioNormal) *
             100
         )
       : 0;
 
+  const etiquetaOferta =
+    mercado === MERCADO_ARGENTINA
+      ? producto.oferta?.etiqueta
+      : producto.ofertaUSD
+          ?.etiqueta;
+
   const precioTransferencia =
-    precioFinal *
-    (1 - DESCUENTO_TRANSFERENCIA / 100);
+    mercado === MERCADO_ARGENTINA
+      ? precioFinal *
+        (1 -
+          DESCUENTO_TRANSFERENCIA /
+            100)
+      : 0;
 
   const precioCuota =
-    precioFinal / CUOTAS_SIN_INTERES;
+    mercado === MERCADO_ARGENTINA
+      ? precioFinal /
+        CUOTAS_SIN_INTERES
+      : 0;
 
   /* =========================================================
      RESEÑAS
@@ -345,7 +530,8 @@ scriptSchema.textContent =
   const resenasDelProducto =
     resenasProductos.filter(
       (resena) =>
-        resena.productoId === producto.id
+        resena.productoId ===
+        producto.id
     );
 
   /* =========================================================
@@ -355,9 +541,11 @@ scriptSchema.textContent =
   const imagenes = [
     producto.imagenes?.portada,
     producto.imagenes?.preview,
-    producto.imagenes?.previewIndividual,
+    producto.imagenes
+      ?.previewIndividual,
     ...(producto.imagenes
-      ?.previewsIndividuales || []),
+      ?.previewsIndividuales ||
+      []),
   ].filter(Boolean);
 
   const imagenActual =
@@ -368,9 +556,22 @@ scriptSchema.textContent =
   ========================================================= */
 
   const irAlCheckout = () => {
-    navigate(
-      `/checkout/${producto.id}`
-    );
+    const parametros =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const mercadoPrueba =
+      parametros.get("mercado");
+
+    const ruta =
+      mercadoPrueba
+        ? `/checkout/${producto.id}?mercado=${encodeURIComponent(
+            mercadoPrueba
+          )}`
+        : `/checkout/${producto.id}`;
+
+    navigate(ruta);
   };
 
   return (
@@ -382,7 +583,9 @@ scriptSchema.textContent =
 
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() =>
+              navigate(-1)
+            }
             className="mb-5 inline-flex items-center gap-2 text-sm font-normal text-[#687477] transition-colors hover:text-[#285861]"
           >
             <ArrowLeft
@@ -411,16 +614,21 @@ scriptSchema.textContent =
                 <button
                   type="button"
                   onClick={() =>
-                    setPreviewAbierto(true)
+                    setPreviewAbierto(
+                      true
+                    )
                   }
                   className="group block w-full"
                   aria-label="Ampliar imagen"
                 >
                   <div className="aspect-square w-full overflow-hidden bg-white">
                     {imagenActual &&
-                      (imagenActiva === 0 ? (
+                      (imagenActiva ===
+                      0 ? (
                         <img
-                          src={imagenActual}
+                          src={
+                            imagenActual
+                          }
                           alt={textoEs(
                             producto.nombre
                           )}
@@ -429,9 +637,12 @@ scriptSchema.textContent =
                       ) : (
                         <ProteccionComercial>
                           <img
-                            src={imagenActual}
+                            src={
+                              imagenActual
+                            }
                             alt={`Vista ${
-                              imagenActiva + 1
+                              imagenActiva +
+                              1
                             } de ${textoEs(
                               producto.nombre
                             )}`}
@@ -455,15 +666,21 @@ scriptSchema.textContent =
               {imagenes.length > 1 && (
                 <div className="mx-auto mt-3 flex max-w-[420px] gap-2 overflow-x-auto pb-1">
                   {imagenes.map(
-                    (imagen, index) => (
+                    (
+                      imagen,
+                      index
+                    ) => (
                       <button
                         key={`${imagen}-${index}`}
                         type="button"
                         onClick={() =>
-                          setImagenActiva(index)
+                          setImagenActiva(
+                            index
+                          )
                         }
                         className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-white p-1 transition-colors ${
-                          imagenActiva === index
+                          imagenActiva ===
+                          index
                             ? "border-[#285861]"
                             : "border-[#DCE5E4] hover:border-[#8EAAAC]"
                         }`}
@@ -487,9 +704,6 @@ scriptSchema.textContent =
               {/* CALIDAD */}
 
               <div className="mx-auto ---mt-1 flex max-w-[420px] items-center gap-2.5 border-t border-[#DCE5E4] -pt-2">
-                
-
-                
               </div>
             </section>
 
@@ -502,14 +716,18 @@ scriptSchema.textContent =
               {/* TÍTULO */}
 
               <h1 className="max-w-2xl text-2xl font-medium -mb-4 leading-tight tracking-tight text-[#263238] sm:text-3xl">
-                {textoEs(producto.nombre)}
+                {textoEs(
+                  producto.nombre
+                )}
               </h1>
 
               {/* CALIFICACIÓN */}
 
               <div className="mt-2">
                 <CalificacionProducto
-                  productoId={producto.id}
+                  productoId={
+                    producto.id
+                  }
                 />
               </div>
 
@@ -518,7 +736,11 @@ scriptSchema.textContent =
               ================================================== */}
 
               <div className="mt-5 border-y border-[#DCE5E4] py-4">
-                {tieneOferta ? (
+                {cargandoMercado ? (
+                  <p className="text-sm text-[#687477]">
+                    Cargando precio...
+                  </p>
+                ) : tieneOferta ? (
                   <>
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <span className="text-3xl font-medium tracking-tight text-[#263238]">
@@ -529,14 +751,16 @@ scriptSchema.textContent =
 
                       <span className="text-sm font-normal text-slate-400 line-through">
                         {formatearPrecio(
-                          producto.precioARS
+                          precioNormal
                         )}
                       </span>
 
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700">
                         <BadgePercent
                           size={14}
-                          strokeWidth={1.8}
+                          strokeWidth={
+                            1.8
+                          }
                         />
 
                         {descuento}% OFF
@@ -554,13 +778,11 @@ scriptSchema.textContent =
                       </p>
 
                       {textoEs(
-                        producto.oferta
-                          ?.etiqueta
+                        etiquetaOferta
                       ) && (
                         <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-orange-700">
                           {textoEs(
-                            producto.oferta
-                              ?.etiqueta
+                            etiquetaOferta
                           )}
                         </span>
                       )}
@@ -569,55 +791,70 @@ scriptSchema.textContent =
                 ) : (
                   <span className="text-3xl font-medium tracking-tight text-[#263238]">
                     {formatearPrecio(
-                      producto.precioARS
+                      precioFinal
                     )}
                   </span>
                 )}
 
                 {/* OPCIONES DE PAGO */}
 
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2.5">
-                    <Landmark
-                      size={15}
-                      strokeWidth={1.7}
-                      className="shrink-0 text-[#285861]"
-                    />
+                {!cargandoMercado &&
+                  mercado ===
+                    MERCADO_ARGENTINA && (
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center gap-2.5">
+                        <Landmark
+                          size={15}
+                          strokeWidth={
+                            1.7
+                          }
+                          className="shrink-0 text-[#285861]"
+                        />
 
-                    <p className="text-xs font-normal text-[#687477] sm:text-sm">
-                      <span className="font-medium text-[#285861]">
-                        {DESCUENTO_TRANSFERENCIA}% OFF
-                      </span>{" "}
-                      con transferencia ·{" "}
-                      <span className="font-medium text-[#263238]">
-                        {formatearPrecio(
-                          precioTransferencia
-                        )}
-                      </span>
-                    </p>
-                  </div>
+                        <p className="text-xs font-normal text-[#687477] sm:text-sm">
+                          <span className="font-medium text-[#285861]">
+                            {
+                              DESCUENTO_TRANSFERENCIA
+                            }
+                            % OFF
+                          </span>{" "}
+                          con transferencia
+                          ·{" "}
+                          <span className="font-medium text-[#263238]">
+                            {formatearPrecio(
+                              precioTransferencia
+                            )}
+                          </span>
+                        </p>
+                      </div>
 
-                  <div className="flex items-center gap-2.5">
-                    <CreditCard
-                      size={15}
-                      strokeWidth={1.7}
-                      className="shrink-0 text-[#B59672]"
-                    />
+                      <div className="flex items-center gap-2.5">
+                        <CreditCard
+                          size={15}
+                          strokeWidth={
+                            1.7
+                          }
+                          className="shrink-0 text-[#B59672]"
+                        />
 
-                    <p className="text-xs font-normal text-[#687477] sm:text-sm">
-                      <span className="font-medium text-[#263238]">
-                        {CUOTAS_SIN_INTERES} x{" "}
-                        {formatearPrecio(
-                          precioCuota
-                        )}
-                      </span>{" "}
-                      sin interés
-                    </p>
-                  </div>
-                </div>
+                        <p className="text-xs font-normal text-[#687477] sm:text-sm">
+                          <span className="font-medium text-[#263238]">
+                            {
+                              CUOTAS_SIN_INTERES
+                            }{" "}
+                            x{" "}
+                            {formatearPrecio(
+                              precioCuota
+                            )}
+                          </span>{" "}
+                          sin interés
+                        </p>
+                      </div>
+                    </div>
+                  )}
               </div>
 
-              {/* =================================================
+                            {/* =================================================
                   SOBRE ESTE PRODUCTO
               ================================================== */}
 
@@ -640,31 +877,36 @@ scriptSchema.textContent =
                   QUÉ INCLUYE
               ================================================== */}
 
-              {listaEs(producto.incluye).length > 0 && (
+              {listaEs(producto.incluye).length >
+                0 && (
                 <div className="mt-6">
                   <h2 className="text-base font-medium text-[#285861]">
                     Qué incluye
                   </h2>
 
                   <div className="mt-3 grid grid-cols-2 gap-3">
-                    {listaEs(producto.incluye).map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2.5 rounded-lg border border-[#285861]/15 bg-[#285861]/[0.06] px-3 py-1"
-                      >
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white">
-                          <Check
-                            size={15}
-                            strokeWidth={2}
-                            className="text-[#285861]"
-                          />
-                        </div>
+                    {listaEs(
+                      producto.incluye
+                    ).map(
+                      (item, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2.5 rounded-lg border border-[#285861]/15 bg-[#285861]/[0.06] px-3 py-1"
+                        >
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white">
+                            <Check
+                              size={15}
+                              strokeWidth={2}
+                              className="text-[#285861]"
+                            />
+                          </div>
 
-                        <p className="text-xs font-normal leading-4 text-[#46585C]">
-                          {item}
-                        </p>
-                      </div>
-                    ))}
+                          <p className="text-xs font-normal leading-4 text-[#46585C]">
+                            {item}
+                          </p>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               )}
@@ -673,71 +915,80 @@ scriptSchema.textContent =
                   BENEFICIOS
               ================================================== */}
 
-              {listaEs(producto.beneficios).length > 0 && (
-  <div className="mt-5">
-    <h2 className="text-base font-medium text-[#756451]">
-      Beneficios
-    </h2>
+              {listaEs(
+                producto.beneficios
+              ).length > 0 && (
+                <div className="mt-5">
+                  <h2 className="text-base font-medium text-[#756451]">
+                    Beneficios
+                  </h2>
 
-    <div className="mt-3 grid grid-cols-2 gap-3">
-      {listaEs(producto.beneficios).map((item, index) => (
-        <div
-          key={index}
-          className="flex items-center gap-2.5 rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1"
-        >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white">
-            <Check
-              size={15}
-              strokeWidth={2}
-              className="text-[#8B684D]"
-            />
-          </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {listaEs(
+                      producto.beneficios
+                    ).map(
+                      (item, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2.5 rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1"
+                        >
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white">
+                            <Check
+                              size={15}
+                              strokeWidth={2}
+                              className="text-[#8B684D]"
+                            />
+                          </div>
 
-          <p className="text-xs font-normal leading-4 text-[#68584D]">
-            {item}
-          </p>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+                          <p className="text-xs font-normal leading-4 text-[#68584D]">
+                            {item}
+                          </p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* =================================================
                   INFORMACIÓN ADICIONAL
               ================================================== */}
 
-        {(producto.edadRecomendada || producto.nivel) && (
-  <div className="mt-4 grid grid-cols-2 gap-3">
+              {(producto.edadRecomendada ||
+                producto.nivel) && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
 
-    {/* EDAD RECOMENDADA */}
+                  {/* EDAD RECOMENDADA */}
 
-    {producto.edadRecomendada && (
-      <div className="rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1">
-        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8B684D]">
-          Edad recomendada
-        </p>
+                  {producto.edadRecomendada && (
+                    <div className="rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8B684D]">
+                        Edad recomendada
+                      </p>
 
-        <p className="mt-1 text-xs font-normal text-[#68584D]">
-          {producto.edadRecomendada}
-        </p>
-      </div>
-    )}
+                      <p className="mt-1 text-xs font-normal text-[#68584D]">
+                        {
+                          producto.edadRecomendada
+                        }
+                      </p>
+                    </div>
+                  )}
 
-    {/* NIVEL */}
+                  {/* NIVEL */}
 
-    {producto.nivel && (
-      <div className="rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1">
-        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8B684D]">
-          Nivel
-        </p>
+                  {producto.nivel && (
+                    <div className="rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8B684D]">
+                        Nivel
+                      </p>
 
-        <p className="mt-1 text-xs font-normal text-[#68584D]">
-          {producto.nivel}
-        </p>
-      </div>
-    )}
-  </div>
-)}      
+                      <p className="mt-1 text-xs font-normal text-[#68584D]">
+                        {producto.nivel}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* =====================================================
                   COMPRA
@@ -767,14 +1018,21 @@ scriptSchema.textContent =
                 <button
                   type="button"
                   onClick={irAlCheckout}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#204850]"
+                  disabled={cargandoMercado}
+                  className={`mt-4 flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-medium text-white transition-colors ${
+                    cargandoMercado
+                      ? "cursor-not-allowed bg-[#789397]"
+                      : "bg-[#285861] hover:bg-[#204850]"
+                  }`}
                 >
                   <ShoppingBag
                     size={16}
                     strokeWidth={1.8}
                   />
 
-                  Comprar ahora
+                  {cargandoMercado
+                    ? "Cargando..."
+                    : "Comprar ahora"}
                 </button>
               </div>
 
@@ -814,7 +1072,11 @@ scriptSchema.textContent =
 
                             <div className="flex text-[13px] leading-none text-amber-500">
                               {[
-                                1, 2, 3, 4, 5,
+                                1,
+                                2,
+                                3,
+                                4,
+                                5,
                               ].map(
                                 (
                                   estrella
@@ -869,7 +1131,9 @@ scriptSchema.textContent =
             <button
               type="button"
               onClick={() =>
-                setPreviewAbierto(false)
+                setPreviewAbierto(
+                  false
+                )
               }
               className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white text-[#536468] transition-colors hover:bg-[#EEF5F5] hover:text-[#285861]"
               aria-label="Cerrar vista previa"
