@@ -304,6 +304,8 @@ export default async function handler(req, res) {
 
         moneda: "ARS",
 
+        metodoPago: "mercadopago",
+
         mercadoPagoOrderId:
           datos.id,
 
