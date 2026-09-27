@@ -42,7 +42,7 @@ export default function PagoExitoso() {
   const esPayPal =
     metodo === "paypal";
 
-  useEffect(() => {
+    useEffect(() => {
     if (!pedidoId) {
       setEstado("error");
       return;
@@ -50,8 +50,23 @@ export default function PagoExitoso() {
 
     let intentos = 0;
     let timeoutId;
+    let cancelado = false;
 
     const maxIntentos = 10;
+    const demoraReintento = 2000;
+
+    const programarReintento = () => {
+      intentos++;
+
+      if (intentos < maxIntentos) {
+        timeoutId = setTimeout(
+          verificarPago,
+          demoraReintento
+        );
+      } else if (!cancelado) {
+        setEstado("pendiente");
+      }
+    };
 
     const verificarPago = async () => {
       try {
@@ -89,14 +104,31 @@ export default function PagoExitoso() {
         }
 
         const datos =
-          await respuesta.json();
+          await respuesta
+            .json()
+            .catch(() => ({}));
+
+        if (cancelado) return;
+
+        /*
+         * Si la consulta falla temporalmente,
+         * esperamos y volvemos a intentar.
+         */
 
         if (!respuesta.ok) {
-          throw new Error(
+          console.warn(
+            "Verificación todavía no disponible:",
             datos?.error ||
-              "No se pudo verificar el pago"
+              respuesta.status
           );
+
+          programarReintento();
+          return;
         }
+
+        /*
+         * PAGO APROBADO
+         */
 
         if (datos.aprobado) {
           setProductos(
@@ -110,43 +142,35 @@ export default function PagoExitoso() {
         }
 
         /*
-         * PayPal no necesita reintentar
-         * la captura desde esta página.
+         * Todavía no aparece aprobado.
+         * Reintentamos tanto para PayPal
+         * como para Mercado Pago.
          */
 
-        if (esPayPal) {
-          setEstado("pendiente");
-          return;
-        }
-
-        /*
-         * Mercado Pago puede demorar
-         * algunos segundos en acreditar.
-         */
-
-        intentos++;
-
-        if (intentos < maxIntentos) {
-          timeoutId = setTimeout(
-            verificarPago,
-            2000
-          );
-        } else {
-          setEstado("pendiente");
-        }
+        programarReintento();
       } catch (error) {
         console.error(
           "Error verificando pago:",
           error
         );
 
-        setEstado("error");
+        if (cancelado) return;
+
+        /*
+         * Un error temporal de red o de
+         * sincronización no muestra error
+         * inmediatamente al comprador.
+         */
+
+        programarReintento();
       }
     };
 
     verificarPago();
 
     return () => {
+      cancelado = true;
+
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
@@ -155,7 +179,7 @@ export default function PagoExitoso() {
     pedidoId,
     esPayPal,
     paypalOrderId,
-  ]);
+  ]);    
 
   /* =====================================================
      DESCARGAR SIN SALIR DE LA PÁGINA
