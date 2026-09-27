@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { get } from "@vercel/blob";
 import { conectarMongoDB } from "../../lib/mongodb.js";
+import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
 /* =========================
    AUTENTICACIÓN ADMIN
@@ -171,6 +172,74 @@ const obtenerComprobante = async (req, res) => {
 };
 
 /* =========================
+   ENVIAR EMAIL DE COMPRA
+========================= */
+
+const enviarEmailPedido = async ({
+  pedidos,
+  pedido,
+}) => {
+  /*
+   * Si ya quedó registrado como enviado,
+   * no volvemos a enviarlo.
+   */
+  if (pedido.emailEnviado === true) {
+    return true;
+  }
+
+  if (!pedido.emailComprador) {
+    console.error(
+      `Pedido ${pedido.pedidoId}: falta emailComprador.`
+    );
+
+    return false;
+  }
+
+  if (
+    !Array.isArray(pedido.productos) ||
+    pedido.productos.length === 0
+  ) {
+    console.error(
+      `Pedido ${pedido.pedidoId}: no contiene productos para enviar por email.`
+    );
+
+    return false;
+  }
+
+  try {
+    await enviarEmailCompra({
+      pedidoId: pedido.pedidoId,
+      email: pedido.emailComprador,
+      productos: pedido.productos,
+    });
+
+    const fechaEmail = new Date();
+
+    await pedidos.updateOne(
+      {
+        pedidoId: pedido.pedidoId,
+        metodoPago: "transferencia",
+      },
+      {
+        $set: {
+          emailEnviado: true,
+          emailEnviadoEn: fechaEmail,
+        },
+      }
+    );
+
+    return true;
+  } catch (error) {
+    console.error(
+      `Error enviando email del pedido ${pedido.pedidoId}:`,
+      error
+    );
+
+    return false;
+  }
+};
+
+/* =========================
    AVANZAR ESTADO
 ========================= */
 
@@ -278,10 +347,27 @@ const avanzarEstado = async (req, res) => {
       });
     }
 
+    /*
+     * El pedido ya está aprobado.
+     * Ahora enviamos el email de descarga.
+     *
+     * Si Resend falla, NO revertimos el pago:
+     * el cliente conserva la descarga habilitada.
+     */
+    const emailEnviado = await enviarEmailPedido({
+      pedidos,
+      pedido: {
+        ...pedido,
+        estado: "aprobado",
+        pagadoEn: fecha,
+      },
+    });
+
     return res.status(200).json({
       actualizado: true,
       estado: "aprobado",
       descargaHabilitada: true,
+      emailEnviado,
     });
   }
 
@@ -290,10 +376,26 @@ const avanzarEstado = async (req, res) => {
   ========================= */
 
   if (pedido.estado === "aprobado") {
+    /*
+     * Si el pedido fue aprobado anteriormente
+     * pero el email no llegó a enviarse,
+     * hacemos un nuevo intento.
+     */
+    let emailEnviado =
+      pedido.emailEnviado === true;
+
+    if (!emailEnviado) {
+      emailEnviado = await enviarEmailPedido({
+        pedidos,
+        pedido,
+      });
+    }
+
     return res.status(200).json({
       actualizado: false,
       estado: "aprobado",
       descargaHabilitada: true,
+      emailEnviado,
     });
   }
 
