@@ -53,7 +53,7 @@ export default function PagoExitoso() {
     let cancelado = false;
 
     const maxIntentos = 10;
-    const demoraReintento = 2000;
+    const demoraReintento = 1000;
 
     const programarReintento = () => {
       intentos++;
