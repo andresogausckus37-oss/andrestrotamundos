@@ -18,6 +18,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { productosDigitales } from "../datos/productosDigitales";
 
+import {
+  MERCADO_ARGENTINA,
+  MERCADO_INTERNACIONAL,
+  obtenerPrecioMercado,
+  formatearPrecioMercado,
+} from "../utilidades/mercado";
+
 /* =========================================================
    CONFIGURACIÓN COMERCIAL
 ========================================================= */
@@ -32,87 +39,188 @@ const CUOTAS_SIN_INTERES = 3;
 const Tienda = () => {
   const navigate = useNavigate();
 
+  /* =======================================================
+     MERCADO
+  ======================================================= */
+
+  const [mercado, setMercado] =
+    useState(MERCADO_ARGENTINA);
+
+  const [cargandoMercado, setCargandoMercado] =
+    useState(true);
+
   useEffect(() => {
-  document.title =
-    "Imprimibles y Juegos para Imprimir | Andrés Imprimibles";
+    let cancelado = false;
 
-  const descripcion =
-    "Descubre juegos, actividades y productos digitales imprimibles. Laberintos, crucigramas, sopas de letras y recursos para el hogar y las mascotas.";
+    const detectarMercado = async () => {
+      try {
+        const parametros =
+          new URLSearchParams(
+            window.location.search
+          );
 
-  const url =
-    "https://andreshousesitter.com/tienda";
+        const mercadoPrueba =
+          parametros
+            .get("mercado")
+            ?.toLowerCase();
 
-  const actualizarMeta = (selector, atributo, contenido) => {
-    let elemento = document.querySelector(selector);
+        if (
+          mercadoPrueba ===
+          "internacional"
+        ) {
+          if (!cancelado) {
+            setMercado(
+              MERCADO_INTERNACIONAL
+            );
+            setCargandoMercado(false);
+          }
 
-    if (!elemento) {
-      elemento = document.createElement("meta");
+          return;
+        }
 
-      if (atributo === "name") {
-        elemento.setAttribute(
-          "name",
-          selector.match(/name="([^"]+)"/)?.[1] || ""
+        if (
+          mercadoPrueba ===
+          "argentina"
+        ) {
+          if (!cancelado) {
+            setMercado(
+              MERCADO_ARGENTINA
+            );
+            setCargandoMercado(false);
+          }
+
+          return;
+        }
+
+        const respuesta = await fetch(
+          "/api/visitas?accion=mercado"
         );
-      } else {
-        elemento.setAttribute(
-          "property",
-          selector.match(/property="([^"]+)"/)?.[1] || ""
+
+        if (!respuesta.ok) {
+          throw new Error(
+            "No se pudo detectar el mercado."
+          );
+        }
+
+        const datos =
+          await respuesta.json();
+
+        if (cancelado) {
+          return;
+        }
+
+        setMercado(
+          datos.mercado ===
+            MERCADO_INTERNACIONAL
+            ? MERCADO_INTERNACIONAL
+            : MERCADO_ARGENTINA
         );
+      } catch (error) {
+        console.error(
+          "Error detectando mercado:",
+          error
+        );
+
+        if (!cancelado) {
+          setMercado(
+            MERCADO_ARGENTINA
+          );
+        }
+      } finally {
+        if (!cancelado) {
+          setCargandoMercado(false);
+        }
+      }
+    };
+
+    detectarMercado();
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    document.title =
+      "Imprimibles y Juegos para Imprimir | Andrés Imprimibles";
+
+    const descripcion =
+      "Descubre juegos, actividades y productos digitales imprimibles. Laberintos, crucigramas, sopas de letras y recursos para el hogar y las mascotas.";
+
+    const url =
+      "https://andreshousesitter.com/tienda";
+
+    const actualizarMeta = (selector, atributo, contenido) => {
+      let elemento = document.querySelector(selector);
+
+      if (!elemento) {
+        elemento = document.createElement("meta");
+
+        if (atributo === "name") {
+          elemento.setAttribute(
+            "name",
+            selector.match(/name="([^"]+)"/)?.[1] || ""
+          );
+        } else {
+          elemento.setAttribute(
+            "property",
+            selector.match(/property="([^"]+)"/)?.[1] || ""
+          );
+        }
+
+        document.head.appendChild(elemento);
       }
 
-      document.head.appendChild(elemento);
+      elemento.setAttribute("content", contenido);
+    };
+
+    actualizarMeta(
+      'meta[name="description"]',
+      "name",
+      descripcion
+    );
+
+    actualizarMeta(
+      'meta[property="og:title"]',
+      "property",
+      "Imprimibles y Juegos para Imprimir | Andrés Imprimibles"
+    );
+
+    actualizarMeta(
+      'meta[property="og:description"]',
+      "property",
+      descripcion
+    );
+
+    actualizarMeta(
+      'meta[property="og:url"]',
+      "property",
+      url
+    );
+
+    let canonical =
+      document.querySelector('link[rel="canonical"]');
+
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
     }
 
-    elemento.setAttribute("content", contenido);
-  };
+    canonical.setAttribute("href", url);
 
-  actualizarMeta(
-    'meta[name="description"]',
-    "name",
-    descripcion
-  );
+    return () => {
+      document.title =
+        "Cuidado de Casas y Mascotas | Andres House Sitter";
 
-  actualizarMeta(
-    'meta[property="og:title"]',
-    "property",
-    "Imprimibles y Juegos para Imprimir | Andrés Imprimibles"
-  );
-
-  actualizarMeta(
-    'meta[property="og:description"]',
-    "property",
-    descripcion
-  );
-
-  actualizarMeta(
-    'meta[property="og:url"]',
-    "property",
-    url
-  );
-
-  let canonical =
-    document.querySelector('link[rel="canonical"]');
-
-  if (!canonical) {
-    canonical = document.createElement("link");
-    canonical.setAttribute("rel", "canonical");
-    document.head.appendChild(canonical);
-  }
-
-  canonical.setAttribute("href", url);
-
-  return () => {
-    document.title =
-      "Cuidado de Casas y Mascotas | Andres House Sitter";
-
-    document
-      .querySelector('link[rel="canonical"]')
-      ?.setAttribute(
-        "href",
-        "https://andreshousesitter.com/"
-      );
-  };
-}, []);
+      document
+        .querySelector('link[rel="canonical"]')
+        ?.setAttribute(
+          "href",
+          "https://andreshousesitter.com/"
+        );
+    };
+  }, []);
 
   const [filtroActivo, setFiltroActivo] =
     useState("todos");
@@ -195,16 +303,46 @@ const Tienda = () => {
      FORMATEAR PRECIO
   ======================================================= */
 
-  const formatearPrecio = (precioARS) => {
-    if (!precioARS) {
+  const formatearPrecio = (precio) => {
+    if (!precio) {
       return "Precio a definir";
     }
 
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: "ARS",
-      maximumFractionDigits: 0,
-    }).format(precioARS);
+    return formatearPrecioMercado(
+      Number(precio),
+      mercado
+    );
+  };
+
+  /* =======================================================
+     NAVEGAR A PRODUCTO
+  ======================================================= */
+
+  const irAProducto = (productoId) => {
+    const parametros =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const mercadoPrueba =
+      parametros
+        .get("mercado")
+        ?.toLowerCase();
+
+    if (
+      mercadoPrueba === "internacional" ||
+      mercadoPrueba === "argentina"
+    ) {
+      navigate(
+        `/tienda/${productoId}?mercado=${mercadoPrueba}`
+      );
+
+      return;
+    }
+
+    navigate(
+      `/tienda/${productoId}`
+    );
   };
 
   /* =======================================================
@@ -517,7 +655,7 @@ const Tienda = () => {
         </div>
       </section>
 
-      {/* =====================================================
+            {/* =====================================================
           PRODUCTOS
       ====================================================== */}
 
@@ -540,54 +678,91 @@ const Tienda = () => {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {productosMostrados.map(
                 (producto) => {
+                  const esArgentina =
+                    mercado ===
+                    MERCADO_ARGENTINA;
+
+                  const ofertaActual =
+                    esArgentina
+                      ? producto.oferta
+                      : producto.ofertaUSD;
+
+                  const precioNormal =
+                    esArgentina
+                      ? Number(
+                          producto.precioARS
+                        )
+                      : Number(
+                          producto.precioUSD
+                        );
+
+                  const precioOferta =
+                    esArgentina
+                      ? Number(
+                          producto.oferta
+                            ?.precioARS
+                        )
+                      : Number(
+                          producto.ofertaUSD
+                            ?.precioUSD
+                        );
+
                   const tieneOferta =
-                    producto.oferta?.activa ===
-                    true;
+                    ofertaActual?.activa ===
+                      true &&
+                    Number.isFinite(
+                      precioOferta
+                    ) &&
+                    precioOferta > 0;
 
                   const precioFinal =
-                    tieneOferta
-                      ? producto.oferta
-                          .precioARS
-                      : producto.precioARS;
+                    obtenerPrecioMercado(
+                      producto,
+                      mercado
+                    );
 
                   const ahorro =
                     tieneOferta
-                      ? producto.precioARS -
-                        producto.oferta
-                          .precioARS
+                      ? precioNormal -
+                        precioFinal
                       : 0;
 
                   const descuento =
                     tieneOferta &&
-                    producto.precioARS
+                    precioNormal
                       ? Math.round(
                           (ahorro /
-                            producto.precioARS) *
+                            precioNormal) *
                             100
                         )
                       : 0;
 
                   const precioTransferencia =
-                    precioFinal *
-                    (1 -
-                      DESCUENTO_TRANSFERENCIA /
-                        100);
+                    esArgentina
+                      ? precioFinal *
+                        (1 -
+                          DESCUENTO_TRANSFERENCIA /
+                            100)
+                      : 0;
 
                   const precioCuota =
-                    precioFinal /
-                    CUOTAS_SIN_INTERES;
+                    esArgentina
+                      ? precioFinal /
+                        CUOTAS_SIN_INTERES
+                      : 0;
 
                   const nombreProducto =
-                    textoEs(producto.nombre);
+                    textoEs(
+                      producto.nombre
+                    );
 
                   const etiquetaOferta =
                     textoEs(
-                      producto.oferta
+                      ofertaActual
                         ?.etiqueta
                     );
 
                   return (
-
                     <article
                       key={producto.id}
                       className="group flex flex-col overflow-hidden rounded-md border border-[#DCE5E4] bg-white transition-colors duration-200 hover:border-[#8EAAAC]"
@@ -597,8 +772,8 @@ const Tienda = () => {
                       <button
                         type="button"
                         onClick={() =>
-                          navigate(
-                            `/tienda/${producto.id}`
+                          irAProducto(
+                            producto.id
                           )
                         }
                         className="w-full bg-[#F7FAFA]"
@@ -610,7 +785,9 @@ const Tienda = () => {
                               producto.imagenes
                                 ?.portada
                             }
-                            alt={nombreProducto}
+                            alt={
+                              nombreProducto
+                            }
                             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                           />
                         </div>
@@ -626,7 +803,9 @@ const Tienda = () => {
                           <span className="inline-flex items-center gap-1 rounded-md border border-[#D9E6E7] bg-[#EEF5F5] px-1 py-0.5 text-[8px] font-medium uppercase tracking-wide text-[#285861] sm:px-2 sm:py-1 sm:text-[10px]">
                             <Download
                               size={10}
-                              strokeWidth={1.8}
+                              strokeWidth={
+                                1.8
+                              }
                               className="shrink-0"
                             />
 
@@ -636,11 +815,15 @@ const Tienda = () => {
                           <span className="inline-flex items-center gap-1 rounded-md border border-[#E4DDD3] bg-[#F7F2EB] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-[#756451] sm:px-2 sm:py-1 sm:text-[10px]">
                             <FileDown
                               size={10}
-                              strokeWidth={1.8}
+                              strokeWidth={
+                                1.8
+                              }
                               className="shrink-0"
                             />
 
-                            {t.descargaDigital}
+                            {
+                              t.descargaDigital
+                            }
                           </span>
                         </div>
 
@@ -676,102 +859,116 @@ const Tienda = () => {
 
                                 <p className="text-xs font-normal text-slate-400 line-through sm:text-sm">
                                   {formatearPrecio(
-                                    producto.precioARS
+                                    precioNormal
                                   )}
                                 </p>
 
                                 <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-700 sm:text-xs">
-                                  <BadgePerce
-                                    
-                                    strokeWidth={1.8}
+                                  <BadgePercent
+                                    size={13}
+                                    strokeWidth={
+                                      1.8
+                                    }
                                   />
 
-                                  {descuento}% OFF
+                                  {descuento}%
+                                  OFF
                                 </span>
                               </div>
 
                               {etiquetaOferta && (
                                 <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-orange-700">
-                                  {etiquetaOferta}
+                                  {
+                                    etiquetaOferta
+                                  }
                                 </p>
                               )}
                             </>
                           ) : (
                             <p className="text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
                               {formatearPrecio(
-                                producto.precioARS
+                                precioFinal
                               )}
                             </p>
                           )}
 
                           {/* OPCIONES DE PAGO */}
 
-                          <div className="mt-3 border-t border-[#E3E8E7] pt-2.5">
+                          {esArgentina && (
+                            <div className="mt-3 border-t border-[#E3E8E7] pt-2.5">
 
-                            {/* TRANSFERENCIA */}
+                              {/* TRANSFERENCIA */}
 
-                            <div className="flex items-start gap-2">
-                              <Landmark
-                                size={14}
-                                strokeWidth={1.7}
-                                className="mt-0.5 shrink-0 text-[#285861]"
-                              />
-
-                              <p className="text-[11px] font-normal leading-4 text-[#687477] sm:text-xs">
-                                <span className="font-medium text-[#285861]">
-                                  {
-                                    DESCUENTO_TRANSFERENCIA
+                              <div className="flex items-start gap-2">
+                                <Landmark
+                                  size={14}
+                                  strokeWidth={
+                                    1.7
                                   }
-                                  % OFF
-                                </span>{" "}
-                                con transferencia
-                                {" · "}
-                                <span className="font-medium text-[#263238]">
-                                  {formatearPrecio(
-                                    precioTransferencia
-                                  )}
-                                </span>
-                              </p>
+                                  className="mt-0.5 shrink-0 text-[#285861]"
+                                />
+
+                                <p className="text-[11px] font-normal leading-4 text-[#687477] sm:text-xs">
+                                  <span className="font-medium text-[#285861]">
+                                    {
+                                      DESCUENTO_TRANSFERENCIA
+                                    }
+                                    % OFF
+                                  </span>{" "}
+                                  con
+                                  transferencia
+                                  {" · "}
+                                  <span className="font-medium text-[#263238]">
+                                    {formatearPrecio(
+                                      precioTransferencia
+                                    )}
+                                  </span>
+                                </p>
+                              </div>
+
+                              {/* CUOTAS */}
+
+                              <div className="mt-1.5 flex items-start gap-2">
+                                <CreditCard
+                                  size={14}
+                                  strokeWidth={
+                                    1.7
+                                  }
+                                  className="mt-0.5 shrink-0 text-[#B59672]"
+                                />
+
+                                <p className="text-[11px] font-normal leading-4 text-[#687477] sm:text-xs">
+                                  <span className="font-medium text-[#263238]">
+                                    {
+                                      CUOTAS_SIN_INTERES
+                                    }{" "}
+                                    x{" "}
+                                    {formatearPrecio(
+                                      precioCuota
+                                    )}
+                                  </span>{" "}
+                                  sin interés
+                                </p>
+                              </div>
                             </div>
-
-                            {/* CUOTAS */}
-
-                            <div className="mt-1.5 flex items-start gap-2">
-                              <CreditCard
-                                size={14}
-                                strokeWidth={1.7}
-                                className="mt-0.5 shrink-0 text-[#B59672]"
-                              />
-
-                              <p className="text-[11px] font-normal leading-4 text-[#687477] sm:text-xs">
-                                <span className="font-medium text-[#263238]">
-                                  {
-                                    CUOTAS_SIN_INTERES
-                                  }{" "}
-                                  x{" "}
-                                  {formatearPrecio(
-                                    precioCuota
-                                  )}
-                                </span>{" "}
-                                sin interés
-                              </p>
-                            </div>
-                          </div>
+                          )}
 
                           {/* BOTÓN */}
 
                           <button
                             type="button"
                             onClick={() =>
-                              navigate(
-                                `/tienda/${producto.id}`
+                              irAProducto(
+                                producto.id
                               )
                             }
                             className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-3 py-2.5 text-xs font-medium text-white transition-colors hover:bg-[#204850] sm:text-sm"
                           >
                             <ShoppingBag
                               size={14}
-                              strokeWidth={1.8}
+                              strokeWidth={
+                                1.8
+                              }
                               className="shrink-0"
                             />
 
@@ -802,13 +999,15 @@ const Tienda = () => {
 
           {/* VER TODOS / VER MENOS */}
 
-          {productosFiltrados.length > 3 && (
+          {productosFiltrados.length >
+            3 && (
             <div className="mt-7 flex justify-center">
               <button
                 type="button"
                 onClick={() =>
                   setMostrarTodos(
-                    (actual) => !actual
+                    (actual) =>
+                      !actual
                   )
                 }
                 className="inline-flex min-w-[160px] items-center justify-center gap-2 rounded-md border border-[#B9CCCD] bg-white px-5 py-2.5 text-xs font-medium text-[#285861] transition-colors hover:border-[#7FA0A3] hover:bg-[#EEF5F5] sm:text-sm"
@@ -817,7 +1016,9 @@ const Tienda = () => {
                   <>
                     <ChevronUp
                       size={16}
-                      strokeWidth={1.8}
+                      strokeWidth={
+                        1.8
+                      }
                     />
 
                     {t.verMenos}
@@ -826,7 +1027,9 @@ const Tienda = () => {
                   <>
                     <ChevronDown
                       size={16}
-                      strokeWidth={1.8}
+                      strokeWidth={
+                        1.8
+                      }
                     />
 
                     {t.verTodos}
