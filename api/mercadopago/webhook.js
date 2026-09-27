@@ -4,6 +4,7 @@ import {
 } from "mercadopago";
 
 import { conectarMongoDB } from "../../lib/mongodb.js";
+import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -45,8 +46,7 @@ export default async function handler(req, res) {
       !dataId
     ) {
       return res.status(400).json({
-        error:
-          "Notificación incompleta",
+        error: "Notificación incompleta",
       });
     }
 
@@ -124,12 +124,10 @@ export default async function handler(req, res) {
         ?.payments?.[0];
 
     const pagoAprobado =
-      order.status ===
-        "processed" &&
+      order.status === "processed" &&
       order.status_detail ===
         "accredited" &&
-      pago?.status ===
-        "processed" &&
+      pago?.status === "processed" &&
       pago?.status_detail ===
         "accredited";
 
@@ -147,9 +145,11 @@ export default async function handler(req, res) {
     const db =
       await conectarMongoDB();
 
-    const pedido = await db
-      .collection("pedidos")
-      .findOne({
+    const pedidos =
+      db.collection("pedidos");
+
+    const pedido =
+      await pedidos.findOne({
         pedidoId:
           order.external_reference,
       });
@@ -158,6 +158,24 @@ export default async function handler(req, res) {
       console.error(
         "Pedido no encontrado:",
         order.external_reference
+      );
+
+      return res.status(200).json({
+        recibido: true,
+      });
+    }
+
+    /* =====================================================
+       VALIDAR MÉTODO DE PAGO
+    ===================================================== */
+
+    if (
+      pedido.metodoPago !==
+      "mercadopago"
+    ) {
+      console.error(
+        "Método de pago incorrecto:",
+        pedido.pedidoId
       );
 
       return res.status(200).json({
@@ -208,30 +226,103 @@ export default async function handler(req, res) {
        APROBAR PEDIDO
     ===================================================== */
 
-    await db
-      .collection("pedidos")
-      .updateOne(
-        {
-          pedidoId:
-            order.external_reference,
+    const fechaPago = new Date();
+
+    await pedidos.updateOne(
+      {
+        pedidoId:
+          order.external_reference,
+      },
+      {
+        $set: {
+          estado: "aprobado",
+
+          pagadoEn:
+            pedido.pagadoEn ||
+            fechaPago,
+
+          mercadoPagoPaymentId:
+            pago.id,
         },
-        {
-          $set: {
-            estado:
-              "aprobado",
+      }
+    );
 
-            pagadoEn:
-              new Date(),
+    /* =====================================================
+       ENVIAR EMAIL DE COMPRA
+    ===================================================== */
 
-            mercadoPagoPaymentId:
-              pago.id,
-          },
+    let emailEnviado =
+      pedido.emailEnviado === true;
+
+    if (!emailEnviado) {
+      if (
+        !pedido.emailComprador
+      ) {
+        console.error(
+          `Pedido ${pedido.pedidoId}: falta emailComprador.`
+        );
+      } else if (
+        !Array.isArray(
+          pedido.productos
+        ) ||
+        pedido.productos.length === 0
+      ) {
+        console.error(
+          `Pedido ${pedido.pedidoId}: no contiene productos para enviar por email.`
+        );
+      } else {
+        try {
+          await enviarEmailCompra({
+            pedidoId:
+              pedido.pedidoId,
+
+            email:
+              pedido.emailComprador,
+
+            productos:
+              pedido.productos,
+          });
+
+          const fechaEmail =
+            new Date();
+
+          await pedidos.updateOne(
+            {
+              pedidoId:
+                pedido.pedidoId,
+            },
+            {
+              $set: {
+                emailEnviado: true,
+                emailEnviadoEn:
+                  fechaEmail,
+              },
+            }
+          );
+
+          emailEnviado = true;
+        } catch (error) {
+          /*
+           * El pago ya fue confirmado.
+           * Un fallo de Resend NO debe
+           * revertir ni bloquear el pedido.
+           */
+          console.error(
+            `Error enviando email del pedido ${pedido.pedidoId}:`,
+            error
+          );
         }
-      );
+      }
+    }
+
+    /* =====================================================
+       RESPUESTA
+    ===================================================== */
 
     return res.status(200).json({
       recibido: true,
       aprobado: true,
+      emailEnviado,
     });
   } catch (error) {
     console.error(
