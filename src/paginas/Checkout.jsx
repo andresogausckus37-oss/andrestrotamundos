@@ -27,7 +27,6 @@ import { resenasProductos } from "../datos/resenasProductos";
 import {
   MERCADO_ARGENTINA,
   MERCADO_INTERNACIONAL,
-  obtenerMercadoPorPais,
   obtenerPrecioMercado,
   formatearPrecioMercado,
 } from "../utilidades/mercado";
@@ -48,7 +47,7 @@ export default function Checkout() {
   const [mercado, setMercado] =
     useState(null);
 
-  const [pais, setPais] =
+  const [, setPais] =
     useState(null);
 
   const [
@@ -150,12 +149,19 @@ export default function Checkout() {
           "internacional"
         ) {
           setPais("TEST");
+
           setMercado(
             MERCADO_INTERNACIONAL
           );
+
           setCargandoMercado(false);
+
           return;
         }
+
+        /* ===============================================
+           DETECCIÓN AUTOMÁTICA
+        =============================================== */
 
         const respuesta = await fetch(
           "/api/visitas?accion=mercado"
@@ -557,59 +563,450 @@ export default function Checkout() {
     pagarMercadoPago();
   };
 
-              <div className="grid gap-3">
-              {/* MERCADO PAGO */}
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 pb-10 pt-4 sm:px-5 sm:pt-6">
+      <div className="mx-auto max-w-3xl">
+
+        {/* VOLVER */}
+
+        <button
+          type="button"
+          onClick={() =>
+            navigate(
+              `/tienda/${producto.id}`
+            )
+          }
+          className="mb-4 flex items-center gap-2 text-xs font-normal text-slate-600 transition-colors hover:text-slate-900"
+        >
+          <ArrowLeft
+            size={15}
+            strokeWidth={1.8}
+          />
+
+          Volver al producto
+        </button>
+
+        {/* ENCABEZADO */}
+
+        <div className="mb-5">
+          <h1 className="mt-1 text-xl font-medium tracking-tight text-slate-900 sm:text-2xl">
+            Finalizar compra
+          </h1>
+        </div>
+
+        {/* =====================================================
+            RESUMEN DEL PEDIDO
+        ====================================================== */}
+
+        <section className="mb-3 rounded-md border border-slate-200 bg-white p-4">
+          <div className="flex items-center gap-3">
+            {producto.imagenes
+              ?.portada && (
+              <img
+                src={
+                  producto.imagenes
+                    .portada
+                }
+                alt={producto.nombre}
+                className="h-20 w-20 shrink-0 rounded-md border border-slate-200 object-cover"
+              />
+            )}
+
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-medium leading-5 text-slate-900">
+                {producto.nombre}
+              </h2>
+
+              <div className="mt-2 flex flex-wrap items-baseline gap-2">
+                <span className="text-lg font-medium text-slate-950">
+                  {formatearPrecio(
+                    precioProducto
+                  )}
+                </span>
+
+                {mercado ===
+                  MERCADO_ARGENTINA &&
+                  producto.oferta
+                    ?.activa &&
+                  Number(
+                    producto.precioARS
+                  ) >
+                    precioProducto && (
+                    <span className="text-[11px] font-normal text-slate-400 line-through">
+                      {formatearPrecio(
+                        producto.precioARS
+                      )}
+                    </span>
+                  )}
+
+                {mercado ===
+                  MERCADO_INTERNACIONAL &&
+                  producto.ofertaUSD
+                    ?.activa &&
+                  Number(
+                    producto.precioUSD
+                  ) >
+                    precioProducto && (
+                    <span className="text-[11px] font-normal text-slate-400 line-through">
+                      {formatearPrecio(
+                        producto.precioUSD
+                      )}
+                    </span>
+                  )}
+              </div>
+            </div>
+          </div>
+        </section>
+        {/* =====================================================
+            PRODUCTO ADICIONAL
+        ====================================================== */}
+
+        {productoVentaCruzada && (
+          <section className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-4">
+            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.12em] text-orange-700">
+              También te recomendamos
+            </p>
+
+            <div className="flex items-center gap-3">
+              {productoVentaCruzada
+                .imagenes?.portada && (
+                <img
+                  src={
+                    productoVentaCruzada
+                      .imagenes.portada
+                  }
+                  alt={
+                    productoVentaCruzada
+                      .nombre
+                  }
+                  className="h-20 w-20 shrink-0 rounded-md border border-orange-200 bg-white object-cover"
+                />
+              )}
+
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium leading-4 text-slate-900">
+                  {
+                    productoVentaCruzada.nombre
+                  }
+                </p>
+
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="text-md font-medium text-slate-900">
+                    {formatearPrecio(
+                      precioVentaCruzada
+                    )}
+                  </span>
+
+                  {mercado ===
+                    MERCADO_ARGENTINA &&
+                    productoVentaCruzada
+                      .oferta?.activa &&
+                    Number(
+                      productoVentaCruzada
+                        .precioARS
+                    ) >
+                      precioVentaCruzada && (
+                      <span className="text-[12px] font-normal text-slate-400 line-through">
+                        {formatearPrecio(
+                          productoVentaCruzada
+                            .precioARS
+                        )}
+                      </span>
+                    )}
+
+                  {mercado ===
+                    MERCADO_INTERNACIONAL &&
+                    productoVentaCruzada
+                      .ofertaUSD
+                      ?.activa &&
+                    Number(
+                      productoVentaCruzada
+                        .precioUSD
+                    ) >
+                      precioVentaCruzada && (
+                      <span className="text-[12px] font-normal text-slate-400 line-through">
+                        {formatearPrecio(
+                          productoVentaCruzada
+                            .precioUSD
+                        )}
+                      </span>
+                    )}
+                </div>
+
+                {resenasVentaCruzada.length >
+                  0 && (
+                  <div className="mt-1 flex items-center gap-1">
+                    <div className="flex text-[11px] text-amber-500">
+                      {[1, 2, 3, 4, 5].map(
+                        (estrella) => (
+                          <span
+                            key={
+                              estrella
+                            }
+                          >
+                            {estrella <=
+                            Math.round(
+                              promedioVentaCruzada
+                            )
+                              ? "★"
+                              : "☆"}
+                          </span>
+                        )
+                      )}
+                    </div>
+
+                    <span className="text-[9px] font-normal text-slate-500">
+                      (
+                      {
+                        resenasVentaCruzada.length
+                      }
+                      )
+                    </span>
+                  </div>
+                )}
+              </div>
 
               <button
                 type="button"
                 onClick={() =>
-                  setMetodoPago(
-                    "mercadopago"
+                  setVentaCruzadaAgregada(
+                    !ventaCruzadaAgregada
                   )
                 }
-                className={`relative w-full rounded-md border p-4 text-left transition-all ${
+                className={`shrink-0 rounded-md border px-3 py-2 text-[10px] font-medium transition-colors ${
+                  ventaCruzadaAgregada
+                    ? "border-orange-300 bg-white text-orange-700"
+                    : "border-orange-700 bg-orange-700 text-white hover:bg-orange-800"
+                }`}
+              >
+                {ventaCruzadaAgregada
+                  ? "Agregado ✓"
+                  : "Agregar +"}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* =====================================================
+            DATOS
+        ====================================================== */}
+
+        <section className="rounded-md border border-slate-200 bg-white p-4">
+          <div className="mb-4 flex items-center gap-2.5">
+            <div>
+              <h2 className="text-md font-medium text-slate-900">
+                Tus datos
+              </h2>
+
+              <p className="mt-0.5 text-[13px] font-normal text-slate-500">
+                Usaremos tu correo para
+                identificar la compra.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="min-w-0">
+              <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
+                Nombre
+              </span>
+
+              <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 transition-colors focus-within:border-slate-500">
+                <User
+                  size={15}
+                  strokeWidth={1.8}
+                  className="shrink-0 text-slate-400"
+                />
+
+                <input
+                  type="text"
+                  value={nombre}
+                  onChange={(e) =>
+                    setNombre(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Tu nombre"
+                  className="min-w-0 w-full bg-transparent py-2.5 text-xs font-normal text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </div>
+            </label>
+
+            <label className="min-w-0">
+              <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
+                Correo electrónico
+              </span>
+
+              <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 transition-colors focus-within:border-slate-500">
+                <Mail
+                  size={15}
+                  strokeWidth={1.8}
+                  className="shrink-0 text-slate-400"
+                />
+
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(
+                      e.target.value
+                    )
+                  }
+                  placeholder="tu@email.com"
+                  className="min-w-0 w-full bg-transparent py-2.5 text-xs font-normal text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </div>
+            </label>
+          </div>
+        </section>
+
+        {/* =====================================================
+            MÉTODOS DE PAGO — SOLO ARGENTINA
+        ====================================================== */}
+
+        {mercado ===
+          MERCADO_ARGENTINA && (
+          <section className="mt-5">
+            <div className="mb-3 flex items-center gap-2.5 px-1">
+              <div>
+                <h2 className="text-md font-medium text-slate-900">
+                  Método de pago
+                </h2>
+
+                <p className="mt-0.5 text-[13px] font-normal text-slate-500">
+                  Selecciona cómo abonarás tu
+                  compra.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+
+              {/* MERCADO PAGO */}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMetodoPago(
+                    "mercadopago"
+                  );
+                  setError("");
+                }}
+                className={`w-full rounded-md border bg-white p-4 text-left transition-colors ${
                   metodoPago ===
                   "mercadopago"
-                    ? "border-sky-500 bg-sky-50/70"
-                    : "border-slate-200 bg-white hover:border-slate-300"
+                    ? "border-slate-900"
+                    : "border-slate-200 hover:border-slate-400"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div
-                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                    className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
                       metodoPago ===
                       "mercadopago"
-                        ? "border-sky-500 bg-sky-500 text-white"
-                        : "border-slate-300 bg-white"
+                        ? "border-slate-900"
+                        : "border-slate-300"
                     }`}
                   >
                     {metodoPago ===
                       "mercadopago" && (
-                      <Check
-                        size={12}
-                        strokeWidth={2}
-                      />
+                      <div className="h-2 w-2 rounded-full bg-slate-900" />
                     )}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <CreditCard
-                        size={17}
-                        strokeWidth={1.8}
-                        className="text-slate-700"
-                      />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <CreditCard
+                          size={17}
+                          strokeWidth={1.8}
+                          className="shrink-0 text-slate-600"
+                        />
 
-                      <span className="text-sm font-medium text-slate-900">
-                        Mercado Pago
-                      </span>
+                        <span className="text-sm font-medium text-slate-900">
+                          Mercado Pago
+                        </span>
+                      </div>
+
+                      <img
+                        src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/logo%20mp%20%C3%BAltima%20"
+                        alt="Mercado Pago"
+                        className="relative -top-4 h-auto w-[115px] shrink-0 object-contain sm:w-[105px]"
+                      />
                     </div>
 
-                    <p className="mt-1 text-[12px] font-normal leading-5 text-slate-500">
+                    <p className="-mt-7 max-w-xl text-[12px] font-normal leading-5 text-slate-600 sm:text-xs">
                       Tarjetas de crédito,
-                      débito y dinero en
-                      Mercado Pago.
+                      débito, dinero disponible
+                      y otros medios habilitados
+                      por Mercado Pago.
                     </p>
+
+                    <div className="mt-3 border-t border-slate-200 pt-3">
+                      <p className="text-[11px] font-normal text-slate-500">
+                        Hasta 3 cuotas sin
+                        interés con medios
+                        seleccionados.
+                      </p>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-1">
+                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+                          <img
+                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/visa%20"
+                            alt="Visa"
+                            className="h-14 w-auto max-w-[48px] object-contain"
+                          />
+                        </div>
+
+                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+                          <img
+                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/mastercard"
+                            alt="Mastercard"
+                            className="h-12 w-auto max-w-[48px] object-cover"
+                          />
+                        </div>
+
+                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+                          <img
+                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/ae"
+                            alt="American Express"
+                            className="h-8 w-auto max-w-[48px] object-contain"
+                          />
+                        </div>
+
+                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+                          <img
+                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/nx"
+                            alt="Naranja X"
+                            className="h-8 w-auto max-w-[48px] object-contain"
+                          />
+                        </div>
+
+                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+                          <img
+                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/maestro"
+                            alt="Maestro"
+                            className="h-8 w-auto max-w-[40px] object-contain"
+                          />
+                        </div>
+
+                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+                          <img
+                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/nativa"
+                            alt="Nativa"
+                            className="h-10 w-auto max-w-[48px] rounded-sm object-contain"
+                          />
+                        </div>
+
+                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
+                          <img
+                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/shopping%20"
+                            alt="Shopping"
+                            className="h-8 w-auto max-w-[40px] rounded-sm object-contain"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </button>
@@ -618,59 +1015,81 @@ export default function Checkout() {
 
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   setMetodoPago(
                     "transferencia"
-                  )
-                }
-                className={`relative w-full rounded-md border p-4 text-left transition-all ${
+                  );
+                  setError("");
+                }}
+                className={`w-full rounded-md border bg-white p-4 text-left transition-colors ${
                   metodoPago ===
                   "transferencia"
-                    ? "border-emerald-500 bg-emerald-50/70"
-                    : "border-slate-200 bg-white hover:border-slate-300"
+                    ? "border-slate-900"
+                    : "border-slate-200 hover:border-slate-400"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div
-                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                    className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
                       metodoPago ===
                       "transferencia"
-                        ? "border-emerald-500 bg-emerald-500 text-white"
-                        : "border-slate-300 bg-white"
+                        ? "border-slate-900"
+                        : "border-slate-300"
                     }`}
                   >
                     {metodoPago ===
                       "transferencia" && (
-                      <Check
-                        size={12}
-                        strokeWidth={2}
-                      />
+                      <div className="h-2 w-2 rounded-full bg-slate-900" />
                     )}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Building2
-                        size={17}
-                        strokeWidth={1.8}
-                        className="text-slate-700"
-                      />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Building2
+                          size={17}
+                          strokeWidth={1.8}
+                          className="text-slate-600"
+                        />
 
-                      <span className="text-sm font-medium text-slate-900">
-                        Transferencia
-                        bancaria
-                      </span>
+                        <span className="text-sm font-medium text-slate-900">
+                          Transferencia bancaria
+                        </span>
+                      </div>
 
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                        5% OFF
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-700">
+                        <BadgePercent
+                          size={12}
+                          strokeWidth={1.8}
+                        />
+
+                        {
+                          DESCUENTO_TRANSFERENCIA
+                        }
+                        % OFF
                       </span>
                     </div>
 
-                    <p className="mt-1 text-[12px] font-normal leading-5 text-slate-500">
-                      Transferí desde tu
-                      banco o billetera
-                      virtual.
+                    <p className="mt-2 text-[12px] font-normal leading-5 text-slate-600 sm:text-xs">
+                      Paga mediante
+                      transferencia y ahorra{" "}
+                      {
+                        DESCUENTO_TRANSFERENCIA
+                      }
+                      % adicional
                     </p>
+
+                    <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
+                      <span className="text-[11px] font-normal text-slate-600">
+                        Total por transferencia
+                      </span>
+
+                      <span className="text-base font-medium text-slate-900">
+                        {formatearPrecio(
+                          total
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </button>
@@ -678,183 +1097,7 @@ export default function Checkout() {
           </section>
         )}
 
-        {/* =====================================================
-            RESUMEN FINAL
-        ====================================================== */}
-
-        <section className="mt-5 rounded-md border border-slate-200 bg-white p-4">
-          <h2 className="text-md font-medium text-slate-900">
-            Resumen de compra
-          </h2>
-
-          <div className="mt-4 space-y-3">
-            <div className="flex items-start justify-between gap-4">
-              <span className="text-[13px] font-normal text-slate-600">
-                {producto.nombre}
-              </span>
-
-              <span className="shrink-0 text-[13px] font-medium text-slate-900">
-                {formatearPrecio(
-                  precioProducto
-                )}
-              </span>
-            </div>
-
-            {ventaCruzadaAgregada &&
-              productoVentaCruzada && (
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-[13px] font-normal text-slate-600">
-                    {
-                      productoVentaCruzada.nombre
-                    }
-                  </span>
-
-                  <span className="shrink-0 text-[13px] font-medium text-slate-900">
-                    {formatearPrecio(
-                      precioVentaCruzada
-                    )}
-                  </span>
-                </div>
-              )}
-
-            {metodoPago ===
-              "transferencia" &&
-              descuentoTransferencia >
-                0 && (
-                <div className="flex items-center justify-between gap-4 text-emerald-700">
-                  <span className="flex items-center gap-1.5 text-[13px] font-normal">
-                    <BadgePercent
-                      size={14}
-                      strokeWidth={1.8}
-                    />
-
-                    Descuento por
-                    transferencia
-                  </span>
-
-                  <span className="shrink-0 text-[13px] font-medium">
-                    -
-                    {formatearPrecio(
-                      descuentoTransferencia
-                    )}
-                  </span>
-                </div>
-              )}
-
-            <div className="border-t border-slate-200 pt-3">
-              <div className="flex items-end justify-between gap-4">
-                <span className="text-sm font-medium text-slate-900">
-                  Total
-                </span>
-
-                <div className="text-right">
-                  <span className="block text-xl font-medium tracking-tight text-slate-950">
-                    {formatearPrecio(
-                      total
-                    )}
-                  </span>
-
-                  <span className="mt-0.5 block text-[10px] font-normal text-slate-400">
-                    {mercado ===
-                    MERCADO_ARGENTINA
-                      ? "Pesos argentinos"
-                      : "Dólares estadounidenses"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ERROR */}
-
-          {error && (
-            <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2.5">
-              <p className="text-xs font-normal leading-5 text-red-700">
-                {error}
-              </p>
-            </div>
-          )}
-
-          {/* BOTÓN DE PAGO */}
-
-          <button
-            type="button"
-            onClick={continuarPago}
-            disabled={
-              procesando ||
-              cargandoMercado
-            }
-            className={`mt-5 flex w-full items-center justify-center rounded-md px-4 py-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-              metodoPago === "paypal"
-                ? "bg-[#FFC439] text-[#111820] hover:bg-[#F2BA36]"
-                : "gap-2 bg-[#285861] text-white hover:bg-[#204850]"
-            }`}
-          >
-            {metodoPago ===
-            "paypal" ? (
-              procesando ||
-              cargandoMercado ? (
-                "Redirigiendo..."
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <span>
-                    Pay with
-                  </span>
-
-                  <img
-                    src={
-                      LOGO_PAYPAL
-                    }
-                    alt="PayPal"
-                    className="h-5 w-auto object-contain"
-                  />
-                </span>
-              )
-            ) : (
-              <>
-                <LockKeyhole
-                  size={16}
-                  strokeWidth={1.8}
-                />
-
-                {cargandoMercado
-                  ? "Cargando..."
-                  : procesando
-                    ? "Redirigiendo..."
-                    : metodoPago ===
-                        "mercadopago"
-                      ? "Pagar con Mercado Pago"
-                      : "Continuar con transferencia"}
-              </>
-            )}
-          </button>
-
-          {/* SEGURIDAD */}
-
-          <div className="mt-3 flex items-center justify-center gap-4">
-            <span className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
-              <ShieldCheck
-                size={13}
-                strokeWidth={1.8}
-              />
-
-              Compra segura
-            </span>
-
-            <span className="h-3 w-px bg-slate-200" />
-
-            <span className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
-              <LockKeyhole
-                size={12}
-                strokeWidth={1.8}
-              />
-
-              Descarga digital
-            </span>
-          </div>
-        </section>
-
-        {/* =====================================================
+                {/* =====================================================
             ERROR
         ====================================================== */}
 
@@ -997,3 +1240,4 @@ export default function Checkout() {
     </main>
   );
 }
+        
