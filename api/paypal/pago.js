@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { conectarMongoDB } from "../../lib/mongodb.js";
 import { productosDigitales } from "../../src/datos/productosDigitales.js";
+import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
 /* =====================================================
    CONFIGURACIÓN PAYPAL
@@ -85,38 +86,130 @@ const obtenerPrecioFinalUSD = (producto) => {
 };
 
 /* =====================================================
-   DETECTAR MERCADO
+   VERIFICAR WEBHOOK PAYPAL
 ===================================================== */
 
-const obtenerMercado = (req, res) => {
-  const pais =
-    req.headers["x-vercel-ip-country"] || "";
+const verificarWebhookPayPal = async (req) => {
+  const webhookId =
+    process.env.PAYPAL_WEBHOOK_ID;
 
-  const codigoPais =
-    String(pais).toUpperCase();
+  if (!webhookId) {
+    throw new Error(
+      "Falta PAYPAL_WEBHOOK_ID."
+    );
+  }
 
-  const mercado =
-    codigoPais === "AR"
-      ? "AR"
-      : "INTERNACIONAL";
+  const accessToken =
+    await obtenerAccessToken();
 
-  const moneda =
-    mercado === "AR"
-      ? "ARS"
-      : "USD";
+  const respuesta = await fetch(
+    `${obtenerBaseUrlPayPal()}/v1/notifications/verify-webhook-signature`,
+    {
+      method: "POST",
 
-  return res.status(200).json({
-    pais: codigoPais || null,
-    mercado,
-    moneda,
-  });
+      headers: {
+        Authorization:
+          `Bearer ${accessToken}`,
+
+        "Content-Type":
+          "application/json",
+      },
+
+      body: JSON.stringify({
+        auth_algo:
+          req.headers["paypal-auth-algo"],
+
+        cert_url:
+          req.headers["paypal-cert-url"],
+
+        transmission_id:
+          req.headers[
+            "paypal-transmission-id"
+          ],
+
+        transmission_sig:
+          req.headers[
+            "paypal-transmission-sig"
+          ],
+
+        transmission_time:
+          req.headers[
+            "paypal-transmission-time"
+          ],
+
+        webhook_id: webhookId,
+
+        webhook_event: req.body,
+      }),
+    }
+  );
+
+  const datos = await respuesta.json();
+
+  return (
+    respuesta.ok &&
+    datos.verification_status ===
+      "SUCCESS"
+  );
+};
+
+/* =====================================================
+   ENVIAR EMAIL DEL PEDIDO
+===================================================== */
+
+const enviarEmailPedido = async (
+  db,
+  pedido
+) => {
+  if (
+    !pedido ||
+    pedido.emailEnviado
+  ) {
+    return;
+  }
+
+  try {
+    await enviarEmailCompra({
+      pedidoId: pedido.pedidoId,
+
+      email:
+        pedido.emailComprador,
+
+      productos:
+        pedido.productos || [],
+    });
+
+    await db
+      .collection("pedidos")
+      .updateOne(
+        {
+          pedidoId:
+            pedido.pedidoId,
+        },
+        {
+          $set: {
+            emailEnviado: true,
+            emailEnviadoEn:
+              new Date(),
+          },
+        }
+      );
+  } catch (errorEmail) {
+    console.error(
+      "Error enviando email de compra PayPal:",
+      errorEmail
+    );
+  }
 };
 
 /* =====================================================
    CAPTURAR ORDEN PAYPAL
 ===================================================== */
 
-const capturarOrdenPayPal = async (req, res) => {
+const capturarOrdenPayPal = async (
+  req,
+  res
+) => {
   const pedidoId =
     req.body?.pedidoId;
 
@@ -138,25 +231,42 @@ const capturarOrdenPayPal = async (req, res) => {
 
   if (!pedido) {
     return res.status(404).json({
-      error: "Pedido no encontrado.",
+      error:
+        "Pedido no encontrado.",
     });
   }
 
   if (
     pedido.metodoPago !== "paypal" ||
-    pedido.paypalOrderId !== paypalOrderId
+    pedido.paypalOrderId !==
+      paypalOrderId
   ) {
     return res.status(400).json({
-      error: "La orden PayPal no es válida.",
+      error:
+        "La orden PayPal no es válida.",
     });
   }
 
+  /* =====================================================
+     PEDIDO YA APROBADO
+  ===================================================== */
+
   if (pedido.estado === "aprobado") {
+    await enviarEmailPedido(
+      db,
+      pedido
+    );
+
     return res.status(200).json({
       aprobado: true,
-      productos: pedido.productos || [],
+      productos:
+        pedido.productos || [],
     });
   }
+
+  /* =====================================================
+     CAPTURAR
+  ===================================================== */
 
   const accessToken =
     await obtenerAccessToken();
@@ -198,19 +308,33 @@ const capturarOrdenPayPal = async (req, res) => {
       });
   }
 
+  const unidad =
+    datosPayPal.purchase_units?.[0];
+
   const captura =
-    datosPayPal.purchase_units?.[0]
-      ?.payments?.captures?.[0];
+    unidad?.payments?.captures?.[0];
 
   const montoEsperado =
     Number(pedido.precio).toFixed(2);
 
+  const referenciaValida =
+    unidad?.reference_id ===
+      pedidoId &&
+    unidad?.custom_id ===
+      pedidoId;
+
   const pagoValido =
-    datosPayPal.id === paypalOrderId &&
-    datosPayPal.status === "COMPLETED" &&
-    captura?.status === "COMPLETED" &&
-    captura?.amount?.currency_code === "USD" &&
-    captura?.amount?.value === montoEsperado;
+    datosPayPal.id ===
+      paypalOrderId &&
+    datosPayPal.status ===
+      "COMPLETED" &&
+    referenciaValida &&
+    captura?.status ===
+      "COMPLETED" &&
+    captura?.amount
+      ?.currency_code === "USD" &&
+    captura?.amount?.value ===
+      montoEsperado;
 
   if (!pagoValido) {
     console.error(
@@ -224,6 +348,10 @@ const capturarOrdenPayPal = async (req, res) => {
     });
   }
 
+  /* =====================================================
+     APROBAR PEDIDO
+  ===================================================== */
+
   await db
     .collection("pedidos")
     .updateOne(
@@ -231,24 +359,268 @@ const capturarOrdenPayPal = async (req, res) => {
       {
         $set: {
           estado: "aprobado",
-          pagadoEn: new Date(),
+
+          pagadoEn:
+            new Date(),
+
           paypalCaptureId:
             captura.id,
+
           paypalEstado:
             datosPayPal.status,
+
           paypalPayerId:
-            datosPayPal.payer?.payer_id ||
-            null,
+            datosPayPal.payer
+              ?.payer_id || null,
+
           paypalEmail:
             datosPayPal.payer
-              ?.email_address || null,
+              ?.email_address ||
+            null,
         },
       }
     );
 
+  /* =====================================================
+     EMAIL
+  ===================================================== */
+
+  await enviarEmailPedido(
+    db,
+    pedido
+  );
+
   return res.status(200).json({
     aprobado: true,
-    productos: pedido.productos || [],
+
+    productos:
+      pedido.productos || [],
+  });
+};
+
+/* =====================================================
+   PROCESAR WEBHOOK PAYPAL
+===================================================== */
+
+const procesarWebhookPayPal = async (
+  req,
+  res
+) => {
+  const firmaValida =
+    await verificarWebhookPayPal(req);
+
+  if (!firmaValida) {
+    console.error(
+      "Webhook PayPal con firma inválida."
+    );
+
+    return res.status(400).json({
+      error:
+        "Webhook no válido.",
+    });
+  }
+
+  const evento = req.body;
+
+  const tipo =
+    evento?.event_type;
+
+  const db =
+    await conectarMongoDB();
+
+  /* =====================================================
+     CHECKOUT.ORDER.APPROVED
+  ===================================================== */
+
+  if (
+    tipo ===
+    "CHECKOUT.ORDER.APPROVED"
+  ) {
+    const paypalOrderId =
+      evento.resource?.id;
+
+    if (!paypalOrderId) {
+      return res.status(200).json({
+        recibido: true,
+      });
+    }
+
+    const pedido = await db
+      .collection("pedidos")
+      .findOne({
+        paypalOrderId,
+        metodoPago: "paypal",
+      });
+
+    if (!pedido) {
+      return res.status(200).json({
+        recibido: true,
+      });
+    }
+
+    if (
+      pedido.estado ===
+      "aprobado"
+    ) {
+      await enviarEmailPedido(
+        db,
+        pedido
+      );
+
+      return res.status(200).json({
+        recibido: true,
+      });
+    }
+
+    return await capturarOrdenPayPal(
+      {
+        ...req,
+
+        body: {
+          pedidoId:
+            pedido.pedidoId,
+
+          paypalOrderId,
+        },
+      },
+      res
+    );
+  }
+
+  /* =====================================================
+     PAYMENT.CAPTURE.COMPLETED
+  ===================================================== */
+
+  if (
+    tipo ===
+    "PAYMENT.CAPTURE.COMPLETED"
+  ) {
+    const captura =
+      evento.resource;
+
+    const paypalOrderId =
+      captura?.supplementary_data
+        ?.related_ids?.order_id;
+
+    if (!paypalOrderId) {
+      return res.status(200).json({
+        recibido: true,
+      });
+    }
+
+    const pedido = await db
+      .collection("pedidos")
+      .findOne({
+        paypalOrderId,
+        metodoPago: "paypal",
+      });
+
+    if (!pedido) {
+      return res.status(200).json({
+        recibido: true,
+      });
+    }
+
+    const montoEsperado =
+      Number(
+        pedido.precio
+      ).toFixed(2);
+
+    const capturaValida =
+      captura?.status ===
+        "COMPLETED" &&
+      captura?.amount
+        ?.currency_code ===
+        "USD" &&
+      captura?.amount?.value ===
+        montoEsperado;
+
+    if (!capturaValida) {
+      console.error(
+        "Webhook de captura PayPal no válido."
+      );
+
+      return res.status(400).json({
+        error:
+          "Captura no válida.",
+      });
+    }
+
+    await db
+      .collection("pedidos")
+      .updateOne(
+        {
+          pedidoId:
+            pedido.pedidoId,
+        },
+        {
+          $set: {
+            estado:
+              "aprobado",
+
+            pagadoEn:
+              pedido.pagadoEn ||
+              new Date(),
+
+            paypalCaptureId:
+              captura.id,
+
+            paypalEstado:
+              "COMPLETED",
+          },
+        }
+      );
+
+    await enviarEmailPedido(
+      db,
+      pedido
+    );
+
+    return res.status(200).json({
+      recibido: true,
+    });
+  }
+
+    /* =====================================================
+     PAYMENT.CAPTURE.DENIED
+  ===================================================== */
+
+  if (
+    tipo ===
+    "PAYMENT.CAPTURE.DENIED"
+  ) {
+    const paypalOrderId =
+      evento.resource
+        ?.supplementary_data
+        ?.related_ids?.order_id;
+
+    if (paypalOrderId) {
+      await db
+        .collection("pedidos")
+        .updateOne(
+          {
+            paypalOrderId,
+
+            estado: {
+              $ne: "aprobado",
+            },
+          },
+          {
+            $set: {
+              paypalEstado:
+                "DENIED",
+            },
+          }
+        );
+    }
+
+    return res.status(200).json({
+      recibido: true,
+    });
+  }
+
+  return res.status(200).json({
+    recibido: true,
   });
 };
 
@@ -256,16 +628,48 @@ const capturarOrdenPayPal = async (req, res) => {
    HANDLER
 ===================================================== */
 
-export default async function handler(req, res) {
+export default async function handler(
+  req,
+  res
+) {
   if (req.method !== "POST") {
     return res.status(405).json({
-      error: "Método no permitido",
+      error:
+        "Método no permitido",
     });
   }
 
-  const accion = req.query?.accion;
+  const accion =
+    req.query?.accion;
+
+  /* =====================================================
+     WEBHOOK
+  ===================================================== */
+
+  if (accion === "webhook") {
+    try {
+      return await procesarWebhookPayPal(
+        req,
+        res
+      );
+    } catch (error) {
+      console.error(
+        "Error procesando webhook PayPal:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          "Error procesando webhook PayPal.",
+      });
+    }
+  }
 
   try {
+    /* =====================================================
+       CAPTURAR
+    ===================================================== */
+
     if (accion === "capturar") {
       return await capturarOrdenPayPal(
         req,
@@ -273,18 +677,26 @@ export default async function handler(req, res) {
       );
     }
 
+    /* =====================================================
+       CREAR
+    ===================================================== */
+
     if (accion !== "crear") {
       return res.status(400).json({
-        error: "Acción no válida.",
+        error:
+          "Acción no válida.",
       });
     }
-    const email = req.body?.email?.trim();
+
+    const email =
+      req.body?.email?.trim();
 
     const productoId =
       req.body?.productoId;
 
     const ventaCruzadaId =
-      req.body?.ventaCruzadaId || null;
+      req.body?.ventaCruzadaId ||
+      null;
 
     if (!email) {
       return res.status(400).json({
@@ -295,7 +707,8 @@ export default async function handler(req, res) {
 
     if (!productoId) {
       return res.status(400).json({
-        error: "Falta el producto.",
+        error:
+          "Falta el producto.",
       });
     }
 
@@ -305,24 +718,31 @@ export default async function handler(req, res) {
 
     const producto =
       productosDigitales.find(
-        (item) => item.id === productoId
+        (item) =>
+          item.id === productoId
       );
 
     if (!producto) {
       return res.status(404).json({
-        error: "Producto no encontrado.",
+        error:
+          "Producto no encontrado.",
       });
     }
 
     const precioPrincipal =
-      obtenerPrecioFinalUSD(producto);
+      obtenerPrecioFinalUSD(
+        producto
+      );
 
     /* =====================================================
        VENTA CRUZADA
     ===================================================== */
 
-    let productoVentaCruzada = null;
-    let precioVentaCruzada = 0;
+    let productoVentaCruzada =
+      null;
+
+    let precioVentaCruzada =
+      0;
 
     if (ventaCruzadaId) {
       if (
@@ -338,7 +758,8 @@ export default async function handler(req, res) {
       productoVentaCruzada =
         productosDigitales.find(
           (item) =>
-            item.id === ventaCruzadaId
+            item.id ===
+            ventaCruzadaId
         );
 
       if (!productoVentaCruzada) {
@@ -372,7 +793,8 @@ export default async function handler(req, res) {
       precioPrincipal +
       precioVentaCruzada;
 
-    const monto = precioTotal.toFixed(2);
+    const monto =
+      precioTotal.toFixed(2);
 
     /* =====================================================
        PRODUCTOS DEL PEDIDO
@@ -380,9 +802,14 @@ export default async function handler(req, res) {
 
     const productosPedido = [
       {
-        productoId: producto.id,
-        nombre: producto.nombre,
-        precio: precioPrincipal,
+        productoId:
+          producto.id,
+
+        nombre:
+          producto.nombre,
+
+        precio:
+          precioPrincipal,
       },
     ];
 
@@ -403,7 +830,8 @@ export default async function handler(req, res) {
        ID INTERNO
     ===================================================== */
 
-    const pedidoId = crypto.randomUUID();
+    const pedidoId =
+      crypto.randomUUID();
 
     /* =====================================================
        AUTENTICACIÓN PAYPAL
@@ -416,84 +844,101 @@ export default async function handler(req, res) {
        CREAR ORDEN PAYPAL
     ===================================================== */
 
-    const respuestaPayPal = await fetch(
-      `${obtenerBaseUrlPayPal()}/v2/checkout/orders`,
-      {
-        method: "POST",
+    const respuestaPayPal =
+      await fetch(
+        `${obtenerBaseUrlPayPal()}/v2/checkout/orders`,
+        {
+          method: "POST",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
+          headers: {
+            Authorization:
+              `Bearer ${accessToken}`,
 
-          "Content-Type":
-            "application/json",
+            "Content-Type":
+              "application/json",
 
-          "PayPal-Request-Id":
-            crypto.randomUUID(),
-        },
-
-        body: JSON.stringify({
-          intent: "CAPTURE",
-
-                    payment_source: {
-            paypal: {
-              experience_context: {
-                shipping_preference:
-                  "NO_SHIPPING",
-
-                return_url:
-                `https://andreshousesitter.com/pago/exitoso?metodo=paypal&pedidoId=${encodeURIComponent(
-                  pedidoId
-                )}`,
-
-                cancel_url:
-  `https://andreshousesitter.com/checkout/${encodeURIComponent(
-    producto.id
-  )}`,
-              },
-            },
+            "PayPal-Request-Id":
+              crypto.randomUUID(),
           },
 
-          purchase_units: [
-            {
-              reference_id: pedidoId,
+          body: JSON.stringify({
+            intent: "CAPTURE",
 
-              custom_id: pedidoId,
+            payment_source: {
+              paypal: {
+                experience_context: {
+                  shipping_preference:
+                    "NO_SHIPPING",
 
-              amount: {
-                currency_code: "USD",
-                value: monto,
+                  return_url:
+                    `https://andreshousesitter.com/pago/exitoso?metodo=paypal&pedidoId=${encodeURIComponent(
+                      pedidoId
+                    )}`,
 
-                breakdown: {
-                  item_total: {
-                    currency_code: "USD",
-                    value: monto,
-                  },
+                  cancel_url:
+                    `https://andreshousesitter.com/checkout/${encodeURIComponent(
+                      producto.id
+                    )}`,
                 },
               },
-
-              items: productosPedido.map(
-                (item) => ({
-                  name: item.nombre,
-                  sku: item.productoId,
-
-                  quantity: "1",
-
-                  category:
-                    "DIGITAL_GOODS",
-
-                  unit_amount: {
-                    currency_code: "USD",
-                    value:
-                      item.precio.toFixed(2),
-                  },
-                })
-              ),
             },
-          ],
-        }),
-      }
-    );
+
+            purchase_units: [
+              {
+                reference_id:
+                  pedidoId,
+
+                custom_id:
+                  pedidoId,
+
+                amount: {
+                  currency_code:
+                    "USD",
+
+                  value:
+                    monto,
+
+                  breakdown: {
+                    item_total: {
+                      currency_code:
+                        "USD",
+
+                      value:
+                        monto,
+                    },
+                  },
+                },
+
+                items:
+                  productosPedido.map(
+                    (item) => ({
+                      name:
+                        item.nombre,
+
+                      sku:
+                        item.productoId,
+
+                      quantity: "1",
+
+                      category:
+                        "DIGITAL_GOODS",
+
+                      unit_amount: {
+                        currency_code:
+                          "USD",
+
+                        value:
+                          item.precio.toFixed(
+                            2
+                          ),
+                      },
+                    })
+                  ),
+              },
+            ],
+          }),
+        }
+      );
 
     const datosPayPal =
       await respuestaPayPal.json();
@@ -509,44 +954,53 @@ export default async function handler(req, res) {
       );
 
       return res
-        .status(respuestaPayPal.status)
+        .status(
+          respuestaPayPal.status
+        )
         .json({
           error:
             "No se pudo crear el pago con PayPal.",
         });
     }
 
+    /* =====================================================
+       ENLACE DE APROBACIÓN
+    ===================================================== */
+
     const enlaceAprobacion =
-  datosPayPal.links?.find(
-    (link) =>
-      link.rel === "payer-action" ||
-      link.rel === "approve"
-  )?.href;
+      datosPayPal.links?.find(
+        (link) =>
+          link.rel ===
+            "payer-action" ||
+          link.rel === "approve"
+      )?.href;
 
-if (!enlaceAprobacion) {
-  console.error(
-    "PayPal no devolvió enlace de aprobación:",
-    datosPayPal
-  );
+    if (!enlaceAprobacion) {
+      console.error(
+        "PayPal no devolvió enlace de aprobación:",
+        datosPayPal
+      );
 
-  return res.status(500).json({
-    error:
-      "PayPal no devolvió el enlace de aprobación.",
-  });
-}
+      return res.status(500).json({
+        error:
+          "PayPal no devolvió el enlace de aprobación.",
+      });
+    }
 
     /* =====================================================
        GUARDAR PEDIDO
     ===================================================== */
 
-    const db = await conectarMongoDB();
+    const db =
+      await conectarMongoDB();
 
     await db
       .collection("pedidos")
       .insertOne({
         pedidoId,
 
-        productoId: producto.id,
+        productoId:
+          producto.id,
 
         nombreProducto:
           producto.nombre,
@@ -555,29 +1009,43 @@ if (!enlaceAprobacion) {
           productosPedido,
 
         ventaCruzadaId:
-          productoVentaCruzada?.id ||
-          null,
+          productoVentaCruzada
+            ?.id || null,
 
-        emailComprador: email,
+        emailComprador:
+          email,
 
-        precio: precioTotal,
+        precio:
+          precioTotal,
 
-        moneda: "USD",
+        moneda:
+          "USD",
 
-        metodoPago: "paypal",
+        metodoPago:
+          "paypal",
 
         paypalOrderId:
           datosPayPal.id,
 
-        paypalCaptureId: null,
+        paypalCaptureId:
+          null,
 
-        estado: "pendiente",
+        estado:
+          "pendiente",
 
-        creadoEn: new Date(),
+        creadoEn:
+          new Date(),
 
-        pagadoEn: null,
+        pagadoEn:
+          null,
 
         descargas: 0,
+
+        emailEnviado:
+          false,
+
+        emailEnviadoEn:
+          null,
       });
 
     /* =====================================================
@@ -585,15 +1053,14 @@ if (!enlaceAprobacion) {
     ===================================================== */
 
     return res.status(201).json({
-  pedidoId,
+      pedidoId,
 
-  paypalOrderId:
-    datosPayPal.id,
+      paypalOrderId:
+        datosPayPal.id,
 
-  approveUrl:
-    enlaceAprobacion,
-});
-    
+      approveUrl:
+        enlaceAprobacion,
+    });
   } catch (error) {
     console.error(
       "Error creando orden PayPal:",
