@@ -173,13 +173,13 @@ destacado: false,
      PRECIO INTERNACIONAL
   ========================= */
 
-  precioUSD: 3.49,
+  precioUSD: 0.10,
 
   descuentoUSD: 0,
 
   ofertaUSD: {
-    activa: true,
-    precioUSD: 2.49,
+    activa: false,
+    precioUSD: 0,
     etiqueta: "Oferta lanzamiento",
   },
 
