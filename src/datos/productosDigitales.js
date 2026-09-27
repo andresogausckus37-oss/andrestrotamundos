@@ -22,13 +22,13 @@ export const productosDigitales = [
        PRECIO ARGENTINA
     ========================= */
 
-    precioARS: 10,
+    precioARS: 3499,
 
     descuento: 0,
 
     oferta: {
       activa: true,
-      precioARS: 5,
+      precioARS: 2499,
       etiqueta: "",
     },
 
