@@ -46,10 +46,89 @@ const DetalleProducto = () => {
   const [cargandoMercado, setCargandoMercado] =
     useState(true);
 
-  const producto =
-    productosDigitales.find(
-      (p) => p.id === id
-    );
+  const productoLocal =
+  productosDigitales.find(
+    (p) => p.id === id
+  );
+
+const [productoMongo, setProductoMongo] =
+  useState(null);
+
+const [cargandoProducto, setCargandoProducto] =
+  useState(!productoLocal);
+
+const producto =
+  productoLocal || productoMongo;
+
+  /* =========================================================
+   CARGAR PRODUCTO DESDE MONGODB
+========================================================= */
+
+useEffect(() => {
+  /*
+   * Si el producto ya existe en productosDigitales.js,
+   * no necesitamos consultar MongoDB.
+   */
+  if (productoLocal) {
+    setProductoMongo(null);
+    setCargandoProducto(false);
+    return;
+  }
+
+  let cancelado = false;
+
+  const cargarProducto = async () => {
+    try {
+      setCargandoProducto(true);
+
+      const respuesta = await fetch(
+        "/api/admin/pedidos?accion=productos-publicos"
+      );
+
+      if (!respuesta.ok) {
+        throw new Error(
+          "No se pudo cargar el producto."
+        );
+      }
+
+      const datos =
+        await respuesta.json();
+
+      const encontrado =
+        Array.isArray(datos.productos)
+          ? datos.productos.find(
+              (item) =>
+                item.id === id
+            )
+          : null;
+
+      if (!cancelado) {
+        setProductoMongo(
+          encontrado || null
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Error cargando producto desde MongoDB:",
+        error
+      );
+
+      if (!cancelado) {
+        setProductoMongo(null);
+      }
+    } finally {
+      if (!cancelado) {
+        setCargandoProducto(false);
+      }
+    }
+  };
+
+  cargarProducto();
+
+  return () => {
+    cancelado = true;
+  };
+}, [id, productoLocal]);
 
   const textoEs = (valor) => {
     if (typeof valor === "string") {
@@ -424,6 +503,16 @@ const DetalleProducto = () => {
   /* =========================================================
      PRODUCTO NO ENCONTRADO
   ========================================================= */
+
+  if (cargandoProducto) {
+  return (
+    <main className="flex min-h-[70vh] items-center justify-center bg-[#FCFDFC] px-4">
+      <p className="text-sm text-[#687477]">
+        Cargando producto...
+      </p>
+    </main>
+  );
+  }
 
   if (!producto) {
     return (
