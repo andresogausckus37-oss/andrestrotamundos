@@ -20,10 +20,11 @@ export default async function handler(req, res) {
       });
     }
 
-    const respuesta = await openai.responses.create({
-      model: "gpt-5.6-luna",
-      input: prompt,
-    });
+    const respuesta =
+      await openai.responses.create({
+        model: "gpt-5.6-luna",
+        input: prompt,
+      });
 
     const texto = respuesta.output_text;
 
@@ -31,8 +32,28 @@ export default async function handler(req, res) {
 
     try {
       contenido = JSON.parse(texto);
+    } catch (errorJson) {
+      console.error(
+        "JSON inválido recibido:",
+        texto
+      );
+
+      return res.status(500).json({
+        error:
+          "La IA no devolvió JSON válido",
+        respuesta: texto,
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      contenido,
+    });
   } catch (error) {
-    console.error("Error generando contenido:", error);
+    console.error(
+      "Error generando contenido:",
+      error
+    );
 
     return res.status(500).json({
       error:
