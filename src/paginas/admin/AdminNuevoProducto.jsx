@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import {
   FilePlus2,
   RefreshCw,
+  Trash2,
+  Upload,
 } from "lucide-react";
 
 import { productosDigitales } from "../../datos/productosDigitales";
@@ -38,6 +40,18 @@ const NIVELES = [
   "Dificultad progresiva",
 ];
 
+const ANCHO_OBJETIVO = 794;
+const CALIDAD_WEBP = 0.82;
+
+const NOMBRES_IMAGENES = [
+  "Imagen 1 — Principal de tienda",
+  "Imagen 2 — Segunda imagen de tienda",
+  "Imagen 3 — Tercera imagen de tienda",
+  "Imagen 4 — Cuarta imagen de tienda",
+  "Imagen 5 — Portada del PDF",
+  "Imagen 6 — Página final del PDF",
+];
+
 /* =========================================================
    UTILIDADES
 ========================================================= */
@@ -68,6 +82,125 @@ const pluralActividad = (categoria) => {
 
   return nombres[categoria] || "actividades";
 };
+
+/* =========================================================
+   OPTIMIZAR IMAGEN
+========================================================= */
+
+const procesarImagen = (archivo) =>
+  new Promise((resolve, reject) => {
+    const urlOriginal = URL.createObjectURL(archivo);
+    const imagen = new Image();
+
+    imagen.onload = () => {
+      const escala = Math.min(
+        1,
+        ANCHO_OBJETIVO / imagen.naturalWidth
+      );
+
+      const ancho = Math.round(
+        imagen.naturalWidth * escala
+      );
+
+      const alto = Math.round(
+        imagen.naturalHeight * escala
+      );
+
+      const canvas = document.createElement("canvas");
+
+      canvas.width = ancho;
+      canvas.height = alto;
+
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        URL.revokeObjectURL(urlOriginal);
+
+        reject(
+          new Error("No se pudo procesar la imagen.")
+        );
+
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      ctx.drawImage(
+        imagen,
+        0,
+        0,
+        ancho,
+        alto
+      );
+
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(urlOriginal);
+
+          if (!blob) {
+            reject(
+              new Error(
+                "No se pudo convertir la imagen a WebP."
+              )
+            );
+
+            return;
+          }
+
+          const archivoOptimizado = new File(
+            [blob],
+            "imagen.webp",
+            {
+              type: "image/webp",
+            }
+          );
+
+          resolve({
+            archivoOptimizado,
+
+            urlOptimizada:
+              URL.createObjectURL(
+                archivoOptimizado
+              ),
+
+            pesoOriginal: archivo.size,
+            pesoOptimizado:
+              archivoOptimizado.size,
+          });
+        },
+        "image/webp",
+        CALIDAD_WEBP
+      );
+    };
+
+    imagen.onerror = () => {
+      URL.revokeObjectURL(urlOriginal);
+
+      reject(
+        new Error("No se pudo leer la imagen.")
+      );
+    };
+
+    imagen.src = urlOriginal;
+  });
+
+const archivoADataUrl = (archivo) =>
+  new Promise((resolve, reject) => {
+    const lector = new FileReader();
+
+    lector.onload = () =>
+      resolve(lector.result);
+
+    lector.onerror = () =>
+      reject(
+        new Error(
+          "No se pudo preparar la imagen."
+        )
+      );
+
+    lector.readAsDataURL(archivo);
+  });
 
 /* =========================================================
    COMPONENTE
@@ -103,6 +236,18 @@ export default function AdminNuevoProducto() {
     beneficios: "",
   });
 
+  const [imagenes, setImagenes] = useState(
+    Array(6).fill(null)
+  );
+
+  const [
+    procesandoImagen,
+    setProcesandoImagen,
+  ] = useState(false);
+
+  const [guardando, setGuardando] =
+    useState(false);
+
   const idGenerado = useMemo(
     () => crearId(formulario.nombre),
     [formulario.nombre]
@@ -111,7 +256,8 @@ export default function AdminNuevoProducto() {
   const idRepetido =
     idGenerado &&
     productosDigitales.some(
-      (producto) => producto.id === idGenerado
+      (producto) =>
+        producto.id === idGenerado
     );
 
   const cambiar = (campo, valor) => {
@@ -119,6 +265,103 @@ export default function AdminNuevoProducto() {
       ...actual,
       [campo]: valor,
     }));
+  };
+
+  /* =======================================================
+     IMÁGENES
+  ======================================================= */
+
+  const seleccionarImagen = async (
+    indice,
+    archivo
+  ) => {
+    if (!archivo) return;
+
+    try {
+      setProcesandoImagen(true);
+
+      const resultado =
+        await procesarImagen(archivo);
+
+      setImagenes((actuales) => {
+        const nuevas = [...actuales];
+
+        if (
+          nuevas[indice]?.urlOptimizada
+        ) {
+          URL.revokeObjectURL(
+            nuevas[indice].urlOptimizada
+          );
+        }
+
+        nuevas[indice] = resultado;
+
+        return nuevas;
+      });
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setProcesandoImagen(false);
+    }
+  };
+
+  const eliminarImagen = (indice) => {
+    setImagenes((actuales) => {
+      const nuevas = [...actuales];
+
+      if (
+        nuevas[indice]?.urlOptimizada
+      ) {
+        URL.revokeObjectURL(
+          nuevas[indice].urlOptimizada
+        );
+      }
+
+      nuevas[indice] = null;
+
+      return nuevas;
+    });
+  };
+
+  const subirImagen = async (
+    imagen,
+    numero
+  ) => {
+    const imagenBase64 =
+      await archivoADataUrl(
+        imagen.archivoOptimizado
+      );
+
+    const respuesta = await fetch(
+      "/api/admin/pedidos?accion=subir-imagen-producto",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          productoId: idGenerado,
+          numeroImagen: numero,
+          imagenBase64,
+        }),
+      }
+    );
+
+    const datos =
+      await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos.error ||
+          `No se pudo subir la imagen ${numero}.`
+      );
+    }
+
+    return datos.url;
   };
 
   /* =======================================================
@@ -145,7 +388,8 @@ export default function AdminNuevoProducto() {
       );
 
     const publico =
-      formulario.publico || "todas las edades";
+      formulario.publico ||
+      "todas las edades";
 
     const nivel =
       formulario.nivel || "variado";
@@ -153,9 +397,11 @@ export default function AdminNuevoProducto() {
     const descripcion = [
       `${cantidad} ${actividad} imprimibles`,
       `para ${publico.toLowerCase()}`,
+
       soluciones > 0
         ? `con ${soluciones} soluciones incluidas`
         : "",
+
       nivel
         ? `de nivel ${nivel.toLowerCase()}`
         : "",
@@ -180,9 +426,11 @@ export default function AdminNuevoProducto() {
 
     const incluye = [
       `${cantidad} ${actividad}`,
+
       soluciones > 0
         ? `${soluciones} soluciones incluidas`
         : "",
+
       "PDF A4 listo para imprimir",
       "Descarga digital instantánea",
     ]
@@ -246,7 +494,8 @@ export default function AdminNuevoProducto() {
       descripcion,
       descripcionLarga,
       incluye,
-      beneficios: beneficios.join("\n"),
+      beneficios:
+        beneficios.join("\n"),
     }));
   };
 
@@ -263,7 +512,8 @@ export default function AdminNuevoProducto() {
   const productoFinal = {
     id: idGenerado,
 
-    nombre: formulario.nombre.trim(),
+    nombre:
+      formulario.nombre.trim(),
 
     ventaCruzadaId:
       formulario.ventaCruzadaId,
@@ -276,48 +526,63 @@ export default function AdminNuevoProducto() {
 
     tipo: "digital",
 
-    categoria: formulario.categoria,
+    categoria:
+      formulario.categoria,
 
     linea: "juegos",
 
     precioARS:
-      Number(formulario.precioARS) || 0,
+      Number(formulario.precioARS) ||
+      0,
 
     descuento: 0,
 
     oferta: {
-      activa: formulario.ofertaActiva,
+      activa:
+        formulario.ofertaActiva,
 
-      precioARS: formulario.ofertaActiva
-        ? Number(formulario.precioOfertaARS) || 0
-        : 0,
+      precioARS:
+        formulario.ofertaActiva
+          ? Number(
+              formulario.precioOfertaARS
+            ) || 0
+          : 0,
 
-      etiqueta: formulario.ofertaActiva
-        ? formulario.etiquetaOferta.trim()
-        : "",
+      etiqueta:
+        formulario.ofertaActiva
+          ? formulario.etiquetaOferta.trim()
+          : "",
     },
 
     precioUSD:
-      Number(formulario.precioUSD) || 0,
+      Number(formulario.precioUSD) ||
+      0,
 
     descuentoUSD: 0,
 
     ofertaUSD: {
-      activa: formulario.ofertaUSDActiva,
+      activa:
+        formulario.ofertaUSDActiva,
 
-      precioUSD: formulario.ofertaUSDActiva
-        ? Number(formulario.precioOfertaUSD) || 0
-        : 0,
+      precioUSD:
+        formulario.ofertaUSDActiva
+          ? Number(
+              formulario.precioOfertaUSD
+            ) || 0
+          : 0,
 
-      etiqueta: formulario.ofertaUSDActiva
-        ? formulario.etiquetaOferta.trim()
-        : "",
+      etiqueta:
+        formulario.ofertaUSDActiva
+          ? formulario.etiquetaOferta.trim()
+          : "",
     },
 
     imagenes: {
       portada: "",
       preview: "",
       previewsIndividuales: [],
+      portadaPDF: "",
+      paginaFinalPDF: "",
     },
 
     formato: "PDF",
@@ -325,13 +590,16 @@ export default function AdminNuevoProducto() {
     tamano: "A4",
 
     paginas:
-      Number(formulario.paginas) || 0,
+      Number(formulario.paginas) ||
+      0,
 
     laminas:
-      Number(formulario.laminas) || 0,
+      Number(formulario.laminas) ||
+      0,
 
     soluciones:
-      Number(formulario.soluciones) || 0,
+      Number(formulario.soluciones) ||
+      0,
 
     incluye: convertirLista(
       formulario.incluye
@@ -344,64 +612,143 @@ export default function AdminNuevoProducto() {
     edadRecomendada:
       formulario.publico,
 
-    nivel: formulario.nivel,
+    nivel:
+      formulario.nivel,
 
-    entrega: "Descarga digital",
+    entrega:
+      "Descarga digital",
 
-    destacado: formulario.destacado,
+    destacado:
+      formulario.destacado,
   };
+
+  /* =======================================================
+     GUARDAR PRODUCTO
+  ======================================================= */
 
   const agregarProducto = async () => {
     if (!formulario.nombre.trim()) {
-      alert("Falta el nombre del producto.");
+      alert(
+        "Falta el nombre del producto."
+      );
       return;
     }
 
     if (!formulario.categoria) {
-      alert("Falta seleccionar la categoría.");
+      alert(
+        "Falta seleccionar la categoría."
+      );
       return;
     }
 
     if (!formulario.publico) {
-      alert("Falta seleccionar el público.");
+      alert(
+        "Falta seleccionar el público."
+      );
       return;
     }
 
     if (!formulario.nivel) {
-      alert("Falta seleccionar el nivel.");
+      alert(
+        "Falta seleccionar el nivel."
+      );
       return;
     }
 
     if (!formulario.laminas) {
-      alert("Falta indicar la cantidad de actividades.");
+      alert(
+        "Falta indicar la cantidad de actividades."
+      );
       return;
     }
 
     if (idRepetido) {
-      alert("Ya existe un producto con este ID.");
+      alert(
+        "Ya existe un producto con este ID."
+      );
       return;
     }
 
-    if (!formulario.descripcion.trim()) {
-      alert("Primero generá los textos del producto.");
+    if (
+      !formulario.descripcion.trim()
+    ) {
+      alert(
+        "Primero generá los textos del producto."
+      );
+      return;
+    }
+
+    if (
+      imagenes.some(
+        (imagen) => !imagen
+      )
+    ) {
+      alert(
+        "Falta seleccionar alguna de las 6 imágenes."
+      );
       return;
     }
 
     try {
+      setGuardando(true);
+
+      const urls = [];
+
+      /*
+       * Subimos secuencialmente para
+       * consumir menos memoria.
+       */
+      for (
+        let i = 0;
+        i < imagenes.length;
+        i += 1
+      ) {
+        const url =
+          await subirImagen(
+            imagenes[i],
+            i + 1
+          );
+
+        urls.push(url);
+      }
+
+      const productoConImagenes = {
+        ...productoFinal,
+
+        imagenes: {
+          portada: urls[0],
+
+          preview: urls[1],
+
+          previewsIndividuales: [
+            urls[2],
+            urls[3],
+          ],
+
+          portadaPDF: urls[4],
+
+          paginaFinalPDF: urls[5],
+        },
+      };
+
       const respuesta = await fetch(
-  "/api/admin/pedidos?accion=crear-producto",
+        "/api/admin/pedidos?accion=crear-producto",
         {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
 
-          body: JSON.stringify(productoFinal),
+          body: JSON.stringify(
+            productoConImagenes
+          ),
         }
       );
 
-      const datos = await respuesta.json();
+      const datos =
+        await respuesta.json();
 
       if (!respuesta.ok) {
         throw new Error(
@@ -410,7 +757,9 @@ export default function AdminNuevoProducto() {
         );
       }
 
-      alert("Producto guardado correctamente.");
+      alert(
+        "Producto guardado correctamente."
+      );
 
       console.log(
         "Producto guardado:",
@@ -423,6 +772,8 @@ export default function AdminNuevoProducto() {
       );
 
       alert(error.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -465,7 +816,10 @@ export default function AdminNuevoProducto() {
                   : "bg-slate-50 text-slate-500"
               }`}
             >
-              ID: <strong>{idGenerado}</strong>
+              ID:{" "}
+              <strong>
+                {idGenerado}
+              </strong>
 
               {idRepetido &&
                 " · Este producto ya existe"}
@@ -483,14 +837,20 @@ export default function AdminNuevoProducto() {
               Seleccionar categoría
             </option>
 
-            {CATEGORIAS.map((categoria) => (
-              <option
-                key={categoria.valor}
-                value={categoria.valor}
-              >
-                {categoria.nombre}
-              </option>
-            ))}
+            {CATEGORIAS.map(
+              (categoria) => (
+                <option
+                  key={
+                    categoria.valor
+                  }
+                  value={
+                    categoria.valor
+                  }
+                >
+                  {categoria.nombre}
+                </option>
+              )
+            )}
           </Selector>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -505,14 +865,16 @@ export default function AdminNuevoProducto() {
                 Seleccionar
               </option>
 
-              {PUBLICOS.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                >
-                  {item}
-                </option>
-              ))}
+              {PUBLICOS.map(
+                (item) => (
+                  <option
+                    key={item}
+                    value={item}
+                  >
+                    {item}
+                  </option>
+                )
+              )}
             </Selector>
 
             <Selector
@@ -526,14 +888,16 @@ export default function AdminNuevoProducto() {
                 Seleccionar
               </option>
 
-              {NIVELES.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                >
-                  {item}
-                </option>
-              ))}
+              {NIVELES.map(
+                (item) => (
+                  <option
+                    key={item}
+                    value={item}
+                  >
+                    {item}
+                  </option>
+                )
+              )}
             </Selector>
           </div>
 
@@ -541,18 +905,28 @@ export default function AdminNuevoProducto() {
             <Campo
               titulo="Actividades"
               tipo="number"
-              valor={formulario.laminas}
+              valor={
+                formulario.laminas
+              }
               onChange={(v) =>
-                cambiar("laminas", v)
+                cambiar(
+                  "laminas",
+                  v
+                )
               }
             />
 
             <Campo
               titulo="Soluciones"
               tipo="number"
-              valor={formulario.soluciones}
+              valor={
+                formulario.soluciones
+              }
               onChange={(v) =>
-                cambiar("soluciones", v)
+                cambiar(
+                  "soluciones",
+                  v
+                )
               }
             />
           </div>
@@ -560,14 +934,16 @@ export default function AdminNuevoProducto() {
           <Campo
             titulo="Páginas (opcional)"
             tipo="number"
-            valor={formulario.paginas}
+            valor={
+              formulario.paginas
+            }
             onChange={(v) =>
               cambiar("paginas", v)
             }
           />
         </Seccion>
 
-        {/* PRECIOS */}
+                {/* PRECIOS */}
 
         <Seccion titulo="Precios">
 
@@ -578,18 +954,28 @@ export default function AdminNuevoProducto() {
               <Campo
                 titulo="Precio ARS"
                 tipo="number"
-                valor={formulario.precioARS}
+                valor={
+                  formulario.precioARS
+                }
                 onChange={(v) =>
-                  cambiar("precioARS", v)
+                  cambiar(
+                    "precioARS",
+                    v
+                  )
                 }
               />
 
               <Campo
                 titulo="Precio oferta ARS"
                 tipo="number"
-                valor={formulario.precioOfertaARS}
+                valor={
+                  formulario.precioOfertaARS
+                }
                 onChange={(v) =>
-                  cambiar("precioOfertaARS", v)
+                  cambiar(
+                    "precioOfertaARS",
+                    v
+                  )
                 }
               />
             </div>
@@ -597,9 +983,14 @@ export default function AdminNuevoProducto() {
             <div className="mt-3">
               <Check
                 titulo="Oferta Argentina"
-                activo={formulario.ofertaActiva}
+                activo={
+                  formulario.ofertaActiva
+                }
                 onChange={(v) =>
-                  cambiar("ofertaActiva", v)
+                  cambiar(
+                    "ofertaActiva",
+                    v
+                  )
                 }
               />
             </div>
@@ -613,9 +1004,14 @@ export default function AdminNuevoProducto() {
                 titulo="Precio USD"
                 tipo="number"
                 paso="0.01"
-                valor={formulario.precioUSD}
+                valor={
+                  formulario.precioUSD
+                }
                 onChange={(v) =>
-                  cambiar("precioUSD", v)
+                  cambiar(
+                    "precioUSD",
+                    v
+                  )
                 }
               />
 
@@ -623,9 +1019,14 @@ export default function AdminNuevoProducto() {
                 titulo="Precio oferta USD"
                 tipo="number"
                 paso="0.01"
-                valor={formulario.precioOfertaUSD}
+                valor={
+                  formulario.precioOfertaUSD
+                }
                 onChange={(v) =>
-                  cambiar("precioOfertaUSD", v)
+                  cambiar(
+                    "precioOfertaUSD",
+                    v
+                  )
                 }
               />
             </div>
@@ -633,9 +1034,14 @@ export default function AdminNuevoProducto() {
             <div className="mt-3">
               <Check
                 titulo="Oferta internacional"
-                activo={formulario.ofertaUSDActiva}
+                activo={
+                  formulario.ofertaUSDActiva
+                }
                 onChange={(v) =>
-                  cambiar("ofertaUSDActiva", v)
+                  cambiar(
+                    "ofertaUSDActiva",
+                    v
+                  )
                 }
               />
             </div>
@@ -645,23 +1051,33 @@ export default function AdminNuevoProducto() {
             formulario.ofertaUSDActiva) && (
             <Campo
               titulo="Etiqueta oferta"
-              valor={formulario.etiquetaOferta}
+              valor={
+                formulario.etiquetaOferta
+              }
               onChange={(v) =>
-                cambiar("etiquetaOferta", v)
+                cambiar(
+                  "etiquetaOferta",
+                  v
+                )
               }
             />
           )}
 
         </Seccion>
 
-                {/* CONFIGURACIÓN */}
+        {/* CONFIGURACIÓN */}
 
         <Seccion titulo="Configuración">
           <Selector
             titulo="Venta cruzada"
-            valor={formulario.ventaCruzadaId}
+            valor={
+              formulario.ventaCruzadaId
+            }
             onChange={(v) =>
-              cambiar("ventaCruzadaId", v)
+              cambiar(
+                "ventaCruzadaId",
+                v
+              )
             }
           >
             <option value="">
@@ -682,9 +1098,14 @@ export default function AdminNuevoProducto() {
 
           <Check
             titulo="Producto destacado"
-            activo={formulario.destacado}
+            activo={
+              formulario.destacado
+            }
             onChange={(v) =>
-              cambiar("destacado", v)
+              cambiar(
+                "destacado",
+                v
+              )
             }
           />
         </Seccion>
@@ -729,18 +1150,28 @@ export default function AdminNuevoProducto() {
         <Seccion titulo="Descripción y contenido">
           <Area
             titulo="Descripción corta"
-            valor={formulario.descripcion}
+            valor={
+              formulario.descripcion
+            }
             onChange={(v) =>
-              cambiar("descripcion", v)
+              cambiar(
+                "descripcion",
+                v
+              )
             }
             filas={3}
           />
 
           <Area
             titulo="Descripción larga"
-            valor={formulario.descripcionLarga}
+            valor={
+              formulario.descripcionLarga
+            }
             onChange={(v) =>
-              cambiar("descripcionLarga", v)
+              cambiar(
+                "descripcionLarga",
+                v
+              )
             }
             filas={7}
           />
@@ -748,9 +1179,14 @@ export default function AdminNuevoProducto() {
           <Area
             titulo="Qué incluye"
             ayuda="Un elemento por línea"
-            valor={formulario.incluye}
+            valor={
+              formulario.incluye
+            }
             onChange={(v) =>
-              cambiar("incluye", v)
+              cambiar(
+                "incluye",
+                v
+              )
             }
             filas={6}
           />
@@ -758,12 +1194,63 @@ export default function AdminNuevoProducto() {
           <Area
             titulo="Beneficios"
             ayuda="Un beneficio por línea"
-            valor={formulario.beneficios}
+            valor={
+              formulario.beneficios
+            }
             onChange={(v) =>
-              cambiar("beneficios", v)
+              cambiar(
+                "beneficios",
+                v
+              )
             }
             filas={6}
           />
+        </Seccion>
+
+        {/* IMÁGENES */}
+
+        <Seccion titulo="Imágenes del producto">
+          <p className="text-xs leading-5 text-slate-500">
+            Seleccioná las 6 imágenes originales. Se optimizan
+            automáticamente a WebP, con un ancho máximo de 794 px.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {NOMBRES_IMAGENES.map(
+              (titulo, indice) => (
+                <ImagenProducto
+                  key={titulo}
+                  titulo={titulo}
+                  imagen={
+                    imagenes[indice]
+                  }
+                  deshabilitado={
+                    procesandoImagen ||
+                    guardando
+                  }
+                  onSeleccionar={(
+                    archivo
+                  ) =>
+                    seleccionarImagen(
+                      indice,
+                      archivo
+                    )
+                  }
+                  onEliminar={() =>
+                    eliminarImagen(
+                      indice
+                    )
+                  }
+                />
+              )
+            )}
+          </div>
+
+          {procesandoImagen && (
+            <p className="text-xs font-semibold text-sky-600">
+              Optimizando imagen...
+            </p>
+          )}
         </Seccion>
 
         {/* RESULTADO */}
@@ -786,14 +1273,22 @@ export default function AdminNuevoProducto() {
           </pre>
 
           <button
-  type="button"
-  onClick={agregarProducto}
-  disabled={idRepetido}
-  className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
->
-  Agregar producto
-</button>
-          
+            type="button"
+            onClick={
+              agregarProducto
+            }
+            disabled={
+              idRepetido ||
+              procesandoImagen ||
+              guardando
+            }
+            className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {guardando
+              ? "Subiendo imágenes y guardando..."
+              : "Agregar producto"}
+          </button>
+
         </section>
       </div>
     </main>
@@ -804,7 +1299,94 @@ export default function AdminNuevoProducto() {
    COMPONENTES DEL FORMULARIO
 ========================================================= */
 
-function Seccion({ titulo, children }) {
+function ImagenProducto({
+  titulo,
+  imagen,
+  deshabilitado,
+  onSeleccionar,
+  onEliminar,
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <p className="text-xs font-bold text-slate-700">
+        {titulo}
+      </p>
+
+      {!imagen ? (
+        <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-white px-3 py-6 text-center">
+          <Upload
+            size={22}
+            className="text-sky-600"
+          />
+
+          <span className="mt-2 text-xs font-semibold text-slate-600">
+            Seleccionar imagen
+          </span>
+
+          <input
+            type="file"
+            accept="image/*"
+            disabled={
+              deshabilitado
+            }
+            className="hidden"
+            onChange={(e) => {
+              const archivo =
+                e.target.files?.[0];
+
+              onSeleccionar(
+                archivo
+              );
+
+              e.target.value = "";
+            }}
+          />
+        </label>
+      ) : (
+        <div className="mt-3">
+          <div className="flex h-48 items-center justify-center overflow-hidden rounded-lg bg-white">
+            <img
+              src={
+                imagen.urlOptimizada
+              }
+              alt={titulo}
+              className="h-full w-full object-contain"
+            />
+          </div>
+
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="text-[10px] text-slate-500">
+              {(
+                imagen.pesoOptimizado /
+                1024
+              ).toFixed(1)}{" "}
+              KB · WebP
+            </p>
+
+            <button
+              type="button"
+              onClick={onEliminar}
+              disabled={
+                deshabilitado
+              }
+              className="rounded-lg border border-rose-100 bg-white p-2 text-rose-600 disabled:opacity-40"
+              aria-label={`Eliminar ${titulo}`}
+            >
+              <Trash2
+                size={14}
+              />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Seccion({
+  titulo,
+  children,
+}) {
   return (
     <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="text-sm font-bold text-slate-900">
@@ -836,7 +1418,9 @@ function Campo({
         step={paso}
         value={valor}
         onChange={(e) =>
-          onChange(e.target.value)
+          onChange(
+            e.target.value
+          )
         }
         className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-sky-400"
       />
@@ -859,7 +1443,9 @@ function Selector({
       <select
         value={valor}
         onChange={(e) =>
-          onChange(e.target.value)
+          onChange(
+            e.target.value
+          )
         }
         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
       >
@@ -892,7 +1478,9 @@ function Area({
         rows={filas}
         value={valor}
         onChange={(e) =>
-          onChange(e.target.value)
+          onChange(
+            e.target.value
+          )
         }
         className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2.5 text-sm leading-6 outline-none focus:border-sky-400"
       />
@@ -911,7 +1499,9 @@ function Check({
         type="checkbox"
         checked={activo}
         onChange={(e) =>
-          onChange(e.target.checked)
+          onChange(
+            e.target.checked
+          )
         }
         className="h-4 w-4"
       />
