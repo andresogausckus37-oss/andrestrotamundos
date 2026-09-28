@@ -34,6 +34,7 @@ import Admin from "./paginas/Admin";
 import AdminRedes from "./paginas/admin/AdminRedes";
 
 import { productosDigitales } from "./datos/productosDigitales";
+import AdminNuevoProducto from "./paginas/admin/AdminNuevoProducto";
 
 /* =========================
    REGISTRAR NUEVA VISITA
@@ -303,6 +304,11 @@ const ContenidoApp = () => {
           <Route
   path="/admin/redes"
   element={<AdminRedes />}
+/>
+
+          <Route
+  path="/admin/productos/nuevo"
+  element={<AdminNuevoProducto />}
 />
 
           <Route
