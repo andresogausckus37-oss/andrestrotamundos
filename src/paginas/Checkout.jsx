@@ -39,6 +39,11 @@ const LOGO_PAYPAL =
 export default function Checkout() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [productosMongo, setProductosMongo] =
+  useState([]);
+
+const [cargandoProductos, setCargandoProductos] =
+  useState(true);
 
   /* =========================================================
      MERCADO
@@ -56,47 +61,117 @@ export default function Checkout() {
   ] = useState(true);
 
   /* =========================================================
-     PRODUCTOS
-  ========================================================= */
+   CARGAR PRODUCTOS MONGODB
+========================================================= */
 
-  const producto =
-    productosDigitales.find(
-      (item) => item.id === id
+useEffect(() => {
+  let cancelado = false;
+
+  const cargarProductos = async () => {
+    try {
+      const respuesta = await fetch(
+        "/api/admin/pedidos?accion=productos-publicos"
+      );
+
+      if (!respuesta.ok) {
+        throw new Error(
+          "No se pudieron cargar los productos."
+        );
+      }
+
+      const datos = await respuesta.json();
+
+      if (!cancelado) {
+        setProductosMongo(
+          Array.isArray(datos.productos)
+            ? datos.productos
+            : []
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Error cargando productos desde MongoDB:",
+        error
+      );
+
+      if (!cancelado) {
+        setProductosMongo([]);
+      }
+    } finally {
+      if (!cancelado) {
+        setCargandoProductos(false);
+      }
+    }
+  };
+
+  cargarProductos();
+
+  return () => {
+    cancelado = true;
+  };
+}, []);
+
+ /* =========================================================
+   PRODUCTOS
+========================================================= */
+
+const productosDisponibles = useMemo(() => {
+  const idsMongo = new Set(
+    productosMongo.map(
+      (producto) => producto.id
+    )
+  );
+
+  const productosLocales =
+    productosDigitales.filter(
+      (producto) =>
+        !idsMongo.has(producto.id)
     );
 
-  const productoVentaCruzada =
-    producto?.ventaCruzadaId
-      ? productosDigitales.find(
-          (item) =>
-            item.id ===
-            producto.ventaCruzadaId
-        )
-      : null;
+  return [
+    ...productosLocales,
+    ...productosMongo,
+  ];
+}, [productosMongo]);
 
-  const precioVentaCruzada =
-    obtenerPrecioMercado(
-      productoVentaCruzada,
-      mercado || MERCADO_ARGENTINA
-    );
+const producto =
+  productosDisponibles.find(
+    (item) => item.id === id
+  );
 
-  const resenasVentaCruzada =
-    productoVentaCruzada
-      ? resenasProductos.filter(
-          (resena) =>
-            resena.productoId ===
-            productoVentaCruzada.id
-        )
-      : [];
+const productoVentaCruzada =
+  producto?.ventaCruzadaId
+    ? productosDisponibles.find(
+        (item) =>
+          item.id ===
+          producto.ventaCruzadaId
+      )
+    : null;
 
-  const promedioVentaCruzada =
-    resenasVentaCruzada.length > 0
-      ? resenasVentaCruzada.reduce(
-          (total, resena) =>
-            total + resena.estrellas,
-          0
-        ) /
-        resenasVentaCruzada.length
-      : 0;
+const precioVentaCruzada =
+  obtenerPrecioMercado(
+    productoVentaCruzada,
+    mercado || MERCADO_ARGENTINA
+  );
+
+const resenasVentaCruzada =
+  productoVentaCruzada
+    ? resenasProductos.filter(
+        (resena) =>
+          resena.productoId ===
+          productoVentaCruzada.id
+      )
+    : [];
+
+const promedioVentaCruzada =
+  resenasVentaCruzada.length > 0
+    ? resenasVentaCruzada.reduce(
+        (total, resena) =>
+          total + resena.estrellas,
+        0
+      ) /
+      resenasVentaCruzada.length
+    : 0;
 
   /* =========================================================
      ESTADOS
@@ -260,6 +335,16 @@ export default function Checkout() {
   /* =========================================================
      PRODUCTO NO ENCONTRADO
   ========================================================= */
+
+  if (cargandoProductos) {
+  return (
+    <main className="flex min-h-[70vh] items-center justify-center bg-white px-4">
+      <p className="text-sm text-slate-500">
+        Cargando producto...
+      </p>
+    </main>
+  );
+  }
 
   if (!producto) {
     return (
