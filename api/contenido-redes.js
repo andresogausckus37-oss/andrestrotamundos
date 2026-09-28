@@ -31,22 +31,15 @@ export default async function handler(req, res) {
 
     try {
       contenido = JSON.parse(texto);
-    } catch {
-      return res.status(500).json({
-        error: "La IA no devolvió JSON válido",
-        respuesta: texto,
-      });
-    }
-
-    return res.status(200).json({
-      ok: true,
-      contenido,
-    });
   } catch (error) {
     console.error("Error generando contenido:", error);
 
     return res.status(500).json({
-      error: "No se pudo generar el contenido",
+      error:
+        error?.message ||
+        "No se pudo generar el contenido",
+      tipo: error?.name || "Error",
+      status: error?.status || null,
     });
   }
 }
