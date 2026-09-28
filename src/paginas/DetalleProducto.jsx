@@ -9,10 +9,8 @@ import {
   Check,
   CreditCard,
   Download,
-  Expand,
   Landmark,
   ShoppingBag,
-  X,
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
@@ -38,9 +36,6 @@ const CUOTAS_SIN_INTERES = 3;
 const DetalleProducto = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const [previewAbierto, setPreviewAbierto] =
-    useState(false);
 
   const [imagenActiva, setImagenActiva] =
     useState(0);
@@ -611,54 +606,30 @@ const DetalleProducto = () => {
               {/* IMAGEN PRINCIPAL */}
 
               <div className="relative mx-auto max-w-[420px] overflow-hidden rounded-md border border-[#DCE5E4] bg-white">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPreviewAbierto(
-                      true
-                    )
-                  }
-                  className="group block w-full"
-                  aria-label="Ampliar imagen"
-                >
-                  <div className="aspect-square w-full overflow-hidden bg-white">
-                    {imagenActual &&
-                      (imagenActiva ===
-                      0 ? (
+                <div className="aspect-square w-full overflow-hidden bg-white">
+                  {imagenActual &&
+                    (imagenActiva === 0 ? (
+                      <img
+                        src={imagenActual}
+                        alt={textoEs(
+                          producto.nombre
+                        )}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <ProteccionComercial>
                         <img
-                          src={
-                            imagenActual
-                          }
-                          alt={textoEs(
+                          src={imagenActual}
+                          alt={`Vista ${
+                            imagenActiva + 1
+                          } de ${textoEs(
                             producto.nombre
-                          )}
+                          )}`}
                           className="h-full w-full object-contain"
                         />
-                      ) : (
-                        <ProteccionComercial>
-                          <img
-                            src={
-                              imagenActual
-                            }
-                            alt={`Vista ${
-                              imagenActiva +
-                              1
-                            } de ${textoEs(
-                              producto.nombre
-                            )}`}
-                            className="h-full w-full object-contain"
-                          />
-                        </ProteccionComercial>
-                      ))}
-                  </div>
-
-                  <div className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-md border border-[#DCE5E4] bg-white/95 text-[#687477] transition-colors group-hover:border-[#8EAAAC] group-hover:text-[#285861]">
-                    <Expand
-                      size={16}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-                </button>
+                      </ProteccionComercial>
+                    ))}
+                </div>
               </div>
 
               {/* MINIATURAS */}
@@ -715,7 +686,7 @@ const DetalleProducto = () => {
 
               {/* TÍTULO */}
 
-              <h1 className="max-w-2xl text-2xl font-medium -mb-4 leading-tight tracking-tight text-[#263238] sm:text-3xl">
+              <h1 className="max-w-2xl text-2xl font-medium -mb-0 leading-tight tracking-tight text-[#263238] sm:text-3xl">
                 {textoEs(
                   producto.nombre
                 )}
@@ -1117,58 +1088,6 @@ const DetalleProducto = () => {
           </div>
         </div>
       </main>
-
-      {/* =========================================================
-          PREVIEW AMPLIADO
-      ========================================================= */}
-
-      {previewAbierto &&
-        imagenActual && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#172A2D]/90 p-4">
-
-            {/* CERRAR */}
-
-            <button
-              type="button"
-              onClick={() =>
-                setPreviewAbierto(
-                  false
-                )
-              }
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white text-[#536468] transition-colors hover:bg-[#EEF5F5] hover:text-[#285861]"
-              aria-label="Cerrar vista previa"
-            >
-              <X
-                size={20}
-                strokeWidth={1.8}
-              />
-            </button>
-
-            {/* IMAGEN */}
-
-            <div className="max-h-[92vh] max-w-4xl overflow-hidden rounded-md bg-white p-2">
-              {imagenActiva === 0 ? (
-                <img
-                  src={imagenActual}
-                  alt={`Vista ampliada de ${textoEs(
-                    producto.nombre
-                  )}`}
-                  className="max-h-[88vh] max-w-full object-contain"
-                />
-              ) : (
-                <ProteccionComercial>
-                  <img
-                    src={imagenActual}
-                    alt={`Vista ampliada de ${textoEs(
-                      producto.nombre
-                    )}`}
-                    className="max-h-[88vh] max-w-full object-contain"
-                  />
-                </ProteccionComercial>
-              )}
-            </div>
-          </div>
-        )}
     </>
   );
 };

@@ -510,7 +510,7 @@ const Tienda = () => {
   const productosMostrados =
     mostrarTodos
       ? productosFiltrados
-      : productosFiltrados.slice(0, 3);
+      : productosFiltrados.slice(0, 5);
 
   /* =======================================================
      CAMBIAR FILTRO PRINCIPAL
