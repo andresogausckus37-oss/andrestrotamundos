@@ -31,6 +31,7 @@ import Checkout from "./paginas/Checkout";
 import PagoTransferencia from "./paginas/PagoTransferencia";
 import LoginAdmin from "./paginas/LoginAdmin";
 import Admin from "./paginas/Admin";
+import AdminRedes from "./paginas/admin/AdminRedes";
 
 import { productosDigitales } from "./datos/productosDigitales";
 
@@ -298,6 +299,11 @@ const ContenidoApp = () => {
             path="/admin"
             element={<Admin />}
           />
+
+          <Route
+  path="/admin/redes"
+  element={<AdminRedes />}
+/>
 
           <Route
             path="/generador-laminas"
