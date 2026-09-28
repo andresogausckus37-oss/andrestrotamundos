@@ -271,4 +271,86 @@ export const productosDigitales = [
 
     destacado: false,
   },
+
+  {
+  id: "100-laberintos-para-adultos",
+
+  nombre:
+    "100 Laberintos para Adultos con Soluciones",
+
+  ventaCruzadaId: "",
+
+  descripcion:
+    "100 laberintos imprimibles para adultos con soluciones incluidas. Desafíos de nivel imposible para poner a prueba la concentración, el seguimiento visual y el reconocimiento de patrones.",
+
+  descripcionLarga:
+    "Una colección de 100 laberintos imprimibles especialmente pensados para adultos que disfrutan de los desafíos. Cada actividad propone encontrar el camino correcto desde el inicio hasta la salida, poniendo a prueba la concentración, el seguimiento visual y el reconocimiento de patrones. Incluye 100 soluciones para comprobar cada recorrido y está preparado en formato PDF A4 para imprimir fácilmente en casa o en una imprenta. Ideal para disfrutar durante el tiempo libre y mantener la mente activa con nuevos desafíos.",
+
+  tipo: "digital",
+  categoria: "laberintos",
+  linea: "juegos",
+
+  /* =========================
+     PRECIO ARGENTINA
+  ========================= */
+
+    precioARS: 5499,
+
+    descuento: 0,
+
+    oferta: {
+      activa: true,
+      precioARS: 3999,
+      etiqueta: "Oferta lanzamiento",
+    },
+
+    precioUSD: 4.99,
+
+    descuentoUSD: 0,
+
+    ofertaUSD: {
+      activa: true,
+      precioUSD: 3.99,
+      etiqueta: "Oferta lanzamiento",
+    },
+
+  imagenes: {
+    portada: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/1",
+
+    preview: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/2",
+
+    previewsIndividuales: [
+      "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/3",
+      "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/4",
+    ],
+  },
+
+  formato: "PDF",
+  tamano: "A4",
+
+  paginas: 202,
+  laminas: 100,
+
+  incluye: [
+    "100 laberintos para adultos",
+    "100 soluciones incluidas",
+    "PDF A4 listo para imprimir",
+    "Descarga digital instantánea",
+  ],
+
+  beneficios: [
+    "Concentración",
+    "Seguimiento visual",
+    "Reconocimiento de patrones",
+    "Actividad para mantener la mente activa",
+  ],
+
+  edadRecomendada: "Adultos",
+
+  nivel: "Imposible",
+
+  entrega: "Descarga digital",
+
+  destacado: true,
+},
 ];

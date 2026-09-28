@@ -10,6 +10,9 @@ const ARCHIVOS_PRODUCTOS = {
 
   "25-sopas-de-letras-para-adultos":
   "25-sopas-de-letras-para-adultos.pdf",
+
+  "100-laberintos-para-adultos":
+    "100-laberintos-adultos-nivel-imposible.pdf",
 };
 
 export default async function handler(req, res) {
