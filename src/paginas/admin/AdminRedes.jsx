@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 
 import { productosDigitales } from "../../datos/productosDigitales";
+import { crearPromptRedes } from "../../utilidades/crearPromptRedes";
 
 export default function AdminRedes() {
   const [producto1Id, setProducto1Id] =
@@ -10,16 +14,102 @@ export default function AdminRedes() {
   const [producto2Id, setProducto2Id] =
     useState("");
 
-  const producto1 = productosDigitales.find(
-    (producto) => producto.id === producto1Id
-  );
+  const [generando, setGenerando] =
+    useState(false);
 
-  const producto2 = productosDigitales.find(
-    (producto) => producto.id === producto2Id
-  );
+  const [error, setError] =
+    useState("");
+
+  const [contenidos, setContenidos] =
+    useState([]);
+
+  const producto1 =
+    productosDigitales.find(
+      (producto) =>
+        producto.id === producto1Id
+    );
+
+  const producto2 =
+    productosDigitales.find(
+      (producto) =>
+        producto.id === producto2Id
+    );
 
   const productosSeleccionados =
-  producto1 || producto2;
+    producto1 || producto2;
+
+  /* =========================
+     GENERAR CONTENIDO
+  ========================= */
+
+  const generarContenido = async () => {
+    const seleccionados = [
+      producto1,
+      producto2,
+    ].filter(Boolean);
+
+    if (seleccionados.length === 0) {
+      return;
+    }
+
+    try {
+      setGenerando(true);
+      setError("");
+
+      const resultados = [];
+
+      for (const producto of seleccionados) {
+        const prompt =
+          crearPromptRedes(producto);
+
+        const respuesta = await fetch(
+          "/api/contenido-redes",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              prompt,
+            }),
+          }
+        );
+
+        const datos =
+          await respuesta.json();
+
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.error ||
+              `No se pudo generar contenido para ${producto.nombre}`
+          );
+        }
+
+        resultados.push({
+          productoId: producto.id,
+          nombre: producto.nombre,
+          contenido: datos.contenido,
+        });
+      }
+
+      setContenidos(resultados);
+    } catch (error) {
+      console.error(
+        "Error generando contenido:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "No se pudo generar el contenido."
+      );
+    } finally {
+      setGenerando(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24">
@@ -36,11 +126,12 @@ export default function AdminRedes() {
           </h1>
 
           <p className="mt-1 text-xs text-slate-500">
-            Generá, revisá y programá el contenido semanal.
+            Generá, revisá y programá el
+            contenido semanal.
           </p>
         </div>
 
-        {/* PRODUCTOS DE LA SEMANA */}
+        {/* PRODUCTOS */}
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2">
@@ -55,7 +146,8 @@ export default function AdminRedes() {
           </div>
 
           <p className="mt-2 text-xs text-slate-500">
-            Seleccioná los dos productos que tendrán contenido esta semana.
+            Seleccioná uno o dos productos
+            para generar su contenido.
           </p>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -134,18 +226,66 @@ export default function AdminRedes() {
             </div>
           </div>
 
+          {/* ERROR */}
+
+          {error && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* BOTÓN */}
 
           <button
             type="button"
-            disabled={!productosSeleccionados}
+            onClick={generarContenido}
+            disabled={
+              !productosSeleccionados ||
+              generando
+            }
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
-            <Sparkles size={15} />
+            {generando ? (
+              <>
+                <Loader2
+                  size={15}
+                  className="animate-spin"
+                />
 
-            Generar contenido con IA
+                Generando contenido...
+              </>
+            ) : (
+              <>
+                <Sparkles size={15} />
+
+                Generar contenido con IA
+              </>
+            )}
           </button>
         </section>
+
+        {/* RESULTADO TEMPORAL */}
+
+        {contenidos.length > 0 && (
+          <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-bold text-slate-900">
+              Contenido generado
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-500">
+              La conexión con la IA funcionó
+              correctamente.
+            </p>
+
+            <pre className="mt-4 max-h-[500px] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-4 text-[10px] text-slate-100">
+              {JSON.stringify(
+                contenidos,
+                null,
+                2
+              )}
+            </pre>
+          </section>
+        )}
       </div>
     </main>
   );
