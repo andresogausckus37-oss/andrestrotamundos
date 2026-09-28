@@ -551,18 +551,69 @@ const subirImagenProducto = async (req, res) => {
 };
 
 /* =========================
+   LISTAR PRODUCTOS PÚBLICOS
+========================= */
+
+const listarProductosPublicos = async (req, res) => {
+  const db = await conectarMongoDB();
+
+  const productos = await db
+    .collection("productos")
+    .find({})
+    .sort({
+      creadoEn: -1,
+    })
+    .toArray();
+
+  const resultado = productos.map(
+    ({ _id, creadoEn, actualizadoEn, ...producto }) =>
+      producto
+  );
+
+  res.setHeader(
+    "Cache-Control",
+    "public, s-maxage=60, stale-while-revalidate=300"
+  );
+
+  return res.status(200).json({
+    productos: resultado,
+  });
+};
+
+/* =========================
    ENDPOINT ÚNICO
 ========================= */
 
 export default async function handler(req, res) {
   try {
+    const accion = req.query?.accion;
+
+    /* =========================
+       PRODUCTOS PÚBLICOS
+    ========================= */
+
+    if (accion === "productos-publicos") {
+      if (req.method !== "GET") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
+
+      return await listarProductosPublicos(
+        req,
+        res
+      );
+    }
+
+    /* =========================
+       AUTENTICACIÓN ADMIN
+    ========================= */
+
     if (!adminAutorizado(req)) {
       return res.status(401).json({
         error: "No autorizado",
       });
     }
-
-    const accion = req.query?.accion;
 
     /* =========================
        LISTAR
