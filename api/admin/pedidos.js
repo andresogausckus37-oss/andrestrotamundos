@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { get } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 import { conectarMongoDB } from "../../lib/mongodb.js";
 import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
@@ -462,6 +462,96 @@ const crearProducto = async (req, res) => {
 };
 
 /* =========================
+   SUBIR IMAGEN DE PRODUCTO
+========================= */
+
+const subirImagenProducto = async (req, res) => {
+  const {
+    productoId,
+    numeroImagen,
+    imagenBase64,
+  } = req.body || {};
+
+  if (!productoId) {
+    return res.status(400).json({
+      error: "Falta productoId.",
+    });
+  }
+
+  const numero = Number(numeroImagen);
+
+  if (
+    !Number.isInteger(numero) ||
+    numero < 1 ||
+    numero > 6
+  ) {
+    return res.status(400).json({
+      error: "El número de imagen debe estar entre 1 y 6.",
+    });
+  }
+
+  if (!imagenBase64) {
+    return res.status(400).json({
+      error: "Falta la imagen.",
+    });
+  }
+
+  /*
+   * Recibimos el WebP ya optimizado desde
+   * AdminNuevoProducto.
+   */
+  const base64 = imagenBase64.replace(
+    /^data:image\/webp;base64,/,
+    ""
+  );
+
+  const buffer = Buffer.from(
+    base64,
+    "base64"
+  );
+
+  if (!buffer.length) {
+    return res.status(400).json({
+      error: "La imagen está vacía.",
+    });
+  }
+
+  /*
+   * Evitamos recibir archivos excesivamente
+   * grandes por error.
+   */
+  const MAX_BYTES = 5 * 1024 * 1024;
+
+  if (buffer.length > MAX_BYTES) {
+    return res.status(413).json({
+      error: "La imagen supera los 5 MB.",
+    });
+  }
+
+  const pathname =
+    `productos/${productoId}/imagen-${numero}.webp`;
+
+  const blob = await put(
+    pathname,
+    buffer,
+    {
+      access: "public",
+      contentType: "image/webp",
+      addRandomSuffix: false,
+      token:
+  process.env.BLOB_READ_WRITE_TOKEN,
+    }
+  );
+
+  return res.status(201).json({
+    ok: true,
+    numeroImagen: numero,
+    url: blob.url,
+    pathname: blob.pathname,
+  });
+};
+
+/* =========================
    ENDPOINT ÚNICO
 ========================= */
 
@@ -530,6 +620,20 @@ export default async function handler(req, res) {
 
       return await crearProducto(req, res);
     }
+
+    /* =========================
+   SUBIR IMAGEN PRODUCTO
+========================= */
+
+if (accion === "subir-imagen-producto") {
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await subirImagenProducto(req, res);
+}
 
     return res.status(400).json({
       error: "Acción no válida",
