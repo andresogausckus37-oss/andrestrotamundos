@@ -39,6 +39,75 @@ const CUOTAS_SIN_INTERES = 3;
 const Tienda = () => {
   const navigate = useNavigate();
 
+    /* =======================================================
+     PRODUCTOS MONGODB
+  ======================================================= */
+
+  const [productosMongo, setProductosMongo] =
+    useState([]);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    const cargarProductosMongo = async () => {
+      try {
+        const respuesta = await fetch(
+          "/api/admin/pedidos?accion=productos-publicos"
+        );
+
+        if (!respuesta.ok) {
+          throw new Error(
+            "No se pudieron cargar los productos."
+          );
+        }
+
+        const datos = await respuesta.json();
+
+        if (!cancelado) {
+          setProductosMongo(
+            Array.isArray(datos.productos)
+              ? datos.productos
+              : []
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Error cargando productos de MongoDB:",
+          error
+        );
+      }
+    };
+
+    cargarProductosMongo();
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+    const productosTienda = useMemo(() => {
+    const idsMongo = new Set(
+      productosMongo.map(
+        (producto) => producto.id
+      )
+    );
+
+    /*
+     * Si algún día un producto existente también
+     * está en MongoDB, damos prioridad a MongoDB.
+     */
+    const productosLocales =
+      productosDigitales.filter(
+        (producto) =>
+          !idsMongo.has(producto.id)
+      );
+
+    return [
+      ...productosLocales,
+      ...productosMongo,
+    ];
+  }, [productosMongo]);
+
   /* =======================================================
      MERCADO
   ======================================================= */
@@ -438,7 +507,7 @@ const Tienda = () => {
     const disponibles =
       categorias[filtroActivo].filter(
         (categoria) => {
-          return productosDigitales.some(
+          return productosTienda.some(
             (producto) => {
               const perteneceALinea =
                 filtroActivo === "juegos"
@@ -468,14 +537,14 @@ const Tienda = () => {
       },
       ...disponibles,
     ];
-  }, [filtroActivo]);
+  }, [filtroActivo, productosTienda]);
 
   /* =======================================================
      PRODUCTOS FILTRADOS
   ======================================================= */
 
   const productosFiltrados = useMemo(() => {
-    return productosDigitales.filter(
+  return productosTienda.filter(
       (producto) => {
         if (filtroActivo === "todos") {
           return true;
@@ -501,7 +570,11 @@ const Tienda = () => {
         );
       }
     );
-  }, [filtroActivo, categoriaActiva]);
+  }, [
+  filtroActivo,
+  categoriaActiva,
+  productosTienda,
+]);
 
   /* =======================================================
      PRODUCTOS VISIBLES
