@@ -4,6 +4,10 @@ import { CONFIGURACION_TRANSFERENCIA } from "../../lib/configuracionTransferenci
 import { enviarNotificacionTelegram } from "../../lib/telegram.js";
 import { productosDigitales } from "../../src/datos/productosDigitales.js";
 
+/* =====================================================
+   CALCULAR PRECIO REAL DE UN PRODUCTO
+===================================================== */
+
 const obtenerPrecioFinal = (producto) => {
   const precio =
     producto.oferta?.activa &&
@@ -23,6 +27,10 @@ const obtenerPrecioFinal = (producto) => {
   return precio;
 };
 
+/* =====================================================
+   FORMATEAR PESOS
+===================================================== */
+
 const formatearPesos = (valor) =>
   new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -30,7 +38,43 @@ const formatearPesos = (valor) =>
     maximumFractionDigits: 2,
   }).format(valor);
 
-export default async function handler(req, res) {
+/* =====================================================
+   BUSCAR PRODUCTO
+   MongoDB tiene prioridad.
+   Si no existe, busca en productosDigitales.js
+===================================================== */
+
+const buscarProducto = async (
+  db,
+  productoId
+) => {
+  const productoMongo =
+    await db
+      .collection("productos")
+      .findOne({
+        id: productoId,
+      });
+
+  if (productoMongo) {
+    return productoMongo;
+  }
+
+  return (
+    productosDigitales.find(
+      (item) =>
+        item.id === productoId
+    ) || null
+  );
+};
+
+/* =====================================================
+   HANDLER
+===================================================== */
+
+export default async function handler(
+  req,
+  res
+) {
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Método no permitido",
@@ -72,12 +116,21 @@ export default async function handler(req, res) {
       });
     }
 
-    /* PRODUCTO PRINCIPAL */
+    /* =====================================================
+       CONECTAR A MONGODB
+    ===================================================== */
+
+    const db =
+      await conectarMongoDB();
+
+    /* =====================================================
+       PRODUCTO PRINCIPAL
+    ===================================================== */
 
     const producto =
-      productosDigitales.find(
-        (item) =>
-          item.id === productoId
+      await buscarProducto(
+        db,
+        productoId
       );
 
     if (!producto) {
@@ -90,12 +143,19 @@ export default async function handler(req, res) {
     const precioPrincipal =
       obtenerPrecioFinal(producto);
 
-    /* VENTA CRUZADA */
+    /* =====================================================
+       VENTA CRUZADA
+    ===================================================== */
 
     let productoVentaCruzada = null;
     let precioVentaCruzada = 0;
 
     if (ventaCruzadaId) {
+      /*
+       * Solamente permitimos agregar
+       * el producto configurado como
+       * venta cruzada del producto principal.
+       */
       if (
         producto.ventaCruzadaId !==
         ventaCruzadaId
@@ -107,9 +167,9 @@ export default async function handler(req, res) {
       }
 
       productoVentaCruzada =
-        productosDigitales.find(
-          (item) =>
-            item.id === ventaCruzadaId
+        await buscarProducto(
+          db,
+          ventaCruzadaId
         );
 
       if (!productoVentaCruzada) {
@@ -119,13 +179,29 @@ export default async function handler(req, res) {
         });
       }
 
+      /*
+       * Evita agregar el mismo producto
+       * como producto adicional.
+       */
+      if (
+        productoVentaCruzada.id ===
+        producto.id
+      ) {
+        return res.status(400).json({
+          error:
+            "El producto adicional no es válido.",
+        });
+      }
+
       precioVentaCruzada =
         obtenerPrecioFinal(
           productoVentaCruzada
         );
     }
 
-    /* PRECIOS */
+    /* =====================================================
+       PRECIOS
+    ===================================================== */
 
     const subtotal =
       precioPrincipal +
@@ -146,16 +222,26 @@ export default async function handler(req, res) {
 
     const total =
       Number(
-        (subtotal - descuento).toFixed(2)
+        (
+          subtotal -
+          descuento
+        ).toFixed(2)
       );
 
-    /* PRODUCTOS */
+    /* =====================================================
+       PRODUCTOS DEL PEDIDO
+    ===================================================== */
 
     const productosPedido = [
       {
-        productoId: producto.id,
-        nombre: producto.nombre,
-        precio: precioPrincipal,
+        productoId:
+          producto.id,
+
+        nombre:
+          producto.nombre,
+
+        precio:
+          precioPrincipal,
       },
     ];
 
@@ -172,16 +258,15 @@ export default async function handler(req, res) {
       });
     }
 
-    /* CREAR PEDIDO */
+    /* =====================================================
+       CREAR PEDIDO
+    ===================================================== */
 
     const pedidoId =
       crypto.randomUUID();
 
     const fechaCreacion =
       new Date();
-
-    const db =
-      await conectarMongoDB();
 
     await db
       .collection("pedidos")
@@ -191,12 +276,14 @@ export default async function handler(req, res) {
         metodoPago:
           "transferencia",
 
+        /* Compatibilidad con pedidos anteriores */
         productoId:
           producto.id,
 
         nombreProducto:
           producto.nombre,
 
+        /* Nueva estructura */
         productos:
           productosPedido,
 
@@ -216,9 +303,11 @@ export default async function handler(req, res) {
 
         descuento,
 
-        precio: total,
+        precio:
+          total,
 
-        moneda: "ARS",
+        moneda:
+          "ARS",
 
         estado:
           "esperando_transferencia",
@@ -241,19 +330,25 @@ export default async function handler(req, res) {
           },
         ],
 
-        comprobante: null,
+        comprobante:
+          null,
 
         creadoEn:
           fechaCreacion,
 
-        pagadoEn: null,
+        pagadoEn:
+          null,
 
-        descargas: 0,
+        descargas:
+          0,
 
-        historialDescargas: [],
+        historialDescargas:
+          [],
       });
 
-    /* TELEGRAM */
+    /* =====================================================
+       TELEGRAM
+    ===================================================== */
 
     const listaProductos =
       productosPedido
@@ -274,7 +369,9 @@ export default async function handler(req, res) {
         `<b>Pedido:</b> ${pedidoId}`,
     });
 
-    /* RESPUESTA */
+    /* =====================================================
+       RESPUESTA
+    ===================================================== */
 
     return res.status(201).json({
       pedidoId,

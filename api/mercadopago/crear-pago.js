@@ -26,6 +26,27 @@ const obtenerPrecioFinal = (producto) => {
 };
 
 /* =====================================================
+   BUSCAR PRODUCTO
+===================================================== */
+
+const buscarProducto = async (db, productoId) => {
+  const productoMongo =
+    await db.collection("productos").findOne({
+      id: productoId,
+    });
+
+  if (productoMongo) {
+    return productoMongo;
+  }
+
+  return (
+    productosDigitales.find(
+      (item) => item.id === productoId
+    ) || null
+  );
+};
+
+/* =====================================================
    HANDLER
 ===================================================== */
 
@@ -68,15 +89,17 @@ export default async function handler(req, res) {
       });
     }
 
+    const db = await conectarMongoDB();
+
     /* =====================================================
        PRODUCTO PRINCIPAL
     ===================================================== */
 
     const producto =
-      productosDigitales.find(
-        (item) =>
-          item.id === productoId
-      );
+  await buscarProducto(
+    db,
+    productoId
+  );
 
     if (!producto) {
       return res.status(404).json({
@@ -113,10 +136,10 @@ export default async function handler(req, res) {
       }
 
       productoVentaCruzada =
-        productosDigitales.find(
-          (item) =>
-            item.id === ventaCruzadaId
-        );
+  await buscarProducto(
+    db,
+    ventaCruzadaId
+  );
 
       if (!productoVentaCruzada) {
         return res.status(404).json({
@@ -272,9 +295,6 @@ export default async function handler(req, res) {
     /* =====================================================
        GUARDAR PEDIDO EN MONGODB
     ===================================================== */
-
-    const db =
-      await conectarMongoDB();
 
     await db
       .collection("pedidos")

@@ -86,6 +86,33 @@ const obtenerPrecioFinalUSD = (producto) => {
 };
 
 /* =====================================================
+   BUSCAR PRODUCTO
+===================================================== */
+
+const buscarProducto = async (
+  db,
+  productoId
+) => {
+  const productoMongo =
+    await db
+      .collection("productos")
+      .findOne({
+        id: productoId,
+      });
+
+  if (productoMongo) {
+    return productoMongo;
+  }
+
+  return (
+    productosDigitales.find(
+      (item) =>
+        item.id === productoId
+    ) || null
+  );
+};
+
+/* =====================================================
    VERIFICAR WEBHOOK PAYPAL
 ===================================================== */
 
@@ -712,15 +739,18 @@ export default async function handler(
       });
     }
 
+    const db =
+  await conectarMongoDB();
+
     /* =====================================================
        PRODUCTO PRINCIPAL
     ===================================================== */
 
     const producto =
-      productosDigitales.find(
-        (item) =>
-          item.id === productoId
-      );
+  await buscarProducto(
+    db,
+    productoId
+  );
 
     if (!producto) {
       return res.status(404).json({
@@ -756,11 +786,10 @@ export default async function handler(
       }
 
       productoVentaCruzada =
-        productosDigitales.find(
-          (item) =>
-            item.id ===
-            ventaCruzadaId
-        );
+  await buscarProducto(
+    db,
+    ventaCruzadaId
+  );
 
       if (!productoVentaCruzada) {
         return res.status(404).json({
@@ -990,9 +1019,6 @@ export default async function handler(
     /* =====================================================
        GUARDAR PEDIDO
     ===================================================== */
-
-    const db =
-      await conectarMongoDB();
 
     await db
       .collection("pedidos")
