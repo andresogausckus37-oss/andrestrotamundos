@@ -538,8 +538,7 @@ const subirImagenProducto = async (req, res) => {
       access: "public",
       contentType: "image/webp",
       addRandomSuffix: false,
-      token:
-  process.env.BLOB_STORE_ID,
+      token: process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
     }
   );
 
