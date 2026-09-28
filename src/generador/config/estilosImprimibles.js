@@ -1,10 +1,10 @@
 export const ESTILOS_IMPRIMIBLES = {
   logo: {
-    url: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logo-andres-imprimibles",
-    ancho: 100,
-    top: 25,
-    right: 20,
-  },
+  url: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/logo%20para%20pdfs",
+  ancho: 100,
+  top: 25,
+  right: 20,
+},
 
   tipografia: {
     principal: '"Kalam", cursive',
