@@ -389,7 +389,7 @@ export default function AdminNuevoProducto() {
 
     try {
       const respuesta = await fetch(
-        "/api/admin/productos",
+  "/api/admin/pedidos?accion=crear-producto",
         {
           method: "POST",
 

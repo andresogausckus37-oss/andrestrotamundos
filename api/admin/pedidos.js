@@ -405,6 +405,63 @@ const avanzarEstado = async (req, res) => {
 };
 
 /* =========================
+   CREAR PRODUCTO
+========================= */
+
+const crearProducto = async (req, res) => {
+  const producto = req.body;
+
+  if (!producto?.id) {
+    return res.status(400).json({
+      error: "Falta el ID del producto.",
+    });
+  }
+
+  if (!producto?.nombre) {
+    return res.status(400).json({
+      error: "Falta el nombre del producto.",
+    });
+  }
+
+  if (!producto?.categoria) {
+    return res.status(400).json({
+      error: "Falta la categoría del producto.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+  const productos = db.collection("productos");
+
+  const existente = await productos.findOne({
+    id: producto.id,
+  });
+
+  if (existente) {
+    return res.status(409).json({
+      error: "Ya existe un producto con ese ID.",
+    });
+  }
+
+  const fecha = new Date();
+
+  const nuevoProducto = {
+    ...producto,
+    creadoEn: fecha,
+    actualizadoEn: fecha,
+  };
+
+  const resultado = await productos.insertOne(
+    nuevoProducto
+  );
+
+  return res.status(201).json({
+    ok: true,
+    mensaje: "Producto guardado correctamente.",
+    productoId: resultado.insertedId.toString(),
+  });
+};
+
+/* =========================
    ENDPOINT ÚNICO
 ========================= */
 
@@ -458,6 +515,20 @@ export default async function handler(req, res) {
       }
 
       return await avanzarEstado(req, res);
+    }
+
+        /* =========================
+       CREAR PRODUCTO
+    ========================= */
+
+    if (accion === "crear-producto") {
+      if (req.method !== "POST") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
+
+      return await crearProducto(req, res);
     }
 
     return res.status(400).json({
