@@ -315,9 +315,9 @@ export const productosDigitales = [
     },
 
   imagenes: {
-    portada: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/1",
+    portada: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/14611",
 
-    preview: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/2",
+    preview: "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/14612",
 
     previewsIndividuales: [
       "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/productos/100%20laberintos%20para%20adultos%20nivel%20imposible/3",
