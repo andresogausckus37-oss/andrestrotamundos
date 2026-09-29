@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { get, put } from "@vercel/blob";
+import { handleUpload } from "@vercel/blob/client";
 import { conectarMongoDB } from "../../lib/mongodb.js";
 import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
@@ -429,6 +430,16 @@ const crearProducto = async (req, res) => {
     });
   }
 
+  /*
+   * A partir de ahora, los productos nuevos
+   * deben tener su PDF privado asociado.
+   */
+  if (!producto?.archivoPDF) {
+    return res.status(400).json({
+      error: "Falta el PDF privado del producto.",
+    });
+  }
+
   const db = await conectarMongoDB();
   const productos = db.collection("productos");
 
@@ -486,7 +497,8 @@ const subirImagenProducto = async (req, res) => {
     numero > 6
   ) {
     return res.status(400).json({
-      error: "El número de imagen debe estar entre 1 y 6.",
+      error:
+        "El número de imagen debe estar entre 1 y 6.",
     });
   }
 
@@ -538,7 +550,8 @@ const subirImagenProducto = async (req, res) => {
       access: "public",
       contentType: "image/webp",
       addRandomSuffix: false,
-      token: process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
+      token:
+        process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
     }
   );
 
@@ -551,10 +564,168 @@ const subirImagenProducto = async (req, res) => {
 };
 
 /* =========================
+   SUBIR PDF PRIVADO
+========================= */
+
+const subirPdfProducto = async (req, res) => {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return res.status(500).json({
+      error:
+        "No está configurado BLOB_READ_WRITE_TOKEN.",
+    });
+  }
+
+  /*
+   * El navegador no envía el PDF a esta
+   * función.
+   *
+   * handleUpload genera un token temporal
+   * para que el navegador pueda subir el
+   * PDF directamente al Blob privado.
+   */
+  const resultado = await handleUpload({
+    body: req.body,
+    request: req,
+
+    token:
+      process.env.BLOB_READ_WRITE_TOKEN,
+
+    onBeforeGenerateToken: async (
+      pathname,
+      clientPayload
+    ) => {
+      /*
+       * La generación del token viene desde
+       * el navegador del administrador.
+       *
+       * Acá sí comprobamos la cookie admin.
+       */
+      if (!adminAutorizado(req)) {
+        throw new Error("No autorizado");
+      }
+
+      if (
+        !pathname ||
+        typeof pathname !== "string"
+      ) {
+        throw new Error(
+          "Ruta de PDF inválida."
+        );
+      }
+
+      let datos = {};
+
+      if (clientPayload) {
+        try {
+          datos =
+            JSON.parse(clientPayload);
+        } catch {
+          throw new Error(
+            "Datos de subida inválidos."
+          );
+        }
+      }
+
+      const productoId =
+        datos?.productoId;
+
+      if (
+        !productoId ||
+        typeof productoId !== "string"
+      ) {
+        throw new Error(
+          "Falta productoId."
+        );
+      }
+
+      /*
+       * Los IDs de nuestros productos utilizan
+       * únicamente letras minúsculas, números
+       * y guiones.
+       */
+      if (
+        !/^[a-z0-9-]+$/.test(
+          productoId
+        )
+      ) {
+        throw new Error(
+          "productoId inválido."
+        );
+      }
+
+      const pathnameEsperado =
+        `productos/${productoId}/${productoId}.pdf`;
+
+      /*
+       * Impedimos que desde el navegador se
+       * pueda elegir cualquier ruta del
+       * almacenamiento privado.
+       */
+      if (
+        pathname !==
+        pathnameEsperado
+      ) {
+        throw new Error(
+          "La ruta del PDF no coincide con el producto."
+        );
+      }
+
+      return {
+        allowedContentTypes: [
+          "application/pdf",
+        ],
+
+        /*
+         * Permitimos hasta 12 MB.
+         */
+        maximumSizeInBytes:
+          12 * 1024 * 1024,
+
+        addRandomSuffix: false,
+
+        allowOverwrite: true,
+
+        tokenPayload:
+          JSON.stringify({
+            productoId,
+          }),
+      };
+    },
+
+    /*
+     * Esta llamada la realiza Vercel una vez
+     * completada la subida.
+     *
+     * No necesitamos modificar MongoDB aquí,
+     * porque AdminNuevoProducto recibe el
+     * pathname y luego lo guarda dentro del
+     * producto.
+     */
+    onUploadCompleted: async ({
+      blob,
+      tokenPayload,
+    }) => {
+      console.log(
+        "PDF privado subido:",
+        blob.pathname,
+        tokenPayload
+      );
+    },
+  });
+
+  return res.status(200).json(
+    resultado
+  );
+};
+
+/* =========================
    LISTAR PRODUCTOS PÚBLICOS
 ========================= */
 
-const listarProductosPublicos = async (req, res) => {
+const listarProductosPublicos = async (
+  req,
+  res
+) => {
   const db = await conectarMongoDB();
 
   const productos = await db
@@ -565,9 +736,20 @@ const listarProductosPublicos = async (req, res) => {
     })
     .toArray();
 
+  /*
+   * archivoPDF NO debe salir por esta API.
+   *
+   * El pathname pertenece al sistema privado
+   * de entrega de archivos.
+   */
   const resultado = productos.map(
-    ({ _id, creadoEn, actualizadoEn, ...producto }) =>
-      producto
+    ({
+      _id,
+      creadoEn,
+      actualizadoEn,
+      archivoPDF,
+      ...producto
+    }) => producto
   );
 
   res.setHeader(
@@ -584,22 +766,63 @@ const listarProductosPublicos = async (req, res) => {
    ENDPOINT ÚNICO
 ========================= */
 
-export default async function handler(req, res) {
+export default async function handler(
+  req,
+  res
+) {
   try {
-    const accion = req.query?.accion;
+    const accion =
+      req.query?.accion;
 
     /* =========================
        PRODUCTOS PÚBLICOS
     ========================= */
 
-    if (accion === "productos-publicos") {
+    if (
+      accion ===
+      "productos-publicos"
+    ) {
       if (req.method !== "GET") {
         return res.status(405).json({
-          error: "Método no permitido",
+          error:
+            "Método no permitido",
         });
       }
 
       return await listarProductosPublicos(
+        req,
+        res
+      );
+    }
+
+    /* =========================
+       SUBIR PDF PRODUCTO
+       
+       IMPORTANTE:
+       esta acción va ANTES de la
+       autenticación general.
+       
+       handleUpload recibe tanto la
+       solicitud inicial del navegador
+       como la notificación posterior
+       de Vercel.
+       
+       La autorización admin se realiza
+       dentro de onBeforeGenerateToken.
+    ========================= */
+
+    if (
+      accion ===
+      "subir-pdf-producto"
+    ) {
+      if (req.method !== "POST") {
+        return res.status(405).json({
+          error:
+            "Método no permitido",
+        });
+      }
+
+      return await subirPdfProducto(
         req,
         res
       );
@@ -622,25 +845,35 @@ export default async function handler(req, res) {
     if (accion === "listar") {
       if (req.method !== "GET") {
         return res.status(405).json({
-          error: "Método no permitido",
+          error:
+            "Método no permitido",
         });
       }
 
-      return await listarPedidos(req, res);
+      return await listarPedidos(
+        req,
+        res
+      );
     }
 
     /* =========================
        COMPROBANTE
     ========================= */
 
-    if (accion === "comprobante") {
+    if (
+      accion === "comprobante"
+    ) {
       if (req.method !== "GET") {
         return res.status(405).json({
-          error: "Método no permitido",
+          error:
+            "Método no permitido",
         });
       }
 
-      return await obtenerComprobante(req, res);
+      return await obtenerComprobante(
+        req,
+        res
+      );
     }
 
     /* =========================
@@ -650,40 +883,58 @@ export default async function handler(req, res) {
     if (accion === "avanzar") {
       if (req.method !== "POST") {
         return res.status(405).json({
-          error: "Método no permitido",
+          error:
+            "Método no permitido",
         });
       }
 
-      return await avanzarEstado(req, res);
-    }
-
-        /* =========================
-       CREAR PRODUCTO
-    ========================= */
-
-    if (accion === "crear-producto") {
-      if (req.method !== "POST") {
-        return res.status(405).json({
-          error: "Método no permitido",
-        });
-      }
-
-      return await crearProducto(req, res);
+      return await avanzarEstado(
+        req,
+        res
+      );
     }
 
     /* =========================
-   SUBIR IMAGEN PRODUCTO
-========================= */
+       CREAR PRODUCTO
+    ========================= */
 
-if (accion === "subir-imagen-producto") {
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Método no permitido",
-    });
-  }
+    if (
+      accion ===
+      "crear-producto"
+    ) {
+      if (req.method !== "POST") {
+        return res.status(405).json({
+          error:
+            "Método no permitido",
+        });
+      }
 
-  return await subirImagenProducto(req, res);
-}
+      return await crearProducto(
+        req,
+        res
+      );
+    }
+
+    /* =========================
+       SUBIR IMAGEN PRODUCTO
+    ========================= */
+
+    if (
+      accion ===
+      "subir-imagen-producto"
+    ) {
+      if (req.method !== "POST") {
+        return res.status(405).json({
+          error:
+            "Método no permitido",
+        });
+      }
+
+      return await subirImagenProducto(
+        req,
+        res
+      );
+    }
 
     return res.status(400).json({
       error: "Acción no válida",
@@ -696,6 +947,7 @@ if (accion === "subir-imagen-producto") {
 
     return res.status(500).json({
       error:
+        error?.message ||
         "No se pudo procesar la solicitud.",
     });
   }
