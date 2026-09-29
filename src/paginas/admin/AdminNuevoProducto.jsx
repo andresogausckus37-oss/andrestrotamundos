@@ -5,13 +5,21 @@ import {
 } from "react";
 
 import {
+  ArrowDown,
+  ArrowUp,
   FilePlus2,
+  Loader2,
+  Plus,
   RefreshCw,
   Trash2,
   Upload,
 } from "lucide-react";
 
 import { upload } from "@vercel/blob/client";
+import { PDFDocument } from "pdf-lib";
+
+import { generarPdfLaminas } from "../../utilidades/generarPdfLaminas";
+import { ESTILOS_IMPRIMIBLES } from "../../generador/config/estilosImprimibles";
 
 /* =========================================================
    CONFIGURACIÓN
@@ -68,8 +76,6 @@ const NOMBRES_IMAGENES = [
   "Imagen 2 — Segunda imagen de tienda",
   "Imagen 3 — Tercera imagen de tienda",
   "Imagen 4 — Cuarta imagen de tienda",
-  "Imagen 5 — Portada del PDF",
-  "Imagen 6 — Página final del PDF",
 ];
 
 /* =========================================================
@@ -298,6 +304,39 @@ const archivoADataUrl = (
   );
 
 /* =========================================================
+   UTILIDADES DEL ARMADOR PDF
+========================================================= */
+
+const ALTURA_COBERTURA_MM = 12;
+const ANCHO_COBERTURA_MM = 210;
+
+const crearIdArchivo = () =>
+  `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const formatearBytes = (bytes = 0) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+const obtenerCantidadPaginas = async (archivo) => {
+  const bytes = await archivo.arrayBuffer();
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  return pdf.getPageCount();
+};
+
+const moverElemento = (lista, desde, hasta) => {
+  if (desde < 0 || hasta < 0 || desde >= lista.length || hasta >= lista.length || desde === hasta) {
+    return lista;
+  }
+
+  const copia = [...lista];
+  const [elemento] = copia.splice(desde, 1);
+  copia.splice(hasta, 0, elemento);
+  return copia;
+};
+
+/* =========================================================
    COMPONENTE
 ========================================================= */
 
@@ -365,7 +404,7 @@ export default function AdminNuevoProducto() {
     imagenes,
     setImagenes,
   ] = useState(
-    Array(6).fill(null)
+    Array(4).fill(null)
   );
 
   const [
@@ -378,10 +417,35 @@ export default function AdminNuevoProducto() {
     setGuardando,
   ] = useState(false);
 
-  const [
-    archivoPDF,
-    setArchivoPDF,
-  ] = useState(null);
+  const [imagenPortadaPdf, setImagenPortadaPdf] = useState(null);
+  const [imagenFinalPdf, setImagenFinalPdf] = useState(null);
+  const [archivosPdf, setArchivosPdf] = useState([]);
+  const [procesandoArchivosPdf, setProcesandoArchivosPdf] = useState(false);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [archivoPDF, setArchivoPDF] = useState(null);
+  const [mensajePdf, setMensajePdf] = useState("");
+  const [posicionCobertura, setPosicionCobertura] = useState(8);
+  const [progresoPdf, setProgresoPdf] = useState({
+    actual: 0,
+    total: 0,
+    porcentaje: 0,
+    fase: "",
+  });
+
+  const totalPaginasActividades = useMemo(
+    () => archivosPdf.reduce((total, item) => total + (item.paginas || 0), 0),
+    [archivosPdf]
+  );
+
+  const pesoTotalPdf = useMemo(
+    () => archivosPdf.reduce((total, item) => total + (item.archivo?.size || 0), 0),
+    [archivosPdf]
+  );
+
+  const hayArchivosPdfInvalidos = useMemo(
+    () => archivosPdf.some((item) => item.estado === "error" || !item.paginas),
+    [archivosPdf]
+  );
 
   /* =======================================================
      CARGAR PRODUCTOS DESDE MONGODB
@@ -415,7 +479,7 @@ export default function AdminNuevoProducto() {
           "Error cargando productos:",
           error
         );
-
+        
         setProductosDisponibles(
           []
         );
@@ -610,6 +674,131 @@ export default function AdminNuevoProducto() {
     };
 
   /* =======================================================
+     ARMADOR DE PDF
+  ======================================================= */
+
+  const agregarArchivosPdf = async (evento) => {
+    const seleccionados = Array.from(evento.target.files || []);
+    evento.target.value = "";
+    if (!seleccionados.length) return;
+
+    setMensajePdf("");
+    setArchivoPDF(null);
+    setProcesandoArchivosPdf(true);
+
+    try {
+      const nuevos = [];
+
+      for (const archivo of seleccionados) {
+        if (archivo.type !== "application/pdf" && !archivo.name.toLowerCase().endsWith(".pdf")) {
+          nuevos.push({
+            id: crearIdArchivo(),
+            archivo,
+            nombre: archivo.name,
+            paginas: 0,
+            estado: "error",
+            error: "El archivo no es un PDF.",
+          });
+          continue;
+        }
+
+        try {
+          const paginas = await obtenerCantidadPaginas(archivo);
+          nuevos.push({
+            id: crearIdArchivo(),
+            archivo,
+            nombre: archivo.name,
+            paginas,
+            estado: "listo",
+            error: "",
+          });
+        } catch (error) {
+          console.error(`No se pudo leer ${archivo.name}:`, error);
+          nuevos.push({
+            id: crearIdArchivo(),
+            archivo,
+            nombre: archivo.name,
+            paginas: 0,
+            estado: "error",
+            error: "No se pudo leer este PDF.",
+          });
+        }
+      }
+
+      setArchivosPdf((actuales) => [...actuales, ...nuevos]);
+    } finally {
+      setProcesandoArchivosPdf(false);
+    }
+  };
+
+  const moverArchivoPdf = (indice, direccion) => {
+    const destino = direccion === "arriba" ? indice - 1 : indice + 1;
+    setArchivosPdf((actuales) => moverElemento(actuales, indice, destino));
+    setArchivoPDF(null);
+  };
+
+  const eliminarArchivoPdf = (id) => {
+    setArchivosPdf((actuales) => actuales.filter((item) => item.id !== id));
+    setArchivoPDF(null);
+  };
+
+  const generarPdfProducto = async () => {
+    if (!imagenPortadaPdf) {
+      setMensajePdf("Falta seleccionar la portada del PDF.");
+      return;
+    }
+
+    if (!archivosPdf.length) {
+      setMensajePdf("Seleccioná al menos un PDF de actividades o soluciones.");
+      return;
+    }
+
+    if (hayArchivosPdfInvalidos) {
+      setMensajePdf("Hay PDFs con errores. Eliminálos o reemplazalos.");
+      return;
+    }
+
+    if (!imagenFinalPdf) {
+      setMensajePdf("Falta seleccionar la lámina final.");
+      return;
+    }
+
+    try {
+      setMensajePdf("");
+      setGenerandoPdf(true);
+      setArchivoPDF(null);
+
+      const nombreArchivo = idGenerado
+        ? `${idGenerado}.pdf`
+        : "Andres-Imprimibles.pdf";
+
+      const resultado = await generarPdfLaminas({
+        imagenPortada: imagenPortadaPdf,
+        imagenFinal: imagenFinalPdf,
+        archivosPdf: archivosPdf.map((item) => item.archivo),
+        logoUrl: ESTILOS_IMPRIMIBLES.logo.url,
+        nombreArchivo,
+        coberturaInferior: {
+          activa: true,
+          posicion: posicionCobertura,
+          altura: ALTURA_COBERTURA_MM,
+          ancho: ANCHO_COBERTURA_MM,
+        },
+        alActualizarProgreso: setProgresoPdf,
+      });
+
+      setArchivoPDF(resultado.archivoPdf);
+      setMensajePdf(`PDF generado correctamente: ${resultado.paginas} páginas.`);
+      cambiar("paginas", String(resultado.paginas));
+    } catch (error) {
+      console.error("Error generando PDF:", error);
+      setMensajePdf(error?.message || "No se pudo generar el PDF.");
+    } finally {
+      setGenerandoPdf(false);
+    }
+  };
+
+  /* =======================================================
      GENERAR TEXTOS
   ======================================================= */
 
@@ -771,7 +960,7 @@ export default function AdminNuevoProducto() {
   const convertirLista = (
     texto
   ) =>
-    texto
+        texto
       .split("\n")
       .map((item) =>
         item.trim()
@@ -860,13 +1049,7 @@ export default function AdminNuevoProducto() {
     imagenes: {
       portada: "",
       preview: "",
-
-      previewsIndividuales:
-        [],
-
-      portadaPDF: "",
-
-      paginaFinalPDF: "",
+      previewsIndividuales: [],
     },
 
     formato: "PDF",
@@ -992,7 +1175,7 @@ export default function AdminNuevoProducto() {
         )
       ) {
         alert(
-          "Falta seleccionar alguna de las 6 imágenes."
+          "Falta seleccionar alguna de las 4 imágenes comerciales."
         );
 
         return;
@@ -1078,12 +1261,6 @@ export default function AdminNuevoProducto() {
                   urls[2],
                   urls[3],
                 ],
-
-              portadaPDF:
-                urls[4],
-
-              paginaFinalPDF:
-                urls[5],
             },
 
             archivoPDF:
@@ -1264,7 +1441,8 @@ export default function AdminNuevoProducto() {
                   value={
                     categoria.valor
                   }
-                >
+
+                                  >
                   {
                     categoria.nombre
                   }
@@ -1658,7 +1836,7 @@ export default function AdminNuevoProducto() {
 
         <Seccion titulo="Imágenes del producto">
           <p className="text-xs leading-5 text-slate-500">
-            Seleccioná las 6 imágenes originales. Se optimizan automáticamente a WebP, con un ancho máximo de 794 px.
+            Seleccioná las 4 imágenes comerciales de la tienda. Se optimizan automáticamente a WebP, con un ancho máximo de 794 px.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1708,70 +1886,160 @@ export default function AdminNuevoProducto() {
           )}
         </Seccion>
 
-                {/* PDF PRIVADO */}
+                  {/* ARMADOR DE PDF */}
 
-        <Seccion titulo="PDF del producto">
-          <p className="text-xs leading-5 text-slate-500">
-            Seleccioná el PDF final que recibirá el comprador.
-            Se subirá automáticamente al almacenamiento privado.
-          </p>
+                  <Seccion titulo="Crear PDF del producto">
+                    <p className="text-xs leading-5 text-slate-500">
+                      Portada + actividades y soluciones + lámina final. Estos archivos se usan solamente para generar el PDF y no se guardan individualmente en Blob.
+                    </p>
 
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center transition hover:border-sky-400 hover:bg-sky-50">
-            <Upload
-              size={20}
-              className="text-sky-600"
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <SelectorArchivoSimple
+                        titulo="1. Portada del PDF"
+                        archivo={imagenPortadaPdf}
+                        accept="image/png,image/jpeg,image/webp"
+                        textoVacio="Seleccionar portada"
+                        deshabilitado={guardando || generandoPdf}
+                        onSeleccionar={(archivo) => {
+                          setImagenPortadaPdf(archivo);
+                          setArchivoPDF(null);
+                        }}
+                        onEliminar={() => {
+                          setImagenPortadaPdf(null);
+                          setArchivoPDF(null);
+                        }}
+                      />
+
+                      <SelectorArchivoSimple
+                        titulo="3. Lámina final"
+                        archivo={imagenFinalPdf}
+                        accept="image/png,image/jpeg,image/webp"
+                        textoVacio="Seleccionar lámina final"
+                        deshabilitado={guardando || generandoPdf}
+                        onSeleccionar={(archivo) => {
+                          setImagenFinalPdf(archivo);
+                          setArchivoPDF(null);
+                        }}
+                        onEliminar={() => {
+                          setImagenFinalPdf(null);
+                          setArchivoPDF(null);
+                                        }}
             />
+          </div>
 
-            <span className="text-xs font-semibold text-slate-700">
-              {archivoPDF
-                ? archivoPDF.name
-                : "Seleccionar PDF"}
-            </span>
-
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              className="hidden"
-              disabled={guardando}
-              onChange={(e) =>
-                setArchivoPDF(
-                  e.target.files?.[0] ||
-                    null
-                )
-              }
-            />
-          </label>
-
-          {archivoPDF && (
-            <div className="flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2">
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-emerald-700">
-                  {archivoPDF.name}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-700">
+                  2. Actividades y soluciones
                 </p>
-
-                <p className="mt-0.5 text-[10px] text-emerald-600">
-                  {(
-                    archivoPDF.size /
-                    1024 /
-                    1024
-                  ).toFixed(2)}{" "}
-                  MB
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Podés seleccionar varios PDFs y ordenar el resultado.
                 </p>
               </div>
 
-              <button
-                type="button"
-                disabled={guardando}
-                onClick={() =>
-                  setArchivoPDF(null)
-                }
-                className="rounded-lg p-2 text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"
-                aria-label="Eliminar PDF"
-              >
-                <Trash2
-                  size={16}
+              <label className="flex cursor-pointer items-center gap-1 rounded-lg bg-sky-600 px-3 py-2 text-[10px] font-bold text-white">
+                {procesandoArchivosPdf ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {archivosPdf.length ? "Agregar" : "Seleccionar"}
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  multiple
+                  disabled={procesandoArchivosPdf || generandoPdf || guardando}
+                  onChange={agregarArchivosPdf}
+                  className="hidden"
                 />
-              </button>
+              </label>
+            </div>
+
+            {archivosPdf.length > 0 && (
+              <>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <MiniDato titulo="Archivos" valor={archivosPdf.length} />
+                  <MiniDato titulo="Páginas" valor={totalPaginasActividades} />
+                  <MiniDato titulo="Peso" valor={formatearBytes(pesoTotalPdf)} />
+                </div>
+
+                <div className="mt-3 space-y-1">
+                  {archivosPdf.map((item, indice) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-2 rounded-lg border p-2 ${
+                        item.estado === "error" ? "border-red-200 bg-red-50" : "border-slate-200 bg-white"
+                      }`}
+                    >
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold">
+                        {indice + 1}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[10px] font-bold text-slate-800">{item.nombre}</p>
+                        <p className="text-[9px] text-slate-400">
+                          {item.estado === "error" ? item.error : `${item.paginas} pág. · ${formatearBytes(item.archivo.size)}`}
+                        </p>
+                      </div>
+
+                      <button type="button" onClick={() => moverArchivoPdf(indice, "arriba")} disabled={indice === 0 || generandoPdf} className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 disabled:opacity-20" aria-label="Subir">
+                        <ArrowUp size={13} />
+                      </button>
+                      <button type="button" onClick={() => moverArchivoPdf(indice, "abajo")} disabled={indice === archivosPdf.length - 1 || generandoPdf} className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 disabled:opacity-20" aria-label="Bajar">
+                        <ArrowDown size={13} />
+                      </button>
+                      <button type="button" onClick={() => eliminarArchivoPdf(item.id)} disabled={generandoPdf} className="flex h-7 w-7 items-center justify-center rounded-md border border-red-200 text-red-600 disabled:opacity-30" aria-label="Eliminar">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-700">Cobertura inferior</p>
+                <p className="text-[10px] text-slate-500">Posición de la franja blanca aplicada a las actividades y soluciones.</p>
+              </div>
+              <span className="text-xs font-bold text-slate-700">{posicionCobertura} mm</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="30"
+              step="1"
+              value={posicionCobertura}
+              disabled={generandoPdf || guardando}
+              onChange={(e) => {
+                setPosicionCobertura(Number(e.target.value));
+                setArchivoPDF(null);
+              }}
+              className="mt-3 w-full"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={generarPdfProducto}
+            disabled={generandoPdf || guardando || procesandoArchivosPdf}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
+          >
+            {generandoPdf ? <Loader2 size={17} className="animate-spin" /> : <FilePlus2 size={17} />}
+            {generandoPdf ? `Generando... ${progresoPdf.porcentaje || 0}%` : "Generar PDF"}
+          </button>
+
+          {mensajePdf && (
+            <div className={`rounded-lg px-3 py-2 text-xs font-semibold ${archivoPDF ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+              {mensajePdf}
+            </div>
+          )}
+
+          {archivoPDF && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+              <p className="text-xs font-bold text-emerald-700">PDF listo para publicar</p>
+              <p className="mt-1 text-[10px] text-emerald-600">
+                {archivoPDF.name} · {formatearBytes(archivoPDF.size)}
+              </p>
             </div>
           )}
         </Seccion>
@@ -1803,6 +2071,7 @@ export default function AdminNuevoProducto() {
             disabled={
               idRepetido ||
               procesandoImagen ||
+              generandoPdf ||
               guardando ||
               cargandoProductos
             }
@@ -1933,6 +2202,49 @@ function ImagenProducto({
 /* =========================================================
    SECCIÓN
 ========================================================= */
+
+function SelectorArchivoSimple({
+  titulo,
+  archivo,
+  accept,
+  textoVacio,
+  deshabilitado,
+  onSeleccionar,
+  onEliminar,
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <p className="text-xs font-bold text-slate-700">{titulo}</p>
+      <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white px-3 py-5 text-center">
+        <Upload size={18} className="text-sky-600" />
+        <span className="min-w-0 truncate text-[10px] font-semibold text-slate-700">
+          {archivo ? archivo.name : textoVacio}
+        </span>
+        <input
+          type="file"
+          accept={accept}
+          disabled={deshabilitado}
+          className="hidden"
+          onChange={(e) => onSeleccionar(e.target.files?.[0] || null)}
+        />
+      </label>
+      {archivo && (
+        <button type="button" disabled={deshabilitado} onClick={onEliminar} className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-600 disabled:opacity-40">
+          <Trash2 size={12} /> Eliminar
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MiniDato({ titulo, valor }) {
+  return (
+    <div className="rounded-lg bg-white p-2">
+      <div className="text-[8px] font-bold uppercase text-slate-400">{titulo}</div>
+      <div className="truncate text-xs font-bold text-slate-800">{valor}</div>
+    </div>
+  );
+}
 
 function Seccion({
   titulo,

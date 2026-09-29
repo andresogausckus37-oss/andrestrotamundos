@@ -8,27 +8,44 @@ const ANCHO_A4 = 595.28;
 const ALTO_A4 = 841.89;
 
 /* =========================================================
-   DESCARGAR ARCHIVO
+   OBTENER BYTES DE IMAGEN
 ========================================================= */
 
-async function descargarBytes(url, nombreRecurso) {
-  if (!url || typeof url !== "string") {
-    throw new Error(
-      `No se encontró ${nombreRecurso}.`
-    );
+async function obtenerBytesImagen(recurso, nombreRecurso) {
+  if (!recurso) {
+    throw new Error(`No se encontró ${nombreRecurso}.`);
   }
 
-  const respuesta = await fetch(url);
-
-  if (!respuesta.ok) {
-    throw new Error(
-      `No se pudo descargar ${nombreRecurso}.`
-    );
+  // Archivo seleccionado desde la galería.
+  if (
+    recurso instanceof File ||
+    recurso instanceof Blob
+  ) {
+    const buffer = await recurso.arrayBuffer();
+    return new Uint8Array(buffer);
   }
 
-  const buffer = await respuesta.arrayBuffer();
+  // Compatibilidad con URLs antiguas.
+  if (typeof recurso === "string") {
+    const url = recurso.trim();
 
-  return new Uint8Array(buffer);
+    if (!url) {
+      throw new Error(`No se encontró ${nombreRecurso}.`);
+    }
+
+    const respuesta = await fetch(url);
+
+    if (!respuesta.ok) {
+      throw new Error(
+        `No se pudo descargar ${nombreRecurso}.`
+      );
+    }
+
+    const buffer = await respuesta.arrayBuffer();
+    return new Uint8Array(buffer);
+  }
+
+  throw new Error(`${nombreRecurso} no es válido.`);
 }
 
 /* =========================================================
@@ -71,6 +88,10 @@ function detectarTipoImagen(bytes) {
   );
 }
 
+/* =========================================================
+   CONVERTIR WEBP A PNG
+========================================================= */
+
 async function convertirWebpAPng(bytes) {
   const blob = new Blob([bytes], {
     type: "image/webp",
@@ -90,15 +111,20 @@ async function convertirWebpAPng(bytes) {
   bitmap.close();
 
   const blobPng = await new Promise((resolve, reject) => {
-    canvas.toBlob((resultado) => {
-      if (resultado) {
-        resolve(resultado);
-      } else {
-        reject(
-          new Error("No se pudo convertir la imagen WebP.")
-        );
-      }
-    }, "image/png");
+    canvas.toBlob(
+      (resultado) => {
+        if (resultado) {
+          resolve(resultado);
+        } else {
+          reject(
+            new Error(
+              "No se pudo convertir la imagen WebP."
+            )
+          );
+        }
+      },
+      "image/png"
+    );
   });
 
   return new Uint8Array(
@@ -112,11 +138,11 @@ async function convertirWebpAPng(bytes) {
 
 async function agregarImagenA4(
   documento,
-  url,
+  recurso,
   nombreRecurso
 ) {
-  const bytes = await descargarBytes(
-    url,
+  const bytes = await obtenerBytesImagen(
+    recurso,
     nombreRecurso
   );
 
@@ -124,14 +150,14 @@ async function agregarImagenA4(
 
   let imagen;
 
-if (tipo === "png") {
-  imagen = await documento.embedPng(bytes);
-} else if (tipo === "jpg") {
-  imagen = await documento.embedJpg(bytes);
-} else {
-  const bytesPng = await convertirWebpAPng(bytes);
-  imagen = await documento.embedPng(bytesPng);
-}
+  if (tipo === "png") {
+    imagen = await documento.embedPng(bytes);
+  } else if (tipo === "jpg") {
+    imagen = await documento.embedJpg(bytes);
+  } else {
+    const bytesPng = await convertirWebpAPng(bytes);
+    imagen = await documento.embedPng(bytesPng);
+  }
 
   const pagina = documento.addPage([
     ANCHO_A4,
@@ -160,7 +186,7 @@ if (tipo === "png") {
 }
 
 /* =========================================================
-   AGREGAR LOGO
+   PREPARAR LOGO
 ========================================================= */
 
 async function prepararLogo(
@@ -172,7 +198,7 @@ async function prepararLogo(
   }
 
   try {
-    const bytes = await descargarBytes(
+    const bytes = await obtenerBytesImagen(
       logoUrl,
       "el logo"
     );
@@ -183,7 +209,13 @@ async function prepararLogo(
       return await documento.embedPng(bytes);
     }
 
-    return await documento.embedJpg(bytes);
+    if (tipo === "jpg") {
+      return await documento.embedJpg(bytes);
+    }
+
+    const bytesPng = await convertirWebpAPng(bytes);
+
+    return await documento.embedPng(bytesPng);
   } catch (error) {
     console.warn(
       "No se pudo agregar el logo:",
@@ -193,6 +225,10 @@ async function prepararLogo(
     return null;
   }
 }
+
+/* =========================================================
+   DIBUJAR LOGO
+========================================================= */
 
 function dibujarLogo(
   pagina,
@@ -251,8 +287,6 @@ function aplicarCoberturaInferior(
     height: altoPagina,
   } = pagina.getSize();
 
-  // Los controles del editor están expresados en mm.
-  // pdf-lib trabaja en puntos.
   const MM_A_PUNTOS = 72 / 25.4;
 
   const anchoSolicitado =
@@ -285,13 +319,13 @@ function aplicarCoberturaInferior(
     Math.max(0, altoPagina - altura)
   );
 
-pagina.drawRectangle({
-  x,
-  y,
-  width: ancho,
-  height: altura,
-  color: rgb(1, 1, 1),
-});
+  pagina.drawRectangle({
+    x,
+    y,
+    width: ancho,
+    height: altura,
+    color: rgb(1, 1, 1),
+  });
 }
 
 /* =========================================================
@@ -320,59 +354,20 @@ async function agregarPdfExterno(
     );
 
   for (const pagina of paginas) {
-  documentoFinal.addPage(pagina);
+    documentoFinal.addPage(pagina);
 
-  aplicarCoberturaInferior(
-    pagina,
-    coberturaInferior
-  );
+    aplicarCoberturaInferior(
+      pagina,
+      coberturaInferior
+    );
 
-  dibujarLogo(
-    pagina,
-    logo
-  );
+    dibujarLogo(
+      pagina,
+      logo
+    );
   }
 
   return paginas.length;
-}
-
-/* =========================================================
-   DESCARGAR PDF FINAL
-========================================================= */
-
-function descargarPdf(
-  bytes,
-  nombreArchivo
-) {
-  const blob = new Blob(
-    [bytes],
-    {
-      type: "application/pdf",
-    }
-  );
-
-  const url =
-    URL.createObjectURL(blob);
-
-  const enlace =
-    document.createElement("a");
-
-  enlace.href = url;
-
-  enlace.download =
-    nombreArchivo;
-
-  document.body.appendChild(
-    enlace
-  );
-
-  enlace.click();
-
-  enlace.remove();
-
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 1000);
 }
 
 /* =========================================================
@@ -380,20 +375,20 @@ function descargarPdf(
 ========================================================= */
 
 export async function generarPdfLaminas({
-  imagenPortada = "",
+  imagenPortada = null,
 
-  imagenFinal = "",
+  imagenFinal = null,
 
   archivosPdf = [],
 
   logoUrl = "",
 
   coberturaInferior = {
-  activa: false,
-  posicion: 18,
-  altura: 22,
-  ancho: 220,
-},
+    activa: false,
+    posicion: 18,
+    altura: 22,
+    ancho: 220,
+  },
 
   nombreArchivo =
     "Andres-Imprimibles.pdf",
@@ -500,12 +495,11 @@ export async function generarPdfLaminas({
   ======================================================= */
 
   if (imagenPortada) {
-    const paginaPortada =
-      await agregarImagenA4(
-        documentoFinal,
-        imagenPortada,
-        "la portada"
-      );
+    await agregarImagenA4(
+      documentoFinal,
+      imagenPortada,
+      "la portada"
+    );
 
     paginasProcesadas += 1;
 
@@ -526,12 +520,12 @@ export async function generarPdfLaminas({
 
     try {
       const paginasAgregadas =
-  await agregarPdfExterno(
-    documentoFinal,
-    archivo,
-    logo,
-    coberturaInferior
-  );
+        await agregarPdfExterno(
+          documentoFinal,
+          archivo,
+          logo,
+          coberturaInferior
+        );
 
       paginasProcesadas +=
         paginasAgregadas;
@@ -554,12 +548,11 @@ export async function generarPdfLaminas({
   ======================================================= */
 
   if (imagenFinal) {
-    const paginaFinal =
-      await agregarImagenA4(
-        documentoFinal,
-        imagenFinal,
-        "la lámina final"
-      );
+    await agregarImagenA4(
+      documentoFinal,
+      imagenFinal,
+      "la lámina final"
+    );
 
     paginasProcesadas += 1;
 
@@ -567,7 +560,7 @@ export async function generarPdfLaminas({
   }
 
   /* =======================================================
-     GUARDAR
+     GENERAR ARCHIVO FINAL
   ======================================================= */
 
   actualizarProgreso(
@@ -579,9 +572,19 @@ export async function generarPdfLaminas({
       useObjectStreams: true,
     });
 
-  descargarPdf(
-    bytes,
-    nombreArchivo
+  const blobPdf = new Blob(
+    [bytes],
+    {
+      type: "application/pdf",
+    }
+  );
+
+  const archivoPdf = new File(
+    [blobPdf],
+    nombreArchivo,
+    {
+      type: "application/pdf",
+    }
   );
 
   paginasProcesadas =
@@ -592,6 +595,9 @@ export async function generarPdfLaminas({
   );
 
   return {
+    blobPdf,
+    archivoPdf,
+
     paginas:
       totalPaginas,
 
