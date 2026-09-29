@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -17,6 +18,8 @@ import {
 
 import { upload } from "@vercel/blob/client";
 import { PDFDocument } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 import { generarPdfLaminas } from "../../utilidades/generarPdfLaminas";
 import { ESTILOS_IMPRIMIBLES } from "../../generador/config/estilosImprimibles";
@@ -310,6 +313,8 @@ const archivoADataUrl = (
 const ALTURA_COBERTURA_MM = 12;
 const ANCHO_COBERTURA_MM = 210;
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
 const crearIdArchivo = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -335,6 +340,239 @@ const moverElemento = (lista, desde, hasta) => {
   copia.splice(hasta, 0, elemento);
   return copia;
 };
+
+/* =========================================================
+   PREVIEW PRIMERA ACTIVIDAD
+========================================================= */
+
+function PreviewPaginaPdf({
+  archivo,
+  numeroPagina,
+  titulo,
+  posicionCobertura,
+}) {
+  const canvasRef = useRef(null);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelado = false;
+    let tareaRender = null;
+    let documentoPdf = null;
+
+    const renderizar = async () => {
+      if (!archivo || !canvasRef.current) {
+        return;
+      }
+
+      try {
+        setCargando(true);
+        setError("");
+
+        const bytes = new Uint8Array(
+          await archivo.arrayBuffer()
+        );
+
+        const tareaCarga = pdfjsLib.getDocument({
+          data: bytes,
+        });
+
+        documentoPdf = await tareaCarga.promise;
+
+        if (cancelado) {
+          return;
+        }
+
+        if (numeroPagina > documentoPdf.numPages) {
+          setError("");
+          return;
+        }
+
+        const pagina = await documentoPdf.getPage(
+          numeroPagina
+        );
+
+        if (cancelado || !canvasRef.current) {
+          return;
+        }
+
+        const viewportBase = pagina.getViewport({
+          scale: 1,
+        });
+
+        const anchoObjetivo = 500;
+
+        const escala =
+          anchoObjetivo / viewportBase.width;
+
+        const viewport = pagina.getViewport({
+          scale: escala,
+        });
+
+        const canvas = canvasRef.current;
+        const contexto = canvas.getContext("2d");
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        tareaRender = pagina.render({
+          canvasContext: contexto,
+          viewport,
+        });
+
+        await tareaRender.promise;
+      } catch (errorRender) {
+        if (
+          !cancelado &&
+          errorRender?.name !== "RenderingCancelledException"
+        ) {
+          console.error(
+            "Error mostrando preview del PDF:",
+            errorRender
+          );
+
+          setError("No se pudo mostrar esta página.");
+        }
+      } finally {
+        if (!cancelado) {
+          setCargando(false);
+        }
+      }
+    };
+
+    renderizar();
+
+    return () => {
+      cancelado = true;
+
+      if (tareaRender) {
+        try {
+          tareaRender.cancel();
+        } catch {
+          // Sin acción.
+        }
+      }
+
+      if (documentoPdf) {
+        try {
+          documentoPdf.destroy();
+        } catch {
+          // Sin acción.
+        }
+      }
+    };
+  }, [archivo, numeroPagina]);
+
+  if (!archivo) {
+    return null;
+  }
+
+  const porcentajeAltura =
+    (ALTURA_COBERTURA_MM / 297) * 100;
+
+  const porcentajePosicion =
+    (Number(posicionCobertura || 0) / 297) * 100;
+
+  return (
+    <div className="min-w-0">
+      <p className="mb-2 text-center text-[11px] font-bold text-slate-700">
+        {titulo}
+      </p>
+
+      <div className="relative overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
+        <canvas
+          ref={canvasRef}
+          className="block h-auto w-full bg-white"
+        />
+
+        {!cargando && !error && (
+          <div
+            className="pointer-events-none absolute left-0 right-0 border-y border-slate-200 bg-white"
+            style={{
+              bottom: `${porcentajePosicion}%`,
+              height: `${porcentajeAltura}%`,
+            }}
+          />
+        )}
+
+        {cargando && (
+          <div className="absolute inset-0 flex min-h-32 items-center justify-center bg-white/80">
+            <Loader2
+              size={18}
+              className="animate-spin text-slate-500"
+            />
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <p className="mt-1 text-center text-[10px] font-semibold text-red-600">
+          {error}
+        </p>
+      )}
+
+      <p className="mt-1 text-center text-[10px] text-slate-500">
+        Página {numeroPagina}
+      </p>
+    </div>
+  );
+}
+
+function PreviewActividadYSolucion({
+  item,
+  posicionCobertura,
+}) {
+  if (!item?.archivo) {
+    return null;
+  }
+
+  const paginas = Number(item.paginas || 0);
+  const tieneSolucion = paginas >= 2;
+
+  return (
+    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="mb-3">
+        <p className="text-xs font-bold text-slate-700">
+          Vista previa de actividad y solución
+        </p>
+
+        <p className="mt-1 text-[10px] text-slate-500">
+          La franja blanca muestra la cobertura inferior que se aplicará al PDF final.
+        </p>
+      </div>
+
+      <div
+        className={
+          tieneSolucion
+            ? "grid grid-cols-2 gap-3"
+            : "mx-auto grid max-w-[240px] grid-cols-1"
+        }
+      >
+        <PreviewPaginaPdf
+          archivo={item.archivo}
+          numeroPagina={1}
+          titulo="Actividad"
+          posicionCobertura={posicionCobertura}
+        />
+
+        {tieneSolucion && (
+          <PreviewPaginaPdf
+            archivo={item.archivo}
+            numeroPagina={2}
+            titulo="Solución"
+            posicionCobertura={posicionCobertura}
+          />
+        )}
+      </div>
+
+      {!tieneSolucion && (
+        <p className="mt-3 text-center text-[10px] text-slate-500">
+          Este archivo tiene una sola página, por eso se muestra únicamente la actividad.
+        </p>
+      )}
+    </div>
+  );
+}
 
 /* =========================================================
    COMPONENTE
@@ -1238,6 +1476,8 @@ export default function AdminNuevoProducto() {
                   productoId:
                     idGenerado,
                 }),
+
+              multipart: true,
             }
           );
 
@@ -1994,6 +2234,11 @@ export default function AdminNuevoProducto() {
               </>
             )}
           </div>
+
+          <PreviewActividadYSolucion
+            item={archivosPdf[0] || null}
+            posicionCobertura={posicionCobertura}
+          />
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <div className="flex items-center justify-between gap-3">
