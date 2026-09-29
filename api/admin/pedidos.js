@@ -679,9 +679,7 @@ const subirPdfProducto = async (req, res) => {
         /*
          * Permitimos hasta 12 MB.
          */
-        maximumSizeInBytes:
-          12 * 1024 * 1024,
-
+        maximumSizeInBytes: 250 * 1024 * 1024,
         addRandomSuffix: false,
 
         allowOverwrite: true,
