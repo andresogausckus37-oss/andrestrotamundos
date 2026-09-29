@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { get, put } from "@vercel/blob";
+import { del, get, put } from "@vercel/blob";
 import { handleUpload } from "@vercel/blob/client";
 import { conectarMongoDB } from "../../lib/mongodb.js";
 import { enviarEmailCompra } from "../../lib/emailCompra.js";
@@ -763,6 +763,121 @@ const listarProductosPublicos = async (
 };
 
 /* =========================
+   LISTAR PRODUCTOS ADMIN
+========================= */
+
+const listarProductosAdmin = async (req, res) => {
+  const db = await conectarMongoDB();
+
+  const productos = await db
+    .collection("productos")
+    .find({})
+    .sort({
+      creadoEn: -1,
+    })
+    .toArray();
+
+  const resultado = productos.map(
+    ({ _id, ...producto }) => ({
+      ...producto,
+      _id: _id.toString(),
+    })
+  );
+
+  return res.status(200).json({
+    productos: resultado,
+  });
+};
+
+/* =========================
+   ELIMINAR PRODUCTO
+========================= */
+
+const eliminarProducto = async (req, res) => {
+  const productoId =
+    req.body?.productoId;
+
+  if (!productoId) {
+    return res.status(400).json({
+      error: "Falta productoId.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+  const productos =
+    db.collection("productos");
+
+  const producto =
+    await productos.findOne({
+      id: productoId,
+    });
+
+  if (!producto) {
+    return res.status(404).json({
+      error: "Producto no encontrado.",
+    });
+  }
+
+  /*
+   * 1. ELIMINAR IMÁGENES PÚBLICAS
+   */
+
+  const imagenes = [
+    producto.imagenes?.portada,
+    producto.imagenes?.preview,
+    ...(producto.imagenes
+      ?.previewsIndividuales || []),
+    producto.imagenes?.portadaPDF,
+    producto.imagenes?.paginaFinalPDF,
+  ].filter(Boolean);
+
+  if (imagenes.length > 0) {
+    await del(imagenes, {
+      token:
+        process.env
+          .BLOB_PUBLIC_READ_WRITE_TOKEN,
+    });
+  }
+
+  /*
+   * 2. ELIMINAR PDF PRIVADO
+   */
+
+  if (producto.archivoPDF) {
+    await del(producto.archivoPDF, {
+      token:
+        process.env.BLOB_READ_WRITE_TOKEN,
+    });
+  }
+
+  /*
+   * 3. ELIMINAR DE MONGODB
+   *
+   * Esto se hace al final para no perder
+   * las referencias a los archivos si
+   * fallara alguna eliminación anterior.
+   */
+
+  const resultado =
+    await productos.deleteOne({
+      id: productoId,
+    });
+
+  if (resultado.deletedCount !== 1) {
+    return res.status(500).json({
+      error:
+        "No se pudo eliminar el producto de MongoDB.",
+    });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    mensaje:
+      "Producto eliminado correctamente.",
+  });
+};
+
+/* =========================
    SITEMAP XML
 ========================= */
 
@@ -1043,6 +1158,40 @@ if (accion === "sitemap") {
         res
       );
     }
+
+    /* =========================
+   LISTAR PRODUCTOS ADMIN
+========================= */
+
+if (accion === "listar-productos") {
+  if (req.method !== "GET") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await listarProductosAdmin(
+    req,
+    res
+  );
+}
+
+/* =========================
+   ELIMINAR PRODUCTO
+========================= */
+
+if (accion === "eliminar-producto") {
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await eliminarProducto(
+    req,
+    res
+  );
+}
 
     return res.status(400).json({
       error: "Acción no válida",
