@@ -763,6 +763,97 @@ const listarProductosPublicos = async (
 };
 
 /* =========================
+   SITEMAP XML
+========================= */
+
+const generarSitemap = async (req, res) => {
+  const db = await conectarMongoDB();
+
+  const productosMongo = await db
+    .collection("productos")
+    .find(
+      {},
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          actualizadoEn: 1,
+          creadoEn: 1,
+        },
+      }
+    )
+    .toArray();
+
+  /*
+   * Productos antiguos que todavía están
+   * definidos en productosDigitales.js.
+   */
+  const productosAntiguos = [
+    "50-laberintos-para-ninos",
+    "50-crucigramas-reino-animal",
+    "25-sopas-de-letras-para-adultos",
+    "100-laberintos-para-adultos",
+  ];
+
+  /*
+   * Unimos productos antiguos + MongoDB
+   * evitando IDs repetidos.
+   */
+  const idsProductos = new Set(
+    productosAntiguos
+  );
+
+  productosMongo.forEach((producto) => {
+    if (producto?.id) {
+      idsProductos.add(producto.id);
+    }
+  });
+
+  const urlsProductos = Array.from(
+    idsProductos
+  )
+    .map(
+      (id) => `
+  <url>
+    <loc>https://andreshousesitter.com/tienda/${encodeURIComponent(
+      id
+    )}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>`
+    )
+    .join("");
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://andreshousesitter.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://andreshousesitter.com/tienda</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+${urlsProductos}
+</urlset>`;
+
+  res.setHeader(
+    "Content-Type",
+    "application/xml; charset=utf-8"
+  );
+
+  res.setHeader(
+    "Cache-Control",
+    "public, s-maxage=300, stale-while-revalidate=600"
+  );
+
+  return res.status(200).send(xml);
+};
+
+/* =========================
    ENDPOINT ÚNICO
 ========================= */
 
@@ -773,6 +864,23 @@ export default async function handler(
   try {
     const accion =
       req.query?.accion;
+
+    /* =========================
+   SITEMAP PÚBLICO
+========================= */
+
+if (accion === "sitemap") {
+  if (req.method !== "GET") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await generarSitemap(
+    req,
+    res
+  );
+}
 
     /* =========================
        PRODUCTOS PÚBLICOS
