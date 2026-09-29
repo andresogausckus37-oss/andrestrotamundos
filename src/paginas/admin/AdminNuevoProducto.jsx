@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { productosDigitales } from "../../datos/productosDigitales";
+import { upload } from "@vercel/blob/client";
 
 /* =========================================================
    CONFIGURACIÓN
@@ -247,6 +248,9 @@ export default function AdminNuevoProducto() {
 
   const [guardando, setGuardando] =
     useState(false);
+
+  const [archivoPDF, setArchivoPDF] =
+    useState(null);
 
   const idGenerado = useMemo(
     () => crearId(formulario.nombre),
@@ -689,6 +693,13 @@ export default function AdminNuevoProducto() {
       return;
     }
 
+    if (!archivoPDF) {
+      alert(
+        "Falta seleccionar el PDF del producto."
+      );
+      return;
+    }
+
     try {
       setGuardando(true);
 
@@ -712,6 +723,25 @@ export default function AdminNuevoProducto() {
         urls.push(url);
       }
 
+      const pathnamePDF =
+        `productos/${idGenerado}/${idGenerado}.pdf`;
+
+      const blobPDF = await upload(
+        pathnamePDF,
+        archivoPDF,
+        {
+          access: "private",
+
+          handleUploadUrl:
+            "/api/admin/pedidos?accion=subir-pdf-producto",
+
+          clientPayload:
+            JSON.stringify({
+              productoId: idGenerado,
+            }),
+        }
+      );
+
       const productoConImagenes = {
         ...productoFinal,
 
@@ -729,6 +759,9 @@ export default function AdminNuevoProducto() {
 
           paginaFinalPDF: urls[5],
         },
+
+        archivoPDF:
+          blobPDF.pathname,
       };
 
       const respuesta = await fetch(
@@ -853,118 +886,109 @@ export default function AdminNuevoProducto() {
             )}
           </Selector>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Selector
-              titulo="Público"
-              valor={formulario.publico}
-              onChange={(v) =>
-                cambiar("publico", v)
-              }
-            >
-              <option value="">
-                Seleccionar
-              </option>
+          <Selector
+            titulo="Público"
+            valor={formulario.publico}
+            onChange={(v) =>
+              cambiar("publico", v)
+            }
+          >
+            <option value="">
+              Seleccionar público
+            </option>
 
-              {PUBLICOS.map(
-                (item) => (
-                  <option
-                    key={item}
-                    value={item}
-                  >
-                    {item}
-                  </option>
-                )
-              )}
-            </Selector>
+            {PUBLICOS.map(
+              (publico) => (
+                <option
+                  key={publico}
+                  value={publico}
+                >
+                  {publico}
+                </option>
+              )
+            )}
+          </Selector>
 
-            <Selector
-              titulo="Nivel"
-              valor={formulario.nivel}
-              onChange={(v) =>
-                cambiar("nivel", v)
-              }
-            >
-              <option value="">
-                Seleccionar
-              </option>
+          <Selector
+            titulo="Nivel"
+            valor={formulario.nivel}
+            onChange={(v) =>
+              cambiar("nivel", v)
+            }
+          >
+            <option value="">
+              Seleccionar nivel
+            </option>
 
-              {NIVELES.map(
-                (item) => (
-                  <option
-                    key={item}
-                    value={item}
-                  >
-                    {item}
-                  </option>
-                )
-              )}
-            </Selector>
-          </div>
+            {NIVELES.map(
+              (nivel) => (
+                <option
+                  key={nivel}
+                  value={nivel}
+                >
+                  {nivel}
+                </option>
+              )
+            )}
+          </Selector>
 
-          <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-3">
             <Campo
               titulo="Actividades"
               tipo="number"
-              valor={
-                formulario.laminas
-              }
+              valor={formulario.laminas}
               onChange={(v) =>
-                cambiar(
-                  "laminas",
-                  v
-                )
+                cambiar("laminas", v)
               }
             />
 
             <Campo
               titulo="Soluciones"
               tipo="number"
-              valor={
-                formulario.soluciones
-              }
+              valor={formulario.soluciones}
               onChange={(v) =>
-                cambiar(
-                  "soluciones",
-                  v
-                )
+                cambiar("soluciones", v)
+              }
+            />
+
+            <Campo
+              titulo="Páginas"
+              tipo="number"
+              valor={formulario.paginas}
+              onChange={(v) =>
+                cambiar("paginas", v)
               }
             />
           </div>
-
-          <Campo
-            titulo="Páginas (opcional)"
-            tipo="number"
-            valor={
-              formulario.paginas
-            }
-            onChange={(v) =>
-              cambiar("paginas", v)
-            }
-          />
         </Seccion>
 
-                {/* PRECIOS */}
+        {/* PRECIOS */}
 
-        <Seccion titulo="Precios">
+        <Seccion titulo="Precio en Argentina">
+          <Campo
+            titulo="Precio ARS"
+            tipo="number"
+            valor={formulario.precioARS}
+            onChange={(v) =>
+              cambiar("precioARS", v)
+            }
+          />
 
-          {/* ARGENTINA */}
+          <Check
+            titulo="Activar oferta en ARS"
+            marcado={
+              formulario.ofertaActiva
+            }
+            onChange={(v) =>
+              cambiar(
+                "ofertaActiva",
+                v
+              )
+            }
+          />
 
-          <div>
-            <div className="grid grid-cols-2 gap-3">
-              <Campo
-                titulo="Precio ARS"
-                tipo="number"
-                valor={
-                  formulario.precioARS
-                }
-                onChange={(v) =>
-                  cambiar(
-                    "precioARS",
-                    v
-                  )
-                }
-              />
-
+          {formulario.ofertaActiva && (
+            <>
               <Campo
                 titulo="Precio oferta ARS"
                 tipo="number"
@@ -978,98 +1002,70 @@ export default function AdminNuevoProducto() {
                   )
                 }
               />
-            </div>
-
-            <div className="mt-3">
-              <Check
-                titulo="Oferta Argentina"
-                activo={
-                  formulario.ofertaActiva
-                }
-                onChange={(v) =>
-                  cambiar(
-                    "ofertaActiva",
-                    v
-                  )
-                }
-              />
-            </div>
-          </div>
-
-          {/* INTERNACIONAL */}
-
-          <div className="border-t border-slate-100 pt-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Campo
-                titulo="Precio USD"
-                tipo="number"
-                paso="0.01"
-                valor={
-                  formulario.precioUSD
-                }
-                onChange={(v) =>
-                  cambiar(
-                    "precioUSD",
-                    v
-                  )
-                }
-              />
 
               <Campo
-                titulo="Precio oferta USD"
-                tipo="number"
-                paso="0.01"
+                titulo="Etiqueta de oferta"
                 valor={
-                  formulario.precioOfertaUSD
+                  formulario.etiquetaOferta
                 }
                 onChange={(v) =>
                   cambiar(
-                    "precioOfertaUSD",
+                    "etiquetaOferta",
                     v
                   )
                 }
               />
-            </div>
+            </>
+          )}
+        </Seccion>
 
-            <div className="mt-3">
-              <Check
-                titulo="Oferta internacional"
-                activo={
-                  formulario.ofertaUSDActiva
-                }
-                onChange={(v) =>
-                  cambiar(
-                    "ofertaUSDActiva",
-                    v
-                  )
-                }
-              />
-            </div>
-          </div>
+        <Seccion titulo="Precio internacional">
+          <Campo
+            titulo="Precio USD"
+            tipo="number"
+            paso="0.01"
+            valor={formulario.precioUSD}
+            onChange={(v) =>
+              cambiar("precioUSD", v)
+            }
+          />
 
-          {(formulario.ofertaActiva ||
-            formulario.ofertaUSDActiva) && (
+          <Check
+            titulo="Activar oferta en USD"
+            marcado={
+              formulario.ofertaUSDActiva
+            }
+            onChange={(v) =>
+              cambiar(
+                "ofertaUSDActiva",
+                v
+              )
+            }
+          />
+
+          {formulario.ofertaUSDActiva && (
             <Campo
-              titulo="Etiqueta oferta"
+              titulo="Precio oferta USD"
+              tipo="number"
+              paso="0.01"
               valor={
-                formulario.etiquetaOferta
+                formulario.precioOfertaUSD
               }
               onChange={(v) =>
                 cambiar(
-                  "etiquetaOferta",
+                  "precioOfertaUSD",
                   v
                 )
               }
             />
           )}
-
         </Seccion>
 
-        {/* CONFIGURACIÓN */}
+        {/* VENTA CRUZADA */}
 
-        <Seccion titulo="Configuración">
+        <Seccion titulo="Venta cruzada">
           <Selector
-            titulo="Venta cruzada"
+            titulo="Producto recomendado"
             valor={
               formulario.ventaCruzadaId
             }
@@ -1084,21 +1080,25 @@ export default function AdminNuevoProducto() {
               Sin venta cruzada
             </option>
 
-            {productosDigitales.map(
-              (producto) => (
+            {productosDigitales
+              .filter(
+                (producto) =>
+                  producto.id !==
+                  idGenerado
+              )
+              .map((producto) => (
                 <option
                   key={producto.id}
                   value={producto.id}
                 >
                   {producto.nombre}
                 </option>
-              )
-            )}
+              ))}
           </Selector>
 
           <Check
             titulo="Producto destacado"
-            activo={
+            marcado={
               formulario.destacado
             }
             onChange={(v) =>
@@ -1110,44 +1110,38 @@ export default function AdminNuevoProducto() {
           />
         </Seccion>
 
-        {/* GENERADOR */}
+        {/* GENERADOR DE TEXTOS */}
 
-        <section className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-5">
-          <div className="flex items-center gap-2">
-            <FilePlus2
-              size={18}
-              className="text-sky-600"
-            />
+        <section className="mt-6 rounded-xl border border-sky-100 bg-sky-50 p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-sky-600 shadow-sm">
+              <RefreshCw size={18} />
+            </div>
 
-            <h2 className="text-sm font-bold text-slate-900">
-              Textos del producto
-            </h2>
+            <div className="flex-1">
+              <h2 className="text-sm font-bold text-slate-900">
+                Generar textos
+              </h2>
+
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                El sistema prepara automáticamente una base para la descripción, contenido y beneficios.
+              </p>
+
+              <button
+                type="button"
+                onClick={generarTextos}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-700"
+              >
+                <RefreshCw size={14} />
+                Generar textos
+              </button>
+            </div>
           </div>
-
-          <p className="mt-2 text-xs leading-5 text-slate-600">
-            Generá una base automáticamente utilizando los datos anteriores.
-            Después podés modificar cualquier texto.
-          </p>
-
-          <button
-            type="button"
-            onClick={generarTextos}
-            disabled={
-              !formulario.categoria ||
-              !formulario.laminas ||
-              !formulario.publico ||
-              !formulario.nivel
-            }
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-40"
-          >
-            <RefreshCw size={15} />
-            Generar textos
-          </button>
         </section>
 
         {/* TEXTOS */}
 
-        <Seccion titulo="Descripción y contenido">
+        <Seccion titulo="Contenido de la ficha">
           <Area
             titulo="Descripción corta"
             valor={
@@ -1159,7 +1153,7 @@ export default function AdminNuevoProducto() {
                 v
               )
             }
-            filas={3}
+            filas={4}
           />
 
           <Area
@@ -1173,7 +1167,7 @@ export default function AdminNuevoProducto() {
                 v
               )
             }
-            filas={7}
+            filas={8}
           />
 
           <Area
@@ -1253,6 +1247,72 @@ export default function AdminNuevoProducto() {
           )}
         </Seccion>
 
+        {/* PDF PRIVADO */}
+
+        <Seccion titulo="PDF del producto">
+          <p className="text-xs leading-5 text-slate-500">
+            Seleccioná el PDF final que recibirá el comprador.
+            Se subirá automáticamente al almacenamiento privado.
+          </p>
+
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center transition hover:border-sky-400 hover:bg-sky-50">
+            <Upload
+              size={20}
+              className="text-sky-600"
+            />
+
+            <span className="text-xs font-semibold text-slate-700">
+              {archivoPDF
+                ? archivoPDF.name
+                : "Seleccionar PDF"}
+            </span>
+
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              disabled={guardando}
+              onChange={(e) =>
+                setArchivoPDF(
+                  e.target.files?.[0] ||
+                    null
+                )
+              }
+            />
+          </label>
+
+          {archivoPDF && (
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-semibold text-emerald-700">
+                  {archivoPDF.name}
+                </p>
+
+                <p className="mt-0.5 text-[10px] text-emerald-600">
+                  {(
+                    archivoPDF.size /
+                    1024 /
+                    1024
+                  ).toFixed(2)}{" "}
+                  MB
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={guardando}
+                onClick={() =>
+                  setArchivoPDF(null)
+                }
+                className="rounded-lg p-2 text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"
+                aria-label="Eliminar PDF"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
+        </Seccion>
+
         {/* RESULTADO */}
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -1285,10 +1345,9 @@ export default function AdminNuevoProducto() {
             className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {guardando
-              ? "Subiendo imágenes y guardando..."
+              ? "Subiendo archivos y guardando..."
               : "Agregar producto"}
           </button>
-
         </section>
       </div>
     </main>
@@ -1323,20 +1382,24 @@ function ImagenProducto({
             Seleccionar imagen
           </span>
 
+          <span className="mt-1 text-[10px] text-slate-400">
+            JPG, PNG o WebP
+          </span>
+
           <input
             type="file"
             accept="image/*"
-            disabled={
-              deshabilitado
-            }
+            disabled={deshabilitado}
             className="hidden"
             onChange={(e) => {
               const archivo =
                 e.target.files?.[0];
 
-              onSeleccionar(
-                archivo
-              );
+              if (archivo) {
+                onSeleccionar(
+                  archivo
+                );
+              }
 
               e.target.value = "";
             }}
@@ -1344,37 +1407,39 @@ function ImagenProducto({
         </label>
       ) : (
         <div className="mt-3">
-          <div className="flex h-48 items-center justify-center overflow-hidden rounded-lg bg-white">
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
             <img
               src={
                 imagen.urlOptimizada
               }
               alt={titulo}
-              className="h-full w-full object-contain"
+              className="aspect-square w-full object-cover"
             />
           </div>
 
           <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="text-[10px] text-slate-500">
-              {(
-                imagen.pesoOptimizado /
-                1024
-              ).toFixed(1)}{" "}
-              KB · WebP
-            </p>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold text-emerald-600">
+                Imagen optimizada
+              </p>
+
+              <p className="mt-0.5 text-[10px] text-slate-400">
+                {(
+                  imagen.pesoOptimizado /
+                  1024
+                ).toFixed(0)}{" "}
+                KB
+              </p>
+            </div>
 
             <button
               type="button"
+              disabled={deshabilitado}
               onClick={onEliminar}
-              disabled={
-                deshabilitado
-              }
-              className="rounded-lg border border-rose-100 bg-white p-2 text-rose-600 disabled:opacity-40"
+              className="rounded-lg p-2 text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"
               aria-label={`Eliminar ${titulo}`}
             >
-              <Trash2
-                size={14}
-              />
+              <Trash2 size={16} />
             </button>
           </div>
         </div>
@@ -1389,11 +1454,18 @@ function Seccion({
 }) {
   return (
     <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-slate-900">
-        {titulo}
-      </h2>
+      <div className="mb-4 flex items-center gap-2">
+        <FilePlus2
+          size={16}
+          className="text-sky-600"
+        />
 
-      <div className="mt-4 space-y-4">
+        <h2 className="text-sm font-bold text-slate-900">
+          {titulo}
+        </h2>
+      </div>
+
+      <div className="space-y-4">
         {children}
       </div>
     </section>
@@ -1406,10 +1478,11 @@ function Campo({
   onChange,
   tipo = "text",
   paso,
+  placeholder = "",
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+      <span className="mb-1.5 block text-xs font-semibold text-slate-700">
         {titulo}
       </span>
 
@@ -1417,12 +1490,13 @@ function Campo({
         type={tipo}
         step={paso}
         value={valor}
+        placeholder={placeholder}
         onChange={(e) =>
           onChange(
             e.target.value
           )
         }
-        className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-sky-400"
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
       />
     </label>
   );
@@ -1436,7 +1510,7 @@ function Selector({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+      <span className="mb-1.5 block text-xs font-semibold text-slate-700">
         {titulo}
       </span>
 
@@ -1447,7 +1521,7 @@ function Selector({
             e.target.value
           )
         }
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400"
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
       >
         {children}
       </select>
@@ -1457,22 +1531,24 @@ function Selector({
 
 function Area({
   titulo,
-  ayuda,
   valor,
   onChange,
-  filas,
+  filas = 5,
+  ayuda = "",
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
-        {titulo}
-      </span>
-
-      {ayuda && (
-        <span className="mb-1.5 block text-[10px] text-slate-400">
-          {ayuda}
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold text-slate-700">
+          {titulo}
         </span>
-      )}
+
+        {ayuda && (
+          <span className="text-[10px] text-slate-400">
+            {ayuda}
+          </span>
+        )}
+      </div>
 
       <textarea
         rows={filas}
@@ -1482,7 +1558,7 @@ function Area({
             e.target.value
           )
         }
-        className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2.5 text-sm leading-6 outline-none focus:border-sky-400"
+        className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
       />
     </label>
   );
@@ -1490,20 +1566,20 @@ function Area({
 
 function Check({
   titulo,
-  activo,
+  marcado,
   onChange,
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-slate-50 px-3 py-3">
+    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
       <input
         type="checkbox"
-        checked={activo}
+        checked={marcado}
         onChange={(e) =>
           onChange(
             e.target.checked
           )
         }
-        className="h-4 w-4"
+        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
       />
 
       <span className="text-xs font-semibold text-slate-700">

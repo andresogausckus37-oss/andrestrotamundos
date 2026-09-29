@@ -1,6 +1,13 @@
 import { get } from "@vercel/blob";
 import { conectarMongoDB } from "../../lib/mongodb.js";
 
+/* =====================================================
+   ARCHIVOS DE PRODUCTOS ANTIGUOS
+
+   Se mantiene temporalmente para compatibilidad.
+   Los productos nuevos obtendrán archivoPDF desde MongoDB.
+===================================================== */
+
 const ARCHIVOS_PRODUCTOS = {
   "50-laberintos-para-ninos":
     "50-laberintos-para-niños.pdf",
@@ -9,13 +16,60 @@ const ARCHIVOS_PRODUCTOS = {
     "50-crucigramas-reino-animal-con-soluciones.pdf",
 
   "25-sopas-de-letras-para-adultos":
-  "25-sopas-de-letras-para-adultos.pdf",
+    "25-sopas-de-letras-para-adultos.pdf",
 
   "100-laberintos-para-adultos":
     "100-laberintos-adultos-nivel-imposible.pdf",
 };
 
-export default async function handler(req, res) {
+/* =====================================================
+   OBTENER ARCHIVO PDF DEL PRODUCTO
+
+   1. Busca el producto en MongoDB.
+   2. Si tiene archivoPDF, utiliza ese archivo.
+   3. Si no existe, utiliza el mapa antiguo.
+===================================================== */
+
+const obtenerArchivoProducto = async (
+  db,
+  productoId
+) => {
+  const productoMongo =
+    await db
+      .collection("productos")
+      .findOne(
+        {
+          id: productoId,
+        },
+        {
+          projection: {
+            archivoPDF: 1,
+          },
+        }
+      );
+
+  if (
+    productoMongo?.archivoPDF &&
+    typeof productoMongo.archivoPDF ===
+      "string"
+  ) {
+    return productoMongo.archivoPDF;
+  }
+
+  return (
+    ARCHIVOS_PRODUCTOS[productoId] ||
+    null
+  );
+};
+
+/* =====================================================
+   HANDLER
+===================================================== */
+
+export default async function handler(
+  req,
+  res
+) {
   if (req.method !== "GET") {
     return res.status(405).json({
       error: "Método no permitido",
@@ -23,8 +77,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { pedidoId, productoId } =
-      req.query;
+    const {
+      pedidoId,
+      productoId,
+    } = req.query;
 
     if (!pedidoId) {
       return res.status(400).json({
@@ -32,19 +88,38 @@ export default async function handler(req, res) {
       });
     }
 
-    const db = await conectarMongoDB();
+    /* =====================================================
+       CONECTAR A MONGODB
+    ===================================================== */
 
-    const pedido = await db
-      .collection("pedidos")
-      .findOne({ pedidoId });
+    const db =
+      await conectarMongoDB();
+
+    /* =====================================================
+       BUSCAR PEDIDO
+    ===================================================== */
+
+    const pedido =
+      await db
+        .collection("pedidos")
+        .findOne({
+          pedidoId,
+        });
 
     if (!pedido) {
       return res.status(404).json({
-        error: "Pedido no encontrado",
+        error:
+          "Pedido no encontrado",
       });
     }
 
-    if (pedido.estado !== "aprobado") {
+    /* =====================================================
+       VALIDAR PAGO
+    ===================================================== */
+
+    if (
+      pedido.estado !== "aprobado"
+    ) {
       return res.status(403).json({
         error:
           "El pago todavía no está aprobado",
@@ -56,7 +131,9 @@ export default async function handler(req, res) {
     ===================================================== */
 
     const productosComprados =
-      Array.isArray(pedido.productos) &&
+      Array.isArray(
+        pedido.productos
+      ) &&
       pedido.productos.length > 0
         ? pedido.productos.map(
             (producto) =>
@@ -105,13 +182,14 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       ARCHIVO
+       OBTENER ARCHIVO DEL PRODUCTO
     ===================================================== */
 
     const archivo =
-      ARCHIVOS_PRODUCTOS[
+      await obtenerArchivoProducto(
+        db,
         productoSolicitado
-      ];
+      );
 
     if (!archivo) {
       return res.status(404).json({
@@ -120,60 +198,70 @@ export default async function handler(req, res) {
       });
     }
 
-    const resultado = await get(
-      archivo,
-      {
+    /* =====================================================
+       OBTENER PDF DEL BLOB PRIVADO
+    ===================================================== */
+
+    const resultado =
+      await get(archivo, {
         access: "private",
-      }
-    );
+      });
 
     if (!resultado) {
       return res.status(404).json({
-        error: "PDF no encontrado",
+        error:
+          "PDF no encontrado",
       });
     }
 
     /* =====================================================
        RESERVAR DESCARGA
-       Evita múltiples solicitudes simultáneas
+
+       Evita múltiples solicitudes simultáneas.
     ===================================================== */
 
-    const fechaDescarga = new Date();
+    const fechaDescarga =
+      new Date();
 
-    const actualizacion = await db
-      .collection("pedidos")
-      .updateOne(
-        {
-          pedidoId,
-          estado: "aprobado",
-          historialDescargas: {
-            $not: {
-              $elemMatch: {
-                productoId:
-                  productoSolicitado,
+    const actualizacion =
+      await db
+        .collection("pedidos")
+        .updateOne(
+          {
+            pedidoId,
+
+            estado:
+              "aprobado",
+
+            historialDescargas: {
+              $not: {
+                $elemMatch: {
+                  productoId:
+                    productoSolicitado,
+                },
               },
             },
           },
-        },
-        {
-          $inc: {
-            descargas: 1,
-          },
-
-          $push: {
-            historialDescargas: {
-              productoId:
-                productoSolicitado,
-
-              fecha:
-                fechaDescarga,
+          {
+            $inc: {
+              descargas: 1,
             },
-          },
-        }
-      );
+
+            $push: {
+              historialDescargas: {
+                productoId:
+                  productoSolicitado,
+
+                fecha:
+                  fechaDescarga,
+              },
+            },
+          }
+        );
 
     if (
-      actualizacion.modifiedCount !== 1
+      actualizacion.modifiedCount !==
+      1
     ) {
       return res.status(403).json({
         error:
@@ -191,9 +279,22 @@ export default async function handler(req, res) {
         "application/pdf"
     );
 
+    /*
+     * Si archivoPDF contiene una ruta como:
+     * productos/mi-producto/archivo.pdf
+     *
+     * descargamos solamente con el nombre:
+     * archivo.pdf
+     */
+    const nombreDescarga =
+      archivo
+        .split("/")
+        .pop() ||
+      `${productoSolicitado}.pdf`;
+
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${archivo}"`
+      `attachment; filename="${nombreDescarga}"`
     );
 
     res.setHeader(
@@ -205,10 +306,14 @@ export default async function handler(req, res) {
       resultado.stream.getReader();
 
     while (true) {
-      const { done, value } =
-        await reader.read();
+      const {
+        done,
+        value,
+      } = await reader.read();
 
-      if (done) break;
+      if (done) {
+        break;
+      }
 
       res.write(
         Buffer.from(value)

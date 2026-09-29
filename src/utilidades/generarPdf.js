@@ -261,16 +261,50 @@ export const generarPdf = async ({
   if (paginaFinal?.archivo) {
     await agregarImagen({
       pdf,
-      archivo:
-        paginaFinal.archivo,
+      archivo: paginaFinal.archivo,
       esPrimeraPagina:
         indicePagina === 0,
       modo: "sin-recortar",
     });
   }
 
-  pdf.save(
+  // ============================================================
+  // CREAR PDF FINAL
+  // ============================================================
+
+  const nombreFinal =
     nombreArchivo ||
-      CONFIG_PDF.nombreArchivo
+    CONFIG_PDF.nombreArchivo;
+
+  /*
+   * Generamos el PDF como Blob.
+   * Este mismo archivo podrá utilizarse después
+   * para subirlo automáticamente al Blob privado.
+   */
+  const blobPdf = pdf.output("blob");
+
+  const archivoPdf = new File(
+    [blobPdf],
+    nombreFinal,
+    {
+      type: "application/pdf",
+    }
   );
+
+  // ============================================================
+  // DESCARGAR AL DISPOSITIVO
+  // ============================================================
+
+  pdf.save(nombreFinal);
+
+  // ============================================================
+  // DEVOLVER PDF GENERADO
+  // ============================================================
+
+  return {
+    blob: blobPdf,
+    archivo: archivoPdf,
+    nombreArchivo: nombreFinal,
+    bytes: blobPdf.size,
+  };
 };
