@@ -943,40 +943,6 @@ const editarProducto = async (req, res) => {
 };
 
 /* =========================
-   OBTENER PRODUCTO ADMIN
-========================= */
-
-if (accion === "obtener-producto") {
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      error: "Método no permitido",
-    });
-  }
-
-  return await obtenerProductoAdmin(
-    req,
-    res
-  );
-}
-
-/* =========================
-   EDITAR PRODUCTO
-========================= */
-
-if (accion === "editar-producto") {
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Método no permitido",
-    });
-  }
-
-  return await editarProducto(
-    req,
-    res
-  );
-}
-
-/* =========================
    ELIMINAR PRODUCTO
 ========================= */
 
@@ -1358,6 +1324,40 @@ if (accion === "listar-productos") {
   }
 
   return await listarProductosAdmin(
+    req,
+    res
+  );
+}
+
+    /* =========================
+   OBTENER PRODUCTO ADMIN
+========================= */
+
+if (accion === "obtener-producto") {
+  if (req.method !== "GET") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await obtenerProductoAdmin(
+    req,
+    res
+  );
+}
+
+/* =========================
+   EDITAR PRODUCTO
+========================= */
+
+if (accion === "editar-producto") {
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await editarProducto(
     req,
     res
   );
