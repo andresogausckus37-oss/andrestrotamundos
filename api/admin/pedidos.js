@@ -544,16 +544,17 @@ const subirImagenProducto = async (req, res) => {
     `productos/${productoId}/imagen-${numero}.webp`;
 
   const blob = await put(
-    pathname,
-    buffer,
-    {
-      access: "public",
-      contentType: "image/webp",
-      addRandomSuffix: false,
-      token:
-        process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
-    }
-  );
+  pathname,
+  buffer,
+  {
+    access: "public",
+    contentType: "image/webp",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    token:
+      process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
+  }
+);
 
   return res.status(201).json({
     ok: true,
@@ -788,6 +789,192 @@ const listarProductosAdmin = async (req, res) => {
     productos: resultado,
   });
 };
+
+/* =========================
+   OBTENER PRODUCTO ADMIN
+========================= */
+
+const obtenerProductoAdmin = async (req, res) => {
+  const productoId = req.query?.productoId;
+
+  if (!productoId) {
+    return res.status(400).json({
+      error: "Falta productoId.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+  const productos = db.collection("productos");
+
+  const producto = await productos.findOne({
+    id: productoId,
+  });
+
+  if (!producto) {
+    return res.status(404).json({
+      error: "Producto no encontrado.",
+    });
+  }
+
+  const {
+    _id,
+    ...productoSinObjectId
+  } = producto;
+
+  return res.status(200).json({
+    producto: {
+      ...productoSinObjectId,
+      _id: _id.toString(),
+    },
+  });
+};
+
+/* =========================
+   EDITAR PRODUCTO
+========================= */
+
+const editarProducto = async (req, res) => {
+  const productoId = req.body?.productoId;
+  const cambios = req.body?.producto;
+
+  if (!productoId) {
+    return res.status(400).json({
+      error: "Falta productoId.",
+    });
+  }
+
+  if (
+    !cambios ||
+    typeof cambios !== "object" ||
+    Array.isArray(cambios)
+  ) {
+    return res.status(400).json({
+      error: "Faltan los datos del producto.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+  const productos = db.collection("productos");
+
+  const productoActual = await productos.findOne({
+    id: productoId,
+  });
+
+  if (!productoActual) {
+    return res.status(404).json({
+      error: "Producto no encontrado.",
+    });
+  }
+
+  /*
+   * El ID no se modifica.
+   *
+   * Así mantenemos estables:
+   * - URL de la tienda
+   * - pedidos existentes
+   * - imágenes
+   * - PDF privado
+   * - sitemap
+   */
+
+  const {
+    _id,
+    id,
+    creadoEn,
+    ...datosEditables
+  } = cambios;
+
+  const productoActualizado = {
+    ...datosEditables,
+
+    id: productoActual.id,
+
+    creadoEn:
+      productoActual.creadoEn ||
+      new Date(),
+
+    actualizadoEn: new Date(),
+  };
+
+  /*
+   * Si desde el formulario no llega
+   * un nuevo PDF, conservamos el actual.
+   */
+
+  if (!productoActualizado.archivoPDF) {
+    productoActualizado.archivoPDF =
+      productoActual.archivoPDF;
+  }
+
+  /*
+   * Si no llegan imágenes nuevas,
+   * conservamos las actuales.
+   */
+
+  if (!productoActualizado.imagenes) {
+    productoActualizado.imagenes =
+      productoActual.imagenes;
+  }
+
+  const resultado = await productos.updateOne(
+    {
+      id: productoId,
+    },
+    {
+      $set: productoActualizado,
+    }
+  );
+
+  if (resultado.matchedCount !== 1) {
+    return res.status(404).json({
+      error: "Producto no encontrado.",
+    });
+  }
+
+  return res.status(200).json({
+    ok: true,
+
+    actualizado:
+      resultado.modifiedCount === 1,
+
+    mensaje:
+      "Producto actualizado correctamente.",
+  });
+};
+
+/* =========================
+   OBTENER PRODUCTO ADMIN
+========================= */
+
+if (accion === "obtener-producto") {
+  if (req.method !== "GET") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await obtenerProductoAdmin(
+    req,
+    res
+  );
+}
+
+/* =========================
+   EDITAR PRODUCTO
+========================= */
+
+if (accion === "editar-producto") {
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await editarProducto(
+    req,
+    res
+  );
+}
 
 /* =========================
    ELIMINAR PRODUCTO

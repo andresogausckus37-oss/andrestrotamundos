@@ -1,15 +1,20 @@
 import {
   Loader2,
   Package,
+  Pencil,
   Plus,
   RefreshCw,
   Trash2,
 } from "lucide-react";
+
 import {
   useEffect,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
+
+import {
+  useNavigate,
+} from "react-router-dom";
 
 export default function AdminProductos() {
   const navigate = useNavigate();
@@ -69,6 +74,20 @@ export default function AdminProductos() {
   useEffect(() => {
     cargarProductos();
   }, []);
+
+  /* =========================
+     EDITAR PRODUCTO
+  ========================= */
+
+  const editarProducto = (
+    producto
+  ) => {
+    navigate(
+      `/admin/productos/editar/${encodeURIComponent(
+        producto.id
+      )}`
+    );
+  };
 
   /* =========================
      ELIMINAR PRODUCTO
@@ -159,6 +178,7 @@ export default function AdminProductos() {
   return (
     <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24">
       <div className="mx-auto max-w-5xl">
+
         {/* ENCABEZADO */}
 
         <div className="mb-5 flex items-start justify-between gap-3">
@@ -244,6 +264,7 @@ export default function AdminProductos() {
                   key={producto.id}
                   className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
                 >
+
                   {/* IMAGEN */}
 
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100">
@@ -288,9 +309,33 @@ export default function AdminProductos() {
                     </p>
                   </div>
 
-                  {/* ELIMINAR */}
+                  {/* ACCIONES */}
 
-                  <div className="flex shrink-0 items-center">
+                  <div className="flex shrink-0 items-center gap-2">
+
+                    {/* EDITAR */}
+
+                    <button
+                      type="button"
+                      disabled={
+                        eliminando ===
+                        producto.id
+                      }
+                      onClick={() =>
+                        editarProducto(
+                          producto
+                        )
+                      }
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-sky-200 text-sky-600 transition hover:bg-sky-50 disabled:opacity-50"
+                      title="Editar producto"
+                    >
+                      <Pencil
+                        size={14}
+                      />
+                    </button>
+
+                    {/* ELIMINAR */}
+
                     <button
                       type="button"
                       disabled={

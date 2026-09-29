@@ -1,4 +1,9 @@
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   FilePlus2,
   RefreshCw,
@@ -6,7 +11,6 @@ import {
   Upload,
 } from "lucide-react";
 
-import { productosDigitales } from "../../datos/productosDigitales";
 import { upload } from "@vercel/blob/client";
 
 /* =========================================================
@@ -14,11 +18,26 @@ import { upload } from "@vercel/blob/client";
 ========================================================= */
 
 const CATEGORIAS = [
-  { valor: "laberintos", nombre: "Laberintos" },
-  { valor: "crucigramas", nombre: "Crucigramas" },
-  { valor: "sopa-de-letras", nombre: "Sopa de letras" },
-  { valor: "rompecabezas", nombre: "Rompecabezas" },
-  { valor: "sudoku", nombre: "Sudoku" },
+  {
+    valor: "laberintos",
+    nombre: "Laberintos",
+  },
+  {
+    valor: "crucigramas",
+    nombre: "Crucigramas",
+  },
+  {
+    valor: "sopa-de-letras",
+    nombre: "Sopa de letras",
+  },
+  {
+    valor: "rompecabezas",
+    nombre: "Rompecabezas",
+  },
+  {
+    valor: "sudoku",
+    nombre: "Sudoku",
+  },
   {
     valor: "palabras-desordenadas",
     nombre: "Palabras desordenadas",
@@ -61,154 +80,232 @@ const crearId = (texto) =>
   texto
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-+|-+$/g,
+      ""
+    );
 
-const obtenerNombreCategoria = (categoria) =>
+const obtenerNombreCategoria = (
+  categoria
+) =>
   CATEGORIAS.find(
-    (item) => item.valor === categoria
-  )?.nombre.toLowerCase() || "actividades";
+    (item) =>
+      item.valor === categoria
+  )?.nombre.toLowerCase() ||
+  "actividades";
 
-const pluralActividad = (categoria) => {
+const pluralActividad = (
+  categoria
+) => {
   const nombres = {
     laberintos: "laberintos",
-    crucigramas: "crucigramas",
-    "sopa-de-letras": "sopas de letras",
-    rompecabezas: "rompecabezas",
-    sudoku: "sudokus",
+
+    crucigramas:
+      "crucigramas",
+
+    "sopa-de-letras":
+      "sopas de letras",
+
+    rompecabezas:
+      "rompecabezas",
+
+    sudoku:
+      "sudokus",
+
     "palabras-desordenadas":
       "actividades de palabras desordenadas",
   };
 
-  return nombres[categoria] || "actividades";
+  return (
+    nombres[categoria] ||
+    "actividades"
+  );
 };
 
 /* =========================================================
    OPTIMIZAR IMAGEN
 ========================================================= */
 
-const procesarImagen = (archivo) =>
-  new Promise((resolve, reject) => {
-    const urlOriginal = URL.createObjectURL(archivo);
-    const imagen = new Image();
-
-    imagen.onload = () => {
-      const escala = Math.min(
-        1,
-        ANCHO_OBJETIVO / imagen.naturalWidth
-      );
-
-      const ancho = Math.round(
-        imagen.naturalWidth * escala
-      );
-
-      const alto = Math.round(
-        imagen.naturalHeight * escala
-      );
-
-      const canvas = document.createElement("canvas");
-
-      canvas.width = ancho;
-      canvas.height = alto;
-
-      const ctx = canvas.getContext("2d");
-
-      if (!ctx) {
-        URL.revokeObjectURL(urlOriginal);
-
-        reject(
-          new Error("No se pudo procesar la imagen.")
+const procesarImagen = (
+  archivo
+) =>
+  new Promise(
+    (resolve, reject) => {
+      const urlOriginal =
+        URL.createObjectURL(
+          archivo
         );
 
-        return;
-      }
+      const imagen =
+        new Image();
 
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-
-      ctx.drawImage(
-        imagen,
-        0,
-        0,
-        ancho,
-        alto
-      );
-
-      canvas.toBlob(
-        (blob) => {
-          URL.revokeObjectURL(urlOriginal);
-
-          if (!blob) {
-            reject(
-              new Error(
-                "No se pudo convertir la imagen a WebP."
-              )
-            );
-
-            return;
-          }
-
-          const archivoOptimizado = new File(
-            [blob],
-            "imagen.webp",
-            {
-              type: "image/webp",
-            }
+      imagen.onload = () => {
+        const escala =
+          Math.min(
+            1,
+            ANCHO_OBJETIVO /
+              imagen.naturalWidth
           );
 
-          resolve({
-            archivoOptimizado,
+        const ancho =
+          Math.round(
+            imagen.naturalWidth *
+              escala
+          );
 
-            urlOptimizada:
-              URL.createObjectURL(
-                archivoOptimizado
-              ),
+        const alto =
+          Math.round(
+            imagen.naturalHeight *
+              escala
+          );
 
-            pesoOriginal: archivo.size,
-            pesoOptimizado:
-              archivoOptimizado.size,
-          });
-        },
-        "image/webp",
-        CALIDAD_WEBP
+        const canvas =
+          document.createElement(
+            "canvas"
+          );
+
+        canvas.width = ancho;
+        canvas.height = alto;
+
+        const ctx =
+          canvas.getContext(
+            "2d"
+          );
+
+        if (!ctx) {
+          URL.revokeObjectURL(
+            urlOriginal
+          );
+
+          reject(
+            new Error(
+              "No se pudo procesar la imagen."
+            )
+          );
+
+          return;
+        }
+
+        ctx.imageSmoothingEnabled =
+          true;
+
+        ctx.imageSmoothingQuality =
+          "high";
+
+        ctx.drawImage(
+          imagen,
+          0,
+          0,
+          ancho,
+          alto
+        );
+
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(
+              urlOriginal
+            );
+
+            if (!blob) {
+              reject(
+                new Error(
+                  "No se pudo convertir la imagen a WebP."
+                )
+              );
+
+              return;
+            }
+
+            const archivoOptimizado =
+              new File(
+                [blob],
+                "imagen.webp",
+                {
+                  type:
+                    "image/webp",
+                }
+              );
+
+            resolve({
+              archivoOptimizado,
+
+              urlOptimizada:
+                URL.createObjectURL(
+                  archivoOptimizado
+                ),
+
+              pesoOriginal:
+                archivo.size,
+
+              pesoOptimizado:
+                archivoOptimizado.size,
+            });
+          },
+          "image/webp",
+          CALIDAD_WEBP
+        );
+      };
+
+      imagen.onerror = () => {
+        URL.revokeObjectURL(
+          urlOriginal
+        );
+
+        reject(
+          new Error(
+            "No se pudo leer la imagen."
+          )
+        );
+      };
+
+      imagen.src =
+        urlOriginal;
+    }
+  );
+
+const archivoADataUrl = (
+  archivo
+) =>
+  new Promise(
+    (resolve, reject) => {
+      const lector =
+        new FileReader();
+
+      lector.onload = () =>
+        resolve(
+          lector.result
+        );
+
+      lector.onerror = () =>
+        reject(
+          new Error(
+            "No se pudo preparar la imagen."
+          )
+        );
+
+      lector.readAsDataURL(
+        archivo
       );
-    };
-
-    imagen.onerror = () => {
-      URL.revokeObjectURL(urlOriginal);
-
-      reject(
-        new Error("No se pudo leer la imagen.")
-      );
-    };
-
-    imagen.src = urlOriginal;
-  });
-
-const archivoADataUrl = (archivo) =>
-  new Promise((resolve, reject) => {
-    const lector = new FileReader();
-
-    lector.onload = () =>
-      resolve(lector.result);
-
-    lector.onerror = () =>
-      reject(
-        new Error(
-          "No se pudo preparar la imagen."
-        )
-      );
-
-    lector.readAsDataURL(archivo);
-  });
+    }
+  );
 
 /* =========================================================
    COMPONENTE
 ========================================================= */
 
 export default function AdminNuevoProducto() {
-  const [formulario, setFormulario] = useState({
+  const [
+    formulario,
+    setFormulario,
+  ] = useState({
     nombre: "",
     categoria: "",
     publico: "",
@@ -226,7 +323,8 @@ export default function AdminNuevoProducto() {
     ofertaUSDActiva: false,
     precioOfertaUSD: "",
 
-    etiquetaOferta: "Oferta lanzamiento",
+    etiquetaOferta:
+      "Oferta lanzamiento",
 
     ventaCruzadaId: "",
     destacado: false,
@@ -237,7 +335,36 @@ export default function AdminNuevoProducto() {
     beneficios: "",
   });
 
-  const [imagenes, setImagenes] = useState(
+  /*
+   * PRODUCTOS EXISTENTES
+   *
+   * Antes se obtenían desde
+   * productosDigitales.js.
+   *
+   * Ahora MongoDB es la única
+   * fuente utilizada por este
+   * formulario.
+   */
+
+  const [
+    productosDisponibles,
+    setProductosDisponibles,
+  ] = useState([]);
+
+  const [
+    cargandoProductos,
+    setCargandoProductos,
+  ] = useState(true);
+
+  const [
+    errorProductos,
+    setErrorProductos,
+  ] = useState("");
+
+  const [
+    imagenes,
+    setImagenes,
+  ] = useState(
     Array(6).fill(null)
   );
 
@@ -246,127 +373,241 @@ export default function AdminNuevoProducto() {
     setProcesandoImagen,
   ] = useState(false);
 
-  const [guardando, setGuardando] =
-    useState(false);
+  const [
+    guardando,
+    setGuardando,
+  ] = useState(false);
 
-  const [archivoPDF, setArchivoPDF] =
-    useState(null);
+  const [
+    archivoPDF,
+    setArchivoPDF,
+  ] = useState(null);
 
-  const idGenerado = useMemo(
-    () => crearId(formulario.nombre),
-    [formulario.nombre]
-  );
+  /* =======================================================
+     CARGAR PRODUCTOS DESDE MONGODB
+  ======================================================= */
 
-  const idRepetido =
-    idGenerado &&
-    productosDigitales.some(
-      (producto) =>
-        producto.id === idGenerado
+  const cargarProductos =
+    async () => {
+      try {
+        setErrorProductos("");
+
+        const respuesta =
+          await fetch(
+            "/api/admin/pedidos?accion=listar-productos"
+          );
+
+        const datos =
+          await respuesta.json();
+
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.error ||
+              "No se pudieron cargar los productos."
+          );
+        }
+
+        setProductosDisponibles(
+          datos.productos || []
+        );
+      } catch (error) {
+        console.error(
+          "Error cargando productos:",
+          error
+        );
+
+        setProductosDisponibles(
+          []
+        );
+
+        setErrorProductos(
+          error.message ||
+            "No se pudieron cargar los productos."
+        );
+      } finally {
+        setCargandoProductos(
+          false
+        );
+      }
+    };
+
+  useEffect(() => {
+    cargarProductos();
+  }, []);
+
+  /* =======================================================
+     ID DEL PRODUCTO
+  ======================================================= */
+
+  const idGenerado =
+    useMemo(
+      () =>
+        crearId(
+          formulario.nombre
+        ),
+      [formulario.nombre]
     );
 
-  const cambiar = (campo, valor) => {
-    setFormulario((actual) => ({
-      ...actual,
-      [campo]: valor,
-    }));
+  /*
+   * Comprobación de ID duplicado
+   * directamente contra los
+   * productos obtenidos de MongoDB.
+   */
+
+  const idRepetido =
+    Boolean(idGenerado) &&
+    productosDisponibles.some(
+      (producto) =>
+        producto.id ===
+        idGenerado
+    );
+
+  const cambiar = (
+    campo,
+    valor
+  ) => {
+    setFormulario(
+      (actual) => ({
+        ...actual,
+        [campo]: valor,
+      })
+    );
   };
 
   /* =======================================================
      IMÁGENES
   ======================================================= */
 
-  const seleccionarImagen = async (
-    indice,
-    archivo
+  const seleccionarImagen =
+    async (
+      indice,
+      archivo
+    ) => {
+      if (!archivo) {
+        return;
+      }
+
+      try {
+        setProcesandoImagen(
+          true
+        );
+
+        const resultado =
+          await procesarImagen(
+            archivo
+          );
+
+        setImagenes(
+          (actuales) => {
+            const nuevas = [
+              ...actuales,
+            ];
+
+            if (
+              nuevas[indice]
+                ?.urlOptimizada
+            ) {
+              URL.revokeObjectURL(
+                nuevas[indice]
+                  .urlOptimizada
+              );
+            }
+
+            nuevas[indice] =
+              resultado;
+
+            return nuevas;
+          }
+        );
+      } catch (error) {
+        console.error(
+          error
+        );
+
+        alert(
+          error.message
+        );
+      } finally {
+        setProcesandoImagen(
+          false
+        );
+      }
+    };
+
+  const eliminarImagen = (
+    indice
   ) => {
-    if (!archivo) return;
-
-    try {
-      setProcesandoImagen(true);
-
-      const resultado =
-        await procesarImagen(archivo);
-
-      setImagenes((actuales) => {
-        const nuevas = [...actuales];
+    setImagenes(
+      (actuales) => {
+        const nuevas = [
+          ...actuales,
+        ];
 
         if (
-          nuevas[indice]?.urlOptimizada
+          nuevas[indice]
+            ?.urlOptimizada
         ) {
           URL.revokeObjectURL(
-            nuevas[indice].urlOptimizada
+            nuevas[indice]
+              .urlOptimizada
           );
         }
 
-        nuevas[indice] = resultado;
+        nuevas[indice] =
+          null;
 
         return nuevas;
-      });
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    } finally {
-      setProcesandoImagen(false);
-    }
+      }
+    );
   };
 
-  const eliminarImagen = (indice) => {
-    setImagenes((actuales) => {
-      const nuevas = [...actuales];
+  const subirImagen =
+    async (
+      imagen,
+      numero
+    ) => {
+      const imagenBase64 =
+        await archivoADataUrl(
+          imagen
+            .archivoOptimizado
+        );
 
-      if (
-        nuevas[indice]?.urlOptimizada
-      ) {
-        URL.revokeObjectURL(
-          nuevas[indice].urlOptimizada
+      const respuesta =
+        await fetch(
+          "/api/admin/pedidos?accion=subir-imagen-producto",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                productoId:
+                  idGenerado,
+
+                numeroImagen:
+                  numero,
+
+                imagenBase64,
+              }),
+          }
+        );
+
+      const datos =
+        await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.error ||
+            `No se pudo subir la imagen ${numero}.`
         );
       }
 
-      nuevas[indice] = null;
-
-      return nuevas;
-    });
-  };
-
-  const subirImagen = async (
-    imagen,
-    numero
-  ) => {
-    const imagenBase64 =
-      await archivoADataUrl(
-        imagen.archivoOptimizado
-      );
-
-    const respuesta = await fetch(
-      "/api/admin/pedidos?accion=subir-imagen-producto",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify({
-          productoId: idGenerado,
-          numeroImagen: numero,
-          imagenBase64,
-        }),
-      }
-    );
-
-    const datos =
-      await respuesta.json();
-
-    if (!respuesta.ok) {
-      throw new Error(
-        datos.error ||
-          `No se pudo subir la imagen ${numero}.`
-      );
-    }
-
-    return datos.url;
-  };
+      return datos.url;
+    };
 
   /* =======================================================
      GENERAR TEXTOS
@@ -374,17 +615,24 @@ export default function AdminNuevoProducto() {
 
   const generarTextos = () => {
     const cantidad =
-      Number(formulario.laminas) || 0;
+      Number(
+        formulario.laminas
+      ) || 0;
 
     const soluciones =
-      Number(formulario.soluciones) || 0;
+      Number(
+        formulario.soluciones
+      ) || 0;
 
     const paginas =
-      Number(formulario.paginas) || 0;
+      Number(
+        formulario.paginas
+      ) || 0;
 
-    const actividad = pluralActividad(
-      formulario.categoria
-    );
+    const actividad =
+      pluralActividad(
+        formulario.categoria
+      );
 
     const categoria =
       obtenerNombreCategoria(
@@ -396,10 +644,12 @@ export default function AdminNuevoProducto() {
       "todas las edades";
 
     const nivel =
-      formulario.nivel || "variado";
+      formulario.nivel ||
+      "variado";
 
     const descripcion = [
       `${cantidad} ${actividad} imprimibles`,
+
       `para ${publico.toLowerCase()}`,
 
       soluciones > 0
@@ -436,54 +686,57 @@ export default function AdminNuevoProducto() {
         : "",
 
       "PDF A4 listo para imprimir",
+
       "Descarga digital instantánea",
     ]
       .filter(Boolean)
       .join("\n");
 
-    const beneficiosPorCategoria = {
-      laberintos: [
-        "Concentración",
-        "Seguimiento visual",
-        "Reconocimiento de patrones",
-        "Entretenimiento sin pantallas",
-      ],
+    const beneficiosPorCategoria =
+      {
+        laberintos: [
+          "Concentración",
+          "Seguimiento visual",
+          "Reconocimiento de patrones",
+          "Entretenimiento sin pantallas",
+        ],
 
-      crucigramas: [
-        "Concentración",
-        "Lógica",
-        "Memoria",
-        "Vocabulario",
-      ],
+        crucigramas: [
+          "Concentración",
+          "Lógica",
+          "Memoria",
+          "Vocabulario",
+        ],
 
-      "sopa-de-letras": [
-        "Concentración",
-        "Memoria",
-        "Vocabulario",
-        "Entretenimiento y relajación",
-      ],
+        "sopa-de-letras": [
+          "Concentración",
+          "Memoria",
+          "Vocabulario",
+          "Entretenimiento y relajación",
+        ],
 
-      rompecabezas: [
-        "Concentración",
-        "Lógica",
-        "Resolución de problemas",
-        "Entretenimiento sin pantallas",
-      ],
+        rompecabezas: [
+          "Concentración",
+          "Lógica",
+          "Resolución de problemas",
+          "Entretenimiento sin pantallas",
+        ],
 
-      sudoku: [
-        "Concentración",
-        "Lógica",
-        "Razonamiento",
-        "Agilidad mental",
-      ],
+        sudoku: [
+          "Concentración",
+          "Lógica",
+          "Razonamiento",
+          "Agilidad mental",
+        ],
 
-      "palabras-desordenadas": [
-        "Concentración",
-        "Vocabulario",
-        "Memoria",
-        "Agilidad mental",
-      ],
-    };
+        "palabras-desordenadas":
+          [
+            "Concentración",
+            "Vocabulario",
+            "Memoria",
+            "Agilidad mental",
+          ],
+      };
 
     const beneficios =
       beneficiosPorCategoria[
@@ -493,24 +746,36 @@ export default function AdminNuevoProducto() {
         "Entretenimiento",
       ];
 
-    setFormulario((actual) => ({
-      ...actual,
-      descripcion,
-      descripcionLarga,
-      incluye,
-      beneficios:
-        beneficios.join("\n"),
-    }));
+    setFormulario(
+      (actual) => ({
+        ...actual,
+
+        descripcion,
+
+        descripcionLarga,
+
+        incluye,
+
+        beneficios:
+          beneficios.join(
+            "\n"
+          ),
+      })
+    );
   };
 
   /* =======================================================
      PRODUCTO FINAL
   ======================================================= */
 
-  const convertirLista = (texto) =>
+  const convertirLista = (
+    texto
+  ) =>
     texto
       .split("\n")
-      .map((item) => item.trim())
+      .map((item) =>
+        item.trim()
+      )
       .filter(Boolean);
 
   const productoFinal = {
@@ -536,8 +801,9 @@ export default function AdminNuevoProducto() {
     linea: "juegos",
 
     precioARS:
-      Number(formulario.precioARS) ||
-      0,
+      Number(
+        formulario.precioARS
+      ) || 0,
 
     descuento: 0,
 
@@ -548,44 +814,58 @@ export default function AdminNuevoProducto() {
       precioARS:
         formulario.ofertaActiva
           ? Number(
-              formulario.precioOfertaARS
+              formulario
+                .precioOfertaARS
             ) || 0
           : 0,
 
       etiqueta:
         formulario.ofertaActiva
-          ? formulario.etiquetaOferta.trim()
+          ? formulario
+              .etiquetaOferta
+              .trim()
           : "",
     },
 
     precioUSD:
-      Number(formulario.precioUSD) ||
-      0,
+      Number(
+        formulario.precioUSD
+      ) || 0,
 
     descuentoUSD: 0,
 
     ofertaUSD: {
       activa:
-        formulario.ofertaUSDActiva,
+        formulario
+          .ofertaUSDActiva,
 
       precioUSD:
-        formulario.ofertaUSDActiva
+        formulario
+          .ofertaUSDActiva
           ? Number(
-              formulario.precioOfertaUSD
+              formulario
+                .precioOfertaUSD
             ) || 0
           : 0,
 
       etiqueta:
-        formulario.ofertaUSDActiva
-          ? formulario.etiquetaOferta.trim()
+        formulario
+          .ofertaUSDActiva
+          ? formulario
+              .etiquetaOferta
+              .trim()
           : "",
     },
 
     imagenes: {
       portada: "",
       preview: "",
-      previewsIndividuales: [],
+
+      previewsIndividuales:
+        [],
+
       portadaPDF: "",
+
       paginaFinalPDF: "",
     },
 
@@ -594,24 +874,29 @@ export default function AdminNuevoProducto() {
     tamano: "A4",
 
     paginas:
-      Number(formulario.paginas) ||
-      0,
+      Number(
+        formulario.paginas
+      ) || 0,
 
     laminas:
-      Number(formulario.laminas) ||
-      0,
+      Number(
+        formulario.laminas
+      ) || 0,
 
     soluciones:
-      Number(formulario.soluciones) ||
-      0,
+      Number(
+        formulario.soluciones
+      ) || 0,
 
-    incluye: convertirLista(
-      formulario.incluye
-    ),
+    incluye:
+      convertirLista(
+        formulario.incluye
+      ),
 
-    beneficios: convertirLista(
-      formulario.beneficios
-    ),
+    beneficios:
+      convertirLista(
+        formulario.beneficios
+      ),
 
     edadRecomendada:
       formulario.publico,
@@ -626,189 +911,252 @@ export default function AdminNuevoProducto() {
       formulario.destacado,
   };
 
-  /* =======================================================
+    /* =======================================================
      GUARDAR PRODUCTO
   ======================================================= */
 
-  const agregarProducto = async () => {
-    if (!formulario.nombre.trim()) {
-      alert(
-        "Falta el nombre del producto."
-      );
-      return;
-    }
-
-    if (!formulario.categoria) {
-      alert(
-        "Falta seleccionar la categoría."
-      );
-      return;
-    }
-
-    if (!formulario.publico) {
-      alert(
-        "Falta seleccionar el público."
-      );
-      return;
-    }
-
-    if (!formulario.nivel) {
-      alert(
-        "Falta seleccionar el nivel."
-      );
-      return;
-    }
-
-    if (!formulario.laminas) {
-      alert(
-        "Falta indicar la cantidad de actividades."
-      );
-      return;
-    }
-
-    if (idRepetido) {
-      alert(
-        "Ya existe un producto con este ID."
-      );
-      return;
-    }
-
-    if (
-      !formulario.descripcion.trim()
-    ) {
-      alert(
-        "Primero generá los textos del producto."
-      );
-      return;
-    }
-
-    if (
-      imagenes.some(
-        (imagen) => !imagen
-      )
-    ) {
-      alert(
-        "Falta seleccionar alguna de las 6 imágenes."
-      );
-      return;
-    }
-
-    if (!archivoPDF) {
-      alert(
-        "Falta seleccionar el PDF del producto."
-      );
-      return;
-    }
-
-    try {
-      setGuardando(true);
-
-      const urls = [];
-
-      /*
-       * Subimos secuencialmente para
-       * consumir menos memoria.
-       */
-      for (
-        let i = 0;
-        i < imagenes.length;
-        i += 1
+  const agregarProducto =
+    async () => {
+      if (
+        !formulario.nombre.trim()
       ) {
-        const url =
-          await subirImagen(
-            imagenes[i],
-            i + 1
+        alert(
+          "Falta el nombre del producto."
+        );
+
+        return;
+      }
+
+      if (
+        !formulario.categoria
+      ) {
+        alert(
+          "Falta seleccionar la categoría."
+        );
+
+        return;
+      }
+
+      if (
+        !formulario.publico
+      ) {
+        alert(
+          "Falta seleccionar el público."
+        );
+
+        return;
+      }
+
+      if (
+        !formulario.nivel
+      ) {
+        alert(
+          "Falta seleccionar el nivel."
+        );
+
+        return;
+      }
+
+      if (
+        !formulario.laminas
+      ) {
+        alert(
+          "Falta indicar la cantidad de actividades."
+        );
+
+        return;
+      }
+
+      if (idRepetido) {
+        alert(
+          "Ya existe un producto con este ID."
+        );
+
+        return;
+      }
+
+      if (
+        !formulario.descripcion.trim()
+      ) {
+        alert(
+          "Primero generá los textos del producto."
+        );
+
+        return;
+      }
+
+      if (
+        imagenes.some(
+          (imagen) =>
+            !imagen
+        )
+      ) {
+        alert(
+          "Falta seleccionar alguna de las 6 imágenes."
+        );
+
+        return;
+      }
+
+      if (!archivoPDF) {
+        alert(
+          "Falta seleccionar el PDF del producto."
+        );
+
+        return;
+      }
+
+      try {
+        setGuardando(true);
+
+        const urls = [];
+
+        /*
+         * Las imágenes se suben
+         * secuencialmente para consumir
+         * menos memoria en el navegador.
+         */
+
+        for (
+          let i = 0;
+          i <
+          imagenes.length;
+          i += 1
+        ) {
+          const url =
+            await subirImagen(
+              imagenes[i],
+              i + 1
+            );
+
+          urls.push(url);
+        }
+
+        /*
+         * PDF PRIVADO
+         */
+
+        const pathnamePDF =
+          `productos/${idGenerado}/${idGenerado}.pdf`;
+
+        const blobPDF =
+          await upload(
+            pathnamePDF,
+            archivoPDF,
+            {
+              access:
+                "private",
+
+              handleUploadUrl:
+                "/api/admin/pedidos?accion=subir-pdf-producto",
+
+              clientPayload:
+                JSON.stringify({
+                  productoId:
+                    idGenerado,
+                }),
+            }
           );
 
-        urls.push(url);
-      }
+        /*
+         * PRODUCTO COMPLETO
+         */
 
-      const pathnamePDF =
-        `productos/${idGenerado}/${idGenerado}.pdf`;
+        const productoConImagenes =
+          {
+            ...productoFinal,
 
-      const blobPDF = await upload(
-        pathnamePDF,
-        archivoPDF,
-        {
-          access: "private",
+            imagenes: {
+              portada:
+                urls[0],
 
-          handleUploadUrl:
-            "/api/admin/pedidos?accion=subir-pdf-producto",
+              preview:
+                urls[1],
 
-          clientPayload:
-            JSON.stringify({
-              productoId: idGenerado,
-            }),
+              previewsIndividuales:
+                [
+                  urls[2],
+                  urls[3],
+                ],
+
+              portadaPDF:
+                urls[4],
+
+              paginaFinalPDF:
+                urls[5],
+            },
+
+            archivoPDF:
+              blobPDF.pathname,
+          };
+
+        /*
+         * GUARDAR EN MONGODB
+         */
+
+        const respuesta =
+          await fetch(
+            "/api/admin/pedidos?accion=crear-producto",
+            {
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify(
+                  productoConImagenes
+                ),
+            }
+          );
+
+        const datos =
+          await respuesta.json();
+
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.error ||
+              "No se pudo guardar el producto."
+          );
         }
-      );
 
-      const productoConImagenes = {
-        ...productoFinal,
+        /*
+         * Actualizamos también la lista
+         * local proveniente de MongoDB.
+         */
 
-        imagenes: {
-          portada: urls[0],
+        await cargarProductos();
 
-          preview: urls[1],
+        alert(
+          "Producto guardado correctamente."
+        );
 
-          previewsIndividuales: [
-            urls[2],
-            urls[3],
-          ],
+        console.log(
+          "Producto guardado:",
+          datos
+        );
+      } catch (error) {
+        console.error(
+          "Error guardando producto:",
+          error
+        );
 
-          portadaPDF: urls[4],
-
-          paginaFinalPDF: urls[5],
-        },
-
-        archivoPDF:
-          blobPDF.pathname,
-      };
-
-      const respuesta = await fetch(
-        "/api/admin/pedidos?accion=crear-producto",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify(
-            productoConImagenes
-          ),
-        }
-      );
-
-      const datos =
-        await respuesta.json();
-
-      if (!respuesta.ok) {
-        throw new Error(
-          datos.error ||
-            "No se pudo guardar el producto."
+        alert(
+          error.message
+        );
+      } finally {
+        setGuardando(
+          false
         );
       }
+    };
 
-      alert(
-        "Producto guardado correctamente."
-      );
-
-      console.log(
-        "Producto guardado:",
-        datos
-      );
-    } catch (error) {
-      console.error(
-        "Error guardando producto:",
-        error
-      );
-
-      alert(error.message);
-    } finally {
-      setGuardando(false);
-    }
-  };
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24">
@@ -830,14 +1178,43 @@ export default function AdminNuevoProducto() {
           </p>
         </div>
 
+        {/* ESTADO DE PRODUCTOS MONGODB */}
+
+        {errorProductos && (
+          <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <p className="text-xs font-semibold text-rose-700">
+              {errorProductos}
+            </p>
+
+            <button
+              type="button"
+              onClick={
+                cargarProductos
+              }
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-[10px] font-bold text-rose-700"
+            >
+              <RefreshCw
+                size={12}
+              />
+
+              Volver a intentar
+            </button>
+          </div>
+        )}
+
         {/* INFORMACIÓN */}
 
         <Seccion titulo="Información del producto">
           <Campo
             titulo="Nombre"
-            valor={formulario.nombre}
+            valor={
+              formulario.nombre
+            }
             onChange={(v) =>
-              cambiar("nombre", v)
+              cambiar(
+                "nombre",
+                v
+              )
             }
           />
 
@@ -850,6 +1227,7 @@ export default function AdminNuevoProducto() {
               }`}
             >
               ID:{" "}
+
               <strong>
                 {idGenerado}
               </strong>
@@ -861,9 +1239,14 @@ export default function AdminNuevoProducto() {
 
           <Selector
             titulo="Categoría"
-            valor={formulario.categoria}
+            valor={
+              formulario.categoria
+            }
             onChange={(v) =>
-              cambiar("categoria", v)
+              cambiar(
+                "categoria",
+                v
+              )
             }
           >
             <option value="">
@@ -871,7 +1254,9 @@ export default function AdminNuevoProducto() {
             </option>
 
             {CATEGORIAS.map(
-              (categoria) => (
+              (
+                categoria
+              ) => (
                 <option
                   key={
                     categoria.valor
@@ -880,7 +1265,9 @@ export default function AdminNuevoProducto() {
                     categoria.valor
                   }
                 >
-                  {categoria.nombre}
+                  {
+                    categoria.nombre
+                  }
                 </option>
               )
             )}
@@ -888,9 +1275,14 @@ export default function AdminNuevoProducto() {
 
           <Selector
             titulo="Público"
-            valor={formulario.publico}
+            valor={
+              formulario.publico
+            }
             onChange={(v) =>
-              cambiar("publico", v)
+              cambiar(
+                "publico",
+                v
+              )
             }
           >
             <option value="">
@@ -900,8 +1292,12 @@ export default function AdminNuevoProducto() {
             {PUBLICOS.map(
               (publico) => (
                 <option
-                  key={publico}
-                  value={publico}
+                  key={
+                    publico
+                  }
+                  value={
+                    publico
+                  }
                 >
                   {publico}
                 </option>
@@ -911,9 +1307,14 @@ export default function AdminNuevoProducto() {
 
           <Selector
             titulo="Nivel"
-            valor={formulario.nivel}
+            valor={
+              formulario.nivel
+            }
             onChange={(v) =>
-              cambiar("nivel", v)
+              cambiar(
+                "nivel",
+                v
+              )
             }
           >
             <option value="">
@@ -932,45 +1333,65 @@ export default function AdminNuevoProducto() {
             )}
           </Selector>
 
-                    <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <Campo
               titulo="Actividades"
               tipo="number"
-              valor={formulario.laminas}
+              valor={
+                formulario.laminas
+              }
               onChange={(v) =>
-                cambiar("laminas", v)
+                cambiar(
+                  "laminas",
+                  v
+                )
               }
             />
 
             <Campo
               titulo="Soluciones"
               tipo="number"
-              valor={formulario.soluciones}
+              valor={
+                formulario.soluciones
+              }
               onChange={(v) =>
-                cambiar("soluciones", v)
+                cambiar(
+                  "soluciones",
+                  v
+                )
               }
             />
 
             <Campo
               titulo="Páginas"
               tipo="number"
-              valor={formulario.paginas}
+              valor={
+                formulario.paginas
+              }
               onChange={(v) =>
-                cambiar("paginas", v)
+                cambiar(
+                  "paginas",
+                  v
+                )
               }
             />
           </div>
         </Seccion>
 
-        {/* PRECIOS */}
+        {/* PRECIOS ARGENTINA */}
 
         <Seccion titulo="Precio en Argentina">
           <Campo
             titulo="Precio ARS"
             tipo="number"
-            valor={formulario.precioARS}
+            valor={
+              formulario.precioARS
+            }
             onChange={(v) =>
-              cambiar("precioARS", v)
+              cambiar(
+                "precioARS",
+                v
+              )
             }
           />
 
@@ -1019,14 +1440,21 @@ export default function AdminNuevoProducto() {
           )}
         </Seccion>
 
+        {/* PRECIOS INTERNACIONALES */}
+
         <Seccion titulo="Precio internacional">
           <Campo
             titulo="Precio USD"
             tipo="number"
             paso="0.01"
-            valor={formulario.precioUSD}
+            valor={
+              formulario.precioUSD
+            }
             onChange={(v) =>
-              cambiar("precioUSD", v)
+              cambiar(
+                "precioUSD",
+                v
+              )
             }
           />
 
@@ -1077,24 +1505,42 @@ export default function AdminNuevoProducto() {
             }
           >
             <option value="">
-              Sin venta cruzada
+              {cargandoProductos
+                ? "Cargando productos..."
+                : "Sin venta cruzada"}
             </option>
 
-            {productosDigitales
+            {productosDisponibles
               .filter(
                 (producto) =>
                   producto.id !==
                   idGenerado
               )
-              .map((producto) => (
-                <option
-                  key={producto.id}
-                  value={producto.id}
-                >
-                  {producto.nombre}
-                </option>
-              ))}
+              .map(
+                (producto) => (
+                  <option
+                    key={
+                      producto.id
+                    }
+                    value={
+                      producto.id
+                    }
+                  >
+                    {
+                      producto.nombre
+                    }
+                  </option>
+                )
+              )}
           </Selector>
+
+          {!cargandoProductos &&
+            productosDisponibles.length ===
+              0 && (
+              <p className="text-[10px] leading-4 text-slate-400">
+                Todavía no hay otros productos en MongoDB para utilizar como venta cruzada.
+              </p>
+            )}
 
           <Check
             titulo="Producto destacado"
@@ -1115,7 +1561,9 @@ export default function AdminNuevoProducto() {
         <section className="mt-6 rounded-xl border border-sky-100 bg-sky-50 p-5">
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-sky-600 shadow-sm">
-              <RefreshCw size={18} />
+              <RefreshCw
+                size={18}
+              />
             </div>
 
             <div className="flex-1">
@@ -1129,17 +1577,22 @@ export default function AdminNuevoProducto() {
 
               <button
                 type="button"
-                onClick={generarTextos}
+                onClick={
+                  generarTextos
+                }
                 className="mt-3 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-700"
               >
-                <RefreshCw size={14} />
+                <RefreshCw
+                  size={14}
+                />
+
                 Generar textos
               </button>
             </div>
           </div>
         </section>
 
-        {/* TEXTOS */}
+        {/* CONTENIDO DE LA FICHA */}
 
         <Seccion titulo="Contenido de la ficha">
           <Area
@@ -1205,18 +1658,26 @@ export default function AdminNuevoProducto() {
 
         <Seccion titulo="Imágenes del producto">
           <p className="text-xs leading-5 text-slate-500">
-            Seleccioná las 6 imágenes originales. Se optimizan
-            automáticamente a WebP, con un ancho máximo de 794 px.
+            Seleccioná las 6 imágenes originales. Se optimizan automáticamente a WebP, con un ancho máximo de 794 px.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             {NOMBRES_IMAGENES.map(
-              (titulo, indice) => (
+              (
+                titulo,
+                indice
+              ) => (
                 <ImagenProducto
-                  key={titulo}
-                  titulo={titulo}
+                  key={
+                    titulo
+                  }
+                  titulo={
+                    titulo
+                  }
                   imagen={
-                    imagenes[indice]
+                    imagenes[
+                      indice
+                    ]
                   }
                   deshabilitado={
                     procesandoImagen ||
@@ -1247,7 +1708,7 @@ export default function AdminNuevoProducto() {
           )}
         </Seccion>
 
-        {/* PDF PRIVADO */}
+                {/* PDF PRIVADO */}
 
         <Seccion titulo="PDF del producto">
           <p className="text-xs leading-5 text-slate-500">
@@ -1307,7 +1768,9 @@ export default function AdminNuevoProducto() {
                 className="rounded-lg p-2 text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"
                 aria-label="Eliminar PDF"
               >
-                <Trash2 size={16} />
+                <Trash2
+                  size={16}
+                />
               </button>
             </div>
           )}
@@ -1340,13 +1803,16 @@ export default function AdminNuevoProducto() {
             disabled={
               idRepetido ||
               procesandoImagen ||
-              guardando
+              guardando ||
+              cargandoProductos
             }
             className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {guardando
               ? "Subiendo archivos y guardando..."
-              : "Agregar producto"}
+              : cargandoProductos
+                ? "Cargando productos..."
+                : "Agregar producto"}
           </button>
         </section>
       </div>
@@ -1389,7 +1855,9 @@ function ImagenProducto({
           <input
             type="file"
             accept="image/*"
-            disabled={deshabilitado}
+            disabled={
+              deshabilitado
+            }
             className="hidden"
             onChange={(e) => {
               const archivo =
@@ -1401,7 +1869,15 @@ function ImagenProducto({
                 );
               }
 
-              e.target.value = "";
+              /*
+               * Permite volver a
+               * seleccionar el mismo
+               * archivo si fuera
+               * necesario.
+               */
+
+              e.target.value =
+                "";
             }}
           />
         </label>
@@ -1434,12 +1910,18 @@ function ImagenProducto({
 
             <button
               type="button"
-              disabled={deshabilitado}
-              onClick={onEliminar}
+              disabled={
+                deshabilitado
+              }
+              onClick={
+                onEliminar
+              }
               className="rounded-lg p-2 text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"
               aria-label={`Eliminar ${titulo}`}
             >
-              <Trash2 size={16} />
+              <Trash2
+                size={16}
+              />
             </button>
           </div>
         </div>
@@ -1447,6 +1929,10 @@ function ImagenProducto({
     </div>
   );
 }
+
+/* =========================================================
+   SECCIÓN
+========================================================= */
 
 function Seccion({
   titulo,
@@ -1472,6 +1958,10 @@ function Seccion({
   );
 }
 
+/* =========================================================
+   CAMPO
+========================================================= */
+
 function Campo({
   titulo,
   valor,
@@ -1490,7 +1980,9 @@ function Campo({
         type={tipo}
         step={paso}
         value={valor}
-        placeholder={placeholder}
+        placeholder={
+          placeholder
+        }
         onChange={(e) =>
           onChange(
             e.target.value
@@ -1501,6 +1993,10 @@ function Campo({
     </label>
   );
 }
+
+/* =========================================================
+   SELECTOR
+========================================================= */
 
 function Selector({
   titulo,
@@ -1528,6 +2024,10 @@ function Selector({
     </label>
   );
 }
+
+/* =========================================================
+   ÁREA DE TEXTO
+========================================================= */
 
 function Area({
   titulo,
@@ -1563,6 +2063,10 @@ function Area({
     </label>
   );
 }
+
+/* =========================================================
+   CHECKBOX
+========================================================= */
 
 function Check({
   titulo,
