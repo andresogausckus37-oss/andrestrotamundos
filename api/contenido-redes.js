@@ -289,6 +289,11 @@ async function publicarThreads(req, res) {
       ? req.body.texto.trim()
       : "";
 
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
   if (!texto) {
     return res.status(400).json({
       ok: false,
@@ -419,17 +424,25 @@ async function publicarThreads(req, res) {
   // -------------------------------------------------------
 
   await db
-    .collection("publicaciones_redes")
-    .insertOne({
-      proveedor: "threads",
-      publicacionId: String(
-        publicacion.id
-      ),
-      texto,
-      estado: "publicado",
-      publicadoEn: new Date(),
-      creadoEn: new Date(),
-    });
+  .collection("publicaciones_redes")
+  .insertOne({
+    proveedor: "threads",
+
+    productoId:
+      productoId || null,
+
+    publicacionId: String(
+      publicacion.id
+    ),
+
+    texto,
+
+    estado: "publicado",
+
+    publicadoEn: new Date(),
+
+    creadoEn: new Date(),
+  });
 
   return res.status(200).json({
     ok: true,
