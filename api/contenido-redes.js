@@ -321,9 +321,6 @@ async function publicarThreads(req, res) {
   const accessToken =
     integracion.accessToken;
 
-  const userId =
-    integracion.userId;
-
   // -------------------------------------------------------
   // 1. Crear contenedor de texto
   // -------------------------------------------------------
@@ -336,10 +333,8 @@ async function publicarThreads(req, res) {
     });
 
   const respuestaContenedor =
-    await fetch(
-      `${THREADS_API}/v1.0/${encodeURIComponent(
-        userId
-      )}/threads`,
+  await fetch(
+    `${THREADS_API}/me/threads`,
       {
         method: "POST",
         headers: {
@@ -384,10 +379,8 @@ async function publicarThreads(req, res) {
     });
 
   const respuestaPublicacion =
-    await fetch(
-      `${THREADS_API}/v1.0/${encodeURIComponent(
-        userId
-      )}/threads_publish`,
+  await fetch(
+    `${THREADS_API}/me/threads_publish`,
       {
         method: "POST",
         headers: {
