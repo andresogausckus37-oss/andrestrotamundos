@@ -21,7 +21,6 @@ import {
   User,
 } from "lucide-react";
 
-import { productosDigitales } from "../datos/productosDigitales";
 import { resenasProductos } from "../datos/resenasProductos";
 
 import {
@@ -115,24 +114,7 @@ useEffect(() => {
    PRODUCTOS
 ========================================================= */
 
-const productosDisponibles = useMemo(() => {
-  const idsMongo = new Set(
-    productosMongo.map(
-      (producto) => producto.id
-    )
-  );
-
-  const productosLocales =
-    productosDigitales.filter(
-      (producto) =>
-        !idsMongo.has(producto.id)
-    );
-
-  return [
-    ...productosLocales,
-    ...productosMongo,
-  ];
-}, [productosMongo]);
+  const productosDisponibles = productosMongo;
 
 const producto =
   productosDisponibles.find(

@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Loader2,
   Sparkles,
 } from "lucide-react";
 
-import { productosDigitales } from "../../datos/productosDigitales";
 import { crearPromptRedes } from "../../utilidades/crearPromptRedes";
 
 export default function AdminRedes() {
   const [producto1Id, setProducto1Id] =
     useState("");
+
+  const [productosDigitales, setProductosDigitales] =
+  useState([]);
 
   const [producto2Id, setProducto2Id] =
     useState("");
@@ -22,6 +24,39 @@ export default function AdminRedes() {
 
   const [contenidos, setContenidos] =
     useState([]);
+
+  useEffect(() => {
+  const cargarProductos = async () => {
+    try {
+      const respuesta = await fetch(
+        "/api/admin/pedidos?accion=listar-productos"
+      );
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.error || "No se pudieron cargar los productos."
+        );
+      }
+
+      setProductosDigitales(
+        Array.isArray(datos) ? datos : datos.productos || []
+      );
+    } catch (error) {
+      console.error(
+        "Error cargando productos:",
+        error
+      );
+
+      setError(
+        "No se pudieron cargar los productos."
+      );
+    }
+  };
+
+  cargarProductos();
+}, []);
 
   const producto1 =
     productosDigitales.find(

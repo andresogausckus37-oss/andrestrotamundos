@@ -45,9 +45,17 @@ export default async function handler(req, res) {
       .update("andres-imprimibles-admin")
       .digest("hex");
 
+    const horasSesion = Math.max(
+  1,
+  Number(process.env.ADMIN_SESSION_HOURS) || 12
+);
+
+const duracionSesionSegundos =
+  horasSesion * 60 * 60;
+
     res.setHeader(
       "Set-Cookie",
-      `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=28800`
+      `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${duracionSesionSegundos}`
     );
 
     return res.status(200).json({

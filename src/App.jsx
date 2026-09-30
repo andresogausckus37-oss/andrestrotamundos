@@ -32,8 +32,6 @@ import PagoTransferencia from "./paginas/PagoTransferencia";
 import LoginAdmin from "./paginas/LoginAdmin";
 import Admin from "./paginas/Admin";
 import AdminRedes from "./paginas/admin/AdminRedes";
-
-import { productosDigitales } from "./datos/productosDigitales";
 import AdminNuevoProducto from "./paginas/admin/AdminNuevoProducto";
 import AdminProductos from "./paginas/admin/AdminProductos";
 import AdminEditarProducto from "./paginas/admin/AdminEditarProducto";
@@ -77,20 +75,7 @@ const RegistrarVisita = () => {
     } else if (
       ruta.startsWith("/tienda/")
     ) {
-      const productoId =
-        decodeURIComponent(
-          ruta.replace("/tienda/", "")
-        );
-
-      const producto =
-        productosDigitales.find(
-          (item) =>
-            item.id === productoId
-        );
-
-      pagina =
-        producto?.nombre ||
-        "Detalle de producto";
+      pagina = "Detalle de producto";
     } else if (
       ruta.startsWith("/checkout/")
     ) {

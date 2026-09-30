@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import CalificacionProducto from "../componentes/CalificacionProducto";
 
 import {
@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
-import { productosDigitales } from "../datos/productosDigitales";
 
 import {
   MERCADO_ARGENTINA,
@@ -85,28 +84,7 @@ const Tienda = () => {
     };
   }, []);
 
-    const productosTienda = useMemo(() => {
-    const idsMongo = new Set(
-      productosMongo.map(
-        (producto) => producto.id
-      )
-    );
-
-    /*
-     * Si algún día un producto existente también
-     * está en MongoDB, damos prioridad a MongoDB.
-     */
-    const productosLocales =
-      productosDigitales.filter(
-        (producto) =>
-          !idsMongo.has(producto.id)
-      );
-
-    return [
-      ...productosLocales,
-      ...productosMongo,
-    ];
-  }, [productosMongo]);
+  const productosTienda = productosMongo;
 
   /* =======================================================
      MERCADO

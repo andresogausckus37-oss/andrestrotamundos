@@ -1,6 +1,5 @@
 import crypto from "crypto";
 import { conectarMongoDB } from "../../lib/mongodb.js";
-import { productosDigitales } from "../../src/datos/productosDigitales.js";
 import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
 /* =====================================================
@@ -86,30 +85,15 @@ const obtenerPrecioFinalUSD = (producto) => {
 };
 
 /* =====================================================
-   BUSCAR PRODUCTO
+   BUSCAR PRODUCTO EN MONGODB
 ===================================================== */
 
-const buscarProducto = async (
-  db,
-  productoId
-) => {
-  const productoMongo =
-    await db
-      .collection("productos")
-      .findOne({
-        id: productoId,
-      });
-
-  if (productoMongo) {
-    return productoMongo;
-  }
-
-  return (
-    productosDigitales.find(
-      (item) =>
-        item.id === productoId
-    ) || null
-  );
+const buscarProducto = async (db, productoId) => {
+  return await db
+    .collection("productos")
+    .findOne({
+      id: productoId,
+    });
 };
 
 /* =====================================================

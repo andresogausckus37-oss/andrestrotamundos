@@ -8,8 +8,8 @@ import {
   ShoppingBag,
 } from "lucide-react";
 
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { productosDigitales } from "../datos/productosDigitales";
 
 /* =========================================================
    FORMATEAR PRECIO
@@ -31,6 +31,42 @@ const formatearPrecio = (precio) => {
 
 const Digitales = () => {
   const navigate = useNavigate();
+
+  const [productosDigitales, setProductosDigitales] =
+    useState([]);
+
+  useEffect(() => {
+    const cargarProductos = async () => {
+      try {
+        const respuesta = await fetch(
+          "/api/admin/pedidos?accion=productos-publicos"
+        );
+
+        if (!respuesta.ok) {
+          throw new Error(
+            "No se pudieron cargar los productos."
+          );
+        }
+
+        const datos = await respuesta.json();
+
+        setProductosDigitales(
+          Array.isArray(datos.productos)
+            ? datos.productos
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Error cargando productos:",
+          error
+        );
+
+        setProductosDigitales([]);
+      }
+    };
+
+    cargarProductos();
+  }, []);
 
   return (
     <main className="min-h-screen bg-white">

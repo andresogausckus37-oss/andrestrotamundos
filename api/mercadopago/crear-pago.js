@@ -1,6 +1,5 @@
 import crypto from "crypto";
 import { conectarMongoDB } from "../../lib/mongodb.js";
-import { productosDigitales } from "../../src/datos/productosDigitales.js";
 
 /* =====================================================
    CALCULAR PRECIO REAL DE UN PRODUCTO
@@ -30,20 +29,9 @@ const obtenerPrecioFinal = (producto) => {
 ===================================================== */
 
 const buscarProducto = async (db, productoId) => {
-  const productoMongo =
-    await db.collection("productos").findOne({
-      id: productoId,
-    });
-
-  if (productoMongo) {
-    return productoMongo;
-  }
-
-  return (
-    productosDigitales.find(
-      (item) => item.id === productoId
-    ) || null
-  );
+  return await db.collection("productos").findOne({
+    id: productoId,
+  });
 };
 
 /* =====================================================

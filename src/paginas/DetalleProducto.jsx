@@ -1,6 +1,5 @@
 import CalificacionProducto from "../componentes/CalificacionProducto";
 import { resenasProductos } from "../datos/resenasProductos";
-import { productosDigitales } from "../datos/productosDigitales";
 import ProteccionComercial from "../generador/componentes/ProteccionComercial";
 
 import {
@@ -46,89 +45,67 @@ const DetalleProducto = () => {
   const [cargandoMercado, setCargandoMercado] =
     useState(true);
 
-  const productoLocal =
-  productosDigitales.find(
-    (p) => p.id === id
-  );
+  const [producto, setProducto] =
+    useState(null);
 
-const [productoMongo, setProductoMongo] =
-  useState(null);
-
-const [cargandoProducto, setCargandoProducto] =
-  useState(!productoLocal);
-
-const producto =
-  productoLocal || productoMongo;
+  const [cargandoProducto, setCargandoProducto] =
+    useState(true);
 
   /* =========================================================
-   CARGAR PRODUCTO DESDE MONGODB
-========================================================= */
+     CARGAR PRODUCTO DESDE MONGODB
+  ========================================================= */
 
-useEffect(() => {
-  /*
-   * Si el producto ya existe en productosDigitales.js,
-   * no necesitamos consultar MongoDB.
-   */
-  if (productoLocal) {
-    setProductoMongo(null);
-    setCargandoProducto(false);
-    return;
-  }
+  useEffect(() => {
+    let cancelado = false;
 
-  let cancelado = false;
+    const cargarProducto = async () => {
+      try {
+        setCargandoProducto(true);
 
-  const cargarProducto = async () => {
-    try {
-      setCargandoProducto(true);
-
-      const respuesta = await fetch(
-        "/api/admin/pedidos?accion=productos-publicos"
-      );
-
-      if (!respuesta.ok) {
-        throw new Error(
-          "No se pudo cargar el producto."
+        const respuesta = await fetch(
+          "/api/admin/pedidos?accion=productos-publicos"
         );
-      }
 
-      const datos =
-        await respuesta.json();
+        if (!respuesta.ok) {
+          throw new Error(
+            "No se pudo cargar el producto."
+          );
+        }
 
-      const encontrado =
-        Array.isArray(datos.productos)
-          ? datos.productos.find(
-              (item) =>
-                item.id === id
-            )
-          : null;
+        const datos = await respuesta.json();
 
-      if (!cancelado) {
-        setProductoMongo(
-          encontrado || null
+        const encontrado =
+          Array.isArray(datos.productos)
+            ? datos.productos.find(
+                (item) => item.id === id
+              )
+            : null;
+
+        if (!cancelado) {
+          setProducto(encontrado || null);
+        }
+      } catch (error) {
+        console.error(
+          "Error cargando producto desde MongoDB:",
+          error
         );
-      }
-    } catch (error) {
-      console.error(
-        "Error cargando producto desde MongoDB:",
-        error
-      );
 
-      if (!cancelado) {
-        setProductoMongo(null);
+        if (!cancelado) {
+          setProducto(null);
+        }
+      } finally {
+        if (!cancelado) {
+          setCargandoProducto(false);
+        }
       }
-    } finally {
-      if (!cancelado) {
-        setCargandoProducto(false);
-      }
-    }
-  };
+    };
 
-  cargarProducto();
+    cargarProducto();
 
-  return () => {
-    cancelado = true;
-  };
-}, [id, productoLocal]);
+    return () => {
+      cancelado = true;
+    };
+  }, [id]);
 
   const textoEs = (valor) => {
     if (typeof valor === "string") {

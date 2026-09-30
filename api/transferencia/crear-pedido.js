@@ -2,7 +2,6 @@ import crypto from "crypto";
 import { conectarMongoDB } from "../../lib/mongodb.js";
 import { CONFIGURACION_TRANSFERENCIA } from "../../lib/configuracionTransferencia.js";
 import { enviarNotificacionTelegram } from "../../lib/telegram.js";
-import { productosDigitales } from "../../src/datos/productosDigitales.js";
 
 /* =====================================================
    CALCULAR PRECIO REAL DE UN PRODUCTO
@@ -39,32 +38,15 @@ const formatearPesos = (valor) =>
   }).format(valor);
 
 /* =====================================================
-   BUSCAR PRODUCTO
-   MongoDB tiene prioridad.
-   Si no existe, busca en productosDigitales.js
+   BUSCAR PRODUCTO EN MONGODB
 ===================================================== */
 
-const buscarProducto = async (
-  db,
-  productoId
-) => {
-  const productoMongo =
-    await db
-      .collection("productos")
-      .findOne({
-        id: productoId,
-      });
-
-  if (productoMongo) {
-    return productoMongo;
-  }
-
-  return (
-    productosDigitales.find(
-      (item) =>
-        item.id === productoId
-    ) || null
-  );
+const buscarProducto = async (db, productoId) => {
+  return await db
+    .collection("productos")
+    .findOne({
+      id: productoId,
+    });
 };
 
 /* =====================================================
