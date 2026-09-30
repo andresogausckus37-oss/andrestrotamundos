@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Loader2,
   Sparkles,
+  Send,
 } from "lucide-react";
 
 import { crearPromptRedes } from "../../utilidades/crearPromptRedes";
@@ -11,7 +12,7 @@ export default function AdminRedes() {
     useState("");
 
   const [productosDigitales, setProductosDigitales] =
-  useState([]);
+    useState([]);
 
   const [producto2Id, setProducto2Id] =
     useState("");
@@ -25,38 +26,60 @@ export default function AdminRedes() {
   const [contenidos, setContenidos] =
     useState([]);
 
+  // =======================================================
+  // PRUEBA THREADS
+  // =======================================================
+
+  const [textoThreads, setTextoThreads] =
+    useState(
+      "Primera publicación de prueba desde Andrés Imprimibles."
+    );
+
+  const [publicandoThreads, setPublicandoThreads] =
+    useState(false);
+
+  const [resultadoThreads, setResultadoThreads] =
+    useState("");
+
+  // =======================================================
+  // CARGAR PRODUCTOS
+  // =======================================================
+
   useEffect(() => {
-  const cargarProductos = async () => {
-    try {
-      const respuesta = await fetch(
-        "/api/admin/pedidos?accion=listar-productos"
-      );
+    const cargarProductos = async () => {
+      try {
+        const respuesta = await fetch(
+          "/api/admin/pedidos?accion=listar-productos"
+        );
 
-      const datos = await respuesta.json();
+        const datos = await respuesta.json();
 
-      if (!respuesta.ok) {
-        throw new Error(
-          datos.error || "No se pudieron cargar los productos."
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.error ||
+              "No se pudieron cargar los productos."
+          );
+        }
+
+        setProductosDigitales(
+          Array.isArray(datos)
+            ? datos
+            : datos.productos || []
+        );
+      } catch (error) {
+        console.error(
+          "Error cargando productos:",
+          error
+        );
+
+        setError(
+          "No se pudieron cargar los productos."
         );
       }
+    };
 
-      setProductosDigitales(
-        Array.isArray(datos) ? datos : datos.productos || []
-      );
-    } catch (error) {
-      console.error(
-        "Error cargando productos:",
-        error
-      );
-
-      setError(
-        "No se pudieron cargar los productos."
-      );
-    }
-  };
-
-  cargarProductos();
-}, []);
+    cargarProductos();
+  }, []);
 
   const producto1 =
     productosDigitales.find(
@@ -73,9 +96,9 @@ export default function AdminRedes() {
   const productosSeleccionados =
     producto1 || producto2;
 
-  /* =========================
-     GENERAR CONTENIDO
-  ========================= */
+  // =======================================================
+  // GENERAR CONTENIDO
+  // =======================================================
 
   const generarContenido = async () => {
     const seleccionados = [
@@ -146,6 +169,71 @@ export default function AdminRedes() {
     }
   };
 
+  // =======================================================
+  // PUBLICAR PRUEBA EN THREADS
+  // =======================================================
+
+  const publicarPruebaThreads = async () => {
+    const texto = textoThreads.trim();
+
+    if (!texto) {
+      setResultadoThreads(
+        "Escribí un texto antes de publicar."
+      );
+      return;
+    }
+
+    try {
+      setPublicandoThreads(true);
+      setResultadoThreads("");
+
+      const respuesta = await fetch(
+        "/api/contenido-redes?accion=threads-publicar",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            texto,
+          }),
+        }
+      );
+
+      const datos =
+        await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.detalle ||
+            datos.error ||
+            "No se pudo publicar en Threads."
+        );
+      }
+
+      setResultadoThreads(
+        `Publicado correctamente. ID: ${datos.publicacionId}`
+      );
+    } catch (error) {
+      console.error(
+        "Error publicando en Threads:",
+        error
+      );
+
+      setResultadoThreads(
+        `Error: ${
+          error.message ||
+          "No se pudo publicar en Threads."
+        }`
+      );
+    } finally {
+      setPublicandoThreads(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24">
       <div className="mx-auto max-w-5xl">
@@ -165,6 +253,70 @@ export default function AdminRedes() {
             contenido semanal.
           </p>
         </div>
+
+        {/* PRUEBA THREADS */}
+
+        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Send
+              size={18}
+              className="text-slate-700"
+            />
+
+            <h2 className="text-sm font-bold text-slate-900">
+              Prueba de Threads
+            </h2>
+          </div>
+
+          <p className="mt-2 text-xs text-slate-500">
+            Esta prueba realizará una
+            publicación real en Threads.
+          </p>
+
+          <textarea
+            value={textoThreads}
+            onChange={(event) =>
+              setTextoThreads(
+                event.target.value
+              )
+            }
+            rows={4}
+            className="mt-4 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+          />
+
+          <button
+            type="button"
+            onClick={publicarPruebaThreads}
+            disabled={
+              publicandoThreads ||
+              !textoThreads.trim()
+            }
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 text-xs font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+          >
+            {publicandoThreads ? (
+              <>
+                <Loader2
+                  size={15}
+                  className="animate-spin"
+                />
+
+                Publicando...
+              </>
+            ) : (
+              <>
+                <Send size={15} />
+
+                Publicar prueba en Threads
+              </>
+            )}
+          </button>
+
+          {resultadoThreads && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              {resultadoThreads}
+            </div>
+          )}
+        </section>
 
         {/* PRODUCTOS */}
 
