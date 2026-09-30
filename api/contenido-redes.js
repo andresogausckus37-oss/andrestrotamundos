@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import OpenAI from "openai";
 import { conectarMongoDB } from "../lib/mongodb.js";
 
@@ -19,6 +20,53 @@ const THREADS_REDIRECT_URI =
 
 const THREADS_API =
   "https://graph.threads.net";
+
+// =========================================================
+// AUTENTICACIÓN ADMIN
+// =========================================================
+
+const obtenerCookies = (req) => {
+  const cookies = {};
+  const header = req.headers.cookie || "";
+
+  header.split(";").forEach((cookie) => {
+    const [nombre, ...valor] =
+      cookie.trim().split("=");
+
+    if (nombre) {
+      cookies[nombre] =
+        decodeURIComponent(valor.join("="));
+    }
+  });
+
+  return cookies;
+};
+
+const adminAutorizado = (req) => {
+  const adminPassword =
+    process.env.ADMIN_PASSWORD;
+
+  if (!adminPassword) return false;
+
+  const tokenEsperado = crypto
+    .createHmac("sha256", adminPassword)
+    .update("andres-imprimibles-admin")
+    .digest("hex");
+
+  const cookies = obtenerCookies(req);
+  const token = cookies.admin_token;
+
+  if (!token) return false;
+
+  const a = Buffer.from(token);
+  const b = Buffer.from(tokenEsperado);
+
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(a, b);
+};
 
 // =========================================================
 // THREADS - CONFIGURACIÓN
@@ -226,13 +274,179 @@ async function callbackThreads(req, res) {
       }
     );
 
-  // -------------------------------------------------------
-  // Volver al Admin
-  // -------------------------------------------------------
-
   return res.redirect(
     "/admin/redes?threads=conectado"
   );
+}
+
+// =========================================================
+// THREADS - PUBLICAR TEXTO
+// =========================================================
+
+async function publicarThreads(req, res) {
+  const texto =
+    typeof req.body?.texto === "string"
+      ? req.body.texto.trim()
+      : "";
+
+  if (!texto) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el texto de la publicación.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const integracion = await db
+    .collection("integraciones")
+    .findOne({
+      proveedor: "threads",
+      conectado: true,
+    });
+
+  if (
+    !integracion?.accessToken ||
+    !integracion?.userId
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Threads no está conectado.",
+    });
+  }
+
+  const accessToken =
+    integracion.accessToken;
+
+  const userId =
+    integracion.userId;
+
+  // -------------------------------------------------------
+  // 1. Crear contenedor de texto
+  // -------------------------------------------------------
+
+  const parametrosContenedor =
+    new URLSearchParams({
+      media_type: "TEXT",
+      text: texto,
+      access_token: accessToken,
+    });
+
+  const respuestaContenedor =
+    await fetch(
+      `${THREADS_API}/v1.0/${encodeURIComponent(
+        userId
+      )}/threads`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded",
+        },
+        body:
+          parametrosContenedor.toString(),
+      }
+    );
+
+  const contenedor =
+    await respuestaContenedor.json();
+
+  if (
+    !respuestaContenedor.ok ||
+    !contenedor?.id
+  ) {
+    console.error(
+      "Error creando publicación de Threads:",
+      contenedor
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        "Threads no pudo crear la publicación.",
+      detalle:
+        contenedor?.error?.message ||
+        null,
+    });
+  }
+
+  // -------------------------------------------------------
+  // 2. Publicar contenedor
+  // -------------------------------------------------------
+
+  const parametrosPublicacion =
+    new URLSearchParams({
+      creation_id: contenedor.id,
+      access_token: accessToken,
+    });
+
+  const respuestaPublicacion =
+    await fetch(
+      `${THREADS_API}/v1.0/${encodeURIComponent(
+        userId
+      )}/threads_publish`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded",
+        },
+        body:
+          parametrosPublicacion.toString(),
+      }
+    );
+
+  const publicacion =
+    await respuestaPublicacion.json();
+
+  if (
+    !respuestaPublicacion.ok ||
+    !publicacion?.id
+  ) {
+    console.error(
+      "Error publicando en Threads:",
+      publicacion
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        "Threads creó el contenido pero no pudo publicarlo.",
+      detalle:
+        publicacion?.error?.message ||
+        null,
+    });
+  }
+
+  // -------------------------------------------------------
+  // 3. Registrar publicación
+  // -------------------------------------------------------
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "threads",
+      publicacionId: String(
+        publicacion.id
+      ),
+      texto,
+      estado: "publicado",
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return res.status(200).json({
+    ok: true,
+    proveedor: "threads",
+    publicacionId: String(
+      publicacion.id
+    ),
+    mensaje:
+      "Publicación realizada correctamente en Threads.",
+  });
 }
 
 // =========================================================
@@ -309,16 +523,10 @@ export default async function handler(
   try {
     const { accion } = req.query;
 
-    // Threads
-    if (
-      req.method === "GET" &&
-      accion === "threads-conectar"
-    ) {
-      return conectarThreads(
-        req,
-        res
-      );
-    }
+    // -----------------------------------------------------
+    // CALLBACK DE THREADS
+    // Debe permanecer accesible para Meta.
+    // -----------------------------------------------------
 
     if (
       req.method === "GET" &&
@@ -330,7 +538,55 @@ export default async function handler(
       );
     }
 
-    // Generación de contenido actual
+    // -----------------------------------------------------
+    // CONEXIÓN DE THREADS
+    // Solo administrador.
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "threads-conectar"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return conectarThreads(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // PUBLICAR EN THREADS
+    // Solo administrador.
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "threads-publicar"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return publicarThreads(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // GENERACIÓN DE CONTENIDO
+    // Conservamos el comportamiento actual.
+    // -----------------------------------------------------
+
     if (
       req.method === "POST" &&
       !accion
