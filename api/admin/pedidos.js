@@ -1050,34 +1050,9 @@ const generarSitemap = async (req, res) => {
     )
     .toArray();
 
-  /*
-   * Productos antiguos que todavía están
-   * definidos en productosDigitales.js.
-   */
-  const productosAntiguos = [
-    "50-laberintos-para-ninos",
-    "50-crucigramas-reino-animal",
-    "25-sopas-de-letras-para-adultos",
-    "100-laberintos-para-adultos",
-  ];
-
-  /*
-   * Unimos productos antiguos + MongoDB
-   * evitando IDs repetidos.
-   */
-  const idsProductos = new Set(
-    productosAntiguos
-  );
-
-  productosMongo.forEach((producto) => {
-    if (producto?.id) {
-      idsProductos.add(producto.id);
-    }
-  });
-
-  const urlsProductos = Array.from(
-    idsProductos
-  )
+    const urlsProductos = productosMongo
+    .filter((producto) => producto?.id)
+    .map((producto) => producto.id)
     .map(
       (id) => `
   <url>
