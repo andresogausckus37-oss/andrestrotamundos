@@ -699,10 +699,12 @@ const [
       }
 
       setMensajeCalendario(
-        pieza.red === "instagram"
-          ? "Carrusel publicado correctamente en Instagram."
-          : "Publicación realizada correctamente en Threads."
-      );
+  pieza.red === "instagram"
+    ? "Carrusel publicado correctamente en Instagram."
+    : pieza.red === "facebook"
+      ? "Publicación realizada correctamente en Facebook."
+      : "Publicación realizada correctamente en Threads."
+);
       await cargarCalendario();
     } catch (error) {
       setMensajeCalendario(`Error: ${error.message || "No se pudo publicar ahora."}`);
@@ -1840,11 +1842,12 @@ const aprobarContenido = async (
                                         Pendiente · horario pasado
                                       </p>
 
-                                      {(
-                                        pieza.red === "threads" ||
-                                        (pieza.red === "instagram" &&
-                                          pieza.tipo === "carrusel")
-                                      ) ? (
+                                        {(
+                                          pieza.red === "threads" ||
+                                          pieza.red === "facebook" ||
+                                          (pieza.red === "instagram" &&
+                                            pieza.tipo === "carrusel")
+                                        ) ? (
                                         <button
                                           type="button"
                                           onClick={() => publicarAhora(item, pieza)}

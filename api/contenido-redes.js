@@ -30,6 +30,32 @@ const INSTAGRAM_API =
   `https://graph.instagram.com/${INSTAGRAM_API_VERSION}`;
 
 // =========================================================
+// FACEBOOK - CONFIGURACIÓN
+// =========================================================
+
+const FACEBOOK_PAGE_ID =
+  process.env.FACEBOOK_PAGE_ID;
+
+const FACEBOOK_PAGE_ACCESS_TOKEN =
+  process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+
+const FACEBOOK_API_VERSION = "v26.0";
+
+const FACEBOOK_API =
+  `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
+
+function verificarConfiguracionFacebook() {
+  if (
+    !FACEBOOK_PAGE_ID ||
+    !FACEBOOK_PAGE_ACCESS_TOKEN
+  ) {
+    throw new Error(
+      "Faltan FACEBOOK_PAGE_ID o FACEBOOK_PAGE_ACCESS_TOKEN"
+    );
+  }
+}
+
+// =========================================================
 // AUTENTICACIÓN ADMIN
 // =========================================================
 
@@ -846,6 +872,119 @@ async function publicarCarruselInstagram({
 }
 
 // =========================================================
+// FACEBOOK - PUBLICACIÓN
+// =========================================================
+
+async function publicarFacebook({
+  publicacion,
+  productoId,
+}) {
+  verificarConfiguracionFacebook();
+
+  const texto =
+    typeof publicacion?.texto === "string"
+      ? publicacion.texto.trim()
+      : "";
+
+  const imagenes =
+    extraerImagenesInstagram(publicacion);
+
+  const imagen = imagenes[0] || null;
+
+  if (!texto && !imagen) {
+    throw new Error(
+      "La publicación de Facebook no contiene texto ni imagen."
+    );
+  }
+
+  const parametros = new URLSearchParams({
+    access_token: FACEBOOK_PAGE_ACCESS_TOKEN,
+  });
+
+  if (texto) {
+    parametros.set(
+      imagen ? "caption" : "message",
+      texto
+    );
+  }
+
+  let endpoint;
+
+  if (imagen) {
+    parametros.set("url", imagen);
+
+    endpoint =
+      `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/photos`;
+  } else {
+    endpoint =
+      `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/feed`;
+  }
+
+  const respuesta = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type":
+        "application/x-www-form-urlencoded",
+    },
+    body: parametros.toString(),
+  });
+
+  const datos =
+    await leerJsonSeguro(respuesta);
+
+  if (!respuesta.ok || !datos?.id) {
+    console.error(
+      "Error publicando en Facebook:",
+      datos
+    );
+
+    throw new Error(
+      datos?.error?.message ||
+        "Facebook no pudo publicar el contenido."
+    );
+  }
+
+  const publicacionId = String(datos.id);
+
+  const db =
+    await conectarMongoDB();
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "facebook",
+      tipo: "publicacion",
+
+      productoId:
+        productoId || null,
+
+      publicacionId,
+
+      paginaId:
+        FACEBOOK_PAGE_ID,
+
+      texto,
+
+      imagen,
+
+      estado: "publicado",
+
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return {
+    ok: true,
+    proveedor: "facebook",
+    tipo: "publicacion",
+    publicacionId,
+
+    mensaje:
+      "Publicación realizada correctamente en Facebook.",
+  };
+}
+
+// =========================================================
 // BORRADORES DE CONTENIDO
 // =========================================================
 
@@ -1436,9 +1575,10 @@ async function publicarProgramado(
   }
 
   if (
-    red !== "threads" &&
-    red !== "instagram"
-  ) {
+  red !== "threads" &&
+  red !== "instagram" &&
+  red !== "facebook"
+) {
     return res.status(400).json({
       ok: false,
       error:
@@ -1599,6 +1739,32 @@ async function publicarProgramado(
           "No se pudo publicar el carrusel en Instagram.",
       });
     }
+  }
+
+  if (red === "facebook") {
+  try {
+    resultado =
+      await publicarFacebook({
+        publicacion:
+          pieza.publicacion,
+        productoId,
+      });
+
+    mensaje =
+      "Publicación realizada correctamente en Facebook.";
+  } catch (errorFacebook) {
+    console.error(
+      "Error publicando contenido programado en Facebook:",
+      errorFacebook
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        errorFacebook?.message ||
+        "No se pudo publicar en Facebook.",
+    });
+  }
   }
 
   if (
