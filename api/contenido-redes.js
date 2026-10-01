@@ -21,6 +21,14 @@ const THREADS_REDIRECT_URI =
 const THREADS_API =
   "https://graph.threads.net";
 
+const INSTAGRAM_ACCESS_TOKEN =
+  process.env.INSTAGRAM_ACCESS_TOKEN;
+
+const INSTAGRAM_API_VERSION = "v26.0";
+
+const INSTAGRAM_API =
+  `https://graph.instagram.com/${INSTAGRAM_API_VERSION}`;
+
 // =========================================================
 // AUTENTICACIÓN ADMIN
 // =========================================================
@@ -432,6 +440,412 @@ async function publicarThreads(req, res) {
 }
 
 // =========================================================
+// INSTAGRAM - PUBLICACIÓN
+// =========================================================
+
+function verificarConfiguracionInstagram() {
+  if (!INSTAGRAM_ACCESS_TOKEN) {
+    throw new Error(
+      "Falta INSTAGRAM_ACCESS_TOKEN"
+    );
+  }
+}
+
+async function leerJsonSeguro(respuesta) {
+  const texto = await respuesta.text();
+
+  if (!texto) return {};
+
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return {
+      error: {
+        message: texto,
+      },
+    };
+  }
+}
+
+async function obtenerCuentaInstagram() {
+  verificarConfiguracionInstagram();
+
+  const parametros = new URLSearchParams({
+    fields: "id,username",
+    access_token: INSTAGRAM_ACCESS_TOKEN,
+  });
+
+  const respuesta = await fetch(
+    `${INSTAGRAM_API}/me?${parametros.toString()}`
+  );
+
+  const datos = await leerJsonSeguro(
+    respuesta
+  );
+
+  if (
+    !respuesta.ok ||
+    !datos?.id
+  ) {
+    console.error(
+      "Error obteniendo cuenta de Instagram:",
+      datos
+    );
+
+    throw new Error(
+      datos?.error?.message ||
+        "No se pudo verificar la cuenta de Instagram."
+    );
+  }
+
+  return {
+    id: String(datos.id),
+    username:
+      typeof datos.username === "string"
+        ? datos.username
+        : null,
+  };
+}
+
+function normalizarUrlImagen(valor) {
+  if (typeof valor !== "string") {
+    return null;
+  }
+
+  const url = valor.trim();
+
+  if (
+    !url ||
+    !/^https:\/\//i.test(url)
+  ) {
+    return null;
+  }
+
+  return url;
+}
+
+function extraerImagenesInstagram(
+  publicacion
+) {
+  if (
+    !publicacion ||
+    typeof publicacion !== "object"
+  ) {
+    return [];
+  }
+
+  const candidatos = [
+    publicacion.imagenes,
+    publicacion.images,
+    publicacion.media,
+    publicacion.slides,
+    publicacion.imagen,
+    publicacion.image,
+    publicacion.imageUrl,
+    publicacion.image_url,
+  ];
+
+  const urls = [];
+
+  const agregarValor = (valor) => {
+    if (Array.isArray(valor)) {
+      valor.forEach(agregarValor);
+      return;
+    }
+
+    if (
+      valor &&
+      typeof valor === "object"
+    ) {
+      [
+        valor.url,
+        valor.imageUrl,
+        valor.image_url,
+        valor.imagen,
+        valor.image,
+      ].forEach(agregarValor);
+
+      return;
+    }
+
+    const url =
+      normalizarUrlImagen(valor);
+
+    if (
+      url &&
+      !urls.includes(url)
+    ) {
+      urls.push(url);
+    }
+  };
+
+  candidatos.forEach(agregarValor);
+
+  return urls;
+}
+
+async function crearContenedorInstagram(
+  cuentaId,
+  parametros
+) {
+  const body = new URLSearchParams({
+    ...parametros,
+    access_token:
+      INSTAGRAM_ACCESS_TOKEN,
+  });
+
+  const respuesta = await fetch(
+    `${INSTAGRAM_API}/${cuentaId}/media`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    }
+  );
+
+  const datos = await leerJsonSeguro(
+    respuesta
+  );
+
+  if (
+    !respuesta.ok ||
+    !datos?.id
+  ) {
+    console.error(
+      "Error creando contenedor de Instagram:",
+      datos
+    );
+
+    throw new Error(
+      datos?.error?.message ||
+        "Instagram no pudo crear el contenedor multimedia."
+    );
+  }
+
+  return String(datos.id);
+}
+
+const esperar = (milisegundos) =>
+  new Promise((resolver) =>
+    setTimeout(resolver, milisegundos)
+  );
+
+async function esperarContenedorInstagram(
+  contenedorId,
+  intentos = 10
+) {
+  for (
+    let intento = 0;
+    intento < intentos;
+    intento += 1
+  ) {
+    const parametros =
+      new URLSearchParams({
+        fields: "status_code,status",
+        access_token:
+          INSTAGRAM_ACCESS_TOKEN,
+      });
+
+    const respuesta = await fetch(
+      `${INSTAGRAM_API}/${contenedorId}?${parametros.toString()}`
+    );
+
+    const datos = await leerJsonSeguro(
+      respuesta
+    );
+
+    if (!respuesta.ok) {
+      console.error(
+        "Error consultando contenedor de Instagram:",
+        datos
+      );
+
+      throw new Error(
+        datos?.error?.message ||
+          "No se pudo consultar el estado del contenido de Instagram."
+      );
+    }
+
+    if (
+      datos?.status_code === "FINISHED"
+    ) {
+      return datos;
+    }
+
+    if (
+      datos?.status_code === "ERROR" ||
+      datos?.status_code === "EXPIRED"
+    ) {
+      throw new Error(
+        datos?.status ||
+          "Instagram no pudo procesar el contenido."
+      );
+    }
+
+    await esperar(1500);
+  }
+
+  throw new Error(
+    "Instagram todavía está procesando el contenido. Intenta nuevamente en unos segundos."
+  );
+}
+async function publicarContenedorInstagram(
+  cuentaId,
+  contenedorId
+) {
+  const body = new URLSearchParams({
+    creation_id: contenedorId,
+    access_token:
+      INSTAGRAM_ACCESS_TOKEN,
+  });
+
+  const respuesta = await fetch(
+    `${INSTAGRAM_API}/${cuentaId}/media_publish`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    }
+  );
+
+  const datos = await leerJsonSeguro(
+    respuesta
+  );
+
+  if (
+    !respuesta.ok ||
+    !datos?.id
+  ) {
+    console.error(
+      "Error publicando en Instagram:",
+      datos
+    );
+
+    throw new Error(
+      datos?.error?.message ||
+        "Instagram no pudo publicar el contenido."
+    );
+  }
+
+  return String(datos.id);
+}
+
+async function publicarCarruselInstagram({
+  publicacion,
+  productoId,
+}) {
+  verificarConfiguracionInstagram();
+
+  const imagenes =
+    extraerImagenesInstagram(
+      publicacion
+    );
+
+  if (
+    imagenes.length < 2 ||
+    imagenes.length > 10
+  ) {
+    throw new Error(
+      `El carrusel necesita entre 2 y 10 imágenes públicas. Se encontraron ${imagenes.length}.`
+    );
+  }
+
+  const texto =
+    typeof publicacion?.texto ===
+    "string"
+      ? publicacion.texto.trim()
+      : typeof publicacion?.caption ===
+          "string"
+        ? publicacion.caption.trim()
+        : "";
+
+  const cuenta =
+    await obtenerCuentaInstagram();
+
+  const hijos = [];
+
+  for (const imageUrl of imagenes) {
+    const hijo =
+      await crearContenedorInstagram(
+        cuenta.id,
+        {
+          image_url: imageUrl,
+          is_carousel_item: "true",
+        }
+      );
+
+    await esperarContenedorInstagram(
+      hijo
+    );
+
+    hijos.push(hijo);
+  }
+
+  const parametrosCarrusel = {
+    media_type: "CAROUSEL",
+    children: hijos.join(","),
+  };
+
+  if (texto) {
+    parametrosCarrusel.caption = texto;
+  }
+
+  const carrusel =
+    await crearContenedorInstagram(
+      cuenta.id,
+      parametrosCarrusel
+    );
+
+  await esperarContenedorInstagram(
+    carrusel
+  );
+
+  const publicacionId =
+    await publicarContenedorInstagram(
+      cuenta.id,
+      carrusel
+    );
+
+  const db =
+    await conectarMongoDB();
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "instagram",
+      tipo: "carrusel",
+      productoId:
+        productoId || null,
+      publicacionId,
+      cuentaId: cuenta.id,
+      username:
+        cuenta.username || null,
+      texto,
+      imagenes,
+      estado: "publicado",
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return {
+    ok: true,
+    proveedor: "instagram",
+    tipo: "carrusel",
+    publicacionId,
+    username:
+      cuenta.username || null,
+    mensaje:
+      "Carrusel publicado correctamente en Instagram.",
+  };
+}
+
+// =========================================================
 // BORRADORES DE CONTENIDO
 // =========================================================
 
@@ -665,8 +1079,7 @@ const crearCalendarioInicial = (contenido) => {
     indice,
     publicacion
   ) => {
-
-        if (!publicacion) return;
+    if (!publicacion) return;
 
     calendario.push({
       fecha: dias[d].fecha,
@@ -893,7 +1306,7 @@ async function listarProgramados(
 
 // =========================================================
 // PUBLICAR AHORA - PIEZA PROGRAMADA
-// Por ahora la publicación real está habilitada para Threads.
+// Publicación real: Threads e Instagram (carrusel).
 // =========================================================
 
 async function publicarProgramado(
@@ -922,11 +1335,25 @@ async function publicarProgramado(
     });
   }
 
-  if (red !== "threads") {
+  if (
+    red !== "threads" &&
+    red !== "instagram"
+  ) {
     return res.status(400).json({
       ok: false,
       error:
         "La publicación automática todavía no está habilitada para esta red.",
+    });
+  }
+
+  if (
+    red === "instagram" &&
+    tipo !== "carrusel"
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Por ahora Instagram está habilitado únicamente para carruseles.",
     });
   }
 
@@ -980,60 +1407,109 @@ async function publicarProgramado(
     });
   }
 
-  const texto =
-    typeof pieza.publicacion?.texto ===
-    "string"
-      ? pieza.publicacion.texto.trim()
-      : "";
+  let resultado = null;
+  let mensaje = "";
 
-  if (!texto) {
-    return res.status(400).json({
-      ok: false,
-      error:
-        "La publicación de Threads no contiene texto.",
-    });
+  if (red === "threads") {
+    const texto =
+      typeof pieza.publicacion?.texto ===
+      "string"
+        ? pieza.publicacion.texto.trim()
+        : "";
+
+    if (!texto) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          "La publicación de Threads no contiene texto.",
+      });
+    }
+
+    let resultadoThreads = null;
+    let estadoHttp = 200;
+
+    const respuestaInterna = {
+      status(codigo) {
+        estadoHttp = codigo;
+        return this;
+      },
+
+      json(datos) {
+        resultadoThreads = datos;
+        return datos;
+      },
+    };
+
+    await publicarThreads(
+      {
+        ...req,
+        body: {
+          texto,
+          productoId,
+        },
+      },
+      respuestaInterna
+    );
+
+    if (
+      estadoHttp < 200 ||
+      estadoHttp >= 300 ||
+      !resultadoThreads?.ok
+    ) {
+      return res
+        .status(estadoHttp || 502)
+        .json(
+          resultadoThreads || {
+            ok: false,
+            error:
+              "No se pudo publicar en Threads.",
+          }
+        );
+    }
+
+    resultado = resultadoThreads;
+    mensaje =
+      "Publicación realizada correctamente en Threads.";
   }
 
-  let resultadoThreads = null;
-  let estadoHttp = 200;
+  if (
+    red === "instagram" &&
+    tipo === "carrusel"
+  ) {
+    try {
+      resultado =
+        await publicarCarruselInstagram({
+          publicacion:
+            pieza.publicacion,
+          productoId,
+        });
 
-  const respuestaInterna = {
-    status(codigo) {
-      estadoHttp = codigo;
-      return this;
-    },
+      mensaje =
+        "Carrusel publicado correctamente en Instagram.";
+    } catch (errorInstagram) {
+      console.error(
+        "Error publicando carrusel programado en Instagram:",
+        errorInstagram
+      );
 
-    json(datos) {
-      resultadoThreads = datos;
-      return datos;
-    },
-  };
-
-  await publicarThreads(
-    {
-      ...req,
-      body: {
-        texto,
-        productoId,
-      },
-    },
-    respuestaInterna
-  );
+      return res.status(502).json({
+        ok: false,
+        error:
+          errorInstagram?.message ||
+          "No se pudo publicar el carrusel en Instagram.",
+      });
+    }
+  }
 
   if (
-    estadoHttp < 200 ||
-    estadoHttp >= 300 ||
-    !resultadoThreads?.ok
+    !resultado?.ok ||
+    !resultado?.publicacionId
   ) {
-    return res
-      .status(estadoHttp || 502)
-      .json(
-        resultadoThreads || {
-          ok: false,
-          error:
-            "No se pudo publicar en Threads.",
-        }
-      );
+    return res.status(502).json({
+      ok: false,
+      error:
+        "La red no devolvió un identificador de publicación válido.",
+    });
   }
 
   const ahora = new Date();
@@ -1053,7 +1529,7 @@ async function publicarProgramado(
             ahora,
 
           [`calendario.${posicion}.publicacionId`]:
-            resultadoThreads.publicacionId,
+            resultado.publicacionId,
 
           actualizadoEn: ahora,
         },
@@ -1062,13 +1538,13 @@ async function publicarProgramado(
 
   return res.status(200).json({
     ok: true,
-    mensaje:
-      "Publicación realizada correctamente en Threads.",
+    mensaje,
+    proveedor: red,
+    tipo,
     publicacionId:
-      resultadoThreads.publicacionId,
+      resultado.publicacionId,
   });
 }
-
 // =========================================================
 // OPENAI - GENERAR CONTENIDO
 // =========================================================
