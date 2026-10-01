@@ -611,7 +611,11 @@ const [
         throw new Error(datos.error || "No se pudo publicar ahora.");
       }
 
-      setMensajeCalendario("Publicación realizada correctamente en Threads.");
+      setMensajeCalendario(
+        pieza.red === "instagram"
+          ? "Carrusel publicado correctamente en Instagram."
+          : "Publicación realizada correctamente en Threads."
+      );
       await cargarCalendario();
     } catch (error) {
       setMensajeCalendario(`Error: ${error.message || "No se pudo publicar ahora."}`);
@@ -1720,7 +1724,11 @@ const aprobarContenido = async (
                                         Pendiente · horario pasado
                                       </p>
 
-                                      {pieza.red === "threads" ? (
+                                      {(
+                                        pieza.red === "threads" ||
+                                        (pieza.red === "instagram" &&
+                                          pieza.tipo === "carrusel")
+                                      ) ? (
                                         <button
                                           type="button"
                                           onClick={() => publicarAhora(item, pieza)}
@@ -1737,7 +1745,9 @@ const aprobarContenido = async (
                                         </button>
                                       ) : (
                                         <p className="mt-1 text-[9px] text-slate-400">
-                                          Publicación automática pendiente de conectar {pieza.red === "instagram" ? "Instagram" : "Facebook"}.
+                                          {pieza.red === "instagram"
+                                            ? "Publicación automática de Stories/Reels pendiente de conectar."
+                                            : "Publicación automática pendiente de conectar Facebook."}
                                         </p>
                                       )}
                                     </div>
