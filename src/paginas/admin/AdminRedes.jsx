@@ -1393,6 +1393,18 @@ const aprobarContenido = async (
     </div>
   )}
 </div>
+
+                      {mensajeAprobacion[
+  item.productoId
+] && (
+  <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
+    {
+      mensajeAprobacion[
+        item.productoId
+      ]
+    }
+  </div>
+)}
                       
                     </div>
                   </section>
