@@ -657,3 +657,426 @@ function generarStories(
   ];
 }
 
+// =========================================================
+// INSTAGRAM - CARRUSEL
+// =========================================================
+
+const instagramCarrusel = [
+  (p, e) =>
+    `Una actividad para tener siempre a mano ${e[0]}\n\n${obtenerNombre(p)} reúne ${descripcionCantidad(p)} pensadas para ${obtenerPublico(p)}.\n\n${incluyeAleatorio(p)} ${e[1]}\n\nDesliza para conocer el producto ${e[2]}`,
+
+  (p, e) =>
+    `¿Buscas nuevas actividades para imprimir? ${e[0]}\n\nHoy te presentamos ${obtenerNombre(p)}.\n\nUna colección en formato ${p.formato || "PDF"} para disfrutar cuando quieras ${e[1]}\n\nDescubre qué incluye ${e[2]}`,
+
+  (p, e) =>
+    `Nuevo desafío para imprimir ${e[0]}\n\nConoce ${obtenerNombre(p)}, una propuesta creada para ${obtenerPublico(p)}.\n\n${incluyeAleatorio(p)} ${e[1]}\n\nDesliza y descubre más ${e[2]}`,
+
+  (p, e) =>
+    `Imprime, juega y disfruta ${e[0]}\n\n${obtenerNombre(p)} te permite tener ${descripcionCantidad(p)} listas para utilizar.\n\nFormato ${p.formato || "PDF"} · ${p.tamano || "A4"} ${e[1]}\n\nConoce todos los detalles ${e[2]}`,
+
+  (p, e) =>
+    `Una propuesta para disfrutar lejos de las pantallas ${e[0]}\n\n${obtenerNombre(p)} combina entretenimiento y ${beneficioAleatorio(p).toLowerCase()}.\n\n${incluyeAleatorio(p)} ${e[1]}\n\nDescubre el producto completo ${e[2]}`,
+];
+
+function generarCarrusel(
+  producto,
+  imagenes
+) {
+  const e =
+    emojis("producto");
+
+  return crearPublicacion({
+    producto,
+    tipo: "carrusel",
+    formato: "carrusel",
+
+    texto: elegir(
+      instagramCarrusel
+    )(
+      producto,
+      e
+    ),
+
+    cta: "Enlace en la bio",
+
+    imagen: imagenes.todas,
+  });
+}
+
+// =========================================================
+// INSTAGRAM - REEL
+// =========================================================
+
+const instagramReels = [
+  (p, e) =>
+    `Un desafío imprimible para tener listo cuando quieras ${e[0]} ${obtenerNombre(p)} reúne ${descripcionCantidad(p)} para disfrutar ${e[1]} Conócelo en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `De la pantalla al papel en pocos pasos ${e[0]} Descubre ${obtenerNombre(p)} y disfruta de nuevas actividades para imprimir ${e[1]} Encuentra el producto en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `¿Te animas a un nuevo desafío? ${e[0]} ${obtenerNombre(p)} está preparado para ${obtenerPublico(p)} ${e[1]} Descubre todo lo que incluye ${e[2]}`,
+
+  (p, e) =>
+    `Una actividad lista para imprimir y disfrutar ${e[0]} ${obtenerNombre(p)} incluye ${incluyeAleatorio(p)} ${e[1]} Conoce el producto completo ${e[2]}`,
+];
+
+function generarReel(
+  producto,
+  imagenes
+) {
+  const e =
+    emojis("producto");
+
+  return {
+    ...crearPublicacion({
+      producto,
+      tipo: "reel",
+      formato: "reel",
+
+      texto: elegir(
+        instagramReels
+      )(
+        producto,
+        e
+      ),
+
+      cta: "Enlace en la bio",
+
+      // Por ahora usamos las cuatro imágenes comerciales
+      // como referencia visual.
+      // Más adelante incorporaremos actividades reales
+      // y generaremos el video del Reel.
+      imagen: imagenes.todas,
+    }),
+
+    guion: [
+      `1. Gancho: presentar ${obtenerNombre(producto)}.`,
+      `2. Presentación: mostrar ${descripcionCantidad(producto)}.`,
+      `3. Producto: enseñar ejemplos reales de las actividades.`,
+      `4. Soluciones: mostrar una actividad y su solución si corresponde.`,
+      `5. Cierre: mostrar el producto y dirigir a la tienda.`,
+    ].join("\n"),
+  };
+}
+
+// =========================================================
+// FACEBOOK - INTERACCIÓN
+// =========================================================
+
+const facebookInteraccion = [
+  (p, e) =>
+    `Pregunta para comenzar ${e[0]}\n\nCuando eliges una actividad imprimible, ¿qué valoras más: que sea entretenida, que represente un desafío o que puedas hacerla con calma? ${e[1]}\n\nCuéntame en los comentarios ${e[2]}`,
+
+  (p, e) =>
+    `Vamos a elegir ${e[0]}\n\nSi hoy tuvieras un rato libre, ¿preferirías una actividad rápida o un desafío para dedicarle más tiempo? ${e[1]}\n\nQuiero conocer tu elección ${e[2]}`,
+
+  (p, e) =>
+    `Hay diferentes formas de disfrutar un juego ${e[0]}\n\nAlgunas personas prefieren resolverlo tranquilamente y otras convierten cada actividad en un desafío contra el reloj ${e[1]}\n\n¿Cuál prefieres? ${e[2]}`,
+
+  (p, e) =>
+    `Pregunta del día ${e[0]}\n\n¿Sueles guardar actividades para tenerlas preparadas cuando aparece un momento libre? ${e[1]}\n\nCuéntame cómo te organizas ${e[2]}`,
+
+  (p, e) =>
+    `Momento de elegir ${e[0]}\n\n¿Qué disfrutas más: comenzar por las actividades fáciles o ir directamente a las más difíciles? ${e[1]}\n\nTe leo en los comentarios ${e[2]}`,
+];
+
+// =========================================================
+// FACEBOOK - TIPS
+// =========================================================
+
+const facebookTips = [
+  (p, e) =>
+    `Una idea práctica para tus imprimibles ${e[0]}\n\nPuedes imprimir algunas actividades con anticipación y guardarlas en una carpeta. Así tendrás una opción preparada para esos momentos en los que quieres hacer algo diferente ${e[1]}\n\nPequeñas ideas que facilitan el día ${e[2]}`,
+
+  (p, e) =>
+    `Consejo sencillo ${e[0]}\n\nNo necesitas imprimir todo el archivo de una sola vez. Puedes elegir las actividades que quieras utilizar y conservar el PDF para otro momento ${e[1]}\n\nAsí aprovechas el material a tu ritmo ${e[2]}`,
+
+  (p, e) =>
+    `Idea para organizar tus actividades ${e[0]}\n\nSepara los imprimibles por tipo o dificultad y podrás elegir rápidamente según el momento ${e[1]}\n\nUna forma sencilla de tener opciones siempre disponibles ${e[2]}`,
+
+  (p, e) =>
+    `Un pequeño truco ${e[0]}\n\nAlternar actividades diferentes puede hacer que cada sesión de juego se sienta nueva ${e[1]}\n\nGuarda tus favoritas para repetirlas cuando quieras ${e[2]}`,
+
+  (p, e) =>
+    `Consejo para disfrutar más cada actividad ${e[0]}\n\nNo siempre es necesario terminar todo de una vez. Puedes avanzar poco a poco y continuar en otro momento ${e[1]}\n\nLo importante es disfrutar el proceso ${e[2]}`,
+];
+
+// =========================================================
+// FACEBOOK - PRODUCTO
+// =========================================================
+
+const facebookProducto = [
+  (p, e) =>
+    `Hoy te presentamos ${obtenerNombre(p)} ${e[0]}\n\nUna propuesta imprimible para ${obtenerPublico(p)} con ${descripcionCantidad(p)}.\n\n${incluyeAleatorio(p)} ${e[1]}\n\nPuedes conocer todos los detalles en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `Una nueva opción para imprimir y disfrutar ${e[0]}\n\n${obtenerNombre(p)} está preparado en formato ${p.formato || "PDF"} y pensado para ${obtenerPublico(p)}.\n\n${incluyeAleatorio(p)} ${e[1]}\n\nDescubre el producto completo en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `¿Buscas nuevas actividades para tener a mano? ${e[0]}\n\nConoce ${obtenerNombre(p)}, una colección con ${descripcionCantidad(p)} para disfrutar cuando quieras.\n\n${incluyeAleatorio(p)} ${e[1]}\n\nEncuentra más información en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `${obtenerNombre(p)} ${e[0]}\n\nUna propuesta digital que puedes guardar e imprimir según la necesites.\n\nPensada para ${obtenerPublico(p)} ${e[1]}\n\nConoce todos los detalles del producto ${e[2]}`,
+];
+
+// =========================================================
+// FACEBOOK - BENEFICIOS
+// =========================================================
+
+const facebookBeneficios = [
+  (p, e) =>
+    `Una actividad sencilla también puede ofrecer diferentes beneficios ${e[0]}\n\n${obtenerNombre(p)} puede acompañar momentos de ${beneficioAleatorio(p).toLowerCase()} mientras se disfruta de un juego imprimible ${e[1]}\n\nUna forma diferente de pasar el tiempo ${e[2]}`,
+
+  (p, e) =>
+    `Los juegos imprimibles pueden ser mucho más que una forma de entretenimiento ${e[0]}\n\nTambién pueden acompañar actividades relacionadas con ${beneficioAleatorio(p).toLowerCase()} ${e[1]}\n\nTodo desde una propuesta sencilla en papel ${e[2]}`,
+
+  (p, e) =>
+    `A veces solo necesitas papel, lápiz y un buen desafío ${e[0]}\n\nUna actividad imprimible puede convertirse en un momento para trabajar ${beneficioAleatorio(p).toLowerCase()} mientras disfrutas ${e[1]}\n\nUna alternativa sencilla a las pantallas ${e[2]}`,
+
+  (p, e) =>
+    `¿Por qué elegir actividades imprimibles? ${e[0]}\n\nPorque puedes tenerlas preparadas, elegir cuándo utilizarlas y disfrutar de beneficios como ${beneficioAleatorio(p).toLowerCase()} ${e[1]}\n\nPrácticas y fáciles de tener a mano ${e[2]}`,
+
+  (p, e) =>
+    `Jugar también puede ser una oportunidad para aprender y ejercitar diferentes habilidades ${e[0]}\n\nCon actividades como ${obtenerNombre(p)} puedes incorporar momentos relacionados con ${beneficioAleatorio(p).toLowerCase()} ${e[1]}\n\nTodo mientras disfrutas del desafío ${e[2]}`,
+];
+
+// =========================================================
+// FACEBOOK - VENTA
+// =========================================================
+
+const facebookVenta = [
+  (p, e) =>
+    `¿Quieres sumar nuevas actividades listas para imprimir? ${e[0]}\n\n${obtenerNombre(p)} reúne ${descripcionCantidad(p)} para ${obtenerPublico(p)}.\n\nAdemás, incluye ${incluyeAleatorio(p)} ${e[1]}\n\nPuedes encontrar el producto completo en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `${obtenerNombre(p)} ya está disponible ${e[0]}\n\nRecibes ${incluyeAleatorio(p)} en formato ${p.formato || "PDF"}.\n\nDescarga, imprime y elige la actividad que quieras utilizar ${e[1]}\n\nEncuentra el producto en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `Una colección para guardar y utilizar cuando quieras ${e[0]}\n\n${obtenerNombre(p)} incluye ${descripcionCantidad(p)} pensadas para ${obtenerPublico(p)}.\n\n${incluyeAleatorio(p)} ${e[1]}\n\nDescubre todos los detalles en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `Imprime cuando quieras y disfruta a tu ritmo ${e[0]}\n\nCon ${obtenerNombre(p)} tienes una colección de actividades preparada para utilizar.\n\nFormato ${p.formato || "PDF"} · ${p.tamano || "A4"} ${e[1]}\n\nConoce el producto en nuestra tienda ${e[2]}`,
+
+  (p, e) =>
+    `Una nueva actividad puede estar a solo unos pasos ${e[0]}\n\nElige ${obtenerNombre(p)}, accede al archivo y prepara la actividad que quieras disfrutar ${e[1]}\n\nDisponible en nuestra tienda ${e[2]}`,
+];
+
+function generarFacebook(
+  producto,
+  imagenes
+) {
+  const eInteraccion =
+    emojis("interaccion");
+
+  const eProducto =
+    emojis("producto");
+
+  const eTip =
+    emojis("tip");
+
+  const eEncuesta =
+    emojis("encuesta");
+
+  const eBeneficio =
+    emojis("beneficio");
+
+  const eVenta =
+    emojis("venta");
+
+  const opcionesEncuesta = elegir([
+    [
+      "Actividad tranquila",
+      "Desafío difícil",
+    ],
+
+    [
+      "Resolver solo/a",
+      "Resolver en compañía",
+    ],
+
+    [
+      "Comenzar fácil",
+      "Comenzar difícil",
+    ],
+
+    [
+      "Sin límite de tiempo",
+      "Contra reloj",
+    ],
+  ]);
+
+  return [
+    crearPublicacion({
+      producto,
+      tipo: "interaccion",
+      formato: "texto",
+
+      texto: elegir(
+        facebookInteraccion
+      )(
+        producto,
+        eInteraccion
+      ),
+    }),
+
+    crearPublicacion({
+      producto,
+      tipo: "producto",
+      formato: "imagen",
+
+      texto: elegir(
+        facebookProducto
+      )(
+        producto,
+        eProducto
+      ),
+
+      cta:
+        "Ver producto en la tienda",
+
+      // Imagen 1:
+      // presentación del producto.
+      imagen:
+        imagenes.presentacion,
+    }),
+
+    crearPublicacion({
+      producto,
+      tipo: "tip",
+      formato: "texto",
+
+      texto: elegir(
+        facebookTips
+      )(
+        producto,
+        eTip
+      ),
+    }),
+
+    crearPublicacion({
+      producto,
+      tipo: "encuesta",
+      formato: "encuesta",
+
+      texto:
+        `Vamos a elegir ${eEncuesta[0]}\n\nSi hoy tuvieras que escoger una opción, ¿cuál preferirías? ${eEncuesta[1]}\n\nVota y cuéntame tu elección ${eEncuesta[2]}`,
+
+      encuesta: {
+        pregunta:
+          "¿Qué opción prefieres?",
+
+        opciones:
+          opcionesEncuesta,
+      },
+
+      // No forzamos una imagen comercial.
+      imagen: null,
+    }),
+
+    crearPublicacion({
+      producto,
+      tipo: "beneficio",
+
+      formato:
+        imagenes.beneficios
+          ? "imagen"
+          : "texto",
+
+      texto: elegir(
+        facebookBeneficios
+      )(
+        producto,
+        eBeneficio
+      ),
+
+      // Imagen 3:
+      // beneficios / aprender jugando.
+      imagen:
+        imagenes.beneficios,
+    }),
+
+    crearPublicacion({
+      producto,
+      tipo: "venta",
+      formato: "imagen",
+
+      texto: elegir(
+        facebookVenta
+      )(
+        producto,
+        eVenta
+      ),
+
+      cta:
+        "Ver producto en la tienda",
+
+      // Imagen 4:
+      // descarga, impresión y funcionamiento.
+      imagen:
+        imagenes.comoFunciona,
+    }),
+  ];
+}
+
+// =========================================================
+// GENERADOR PRINCIPAL
+// =========================================================
+
+export function generarContenidoRedesLocal(
+  productoOriginal
+) {
+  const producto =
+    prepararProductoRedes(
+      productoOriginal
+    );
+
+  const imagenes =
+    obtenerImagenes(
+      producto
+    );
+
+  return {
+    productoId:
+      producto.id,
+
+    nombreProducto:
+      producto.nombre,
+
+    generador: "local",
+
+    instagram: {
+      carrusel:
+        generarCarrusel(
+          producto,
+          imagenes
+        ),
+
+      reel:
+        generarReel(
+          producto,
+          imagenes
+        ),
+
+      stories:
+        generarStories(
+          producto,
+          imagenes
+        ),
+    },
+
+    threads:
+      generarThreads(
+        producto,
+        imagenes
+      ),
+
+    facebook: {
+      publicaciones:
+        generarFacebook(
+          producto,
+          imagenes
+        ),
+    },
+  };
+}
