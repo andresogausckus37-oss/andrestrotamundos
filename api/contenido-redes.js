@@ -456,6 +456,129 @@ async function publicarThreads(req, res) {
 }
 
 // =========================================================
+// BORRADORES DE CONTENIDO
+// =========================================================
+
+async function guardarBorrador(
+  req,
+  res
+) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
+  const nombreProducto =
+    typeof req.body?.nombreProducto === "string"
+      ? req.body.nombreProducto.trim()
+      : "";
+
+  const contenido =
+    req.body?.contenido;
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  if (!nombreProducto) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el nombre del producto.",
+    });
+  }
+
+  if (
+    !contenido ||
+    typeof contenido !== "object" ||
+    Array.isArray(contenido)
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "El contenido del borrador no es válido.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const ahora =
+    new Date();
+
+  await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        productoId,
+        estado: "borrador",
+      },
+      {
+        $set: {
+          productoId,
+          nombreProducto,
+          contenido,
+          estado: "borrador",
+          actualizadoEn: ahora,
+        },
+
+        $setOnInsert: {
+          creadoEn: ahora,
+          aprobadoEn: null,
+        },
+      },
+      {
+        upsert: true,
+      }
+    );
+
+  const borrador = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "borrador",
+    });
+
+  return res.status(200).json({
+    ok: true,
+    mensaje:
+      "Borrador guardado correctamente.",
+    borrador,
+  });
+}
+
+// =========================================================
+// LISTAR BORRADORES
+// =========================================================
+
+async function listarBorradores(
+  req,
+  res
+) {
+  const db =
+    await conectarMongoDB();
+
+  const borradores = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "borrador",
+    })
+    .sort({
+      actualizadoEn: -1,
+    })
+    .toArray();
+
+  return res.status(200).json({
+    ok: true,
+    borradores,
+  });
+}
+
+// =========================================================
 // OPENAI - GENERAR CONTENIDO
 // =========================================================
 
@@ -583,6 +706,50 @@ export default async function handler(
       }
 
       return publicarThreads(
+        req,
+        res
+      );
+    }
+
+        // -----------------------------------------------------
+    // GUARDAR BORRADOR
+    // Solo administrador.
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "guardar-borrador"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return guardarBorrador(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // LISTAR BORRADORES
+    // Solo administrador.
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "listar-borradores"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return listarBorradores(
         req,
         res
       );

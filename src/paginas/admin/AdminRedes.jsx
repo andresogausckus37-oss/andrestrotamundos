@@ -7,6 +7,7 @@ import {
   Loader2,
   MessageCircle,
   Pencil,
+  Save,
   Sparkles,
 } from "lucide-react";
 
@@ -306,6 +307,16 @@ export default function AdminRedes() {
     setContenidos,
   ] = useState([]);
 
+  const [
+  guardandoId,
+  setGuardandoId,
+] = useState("");
+
+const [
+  mensajesGuardado,
+  setMensajesGuardado,
+] = useState({});
+
   // =======================================================
   // CARGAR PRODUCTOS
   // =======================================================
@@ -569,6 +580,89 @@ export default function AdminRedes() {
       }
     );
   };
+
+  // =======================================================
+// GUARDAR BORRADOR EN MONGODB
+// =======================================================
+
+const guardarBorrador = async (
+  item
+) => {
+  try {
+    setGuardandoId(
+      item.productoId
+    );
+
+    setMensajesGuardado(
+      (actuales) => ({
+        ...actuales,
+        [item.productoId]: "",
+      })
+    );
+
+    const respuesta =
+      await fetch(
+        "/api/contenido-redes?accion=guardar-borrador",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            productoId:
+              item.productoId,
+
+            nombreProducto:
+              item.nombre,
+
+            contenido:
+              item.contenido,
+          }),
+        }
+      );
+
+    const datos =
+      await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos.error ||
+          "No se pudo guardar el borrador."
+      );
+    }
+
+    setMensajesGuardado(
+      (actuales) => ({
+        ...actuales,
+
+        [item.productoId]:
+          "Borrador guardado correctamente.",
+      })
+    );
+  } catch (error) {
+    console.error(
+      "Error guardando borrador:",
+      error
+    );
+
+    setMensajesGuardado(
+      (actuales) => ({
+        ...actuales,
+
+        [item.productoId]:
+          `Error: ${
+            error.message ||
+            "No se pudo guardar el borrador."
+          }`,
+      })
+    );
+  } finally {
+    setGuardandoId("");
+  }
+};
 
     // =======================================================
   // RENDER
@@ -1018,6 +1112,73 @@ export default function AdminRedes() {
                           )
                         )}
                       </BloqueRed>
+
+{/* GUARDAR BORRADOR */}
+
+<div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+  <div className="flex items-start gap-3">
+    <Save
+      size={17}
+      className="mt-0.5 shrink-0 text-violet-600"
+    />
+
+    <div className="min-w-0 flex-1">
+      <p className="text-xs font-bold text-slate-900">
+        Guardar revisión
+      </p>
+
+      <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+        Guarda este contenido como
+        borrador. Todavía no se
+        publicará ni entrará al
+        calendario.
+      </p>
+    </div>
+  </div>
+
+  <button
+    type="button"
+    onClick={() =>
+      guardarBorrador(item)
+    }
+    disabled={
+      guardandoId ===
+      item.productoId
+    }
+    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
+  >
+    {guardandoId ===
+    item.productoId ? (
+      <>
+        <Loader2
+          size={15}
+          className="animate-spin"
+        />
+
+        Guardando...
+      </>
+    ) : (
+      <>
+        <Save size={15} />
+
+        Guardar borrador
+      </>
+    )}
+  </button>
+
+  {mensajesGuardado[
+    item.productoId
+  ] && (
+    <div className="mt-3 rounded-lg border border-violet-200 bg-white px-3 py-2 text-[11px] text-slate-700">
+      {
+        mensajesGuardado[
+          item.productoId
+        ]
+      }
+    </div>
+  )}
+</div>
+                      
                     </div>
                   </section>
                 );
