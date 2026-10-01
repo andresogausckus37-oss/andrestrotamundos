@@ -21,6 +21,7 @@ function PublicacionEditable({
   titulo,
   publicacion,
   onCambiar,
+  relacionAspecto = "1:1",
 }) {
   const [abierta, setAbierta] =
     useState(false);
@@ -56,6 +57,20 @@ function PublicacionEditable({
     });
   };
 
+  const claseAspecto =
+    relacionAspecto === "9:16"
+      ? "aspect-[9/16]"
+      : relacionAspecto === "4:5"
+        ? "aspect-[4/5]"
+        : "aspect-square";
+
+  const anchoVista =
+    relacionAspecto === "9:16"
+      ? "w-28"
+      : relacionAspecto === "4:5"
+        ? "w-32"
+        : "w-28";
+
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <button
@@ -63,19 +78,19 @@ function PublicacionEditable({
         onClick={() =>
           setAbierta((valor) => !valor)
         }
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
       >
         <div className="min-w-0">
           <p className="text-xs font-bold text-slate-900">
             {titulo}
           </p>
 
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase text-slate-500">
+          <div className="mt-0.5 flex flex-wrap gap-1">
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-bold uppercase text-slate-500">
               {publicacion.tipo}
             </span>
 
-            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[9px] font-bold uppercase text-violet-600">
+            <span className="rounded-full bg-violet-50 px-1.5 py-0.5 text-[8px] font-bold uppercase text-violet-600">
               {publicacion.formato}
             </span>
           </div>
@@ -95,24 +110,24 @@ function PublicacionEditable({
       </button>
 
       {abierta && (
-        <div className="border-t border-slate-100 p-4">
+        <div className="border-t border-slate-100 p-3">
           {publicacion.imagen && (
-            <div className="mb-4">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+            <div className="mb-3">
+              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
                 Imagen
               </p>
 
               {Array.isArray(
                 publicacion.imagen
               ) ? (
-                <div className="grid grid-cols-4 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {publicacion.imagen.map(
                     (imagen, indice) => (
                       <img
                         key={`${imagen}-${indice}`}
                         src={imagen}
                         alt=""
-                        className="aspect-square w-full rounded-lg border border-slate-200 object-cover"
+                        className={`${claseAspecto} ${anchoVista} rounded-lg border border-slate-200 bg-slate-50 object-contain`}
                       />
                     )
                   )}
@@ -121,7 +136,7 @@ function PublicacionEditable({
                 <img
                   src={publicacion.imagen}
                   alt=""
-                  className="h-32 w-32 rounded-lg border border-slate-200 object-cover"
+                  className={`${claseAspecto} ${anchoVista} rounded-lg border border-slate-200 bg-slate-50 object-contain`}
                 />
               )}
             </div>
@@ -138,13 +153,13 @@ function PublicacionEditable({
                 event.target.value
               )
             }
-            rows={6}
-            className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs leading-relaxed text-slate-700 outline-none transition focus:border-violet-400"
+            rows={4}
+            className="w-full resize-y rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] leading-relaxed text-slate-700 outline-none transition focus:border-violet-400"
           />
 
           {publicacion.cta !==
             undefined && (
-            <div className="mt-4">
+            <div className="mt-3">
               <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
                 CTA
               </label>
@@ -159,12 +174,12 @@ function PublicacionEditable({
                     event.target.value
                   )
                 }
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+                className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] text-slate-700 outline-none transition focus:border-violet-400"
               />
             </div>
           )}
 
-          <div className="mt-4">
+          <div className="mt-3">
             <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
               Hashtags
             </label>
@@ -177,7 +192,7 @@ function PublicacionEditable({
                 )
               }
               rows={2}
-              className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+              className="w-full resize-y rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] text-slate-700 outline-none transition focus:border-violet-400"
             />
 
             <p className="mt-1 text-[10px] text-slate-400">
@@ -186,7 +201,7 @@ function PublicacionEditable({
           </div>
 
           {publicacion.encuesta && (
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
               <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
                 Encuesta
               </p>
@@ -216,7 +231,7 @@ function PublicacionEditable({
           {Array.isArray(
             publicacion.guion
           ) && (
-            <div className="mt-4 rounded-lg border border-violet-100 bg-violet-50 p-3">
+            <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50 p-2.5">
               <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
                 Guion del Reel
               </p>
@@ -251,8 +266,8 @@ function BloqueRed({
   children,
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="mb-4 flex items-center gap-2">
+    <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="mb-2 flex items-center gap-2">
         {icono}
 
         <h3 className="text-sm font-bold text-slate-900">
@@ -260,7 +275,7 @@ function BloqueRed({
         </h3>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {children}
       </div>
     </section>
@@ -843,11 +858,11 @@ const aprobarContenido = async (
     Boolean(producto1 || producto2);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24">
+    <main className="min-h-screen bg-slate-50 px-3 pb-10 pt-20">
       <div className="mx-auto max-w-5xl">
         {/* ENCABEZADO */}
 
-        <div className="mb-6">
+        <div className="mb-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Administración
           </p>
@@ -864,7 +879,7 @@ const aprobarContenido = async (
 
         {/* PRODUCTOS */}
 
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
           <div className="flex items-center gap-2">
             <Sparkles
               size={18}
@@ -891,7 +906,7 @@ const aprobarContenido = async (
               Cargando productos...
             </div>
           ) : (
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
               {/* PRODUCTO 1 */}
 
               <div>
@@ -908,7 +923,7 @@ const aprobarContenido = async (
 
                     setContenidos([]);
                   }}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] text-slate-700 outline-none transition focus:border-violet-400"
                 >
                   <option value="">
                     Seleccionar producto
@@ -947,7 +962,7 @@ const aprobarContenido = async (
 
                     setContenidos([]);
                   }}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] text-slate-700 outline-none transition focus:border-violet-400"
                 >
                   <option value="">
                     Seleccionar producto
@@ -990,7 +1005,7 @@ const aprobarContenido = async (
               generando ||
               cargandoProductos
             }
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
             {generando ? (
               <>
@@ -1026,7 +1041,7 @@ const aprobarContenido = async (
 
         {!cargandoBorradores &&
           contenidos.length > 0 && (
-          <div className="mt-6 space-y-8">
+          <div className="mt-4 space-y-5">
             {contenidos.map(
               (
                 item,
@@ -1042,7 +1057,7 @@ const aprobarContenido = async (
                   >
                     {/* CABECERA PRODUCTO */}
 
-                    <div className="border-b border-slate-200 p-5">
+                    <div className="border-b border-slate-200 p-3.5">
                       <div className="flex items-start gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50">
                           <Pencil
@@ -1071,9 +1086,9 @@ const aprobarContenido = async (
 
                       {/* RESUMEN */}
 
-                      <div className="mt-4 grid grid-cols-3 gap-2">
-                        <div className="rounded-lg bg-slate-50 p-3 text-center">
-                          <p className="text-lg font-bold text-slate-900">
+                      <div className="mt-3 grid grid-cols-3 gap-1.5">
+                        <div className="rounded-lg bg-slate-50 p-2 text-center">
+                          <p className="text-base font-bold text-slate-900">
                             {
                               contenido
                                 .threads
@@ -1086,8 +1101,8 @@ const aprobarContenido = async (
                           </p>
                         </div>
 
-                        <div className="rounded-lg bg-slate-50 p-3 text-center">
-                          <p className="text-lg font-bold text-slate-900">
+                        <div className="rounded-lg bg-slate-50 p-2 text-center">
+                          <p className="text-base font-bold text-slate-900">
                             {contenido
                               .instagram
                               .stories
@@ -1099,8 +1114,8 @@ const aprobarContenido = async (
                           </p>
                         </div>
 
-                        <div className="rounded-lg bg-slate-50 p-3 text-center">
-                          <p className="text-lg font-bold text-slate-900">
+                        <div className="rounded-lg bg-slate-50 p-2 text-center">
+                          <p className="text-base font-bold text-slate-900">
                             {
                               contenido
                                 .facebook
@@ -1118,7 +1133,7 @@ const aprobarContenido = async (
 
                     {/* REDES */}
 
-                    <div className="space-y-5 p-5">
+                    <div className="space-y-3 p-3.5">
                       {/* INSTAGRAM */}
 
                       <BloqueRed
@@ -1143,6 +1158,7 @@ const aprobarContenido = async (
 
                         <PublicacionEditable
                           titulo="Carrusel"
+                          relacionAspecto="4:5"
                           publicacion={
                             contenido
                               .instagram
@@ -1160,6 +1176,7 @@ const aprobarContenido = async (
 
                         <PublicacionEditable
                           titulo="Reel"
+                          relacionAspecto="9:16"
                           publicacion={
                             contenido
                               .instagram
@@ -1175,8 +1192,8 @@ const aprobarContenido = async (
                           }
                         />
 
-                        <div className="pt-3">
-                          <div className="mb-3 flex items-center gap-2">
+                        <div className="pt-1">
+                          <div className="mb-2 flex items-center gap-2">
                             <MessageCircle
                               size={13}
                               className="text-slate-400"
@@ -1187,7 +1204,7 @@ const aprobarContenido = async (
                             </p>
                           </div>
 
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             {contenido.instagram.stories.map(
                               (
                                 story,
@@ -1199,6 +1216,7 @@ const aprobarContenido = async (
                                     indice +
                                     1
                                   }`}
+                                  relacionAspecto="9:16"
                                   publicacion={
                                     story
                                   }
@@ -1240,6 +1258,7 @@ const aprobarContenido = async (
                                 indice +
                                 1
                               }`}
+                              relacionAspecto="1:1"
                               publicacion={
                                 publicacion
                               }
@@ -1279,6 +1298,7 @@ const aprobarContenido = async (
                                 indice +
                                 1
                               }`}
+                              relacionAspecto="1:1"
                               publicacion={
                                 publicacion
                               }
@@ -1298,7 +1318,7 @@ const aprobarContenido = async (
 
 {/* GUARDAR BORRADOR */}
 
-<div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+<div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
   <div className="flex items-start gap-3">
     <Save
       size={17}
@@ -1328,7 +1348,7 @@ const aprobarContenido = async (
       guardandoId ===
       item.productoId
     }
-    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
+    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
   >
     {guardandoId ===
     item.productoId ? (
@@ -1360,7 +1380,7 @@ const aprobarContenido = async (
     guardandoId ===
       item.productoId
   }
-  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+  className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
 >
   {aprobandoId ===
   item.productoId ? (
@@ -1417,7 +1437,7 @@ const aprobarContenido = async (
         {/* AVISO ETAPA ACTUAL */}
 
         {contenidos.length > 0 && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
             <p className="text-xs font-semibold text-amber-900">
               Etapa de revisión
             </p>
