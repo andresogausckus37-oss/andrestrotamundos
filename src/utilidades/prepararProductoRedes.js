@@ -37,9 +37,69 @@ export function prepararProductoRedes(producto) {
     },
 
     imagenes: {
-      portada: producto.imagenes?.portada || "",
-      preview: producto.imagenes?.preview || "",
-      muestras: producto.imagenes?.previewsIndividuales || [],
+      // ==========================================
+      // CUADRADAS 1:1
+      // Tienda + Facebook + Threads
+      // ==========================================
+      cuadradas: {
+        presentacion:
+          producto.imagenes?.portada || "",
+
+        incluye:
+          producto.imagenes?.preview || "",
+
+        beneficios:
+          producto.imagenes
+            ?.previewsIndividuales?.[0] || "",
+
+        comoFunciona:
+          producto.imagenes
+            ?.previewsIndividuales?.[1] || "",
+      },
+
+      // ==========================================
+      // INSTAGRAM FEED / CARRUSEL 4:5
+      // 1080 × 1350
+      // ==========================================
+      feed: {
+        presentacion:
+          producto.imagenes?.redes
+            ?.feed?.presentacion || "",
+
+        incluye:
+          producto.imagenes?.redes
+            ?.feed?.incluye || "",
+
+        beneficios:
+          producto.imagenes?.redes
+            ?.feed?.beneficios || "",
+
+        comoFunciona:
+          producto.imagenes?.redes
+            ?.feed?.comoFunciona || "",
+      },
+
+      // ==========================================
+      // STORIES / REELS 9:16
+      // 1080 × 1920
+      // ==========================================
+      vertical: {
+        presentacion:
+          producto.imagenes?.redes
+            ?.vertical?.presentacion || "",
+
+        incluye:
+          producto.imagenes?.redes
+            ?.vertical?.incluye || "",
+
+        beneficios:
+          producto.imagenes?.redes
+            ?.vertical?.beneficios || "",
+
+        comoFunciona:
+          producto.imagenes?.redes
+            ?.vertical?.comoFunciona || "",
+      },
     },
   };
 }
