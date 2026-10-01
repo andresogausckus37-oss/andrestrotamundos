@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Image,
@@ -320,6 +321,16 @@ export default function AdminRedes() {
     mensajesGuardado,
     setMensajesGuardado,
   ] = useState({});
+
+  const [
+  aprobandoId,
+  setAprobandoId,
+] = useState("");
+
+const [
+  mensajeAprobacion,
+  setMensajeAprobacion,
+] = useState({});
 
   // =======================================================
   // CARGAR PRODUCTOS
@@ -727,6 +738,100 @@ const guardarBorrador = async (
     );
   } finally {
     setGuardandoId("");
+  }
+};
+
+  // =======================================================
+// APROBAR CONTENIDO
+// =======================================================
+
+const aprobarContenido = async (
+  item
+) => {
+  const confirmado = window.confirm(
+    `¿Aprobar el contenido de "${item.nombre}"?\n\nUna vez aprobado quedará disponible para incorporarlo al calendario.`
+  );
+
+  if (!confirmado) {
+    return;
+  }
+
+  try {
+    setAprobandoId(
+      item.productoId
+    );
+
+    setMensajeAprobacion(
+      (actuales) => ({
+        ...actuales,
+        [item.productoId]: "",
+      })
+    );
+
+    const respuesta =
+      await fetch(
+        "/api/contenido-redes?accion=aprobar-borrador",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            productoId:
+              item.productoId,
+          }),
+        }
+      );
+
+    const datos =
+      await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos.error ||
+          "No se pudo aprobar el contenido."
+      );
+    }
+
+    setContenidos(
+      (actuales) =>
+        actuales.filter(
+          (contenido) =>
+            contenido.productoId !==
+            item.productoId
+        )
+    );
+
+    setMensajeAprobacion(
+      (actuales) => ({
+        ...actuales,
+
+        [item.productoId]:
+          "Contenido aprobado correctamente.",
+      })
+    );
+  } catch (error) {
+    console.error(
+      "Error aprobando contenido:",
+      error
+    );
+
+    setMensajeAprobacion(
+      (actuales) => ({
+        ...actuales,
+
+        [item.productoId]:
+          `Error: ${
+            error.message ||
+            "No se pudo aprobar el contenido."
+          }`,
+      })
+    );
+  } finally {
+    setAprobandoId("");
   }
 };
 
@@ -1243,6 +1348,38 @@ const guardarBorrador = async (
       </>
     )}
   </button>
+
+  <button
+  type="button"
+  onClick={() =>
+    aprobarContenido(item)
+  }
+  disabled={
+    aprobandoId ===
+      item.productoId ||
+    guardandoId ===
+      item.productoId
+  }
+  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+>
+  {aprobandoId ===
+  item.productoId ? (
+    <>
+      <Loader2
+        size={15}
+        className="animate-spin"
+      />
+
+      Aprobando...
+    </>
+  ) : (
+    <>
+      <CheckCircle2 size={15} />
+
+      Aprobar contenido
+    </>
+  )}
+</button>
 
   {mensajesGuardado[
     item.productoId

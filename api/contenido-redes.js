@@ -579,6 +579,60 @@ async function listarBorradores(
 }
 
 // =========================================================
+// APROBAR BORRADOR
+// =========================================================
+
+async function aprobarBorrador(req, res) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const ahora = new Date();
+
+  const resultado = await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        productoId,
+        estado: "borrador",
+      },
+      {
+        $set: {
+          estado: "aprobado",
+          aprobadoEn: ahora,
+          actualizadoEn: ahora,
+        },
+      }
+    );
+
+  if (resultado.matchedCount === 0) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró un borrador para aprobar.",
+    });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    mensaje:
+      "Contenido aprobado correctamente.",
+  });
+}
+
+// =========================================================
 // OPENAI - GENERAR CONTENIDO
 // =========================================================
 
@@ -754,6 +808,28 @@ export default async function handler(
         res
       );
     }
+
+    // -----------------------------------------------------
+// APROBAR BORRADOR
+// Solo administrador.
+// -----------------------------------------------------
+
+if (
+  req.method === "POST" &&
+  accion === "aprobar-borrador"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return aprobarBorrador(
+    req,
+    res
+  );
+}
 
     // -----------------------------------------------------
     // GENERACIÓN DE CONTENIDO
