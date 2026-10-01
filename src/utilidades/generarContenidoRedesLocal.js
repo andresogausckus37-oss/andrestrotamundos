@@ -286,6 +286,17 @@ function descripcionCantidad(producto) {
 // CREAR PUBLICACIÓN
 // =========================================================
 
+function normalizarTextoPublicacion(texto) {
+  return limpiar(texto)
+    // Elimina hashtags existentes para evitar duplicados.
+    .replace(/(^|\s)#[\p{L}\p{N}_]+/gu, " ")
+    // Elimina saltos de línea innecesarios.
+    .replace(/\s*\n\s*/g, " ")
+    // Elimina espacios duplicados.
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function crearPublicacion({
   producto,
   tipo,
@@ -295,12 +306,20 @@ function crearPublicacion({
   imagen = null,
   encuesta = null,
 }) {
+  const hashtags = crearHashtags(producto);
+
+  const textoLimpio =
+    normalizarTextoPublicacion(texto);
+
+  const textoFinal =
+    `${textoLimpio}\n\n${hashtags.join(" ")}`;
+
   return {
     tipo,
     formato,
-    texto,
+    texto: textoFinal,
     cta,
-    hashtags: crearHashtags(producto),
+    hashtags,
     imagen,
     encuesta,
   };
