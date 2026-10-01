@@ -633,6 +633,33 @@ async function aprobarBorrador(req, res) {
 }
 
 // =========================================================
+// LISTAR CONTENIDOS APROBADOS
+// =========================================================
+
+async function listarAprobados(
+  req,
+  res
+) {
+  const db =
+    await conectarMongoDB();
+
+  const aprobados = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "aprobado",
+    })
+    .sort({
+      aprobadoEn: -1,
+    })
+    .toArray();
+
+  return res.status(200).json({
+    ok: true,
+    aprobados,
+  });
+}
+
+// =========================================================
 // OPENAI - GENERAR CONTENIDO
 // =========================================================
 
@@ -826,6 +853,28 @@ if (
   }
 
   return aprobarBorrador(
+    req,
+    res
+  );
+}
+
+    // -----------------------------------------------------
+// LISTAR CONTENIDOS APROBADOS
+// Solo administrador.
+// -----------------------------------------------------
+
+if (
+  req.method === "GET" &&
+  accion === "listar-aprobados"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return listarAprobados(
     req,
     res
   );
