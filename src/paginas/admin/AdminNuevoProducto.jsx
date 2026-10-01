@@ -72,13 +72,28 @@ const NIVELES = [
 ];
 
 const ANCHO_OBJETIVO = 794;
+const ANCHO_REDES = 1080;
 const CALIDAD_WEBP = 0.82;
 
 const NOMBRES_IMAGENES = [
-  "Imagen 1 — Principal de tienda",
-  "Imagen 2 — Segunda imagen de tienda",
-  "Imagen 3 — Tercera imagen de tienda",
-  "Imagen 4 — Cuarta imagen de tienda",
+  "Imagen 1 — Presentación",
+  "Imagen 2 — Qué incluye",
+  "Imagen 3 — Beneficios",
+  "Imagen 4 — Cómo funciona",
+];
+
+const NOMBRES_IMAGENES_FEED = [
+  "Feed 1 — Presentación",
+  "Feed 2 — Qué incluye",
+  "Feed 3 — Beneficios",
+  "Feed 4 — Cómo funciona",
+];
+
+const NOMBRES_IMAGENES_VERTICAL = [
+  "Vertical 1 — Presentación",
+  "Vertical 2 — Qué incluye",
+  "Vertical 3 — Beneficios",
+  "Vertical 4 — Cómo funciona",
 ];
 
 /* =========================================================
@@ -144,7 +159,8 @@ const pluralActividad = (
 ========================================================= */
 
 const procesarImagen = (
-  archivo
+  archivo,
+  anchoObjetivo = ANCHO_OBJETIVO
 ) =>
   new Promise(
     (resolve, reject) => {
@@ -160,7 +176,7 @@ const procesarImagen = (
         const escala =
           Math.min(
             1,
-            ANCHO_OBJETIVO /
+            anchoObjetivo /
               imagen.naturalWidth
           );
 
@@ -646,6 +662,20 @@ export default function AdminNuevoProducto() {
   );
 
   const [
+    imagenesFeed,
+    setImagenesFeed,
+  ] = useState(
+    Array(4).fill(null)
+  );
+
+  const [
+    imagenesVertical,
+    setImagenesVertical,
+  ] = useState(
+    Array(4).fill(null)
+  );
+
+  const [
     procesandoImagen,
     setProcesandoImagen,
   ] = useState(false);
@@ -861,6 +891,83 @@ export default function AdminNuevoProducto() {
         return nuevas;
       }
     );
+  };
+
+  const seleccionarImagenRed =
+    async (
+      indice,
+      archivo,
+      tipo
+    ) => {
+      if (!archivo) {
+        return;
+      }
+
+      const setter =
+        tipo === "feed"
+          ? setImagenesFeed
+          : setImagenesVertical;
+
+      try {
+        setProcesandoImagen(true);
+
+        const resultado =
+          await procesarImagen(
+            archivo,
+            ANCHO_REDES
+          );
+
+        setter((actuales) => {
+          const nuevas = [...actuales];
+
+          if (
+            nuevas[indice]
+              ?.urlOptimizada
+          ) {
+            URL.revokeObjectURL(
+              nuevas[indice]
+                .urlOptimizada
+            );
+          }
+
+          nuevas[indice] =
+            resultado;
+
+          return nuevas;
+        });
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      } finally {
+        setProcesandoImagen(false);
+      }
+    };
+
+  const eliminarImagenRed = (
+    indice,
+    tipo
+  ) => {
+    const setter =
+      tipo === "feed"
+        ? setImagenesFeed
+        : setImagenesVertical;
+
+    setter((actuales) => {
+      const nuevas = [...actuales];
+
+      if (
+        nuevas[indice]
+          ?.urlOptimizada
+      ) {
+        URL.revokeObjectURL(
+          nuevas[indice]
+            .urlOptimizada
+        );
+      }
+
+      nuevas[indice] = null;
+      return nuevas;
+    });
   };
 
   const subirImagen =
@@ -1288,6 +1395,20 @@ export default function AdminNuevoProducto() {
       portada: "",
       preview: "",
       previewsIndividuales: [],
+      redes: {
+        feed: {
+          presentacion: "",
+          incluye: "",
+          beneficios: "",
+          comoFunciona: "",
+        },
+        vertical: {
+          presentacion: "",
+          incluye: "",
+          beneficios: "",
+          comoFunciona: "",
+        },
+      },
     },
 
     formato: "PDF",
@@ -1419,6 +1540,28 @@ export default function AdminNuevoProducto() {
         return;
       }
 
+      if (
+        imagenesFeed.some(
+          (imagen) => !imagen
+        )
+      ) {
+        alert(
+          "Falta seleccionar alguna de las 4 imágenes 4:5 para Instagram Feed."
+        );
+        return;
+      }
+
+      if (
+        imagenesVertical.some(
+          (imagen) => !imagen
+        )
+      ) {
+        alert(
+          "Falta seleccionar alguna de las 4 imágenes 9:16 para Stories y Reels."
+        );
+        return;
+      }
+
       if (!archivoPDF) {
         alert(
           "Falta seleccionar el PDF del producto."
@@ -1451,6 +1594,38 @@ export default function AdminNuevoProducto() {
             );
 
           urls.push(url);
+        }
+
+        const urlsFeed = [];
+
+        for (
+          let i = 0;
+          i < imagenesFeed.length;
+          i += 1
+        ) {
+          const url =
+            await subirImagen(
+              imagenesFeed[i],
+              i + 5
+            );
+
+          urlsFeed.push(url);
+        }
+
+        const urlsVertical = [];
+
+        for (
+          let i = 0;
+          i < imagenesVertical.length;
+          i += 1
+        ) {
+          const url =
+            await subirImagen(
+              imagenesVertical[i],
+              i + 9
+            );
+
+          urlsVertical.push(url);
         }
 
         /*
@@ -1501,6 +1676,30 @@ export default function AdminNuevoProducto() {
                   urls[2],
                   urls[3],
                 ],
+
+              redes: {
+                feed: {
+                  presentacion:
+                    urlsFeed[0],
+                  incluye:
+                    urlsFeed[1],
+                  beneficios:
+                    urlsFeed[2],
+                  comoFunciona:
+                    urlsFeed[3],
+                },
+
+                vertical: {
+                  presentacion:
+                    urlsVertical[0],
+                  incluye:
+                    urlsVertical[1],
+                  beneficios:
+                    urlsVertical[2],
+                  comoFunciona:
+                    urlsVertical[3],
+                },
+              },
             },
 
             archivoPDF:
@@ -2117,6 +2316,58 @@ export default function AdminNuevoProducto() {
                 />
               )
             )}
+          </div>
+
+          <div className="mt-6 border-t border-slate-200 pt-5">
+            <h3 className="text-sm font-bold text-slate-900">
+              Instagram Feed — 4:5
+            </h3>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Selecciona las 4 variantes de 1080 × 1350 px. Se conservan hasta 1080 px de ancho y se convierten a WebP.
+            </p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {NOMBRES_IMAGENES_FEED.map((titulo, indice) => (
+                <ImagenProducto
+                  key={titulo}
+                  titulo={titulo}
+                  imagen={imagenesFeed[indice]}
+                  deshabilitado={procesandoImagen || guardando}
+                  onSeleccionar={(archivo) =>
+                    seleccionarImagenRed(indice, archivo, "feed")
+                  }
+                  onEliminar={() =>
+                    eliminarImagenRed(indice, "feed")
+                  }
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-slate-200 pt-5">
+            <h3 className="text-sm font-bold text-slate-900">
+              Stories / Reels — 9:16
+            </h3>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Selecciona las 4 variantes de 1080 × 1920 px. Se conservan hasta 1080 px de ancho y se convierten a WebP.
+            </p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {NOMBRES_IMAGENES_VERTICAL.map((titulo, indice) => (
+                <ImagenProducto
+                  key={titulo}
+                  titulo={titulo}
+                  imagen={imagenesVertical[indice]}
+                  deshabilitado={procesandoImagen || guardando}
+                  onSeleccionar={(archivo) =>
+                    seleccionarImagenRed(indice, archivo, "vertical")
+                  }
+                  onEliminar={() =>
+                    eliminarImagenRed(indice, "vertical")
+                  }
+                />
+              ))}
+            </div>
           </div>
 
           {procesandoImagen && (

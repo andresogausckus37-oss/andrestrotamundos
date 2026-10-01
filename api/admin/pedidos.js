@@ -458,7 +458,7 @@ const crearProducto = async (req, res) => {
   const nuevoProducto = {
     ...producto,
     creadoEn: fecha,
-    actualizadoEn: fecha,
+        actualizadoEn: fecha,
   };
 
   const resultado = await productos.insertOne(
@@ -494,11 +494,11 @@ const subirImagenProducto = async (req, res) => {
   if (
     !Number.isInteger(numero) ||
     numero < 1 ||
-    numero > 6
+    numero > 12
   ) {
     return res.status(400).json({
       error:
-        "El número de imagen debe estar entre 1 y 6.",
+        "El número de imagen debe estar entre 1 y 12.",
     });
   }
 
@@ -544,17 +544,17 @@ const subirImagenProducto = async (req, res) => {
     `productos/${productoId}/imagen-${numero}.webp`;
 
   const blob = await put(
-  pathname,
-  buffer,
-  {
-    access: "public",
-    contentType: "image/webp",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    token:
-      process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
-  }
-);
+    pathname,
+    buffer,
+    {
+      access: "public",
+      contentType: "image/webp",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      token:
+        process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
+    }
+  );
 
   return res.status(201).json({
     ok: true,
@@ -677,9 +677,11 @@ const subirPdfProducto = async (req, res) => {
         ],
 
         /*
-         * Permitimos hasta 12 MB.
+         * Permitimos hasta 250 MB.
          */
-        maximumSizeInBytes: 250 * 1024 * 1024,
+        maximumSizeInBytes:
+          250 * 1024 * 1024,
+
         addRandomSuffix: false,
 
         allowOverwrite: true,
@@ -918,7 +920,7 @@ const editarProducto = async (req, res) => {
     {
       id: productoId,
     },
-    {
+        {
       $set: productoActualizado,
     }
   );
@@ -980,6 +982,16 @@ const eliminarProducto = async (req, res) => {
       ?.previewsIndividuales || []),
     producto.imagenes?.portadaPDF,
     producto.imagenes?.paginaFinalPDF,
+
+    producto.imagenes?.redes?.feed?.presentacion,
+    producto.imagenes?.redes?.feed?.incluye,
+    producto.imagenes?.redes?.feed?.beneficios,
+    producto.imagenes?.redes?.feed?.comoFunciona,
+
+    producto.imagenes?.redes?.vertical?.presentacion,
+    producto.imagenes?.redes?.vertical?.incluye,
+    producto.imagenes?.redes?.vertical?.beneficios,
+    producto.imagenes?.redes?.vertical?.comoFunciona,
   ].filter(Boolean);
 
   if (imagenes.length > 0) {
@@ -1050,7 +1062,7 @@ const generarSitemap = async (req, res) => {
     )
     .toArray();
 
-    const urlsProductos = productosMongo
+  const urlsProductos = productosMongo
     .filter((producto) => producto?.id)
     .map((producto) => producto.id)
     .map(
@@ -1107,21 +1119,21 @@ export default async function handler(
       req.query?.accion;
 
     /* =========================
-   SITEMAP PÚBLICO
-========================= */
+       SITEMAP PÚBLICO
+    ========================= */
 
-if (accion === "sitemap") {
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      error: "Método no permitido",
-    });
-  }
+    if (accion === "sitemap") {
+      if (req.method !== "GET") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
 
-  return await generarSitemap(
-    req,
-    res
-  );
-}
+      return await generarSitemap(
+        req,
+        res
+      );
+    }
 
     /* =========================
        PRODUCTOS PÚBLICOS
@@ -1146,16 +1158,16 @@ if (accion === "sitemap") {
 
     /* =========================
        SUBIR PDF PRODUCTO
-       
+
        IMPORTANTE:
        esta acción va ANTES de la
        autenticación general.
-       
+
        handleUpload recibe tanto la
        solicitud inicial del navegador
        como la notificación posterior
        de Vercel.
-       
+
        La autorización admin se realiza
        dentro de onBeforeGenerateToken.
     ========================= */
@@ -1286,72 +1298,72 @@ if (accion === "sitemap") {
     }
 
     /* =========================
-   LISTAR PRODUCTOS ADMIN
-========================= */
+       LISTAR PRODUCTOS ADMIN
+    ========================= */
 
-if (accion === "listar-productos") {
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      error: "Método no permitido",
-    });
-  }
+    if (accion === "listar-productos") {
+      if (req.method !== "GET") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
 
-  return await listarProductosAdmin(
-    req,
-    res
-  );
-}
+      return await listarProductosAdmin(
+        req,
+        res
+      );
+    }
 
     /* =========================
-   OBTENER PRODUCTO ADMIN
-========================= */
+       OBTENER PRODUCTO ADMIN
+    ========================= */
 
-if (accion === "obtener-producto") {
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      error: "Método no permitido",
-    });
-  }
+    if (accion === "obtener-producto") {
+      if (req.method !== "GET") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
 
-  return await obtenerProductoAdmin(
-    req,
-    res
-  );
-}
+      return await obtenerProductoAdmin(
+        req,
+        res
+      );
+    }
 
-/* =========================
-   EDITAR PRODUCTO
-========================= */
+    /* =========================
+       EDITAR PRODUCTO
+    ========================= */
 
-if (accion === "editar-producto") {
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Método no permitido",
-    });
-  }
+    if (accion === "editar-producto") {
+      if (req.method !== "POST") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
 
-  return await editarProducto(
-    req,
-    res
-  );
-}
+      return await editarProducto(
+        req,
+        res
+      );
+    }
 
-/* =========================
-   ELIMINAR PRODUCTO
-========================= */
+    /* =========================
+       ELIMINAR PRODUCTO
+    ========================= */
 
-if (accion === "eliminar-producto") {
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Método no permitido",
-    });
-  }
+    if (accion === "eliminar-producto") {
+      if (req.method !== "POST") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
 
-  return await eliminarProducto(
-    req,
-    res
-  );
-}
+      return await eliminarProducto(
+        req,
+        res
+      );
+    }
 
     return res.status(400).json({
       error: "Acción no válida",
