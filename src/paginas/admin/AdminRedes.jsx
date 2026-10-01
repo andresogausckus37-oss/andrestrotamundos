@@ -3,7 +3,6 @@ import {
   ChevronDown,
   ChevronUp,
   Image,
-  Instagram,
   Loader2,
   MessageCircle,
   Pencil,
@@ -941,10 +940,10 @@ const guardarBorrador = async (
                       <BloqueRed
                         titulo="Instagram"
                         icono={
-                          <Instagram
-                            size={17}
-                            className="text-violet-600"
-                          />
+                          <Image
+  size={17}
+  className="text-violet-600"
+/>
                         }
                       >
                         <div className="mb-2 flex items-center gap-2">
