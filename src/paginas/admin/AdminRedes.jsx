@@ -307,14 +307,19 @@ export default function AdminRedes() {
   ] = useState([]);
 
   const [
-  guardandoId,
-  setGuardandoId,
-] = useState("");
+    cargandoBorradores,
+    setCargandoBorradores,
+  ] = useState(true);
 
-const [
-  mensajesGuardado,
-  setMensajesGuardado,
-] = useState({});
+  const [
+    guardandoId,
+    setGuardandoId,
+  ] = useState("");
+
+  const [
+    mensajesGuardado,
+    setMensajesGuardado,
+  ] = useState({});
 
   // =======================================================
   // CARGAR PRODUCTOS
@@ -363,6 +368,68 @@ const [
       };
 
     cargarProductos();
+  }, []);
+
+  // =======================================================
+  // CARGAR BORRADORES GUARDADOS
+  // =======================================================
+
+  useEffect(() => {
+    const cargarBorradores =
+      async () => {
+        try {
+          setCargandoBorradores(true);
+
+          const respuesta =
+            await fetch(
+              "/api/contenido-redes?accion=listar-borradores"
+            );
+
+          const datos =
+            await respuesta.json();
+
+          if (!respuesta.ok) {
+            throw new Error(
+              datos.error ||
+                "No se pudieron cargar los borradores."
+            );
+          }
+
+          const borradores =
+            Array.isArray(datos.borradores)
+              ? datos.borradores
+              : [];
+
+          setContenidos(
+            borradores.map(
+              (borrador) => ({
+                productoId:
+                  borrador.productoId,
+
+                nombre:
+                  borrador.nombreProducto,
+
+                contenido:
+                  borrador.contenido,
+              })
+            )
+          );
+        } catch (error) {
+          console.error(
+            "Error cargando borradores:",
+            error
+          );
+
+          setError(
+            error.message ||
+              "No se pudieron cargar los borradores."
+          );
+        } finally {
+          setCargandoBorradores(false);
+        }
+      };
+
+    cargarBorradores();
   }, []);
 
   const producto1 =
@@ -841,7 +908,19 @@ const guardarBorrador = async (
 
         {/* CONTENIDOS */}
 
-        {contenidos.length > 0 && (
+        {cargandoBorradores && (
+          <div className="mt-6 flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-5 text-xs text-slate-500 shadow-sm">
+            <Loader2
+              size={16}
+              className="animate-spin"
+            />
+
+            Recuperando borradores guardados...
+          </div>
+        )}
+
+        {!cargandoBorradores &&
+          contenidos.length > 0 && (
           <div className="mt-6 space-y-8">
             {contenidos.map(
               (
@@ -941,9 +1020,9 @@ const guardarBorrador = async (
                         titulo="Instagram"
                         icono={
                           <Image
-  size={17}
-  className="text-violet-600"
-/>
+                            size={17}
+                            className="text-violet-600"
+                          />
                         }
                       >
                         <div className="mb-2 flex items-center gap-2">
@@ -1195,12 +1274,13 @@ const guardarBorrador = async (
             </p>
 
             <p className="mt-1 text-[11px] leading-relaxed text-amber-700">
-              Los cambios todavía se
-              mantienen únicamente en esta
-              pantalla. En el siguiente paso
-              agregaremos el guardado del
-              borrador y la aprobación antes
-              de enviarlo al calendario.
+              Los borradores guardados se
+              recuperan automáticamente desde
+              MongoDB cuando vuelves a esta
+              pantalla. Todavía no se
+              publicarán ni entrarán al
+              calendario hasta que sean
+              aprobados.
             </p>
           </div>
         )}
