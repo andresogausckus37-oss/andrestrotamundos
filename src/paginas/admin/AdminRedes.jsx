@@ -1,82 +1,356 @@
 import { useEffect, useState } from "react";
 import {
+  ChevronDown,
+  ChevronUp,
+  Image,
+  Instagram,
   Loader2,
+  MessageCircle,
+  Pencil,
   Sparkles,
-  Send,
 } from "lucide-react";
 
-import { crearPromptRedes } from "../../utilidades/crearPromptRedes";
+import { generarContenidoRedesLocal } from "../../utilidades/generarContenidoRedesLocal";
+
+// =========================================================
+// COMPONENTE PUBLICACIÓN EDITABLE
+// =========================================================
+
+function PublicacionEditable({
+  titulo,
+  publicacion,
+  onCambiar,
+}) {
+  const [abierta, setAbierta] =
+    useState(false);
+
+  const hashtags =
+    Array.isArray(publicacion.hashtags)
+      ? publicacion.hashtags
+      : [];
+
+  const actualizarTexto = (texto) => {
+    onCambiar({
+      ...publicacion,
+      texto,
+    });
+  };
+
+  const actualizarCTA = (cta) => {
+    onCambiar({
+      ...publicacion,
+      cta,
+    });
+  };
+
+  const actualizarHashtags = (valor) => {
+    const nuevosHashtags = valor
+      .split(/\s+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    onCambiar({
+      ...publicacion,
+      hashtags: nuevosHashtags,
+    });
+  };
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <button
+        type="button"
+        onClick={() =>
+          setAbierta((valor) => !valor)
+        }
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-slate-900">
+            {titulo}
+          </p>
+
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase text-slate-500">
+              {publicacion.tipo}
+            </span>
+
+            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[9px] font-bold uppercase text-violet-600">
+              {publicacion.formato}
+            </span>
+          </div>
+        </div>
+
+        {abierta ? (
+          <ChevronUp
+            size={16}
+            className="shrink-0 text-slate-400"
+          />
+        ) : (
+          <ChevronDown
+            size={16}
+            className="shrink-0 text-slate-400"
+          />
+        )}
+      </button>
+
+      {abierta && (
+        <div className="border-t border-slate-100 p-4">
+          {publicacion.imagen && (
+            <div className="mb-4">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                Imagen
+              </p>
+
+              {Array.isArray(
+                publicacion.imagen
+              ) ? (
+                <div className="grid grid-cols-4 gap-2">
+                  {publicacion.imagen.map(
+                    (imagen, indice) => (
+                      <img
+                        key={`${imagen}-${indice}`}
+                        src={imagen}
+                        alt=""
+                        className="aspect-square w-full rounded-lg border border-slate-200 object-cover"
+                      />
+                    )
+                  )}
+                </div>
+              ) : (
+                <img
+                  src={publicacion.imagen}
+                  alt=""
+                  className="h-32 w-32 rounded-lg border border-slate-200 object-cover"
+                />
+              )}
+            </div>
+          )}
+
+          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            Texto
+          </label>
+
+          <textarea
+            value={publicacion.texto || ""}
+            onChange={(event) =>
+              actualizarTexto(
+                event.target.value
+              )
+            }
+            rows={6}
+            className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs leading-relaxed text-slate-700 outline-none transition focus:border-violet-400"
+          />
+
+          {publicacion.cta !==
+            undefined && (
+            <div className="mt-4">
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                CTA
+              </label>
+
+              <input
+                type="text"
+                value={
+                  publicacion.cta || ""
+                }
+                onChange={(event) =>
+                  actualizarCTA(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+              />
+            </div>
+          )}
+
+          <div className="mt-4">
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+              Hashtags
+            </label>
+
+            <textarea
+              value={hashtags.join(" ")}
+              onChange={(event) =>
+                actualizarHashtags(
+                  event.target.value
+                )
+              }
+              rows={2}
+              className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+            />
+
+            <p className="mt-1 text-[10px] text-slate-400">
+              {hashtags.length} hashtags
+            </p>
+          </div>
+
+          {publicacion.encuesta && (
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                Encuesta
+              </p>
+
+              <p className="mt-2 text-xs font-semibold text-slate-800">
+                {
+                  publicacion.encuesta
+                    .pregunta
+                }
+              </p>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                {publicacion.encuesta.opciones?.map(
+                  (opcion) => (
+                    <span
+                      key={opcion}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] text-slate-600"
+                    >
+                      {opcion}
+                    </span>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+
+          {Array.isArray(
+            publicacion.guion
+          ) && (
+            <div className="mt-4 rounded-lg border border-violet-100 bg-violet-50 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
+                Guion del Reel
+              </p>
+
+              <div className="mt-2 space-y-1">
+                {publicacion.guion.map(
+                  (paso, indice) => (
+                    <p
+                      key={`${paso}-${indice}`}
+                      className="text-xs leading-relaxed text-slate-700"
+                    >
+                      {indice + 1}. {paso}
+                    </p>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =========================================================
+// BLOQUE DE RED
+// =========================================================
+
+function BloqueRed({
+  titulo,
+  icono,
+  children,
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-4 flex items-center gap-2">
+        {icono}
+
+        <h3 className="text-sm font-bold text-slate-900">
+          {titulo}
+        </h3>
+      </div>
+
+      <div className="space-y-3">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+// =========================================================
+// ADMIN REDES
+// =========================================================
 
 export default function AdminRedes() {
-  const [producto1Id, setProducto1Id] =
-    useState("");
+  const [
+    productosDigitales,
+    setProductosDigitales,
+  ] = useState([]);
 
-  const [productosDigitales, setProductosDigitales] =
-    useState([]);
+  const [
+    producto1Id,
+    setProducto1Id,
+  ] = useState("");
 
-  const [producto2Id, setProducto2Id] =
-    useState("");
+  const [
+    producto2Id,
+    setProducto2Id,
+  ] = useState("");
 
-  const [generando, setGenerando] =
-    useState(false);
+  const [
+    cargandoProductos,
+    setCargandoProductos,
+  ] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [
+    generando,
+    setGenerando,
+  ] = useState(false);
 
-  const [contenidos, setContenidos] =
-    useState([]);
+  const [
+    error,
+    setError,
+  ] = useState("");
 
-  // =======================================================
-  // PRUEBA THREADS
-  // =======================================================
-
-  const [textoThreads, setTextoThreads] =
-    useState(
-      "Primera publicación de prueba desde Andrés Imprimibles."
-    );
-
-  const [publicandoThreads, setPublicandoThreads] =
-    useState(false);
-
-  const [resultadoThreads, setResultadoThreads] =
-    useState("");
+  const [
+    contenidos,
+    setContenidos,
+  ] = useState([]);
 
   // =======================================================
   // CARGAR PRODUCTOS
   // =======================================================
 
   useEffect(() => {
-    const cargarProductos = async () => {
-      try {
-        const respuesta = await fetch(
-          "/api/admin/pedidos?accion=listar-productos"
-        );
+    const cargarProductos =
+      async () => {
+        try {
+          setCargandoProductos(true);
+          setError("");
 
-        const datos = await respuesta.json();
+          const respuesta =
+            await fetch(
+              "/api/admin/pedidos?accion=listar-productos"
+            );
 
-        if (!respuesta.ok) {
-          throw new Error(
-            datos.error ||
+          const datos =
+            await respuesta.json();
+
+          if (!respuesta.ok) {
+            throw new Error(
+              datos.error ||
+                "No se pudieron cargar los productos."
+            );
+          }
+
+          setProductosDigitales(
+            Array.isArray(datos)
+              ? datos
+              : datos.productos || []
+          );
+        } catch (error) {
+          console.error(
+            "Error cargando productos:",
+            error
+          );
+
+          setError(
+            error.message ||
               "No se pudieron cargar los productos."
           );
+        } finally {
+          setCargandoProductos(false);
         }
-
-        setProductosDigitales(
-          Array.isArray(datos)
-            ? datos
-            : datos.productos || []
-        );
-      } catch (error) {
-        console.error(
-          "Error cargando productos:",
-          error
-        );
-
-        setError(
-          "No se pudieron cargar los productos."
-        );
-      }
-    };
+      };
 
     cargarProductos();
   }, []);
@@ -93,20 +367,21 @@ export default function AdminRedes() {
         producto.id === producto2Id
     );
 
-  const productosSeleccionados =
-    producto1 || producto2;
-
   // =======================================================
-  // GENERAR CONTENIDO
+  // GENERAR BORRADORES LOCALES
   // =======================================================
 
-  const generarContenido = async () => {
+  const generarContenido = () => {
     const seleccionados = [
       producto1,
       producto2,
     ].filter(Boolean);
 
-    if (seleccionados.length === 0) {
+    if (!seleccionados.length) {
+      setError(
+        "Selecciona al menos un producto."
+      );
+
       return;
     }
 
@@ -114,46 +389,25 @@ export default function AdminRedes() {
       setGenerando(true);
       setError("");
 
-      const resultados = [];
+      const resultados =
+        seleccionados.map(
+          (producto) => ({
+            productoId:
+              producto.id,
 
-      for (const producto of seleccionados) {
-        const prompt =
-          crearPromptRedes(producto);
+            nombre:
+              producto.nombre,
 
-        const respuesta = await fetch(
-          "/api/contenido-redes",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              prompt,
-            }),
-          }
+            contenido:
+              generarContenidoRedesLocal(
+                producto
+              ),
+          })
         );
 
-        const datos =
-          await respuesta.json();
-
-        if (!respuesta.ok) {
-          throw new Error(
-            datos.error ||
-              `No se pudo generar contenido para ${producto.nombre}`
-          );
-        }
-
-        resultados.push({
-          productoId: producto.id,
-          nombre: producto.nombre,
-          contenido: datos.contenido,
-        });
-      }
-
-      setContenidos(resultados);
+      setContenidos(
+        resultados
+      );
     } catch (error) {
       console.error(
         "Error generando contenido:",
@@ -170,69 +424,158 @@ export default function AdminRedes() {
   };
 
   // =======================================================
-  // PUBLICAR PRUEBA EN THREADS
+  // EDITAR UNA PUBLICACIÓN
   // =======================================================
 
-  const publicarPruebaThreads = async () => {
-    const texto = textoThreads.trim();
+  const actualizarContenido = (
+    indiceProducto,
+    actualizador
+  ) => {
+    setContenidos(
+      (actuales) =>
+        actuales.map(
+          (item, indice) => {
+            if (
+              indice !==
+              indiceProducto
+            ) {
+              return item;
+            }
 
-    if (!texto) {
-      setResultadoThreads(
-        "Escribí un texto antes de publicar."
-      );
-      return;
-    }
-
-    try {
-      setPublicandoThreads(true);
-      setResultadoThreads("");
-
-      const respuesta = await fetch(
-        "/api/contenido-redes?accion=threads-publicar",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            texto,
-          }),
-        }
-      );
-
-      const datos =
-        await respuesta.json();
-
-      if (!respuesta.ok) {
-        throw new Error(
-          datos.detalle ||
-            datos.error ||
-            "No se pudo publicar en Threads."
-        );
-      }
-
-      setResultadoThreads(
-        `Publicado correctamente. ID: ${datos.publicacionId}`
-      );
-    } catch (error) {
-      console.error(
-        "Error publicando en Threads:",
-        error
-      );
-
-      setResultadoThreads(
-        `Error: ${
-          error.message ||
-          "No se pudo publicar en Threads."
-        }`
-      );
-    } finally {
-      setPublicandoThreads(false);
-    }
+            return {
+              ...item,
+              contenido:
+                actualizador(
+                  item.contenido
+                ),
+            };
+          }
+        )
+    );
   };
+
+  const actualizarThreads = (
+    indiceProducto,
+    indicePublicacion,
+    publicacion
+  ) => {
+    actualizarContenido(
+      indiceProducto,
+      (contenido) => {
+        const threads = [
+          ...contenido.threads,
+        ];
+
+        threads[
+          indicePublicacion
+        ] = publicacion;
+
+        return {
+          ...contenido,
+          threads,
+        };
+      }
+    );
+  };
+
+  const actualizarStory = (
+    indiceProducto,
+    indiceStory,
+    publicacion
+  ) => {
+    actualizarContenido(
+      indiceProducto,
+      (contenido) => {
+        const stories = [
+          ...contenido.instagram
+            .stories,
+        ];
+
+        stories[indiceStory] =
+          publicacion;
+
+        return {
+          ...contenido,
+
+          instagram: {
+            ...contenido.instagram,
+            stories,
+          },
+        };
+      }
+    );
+  };
+
+  const actualizarCarrusel = (
+    indiceProducto,
+    publicacion
+  ) => {
+    actualizarContenido(
+      indiceProducto,
+      (contenido) => ({
+        ...contenido,
+
+        instagram: {
+          ...contenido.instagram,
+          carrusel:
+            publicacion,
+        },
+      })
+    );
+  };
+
+  const actualizarReel = (
+    indiceProducto,
+    publicacion
+  ) => {
+    actualizarContenido(
+      indiceProducto,
+      (contenido) => ({
+        ...contenido,
+
+        instagram: {
+          ...contenido.instagram,
+          reel: publicacion,
+        },
+      })
+    );
+  };
+
+  const actualizarFacebook = (
+    indiceProducto,
+    indicePublicacion,
+    publicacion
+  ) => {
+    actualizarContenido(
+      indiceProducto,
+      (contenido) => {
+        const publicaciones = [
+          ...contenido.facebook
+            .publicaciones,
+        ];
+
+        publicaciones[
+          indicePublicacion
+        ] = publicacion;
+
+        return {
+          ...contenido,
+
+          facebook: {
+            ...contenido.facebook,
+            publicaciones,
+          },
+        };
+      }
+    );
+  };
+
+    // =======================================================
+  // RENDER
+  // =======================================================
+
+  const hayProductoSeleccionado =
+    Boolean(producto1 || producto2);
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24">
@@ -249,74 +592,10 @@ export default function AdminRedes() {
           </h1>
 
           <p className="mt-1 text-xs text-slate-500">
-            Generá, revisá y programá el
-            contenido semanal.
+            Genera, revisa y edita el
+            contenido antes de aprobarlo.
           </p>
         </div>
-
-        {/* PRUEBA THREADS */}
-
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Send
-              size={18}
-              className="text-slate-700"
-            />
-
-            <h2 className="text-sm font-bold text-slate-900">
-              Prueba de Threads
-            </h2>
-          </div>
-
-          <p className="mt-2 text-xs text-slate-500">
-            Esta prueba realizará una
-            publicación real en Threads.
-          </p>
-
-          <textarea
-            value={textoThreads}
-            onChange={(event) =>
-              setTextoThreads(
-                event.target.value
-              )
-            }
-            rows={4}
-            className="mt-4 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-700 outline-none transition focus:border-violet-400"
-          />
-
-          <button
-            type="button"
-            onClick={publicarPruebaThreads}
-            disabled={
-              publicandoThreads ||
-              !textoThreads.trim()
-            }
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 text-xs font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-          >
-            {publicandoThreads ? (
-              <>
-                <Loader2
-                  size={15}
-                  className="animate-spin"
-                />
-
-                Publicando...
-              </>
-            ) : (
-              <>
-                <Send size={15} />
-
-                Publicar prueba en Threads
-              </>
-            )}
-          </button>
-
-          {resultadoThreads && (
-            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-              {resultadoThreads}
-            </div>
-          )}
-        </section>
 
         {/* PRODUCTOS */}
 
@@ -333,85 +612,100 @@ export default function AdminRedes() {
           </div>
 
           <p className="mt-2 text-xs text-slate-500">
-            Seleccioná uno o dos productos
-            para generar su contenido.
+            Selecciona uno o dos productos
+            para preparar su contenido.
           </p>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {/* PRODUCTO 1 */}
+          {cargandoProductos ? (
+            <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-slate-50 py-8 text-xs text-slate-500">
+              <Loader2
+                size={16}
+                className="animate-spin"
+              />
 
-            <div>
-              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                Producto 1
-              </label>
-
-              <select
-                value={producto1Id}
-                onChange={(event) =>
-                  setProducto1Id(
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
-              >
-                <option value="">
-                  Seleccionar producto
-                </option>
-
-                {productosDigitales.map(
-                  (producto) => (
-                    <option
-                      key={producto.id}
-                      value={producto.id}
-                      disabled={
-                        producto.id ===
-                        producto2Id
-                      }
-                    >
-                      {producto.nombre}
-                    </option>
-                  )
-                )}
-              </select>
+              Cargando productos...
             </div>
+          ) : (
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {/* PRODUCTO 1 */}
 
-            {/* PRODUCTO 2 */}
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  Producto 1
+                </label>
 
-            <div>
-              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                Producto 2
-              </label>
+                <select
+                  value={producto1Id}
+                  onChange={(event) => {
+                    setProducto1Id(
+                      event.target.value
+                    );
 
-              <select
-                value={producto2Id}
-                onChange={(event) =>
-                  setProducto2Id(
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
-              >
-                <option value="">
-                  Seleccionar producto
-                </option>
+                    setContenidos([]);
+                  }}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+                >
+                  <option value="">
+                    Seleccionar producto
+                  </option>
 
-                {productosDigitales.map(
-                  (producto) => (
-                    <option
-                      key={producto.id}
-                      value={producto.id}
-                      disabled={
-                        producto.id ===
-                        producto1Id
-                      }
-                    >
-                      {producto.nombre}
-                    </option>
-                  )
-                )}
-              </select>
+                  {productosDigitales.map(
+                    (producto) => (
+                      <option
+                        key={producto.id}
+                        value={producto.id}
+                        disabled={
+                          producto.id ===
+                          producto2Id
+                        }
+                      >
+                        {producto.nombre}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* PRODUCTO 2 */}
+
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  Producto 2
+                </label>
+
+                <select
+                  value={producto2Id}
+                  onChange={(event) => {
+                    setProducto2Id(
+                      event.target.value
+                    );
+
+                    setContenidos([]);
+                  }}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none transition focus:border-violet-400"
+                >
+                  <option value="">
+                    Seleccionar producto
+                  </option>
+
+                  {productosDigitales.map(
+                    (producto) => (
+                      <option
+                        key={producto.id}
+                        value={producto.id}
+                        disabled={
+                          producto.id ===
+                          producto1Id
+                        }
+                      >
+                        {producto.nombre}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ERROR */}
 
@@ -421,14 +715,15 @@ export default function AdminRedes() {
             </div>
           )}
 
-          {/* BOTÓN */}
+          {/* GENERAR */}
 
           <button
             type="button"
             onClick={generarContenido}
             disabled={
-              !productosSeleccionados ||
-              generando
+              !hayProductoSeleccionado ||
+              generando ||
+              cargandoProductos
             }
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
@@ -445,33 +740,309 @@ export default function AdminRedes() {
               <>
                 <Sparkles size={15} />
 
-                Generar contenido con IA
+                Generar borradores
               </>
             )}
           </button>
         </section>
 
-        {/* RESULTADO TEMPORAL */}
+        {/* CONTENIDOS */}
 
         {contenidos.length > 0 && (
-          <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-bold text-slate-900">
-              Contenido generado
-            </h2>
+          <div className="mt-6 space-y-8">
+            {contenidos.map(
+              (
+                item,
+                indiceProducto
+              ) => {
+                const contenido =
+                  item.contenido;
 
-            <p className="mt-1 text-xs text-slate-500">
-              La conexión con la IA funcionó
-              correctamente.
+                return (
+                  <section
+                    key={item.productoId}
+                    className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                  >
+                    {/* CABECERA PRODUCTO */}
+
+                    <div className="border-b border-slate-200 p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+                          <Pencil
+                            size={17}
+                            className="text-violet-600"
+                          />
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
+                            Borrador
+                          </p>
+
+                          <h2 className="mt-0.5 text-base font-bold text-slate-900">
+                            {item.nombre}
+                          </h2>
+
+                          <p className="mt-1 text-xs text-slate-500">
+                            Revisa y modifica
+                            cada publicación
+                            antes de aprobar el
+                            contenido.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* RESUMEN */}
+
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        <div className="rounded-lg bg-slate-50 p-3 text-center">
+                          <p className="text-lg font-bold text-slate-900">
+                            {
+                              contenido
+                                .threads
+                                .length
+                            }
+                          </p>
+
+                          <p className="text-[9px] font-bold uppercase text-slate-400">
+                            Threads
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-slate-50 p-3 text-center">
+                          <p className="text-lg font-bold text-slate-900">
+                            {contenido
+                              .instagram
+                              .stories
+                              .length + 2}
+                          </p>
+
+                          <p className="text-[9px] font-bold uppercase text-slate-400">
+                            Instagram
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-slate-50 p-3 text-center">
+                          <p className="text-lg font-bold text-slate-900">
+                            {
+                              contenido
+                                .facebook
+                                .publicaciones
+                                .length
+                            }
+                          </p>
+
+                          <p className="text-[9px] font-bold uppercase text-slate-400">
+                            Facebook
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* REDES */}
+
+                    <div className="space-y-5 p-5">
+                      {/* INSTAGRAM */}
+
+                      <BloqueRed
+                        titulo="Instagram"
+                        icono={
+                          <Instagram
+                            size={17}
+                            className="text-violet-600"
+                          />
+                        }
+                      >
+                        <div className="mb-2 flex items-center gap-2">
+                          <Image
+                            size={13}
+                            className="text-slate-400"
+                          />
+
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                            Feed
+                          </p>
+                        </div>
+
+                        <PublicacionEditable
+                          titulo="Carrusel"
+                          publicacion={
+                            contenido
+                              .instagram
+                              .carrusel
+                          }
+                          onCambiar={(
+                            publicacion
+                          ) =>
+                            actualizarCarrusel(
+                              indiceProducto,
+                              publicacion
+                            )
+                          }
+                        />
+
+                        <PublicacionEditable
+                          titulo="Reel"
+                          publicacion={
+                            contenido
+                              .instagram
+                              .reel
+                          }
+                          onCambiar={(
+                            publicacion
+                          ) =>
+                            actualizarReel(
+                              indiceProducto,
+                              publicacion
+                            )
+                          }
+                        />
+
+                        <div className="pt-3">
+                          <div className="mb-3 flex items-center gap-2">
+                            <MessageCircle
+                              size={13}
+                              className="text-slate-400"
+                            />
+
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                              Stories
+                            </p>
+                          </div>
+
+                          <div className="space-y-3">
+                            {contenido.instagram.stories.map(
+                              (
+                                story,
+                                indice
+                              ) => (
+                                <PublicacionEditable
+                                  key={`story-${indice}`}
+                                  titulo={`Story ${
+                                    indice +
+                                    1
+                                  }`}
+                                  publicacion={
+                                    story
+                                  }
+                                  onCambiar={(
+                                    publicacion
+                                  ) =>
+                                    actualizarStory(
+                                      indiceProducto,
+                                      indice,
+                                      publicacion
+                                    )
+                                  }
+                                />
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </BloqueRed>
+
+                      {/* THREADS */}
+
+                      <BloqueRed
+                        titulo="Threads"
+                        icono={
+                          <MessageCircle
+                            size={17}
+                            className="text-slate-800"
+                          />
+                        }
+                      >
+                        {contenido.threads.map(
+                          (
+                            publicacion,
+                            indice
+                          ) => (
+                            <PublicacionEditable
+                              key={`threads-${indice}`}
+                              titulo={`Publicación ${
+                                indice +
+                                1
+                              }`}
+                              publicacion={
+                                publicacion
+                              }
+                              onCambiar={(
+                                nuevaPublicacion
+                              ) =>
+                                actualizarThreads(
+                                  indiceProducto,
+                                  indice,
+                                  nuevaPublicacion
+                                )
+                              }
+                            />
+                          )
+                        )}
+                      </BloqueRed>
+
+                      {/* FACEBOOK */}
+
+                      <BloqueRed
+                        titulo="Facebook"
+                        icono={
+                          <MessageCircle
+                            size={17}
+                            className="text-blue-600"
+                          />
+                        }
+                      >
+                        {contenido.facebook.publicaciones.map(
+                          (
+                            publicacion,
+                            indice
+                          ) => (
+                            <PublicacionEditable
+                              key={`facebook-${indice}`}
+                              titulo={`Publicación ${
+                                indice +
+                                1
+                              }`}
+                              publicacion={
+                                publicacion
+                              }
+                              onCambiar={(
+                                nuevaPublicacion
+                              ) =>
+                                actualizarFacebook(
+                                  indiceProducto,
+                                  indice,
+                                  nuevaPublicacion
+                                )
+                              }
+                            />
+                          )
+                        )}
+                      </BloqueRed>
+                    </div>
+                  </section>
+                );
+              }
+            )}
+          </div>
+        )}
+
+        {/* AVISO ETAPA ACTUAL */}
+
+        {contenidos.length > 0 && (
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-semibold text-amber-900">
+              Etapa de revisión
             </p>
 
-            <pre className="mt-4 max-h-[500px] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-4 text-[10px] text-slate-100">
-              {JSON.stringify(
-                contenidos,
-                null,
-                2
-              )}
-            </pre>
-          </section>
+            <p className="mt-1 text-[11px] leading-relaxed text-amber-700">
+              Los cambios todavía se
+              mantienen únicamente en esta
+              pantalla. En el siguiente paso
+              agregaremos el guardado del
+              borrador y la aprobación antes
+              de enviarlo al calendario.
+            </p>
+          </div>
         )}
       </div>
     </main>
