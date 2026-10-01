@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  CalendarDays,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -347,6 +348,12 @@ const [
   setMensajeAprobacion,
 ] = useState({});
 
+  const [aprobados, setAprobados] = useState([]);
+  const [programados, setProgramados] = useState([]);
+  const [cargandoCalendario, setCargandoCalendario] = useState(true);
+  const [programandoId, setProgramandoId] = useState("");
+  const [mensajeCalendario, setMensajeCalendario] = useState("");
+
   // =======================================================
   // CARGAR PRODUCTOS
   // =======================================================
@@ -457,6 +464,68 @@ const [
 
     cargarBorradores();
   }, []);
+
+
+  // =======================================================
+  // CALENDARIO
+  // =======================================================
+
+  const cargarCalendario = async () => {
+    try {
+      setCargandoCalendario(true);
+
+      const [ra, rp] = await Promise.all([
+        fetch("/api/contenido-redes?accion=listar-aprobados"),
+        fetch("/api/contenido-redes?accion=listar-programados"),
+      ]);
+
+      const da = await ra.json();
+      const dp = await rp.json();
+
+      if (!ra.ok) throw new Error(da.error || "No se pudieron cargar los aprobados.");
+      if (!rp.ok) throw new Error(dp.error || "No se pudo cargar el calendario.");
+
+      setAprobados(Array.isArray(da.aprobados) ? da.aprobados : []);
+      setProgramados(Array.isArray(dp.programados) ? dp.programados : []);
+    } catch (e) {
+      console.error("Error cargando calendario:", e);
+      setError(e.message || "No se pudo cargar el calendario.");
+    } finally {
+      setCargandoCalendario(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarCalendario();
+  }, []);
+
+  const programarAprobado = async (item) => {
+    try {
+      setProgramandoId(item.productoId);
+      setMensajeCalendario("");
+
+      const respuesta = await fetch(
+        "/api/contenido-redes?accion=programar-contenido",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productoId: item.productoId }),
+        }
+      );
+
+      const datos = await respuesta.json();
+      if (!respuesta.ok) {
+        throw new Error(datos.error || "No se pudo programar el contenido.");
+      }
+
+      setMensajeCalendario("Contenido programado para jueves, viernes y sábado.");
+      await cargarCalendario();
+    } catch (e) {
+      setMensajeCalendario(`Error: ${e.message || "No se pudo programar."}`);
+    } finally {
+      setProgramandoId("");
+    }
+  };
 
   const producto1 =
     productosDigitales.find(
@@ -828,6 +897,8 @@ const aprobarContenido = async (
           "Contenido aprobado correctamente.",
       })
     );
+
+    await cargarCalendario();
   } catch (error) {
     console.error(
       "Error aprobando contenido:",
@@ -1433,6 +1504,141 @@ const aprobarContenido = async (
             )}
           </div>
         )}
+
+
+        {/* CALENDARIO */}
+
+        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={17} className="text-violet-600" />
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Calendario</h2>
+              <p className="text-[10px] text-slate-500">
+                Jueves 1 · Viernes 2 · Sábado 3 de octubre
+              </p>
+            </div>
+          </div>
+
+          {cargandoCalendario ? (
+            <div className="mt-3 flex items-center justify-center gap-2 py-4 text-[11px] text-slate-500">
+              <Loader2 size={14} className="animate-spin" />
+              Cargando calendario...
+            </div>
+          ) : (
+            <>
+              {aprobados.map((item) => (
+                <div
+                  key={String(item._id || item.productoId)}
+                  className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5"
+                >
+                  <p className="text-[11px] font-bold text-slate-900">
+                    {item.nombreProducto}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    Aprobado · listo para programar
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => programarAprobado(item)}
+                    disabled={programandoId === item.productoId}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white disabled:bg-violet-300"
+                  >
+                    {programandoId === item.productoId ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Programando...
+                      </>
+                    ) : (
+                      <>
+                        <CalendarDays size={14} />
+                        Programar jueves, viernes y sábado
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+
+              {programados.map((item) => {
+                const calendario = Array.isArray(item.calendario)
+                  ? item.calendario
+                  : [];
+
+                return (
+                  <div
+                    key={String(item._id || item.productoId)}
+                    className="mt-3"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-900">
+                          {item.nombreProducto}
+                        </p>
+                        <p className="text-[10px] text-emerald-600">Programado</p>
+                      </div>
+                      <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-bold text-emerald-700">
+                        {calendario.length} piezas
+                      </span>
+                    </div>
+
+                    <div className="grid gap-2 md:grid-cols-3">
+                      {[
+                        ["2026-10-01", "Jueves 1"],
+                        ["2026-10-02", "Viernes 2"],
+                        ["2026-10-03", "Sábado 3"],
+                      ].map(([fecha, nombre]) => {
+                        const piezas = calendario
+                          .filter((pieza) => pieza.fecha === fecha)
+                          .sort((a, b) =>
+                            String(a.hora).localeCompare(String(b.hora))
+                          );
+
+                        return (
+                          <div
+                            key={fecha}
+                            className="rounded-lg border border-slate-200 bg-slate-50 p-2.5"
+                          >
+                            <p className="mb-2 text-[10px] font-bold uppercase text-slate-600">
+                              {nombre}
+                            </p>
+
+                            <div className="space-y-1.5">
+                              {piezas.map((pieza, indice) => (
+                                <div
+                                  key={`${pieza.red}-${pieza.tipo}-${pieza.indice}-${indice}`}
+                                  className="flex items-center justify-between gap-2 rounded-md bg-white px-2 py-1.5"
+                                >
+                                  <span className="text-[10px] font-semibold capitalize text-slate-700">
+                                    {pieza.red} · {pieza.tipo}
+                                  </span>
+                                  <span className="text-[9px] font-bold text-violet-600">
+                                    {pieza.hora}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {aprobados.length === 0 && programados.length === 0 && (
+                <p className="mt-3 rounded-lg bg-slate-50 px-3 py-3 text-center text-[11px] text-slate-500">
+                  Aprueba un contenido para incorporarlo al calendario.
+                </p>
+              )}
+            </>
+          )}
+
+          {mensajeCalendario && (
+            <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] text-violet-700">
+              {mensajeCalendario}
+            </div>
+          )}
+        </section>
 
         {/* AVISO ETAPA ACTUAL */}
 

@@ -338,8 +338,8 @@ async function publicarThreads(req, res) {
     });
 
   const respuestaContenedor =
-  await fetch(
-    `${THREADS_API}/me/threads`,
+    await fetch(
+      `${THREADS_API}/me/threads`,
       {
         method: "POST",
         headers: {
@@ -384,8 +384,8 @@ async function publicarThreads(req, res) {
     });
 
   const respuestaPublicacion =
-  await fetch(
-    `${THREADS_API}/me/threads_publish`,
+    await fetch(
+      `${THREADS_API}/me/threads_publish`,
       {
         method: "POST",
         headers: {
@@ -424,25 +424,25 @@ async function publicarThreads(req, res) {
   // -------------------------------------------------------
 
   await db
-  .collection("publicaciones_redes")
-  .insertOne({
-    proveedor: "threads",
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "threads",
 
-    productoId:
-      productoId || null,
+      productoId:
+        productoId || null,
 
-    publicacionId: String(
-      publicacion.id
-    ),
+      publicacionId: String(
+        publicacion.id
+      ),
 
-    texto,
+      texto,
 
-    estado: "publicado",
+      estado: "publicado",
 
-    publicadoEn: new Date(),
+      publicadoEn: new Date(),
 
-    creadoEn: new Date(),
-  });
+      creadoEn: new Date(),
+    });
 
   return res.status(200).json({
     ok: true,
@@ -660,6 +660,268 @@ async function listarAprobados(
 }
 
 // =========================================================
+// CALENDARIO DE REDES
+// =========================================================
+
+const crearCalendarioInicial = (contenido) => {
+  const dias = [
+    {
+      fecha: "2026-10-01",
+      dia: "Jueves",
+    },
+    {
+      fecha: "2026-10-02",
+      dia: "Viernes",
+    },
+    {
+      fecha: "2026-10-03",
+      dia: "Sábado",
+    },
+  ];
+
+  const calendario = [];
+
+  const agregar = (
+    d,
+    hora,
+    red,
+    tipo,
+    indice,
+    publicacion
+  ) => {
+    if (!publicacion) return;
+
+    calendario.push({
+      fecha: dias[d].fecha,
+      dia: dias[d].dia,
+      hora,
+      red,
+      tipo,
+      indice,
+      publicacion,
+      estado: "programado",
+    });
+  };
+
+  // -------------------------------------------------------
+  // INSTAGRAM
+  // Jueves: Stories 1/2 + Carrusel
+  // Viernes: Stories 3/4 + Reel
+  // Sábado: Stories 5/6
+  // -------------------------------------------------------
+
+  agregar(
+    0,
+    "10:00",
+    "instagram",
+    "story",
+    0,
+    contenido?.instagram?.stories?.[0]
+  );
+
+  agregar(
+    0,
+    "12:00",
+    "instagram",
+    "carrusel",
+    0,
+    contenido?.instagram?.carrusel
+  );
+
+  agregar(
+    0,
+    "20:00",
+    "instagram",
+    "story",
+    1,
+    contenido?.instagram?.stories?.[1]
+  );
+
+  agregar(
+    1,
+    "10:00",
+    "instagram",
+    "story",
+    2,
+    contenido?.instagram?.stories?.[2]
+  );
+
+  agregar(
+    1,
+    "18:00",
+    "instagram",
+    "reel",
+    0,
+    contenido?.instagram?.reel
+  );
+
+  agregar(
+    1,
+    "20:00",
+    "instagram",
+    "story",
+    3,
+    contenido?.instagram?.stories?.[3]
+  );
+
+  agregar(
+    2,
+    "10:00",
+    "instagram",
+    "story",
+    4,
+    contenido?.instagram?.stories?.[4]
+  );
+
+  agregar(
+    2,
+    "20:00",
+    "instagram",
+    "story",
+    5,
+    contenido?.instagram?.stories?.[5]
+  );
+
+  // -------------------------------------------------------
+  // THREADS
+  // 2 publicaciones por día
+  // -------------------------------------------------------
+
+  for (
+    let i = 0;
+    i < 6;
+    i += 1
+  ) {
+    agregar(
+      Math.floor(i / 2),
+      i % 2 === 0
+        ? "11:00"
+        : "19:00",
+      "threads",
+      "publicacion",
+      i,
+      contenido?.threads?.[i]
+    );
+
+    // -----------------------------------------------------
+    // FACEBOOK
+    // 2 publicaciones por día
+    // -----------------------------------------------------
+
+    agregar(
+      Math.floor(i / 2),
+      i % 2 === 0
+        ? "17:00"
+        : "21:00",
+      "facebook",
+      "publicacion",
+      i,
+      contenido?.facebook
+        ?.publicaciones?.[i]
+    );
+  }
+
+  return calendario;
+};
+
+// =========================================================
+// PROGRAMAR CONTENIDO APROBADO
+// =========================================================
+
+async function programarContenido(
+  req,
+  res
+) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const aprobado = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "aprobado",
+    });
+
+  if (!aprobado) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró contenido aprobado para este producto.",
+    });
+  }
+
+  const ahora = new Date();
+
+  const calendario =
+    crearCalendarioInicial(
+      aprobado.contenido
+    );
+
+  await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        _id: aprobado._id,
+      },
+      {
+        $set: {
+          estado: "programado",
+          calendario,
+          programadoEn: ahora,
+          actualizadoEn: ahora,
+        },
+      }
+    );
+
+  return res.status(200).json({
+    ok: true,
+    mensaje:
+      "Contenido incorporado al calendario.",
+    calendario,
+  });
+}
+
+// =========================================================
+// LISTAR CONTENIDO PROGRAMADO
+// =========================================================
+
+async function listarProgramados(
+  req,
+  res
+) {
+  const db =
+    await conectarMongoDB();
+
+  const programados = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "programado",
+    })
+    .sort({
+      programadoEn: -1,
+    })
+    .toArray();
+
+  return res.status(200).json({
+    ok: true,
+    programados,
+  });
+}
+
+// =========================================================
 // OPENAI - GENERAR CONTENIDO
 // =========================================================
 
@@ -792,9 +1054,8 @@ export default async function handler(
       );
     }
 
-        // -----------------------------------------------------
+    // -----------------------------------------------------
     // GUARDAR BORRADOR
-    // Solo administrador.
     // -----------------------------------------------------
 
     if (
@@ -816,7 +1077,6 @@ export default async function handler(
 
     // -----------------------------------------------------
     // LISTAR BORRADORES
-    // Solo administrador.
     // -----------------------------------------------------
 
     if (
@@ -837,52 +1097,91 @@ export default async function handler(
     }
 
     // -----------------------------------------------------
-// APROBAR BORRADOR
-// Solo administrador.
-// -----------------------------------------------------
+    // APROBAR BORRADOR
+    // -----------------------------------------------------
 
-if (
-  req.method === "POST" &&
-  accion === "aprobar-borrador"
-) {
-  if (!adminAutorizado(req)) {
-    return res.status(401).json({
-      ok: false,
-      error: "No autorizado",
-    });
-  }
+    if (
+      req.method === "POST" &&
+      accion === "aprobar-borrador"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
 
-  return aprobarBorrador(
-    req,
-    res
-  );
-}
+      return aprobarBorrador(
+        req,
+        res
+      );
+    }
 
     // -----------------------------------------------------
-// LISTAR CONTENIDOS APROBADOS
-// Solo administrador.
-// -----------------------------------------------------
+    // LISTAR APROBADOS
+    // -----------------------------------------------------
 
-if (
-  req.method === "GET" &&
-  accion === "listar-aprobados"
-) {
-  if (!adminAutorizado(req)) {
-    return res.status(401).json({
-      ok: false,
-      error: "No autorizado",
-    });
-  }
+    if (
+      req.method === "GET" &&
+      accion === "listar-aprobados"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
 
-  return listarAprobados(
-    req,
-    res
-  );
-}
+      return listarAprobados(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // PROGRAMAR CONTENIDO APROBADO
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "programar-contenido"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return programarContenido(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // LISTAR CONTENIDO PROGRAMADO
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "listar-programados"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return listarProgramados(
+        req,
+        res
+      );
+    }
 
     // -----------------------------------------------------
     // GENERACIÓN DE CONTENIDO
-    // Conservamos el comportamiento actual.
     // -----------------------------------------------------
 
     if (
