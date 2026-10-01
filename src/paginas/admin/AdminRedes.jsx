@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Pencil,
   Save,
+  RefreshCw,
   Sparkles,
 } from "lucide-react";
 
@@ -407,6 +408,10 @@ const [
   const [programandoId, setProgramandoId] = useState("");
   const [mensajeCalendario, setMensajeCalendario] = useState("");
   const [publicandoPieza, setPublicandoPieza] = useState("");
+  const [
+  regenerandoId,
+  setRegenerandoId,
+] = useState("");
 
   // =======================================================
   // CARGAR PRODUCTOS
@@ -581,6 +586,88 @@ const [
     }
   };
 
+  const regenerarProgramado = async (item) => {
+  const producto =
+    productosDigitales.find(
+      (producto) =>
+        producto.id === item.productoId
+    );
+
+  if (!producto) {
+    setMensajeCalendario(
+      "Error: no se encontró el producto."
+    );
+    return;
+  }
+
+  const confirmar = window.confirm(
+    `¿Regenerar las publicaciones de "${item.nombreProducto}"?\n\n` +
+      "Se reemplazará el contenido programado actual por los textos nuevos."
+  );
+
+  if (!confirmar) return;
+
+  try {
+    setRegenerandoId(item.productoId);
+    setMensajeCalendario("");
+
+    const contenidoNuevo =
+      generarContenidoRedesLocal(producto);
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=regenerar-programado",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          productoId:
+            item.productoId,
+
+          nombreProducto:
+            item.nombreProducto,
+
+          contenido:
+            contenidoNuevo,
+        }),
+      }
+    );
+
+    const datos =
+      await leerRespuestaApi(respuesta);
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos.error ||
+          "No se pudo regenerar el contenido."
+      );
+    }
+
+    setMensajeCalendario(
+      "Contenido actualizado. Las 20 publicaciones fueron regeneradas."
+    );
+
+    await cargarCalendario();
+  } catch (error) {
+    console.error(
+      "Error regenerando contenido:",
+      error
+    );
+
+    setMensajeCalendario(
+      `Error: ${
+        error.message ||
+        "No se pudo regenerar el contenido."
+      }`
+    );
+  } finally {
+    setRegenerandoId("");
+  }
+};
 
   const publicarAhora = async (item, pieza) => {
     const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`;
@@ -1677,6 +1764,35 @@ const aprobarContenido = async (
                         {calendario.length} piezas
                       </span>
                     </div>
+
+                    <button
+  type="button"
+  onClick={() =>
+    regenerarProgramado(item)
+  }
+  disabled={
+    regenerandoId === item.productoId
+  }
+  className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[10px] font-bold text-white disabled:bg-violet-300"
+>
+  {regenerandoId ===
+  item.productoId ? (
+    <>
+      <Loader2
+        size={14}
+        className="animate-spin"
+      />
+
+      Regenerando...
+    </>
+  ) : (
+    <>
+      <RefreshCw size={14} />
+
+      Regenerar contenido programado
+    </>
+  )}
+</button>
 
                     <div className="grid gap-2 md:grid-cols-3">
                       {[

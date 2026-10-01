@@ -1278,6 +1278,106 @@ async function programarContenido(
 }
 
 // =========================================================
+// REGENERAR CONTENIDO PROGRAMADO
+// =========================================================
+
+async function regenerarContenidoProgramado(
+  req,
+  res
+) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
+  const nombreProducto =
+    typeof req.body?.nombreProducto === "string"
+      ? req.body.nombreProducto.trim()
+      : "";
+
+  const contenido =
+    req.body?.contenido;
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  if (
+    !contenido ||
+    typeof contenido !== "object" ||
+    Array.isArray(contenido)
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "El contenido regenerado no es válido.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const documento = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "programado",
+    });
+
+  if (!documento) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró contenido programado para este producto.",
+    });
+  }
+
+  const ahora = new Date();
+
+  // Crea nuevamente las 20 piezas.
+  // Todas quedan en estado "programado"
+  // y sin publicacionId/publicadoEn anteriores.
+  const calendario =
+    crearCalendarioInicial(contenido);
+
+  await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        _id: documento._id,
+      },
+      {
+        $set: {
+          contenido,
+          calendario,
+
+          nombreProducto:
+            nombreProducto ||
+            documento.nombreProducto,
+
+          estado: "programado",
+
+          regeneradoEn: ahora,
+          actualizadoEn: ahora,
+        },
+      }
+    );
+
+  return res.status(200).json({
+    ok: true,
+
+    mensaje:
+      "Contenido programado regenerado correctamente.",
+
+    calendario,
+  });
+}
+
+// =========================================================
 // LISTAR CONTENIDO PROGRAMADO
 // =========================================================
 
@@ -1779,6 +1879,27 @@ export default async function handler(
         res
       );
     }
+
+    // -----------------------------------------------------
+// REGENERAR CONTENIDO PROGRAMADO
+// -----------------------------------------------------
+
+if (
+  req.method === "POST" &&
+  accion === "regenerar-programado"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return regenerarContenidoProgramado(
+    req,
+    res
+  );
+}
 
     // -----------------------------------------------------
     // LISTAR PROGRAMADOS
