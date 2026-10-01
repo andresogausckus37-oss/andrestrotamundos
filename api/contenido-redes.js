@@ -131,10 +131,6 @@ async function callbackThreads(req, res) {
     });
   }
 
-  // -------------------------------------------------------
-  // Código OAuth -> token de corta duración
-  // -------------------------------------------------------
-
   const parametrosToken =
     new URLSearchParams({
       client_id: THREADS_APP_ID,
@@ -178,10 +174,6 @@ async function callbackThreads(req, res) {
     });
   }
 
-  // -------------------------------------------------------
-  // Token corto -> token de larga duración
-  // -------------------------------------------------------
-
   const parametrosLargo =
     new URLSearchParams({
       grant_type:
@@ -214,10 +206,6 @@ async function callbackThreads(req, res) {
         "No se pudo obtener el token de larga duración.",
     });
   }
-
-  // -------------------------------------------------------
-  // Guardar conexión en MongoDB
-  // -------------------------------------------------------
 
   const db =
     await conectarMongoDB();
@@ -326,10 +314,6 @@ async function publicarThreads(req, res) {
   const accessToken =
     integracion.accessToken;
 
-  // -------------------------------------------------------
-  // 1. Crear contenedor de texto
-  // -------------------------------------------------------
-
   const parametrosContenedor =
     new URLSearchParams({
       media_type: "TEXT",
@@ -373,10 +357,6 @@ async function publicarThreads(req, res) {
     });
   }
 
-  // -------------------------------------------------------
-  // 2. Publicar contenedor
-  // -------------------------------------------------------
-
   const parametrosPublicacion =
     new URLSearchParams({
       creation_id: contenedor.id,
@@ -418,10 +398,6 @@ async function publicarThreads(req, res) {
         null,
     });
   }
-
-  // -------------------------------------------------------
-  // 3. Registrar publicación
-  // -------------------------------------------------------
 
   await db
     .collection("publicaciones_redes")
@@ -689,7 +665,8 @@ const crearCalendarioInicial = (contenido) => {
     indice,
     publicacion
   ) => {
-    if (!publicacion) return;
+
+        if (!publicacion) return;
 
     calendario.push({
       fecha: dias[d].fecha,
@@ -700,14 +677,13 @@ const crearCalendarioInicial = (contenido) => {
       indice,
       publicacion,
       estado: "programado",
+      zonaHoraria:
+        "America/Argentina/Buenos_Aires",
     });
   };
 
   // -------------------------------------------------------
   // INSTAGRAM
-  // Jueves: Stories 1/2 + Carrusel
-  // Viernes: Stories 3/4 + Reel
-  // Sábado: Stories 5/6
   // -------------------------------------------------------
 
   agregar(
@@ -783,8 +759,7 @@ const crearCalendarioInicial = (contenido) => {
   );
 
   // -------------------------------------------------------
-  // THREADS
-  // 2 publicaciones por día
+  // THREADS + FACEBOOK
   // -------------------------------------------------------
 
   for (
@@ -802,11 +777,6 @@ const crearCalendarioInicial = (contenido) => {
       i,
       contenido?.threads?.[i]
     );
-
-    // -----------------------------------------------------
-    // FACEBOOK
-    // 2 publicaciones por día
-    // -----------------------------------------------------
 
     agregar(
       Math.floor(i / 2),
@@ -922,6 +892,184 @@ async function listarProgramados(
 }
 
 // =========================================================
+// PUBLICAR AHORA - PIEZA PROGRAMADA
+// Por ahora la publicación real está habilitada para Threads.
+// =========================================================
+
+async function publicarProgramado(
+  req,
+  res
+) {
+  const {
+    productoId,
+    fecha,
+    hora,
+    red,
+    tipo,
+    indice,
+  } = req.body || {};
+
+  if (
+    !productoId ||
+    !fecha ||
+    !hora ||
+    !red
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Faltan datos de la publicación programada.",
+    });
+  }
+
+  if (red !== "threads") {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "La publicación automática todavía no está habilitada para esta red.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const documento = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "programado",
+    });
+
+  if (!documento) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró el contenido programado.",
+    });
+  }
+
+  const posicion =
+    Array.isArray(documento.calendario)
+      ? documento.calendario.findIndex(
+          (pieza) =>
+            pieza.fecha === fecha &&
+            pieza.hora === hora &&
+            pieza.red === red &&
+            pieza.tipo === tipo &&
+            Number(pieza.indice) ===
+              Number(indice)
+        )
+      : -1;
+
+  if (posicion < 0) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró la pieza en el calendario.",
+    });
+  }
+
+  const pieza =
+    documento.calendario[posicion];
+
+  if (pieza.estado === "publicado") {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "Esta publicación ya fue publicada.",
+    });
+  }
+
+  const texto =
+    typeof pieza.publicacion?.texto ===
+    "string"
+      ? pieza.publicacion.texto.trim()
+      : "";
+
+  if (!texto) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "La publicación de Threads no contiene texto.",
+    });
+  }
+
+  let resultadoThreads = null;
+  let estadoHttp = 200;
+
+  const respuestaInterna = {
+    status(codigo) {
+      estadoHttp = codigo;
+      return this;
+    },
+
+    json(datos) {
+      resultadoThreads = datos;
+      return datos;
+    },
+  };
+
+  await publicarThreads(
+    {
+      ...req,
+      body: {
+        texto,
+        productoId,
+      },
+    },
+    respuestaInterna
+  );
+
+  if (
+    estadoHttp < 200 ||
+    estadoHttp >= 300 ||
+    !resultadoThreads?.ok
+  ) {
+    return res
+      .status(estadoHttp || 502)
+      .json(
+        resultadoThreads || {
+          ok: false,
+          error:
+            "No se pudo publicar en Threads.",
+        }
+      );
+  }
+
+  const ahora = new Date();
+
+  await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        _id: documento._id,
+      },
+      {
+        $set: {
+          [`calendario.${posicion}.estado`]:
+            "publicado",
+
+          [`calendario.${posicion}.publicadoEn`]:
+            ahora,
+
+          [`calendario.${posicion}.publicacionId`]:
+            resultadoThreads.publicacionId,
+
+          actualizadoEn: ahora,
+        },
+      }
+    );
+
+  return res.status(200).json({
+    ok: true,
+    mensaje:
+      "Publicación realizada correctamente en Threads.",
+    publicacionId:
+      resultadoThreads.publicacionId,
+  });
+}
+
+// =========================================================
 // OPENAI - GENERAR CONTENIDO
 // =========================================================
 
@@ -996,8 +1144,7 @@ export default async function handler(
     const { accion } = req.query;
 
     // -----------------------------------------------------
-    // CALLBACK DE THREADS
-    // Debe permanecer accesible para Meta.
+    // CALLBACK THREADS
     // -----------------------------------------------------
 
     if (
@@ -1011,8 +1158,7 @@ export default async function handler(
     }
 
     // -----------------------------------------------------
-    // CONEXIÓN DE THREADS
-    // Solo administrador.
+    // CONECTAR THREADS
     // -----------------------------------------------------
 
     if (
@@ -1033,8 +1179,7 @@ export default async function handler(
     }
 
     // -----------------------------------------------------
-    // PUBLICAR EN THREADS
-    // Solo administrador.
+    // PUBLICAR THREADS
     // -----------------------------------------------------
 
     if (
@@ -1139,7 +1284,7 @@ export default async function handler(
     }
 
     // -----------------------------------------------------
-    // PROGRAMAR CONTENIDO APROBADO
+    // PROGRAMAR CONTENIDO
     // -----------------------------------------------------
 
     if (
@@ -1160,7 +1305,7 @@ export default async function handler(
     }
 
     // -----------------------------------------------------
-    // LISTAR CONTENIDO PROGRAMADO
+    // LISTAR PROGRAMADOS
     // -----------------------------------------------------
 
     if (
@@ -1175,6 +1320,27 @@ export default async function handler(
       }
 
       return listarProgramados(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // PUBLICAR AHORA UNA PIEZA PROGRAMADA
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "publicar-programado"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return publicarProgramado(
         req,
         res
       );

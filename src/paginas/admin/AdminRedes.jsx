@@ -287,6 +287,59 @@ function BloqueRed({
 // ADMIN REDES
 // =========================================================
 
+
+const leerRespuestaApi = async (respuesta) => {
+  const texto = await respuesta.text();
+
+  if (!texto) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(texto);
+  } catch {
+    throw new Error(
+      respuesta.ok
+        ? "El servidor devolvió una respuesta no válida."
+        : `Error del servidor (${respuesta.status}). Intenta nuevamente.`
+    );
+  }
+};
+
+const obtenerAhoraArgentina = () => {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+
+  const valores = Object.fromEntries(
+    partes.map((parte) => [parte.type, parte.value])
+  );
+
+  return {
+    fecha: `${valores.year}-${valores.month}-${valores.day}`,
+    hora: `${valores.hour}:${valores.minute}`,
+  };
+};
+
+const horarioYaPasoArgentina = (pieza) => {
+  if (!pieza?.fecha || !pieza?.hora || pieza.estado === "publicado") {
+    return false;
+  }
+
+  const ahora = obtenerAhoraArgentina();
+
+  return (
+    pieza.fecha < ahora.fecha ||
+    (pieza.fecha === ahora.fecha && pieza.hora <= ahora.hora)
+  );
+};
+
 export default function AdminRedes() {
   const [
     productosDigitales,
@@ -353,6 +406,7 @@ const [
   const [cargandoCalendario, setCargandoCalendario] = useState(true);
   const [programandoId, setProgramandoId] = useState("");
   const [mensajeCalendario, setMensajeCalendario] = useState("");
+  const [publicandoPieza, setPublicandoPieza] = useState("");
 
   // =======================================================
   // CARGAR PRODUCTOS
@@ -371,7 +425,7 @@ const [
             );
 
           const datos =
-            await respuesta.json();
+            await leerRespuestaApi(respuesta);
 
           if (!respuesta.ok) {
             throw new Error(
@@ -419,7 +473,7 @@ const [
             );
 
           const datos =
-            await respuesta.json();
+            await leerRespuestaApi(respuesta);
 
           if (!respuesta.ok) {
             throw new Error(
@@ -479,8 +533,8 @@ const [
         fetch("/api/contenido-redes?accion=listar-programados"),
       ]);
 
-      const da = await ra.json();
-      const dp = await rp.json();
+      const da = await leerRespuestaApi(ra);
+      const dp = await leerRespuestaApi(rp);
 
       if (!ra.ok) throw new Error(da.error || "No se pudieron cargar los aprobados.");
       if (!rp.ok) throw new Error(dp.error || "No se pudo cargar el calendario.");
@@ -513,7 +567,7 @@ const [
         }
       );
 
-      const datos = await respuesta.json();
+      const datos = await leerRespuestaApi(respuesta);
       if (!respuesta.ok) {
         throw new Error(datos.error || "No se pudo programar el contenido.");
       }
@@ -524,6 +578,45 @@ const [
       setMensajeCalendario(`Error: ${e.message || "No se pudo programar."}`);
     } finally {
       setProgramandoId("");
+    }
+  };
+
+
+  const publicarAhora = async (item, pieza) => {
+    const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`;
+
+    try {
+      setPublicandoPieza(clave);
+      setMensajeCalendario("");
+
+      const respuesta = await fetch(
+        "/api/contenido-redes?accion=publicar-programado",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productoId: item.productoId,
+            fecha: pieza.fecha,
+            hora: pieza.hora,
+            red: pieza.red,
+            tipo: pieza.tipo,
+            indice: pieza.indice,
+          }),
+        }
+      );
+
+      const datos = await leerRespuestaApi(respuesta);
+
+      if (!respuesta.ok) {
+        throw new Error(datos.error || "No se pudo publicar ahora.");
+      }
+
+      setMensajeCalendario("Publicación realizada correctamente en Threads.");
+      await cargarCalendario();
+    } catch (error) {
+      setMensajeCalendario(`Error: ${error.message || "No se pudo publicar ahora."}`);
+    } finally {
+      setPublicandoPieza("");
     }
   };
 
@@ -786,7 +879,7 @@ const guardarBorrador = async (
       );
 
     const datos =
-      await respuesta.json();
+      await leerRespuestaApi(respuesta);
 
     if (!respuesta.ok) {
       throw new Error(
@@ -871,7 +964,7 @@ const aprobarContenido = async (
       );
 
     const datos =
-      await respuesta.json();
+      await leerRespuestaApi(respuesta);
 
     if (!respuesta.ok) {
       throw new Error(
@@ -1514,7 +1607,7 @@ const aprobarContenido = async (
             <div>
               <h2 className="text-sm font-bold text-slate-900">Calendario</h2>
               <p className="text-[10px] text-slate-500">
-                Jueves 1 · Viernes 2 · Sábado 3 de octubre
+                Jueves 1 · Viernes 2 · Sábado 3 de octubre · Hora Argentina
               </p>
             </div>
           </div>
@@ -1606,14 +1699,53 @@ const aprobarContenido = async (
                               {piezas.map((pieza, indice) => (
                                 <div
                                   key={`${pieza.red}-${pieza.tipo}-${pieza.indice}-${indice}`}
-                                  className="flex items-center justify-between gap-2 rounded-md bg-white px-2 py-1.5"
+                                  className="rounded-md bg-white px-2 py-1.5"
                                 >
-                                  <span className="text-[10px] font-semibold capitalize text-slate-700">
-                                    {pieza.red} · {pieza.tipo}
-                                  </span>
-                                  <span className="text-[9px] font-bold text-violet-600">
-                                    {pieza.hora}
-                                  </span>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-[10px] font-semibold capitalize text-slate-700">
+                                      {pieza.red} · {pieza.tipo}
+                                    </span>
+                                    <span className="text-[9px] font-bold text-violet-600">
+                                      {pieza.hora} AR
+                                    </span>
+                                  </div>
+
+                                  {pieza.estado === "publicado" ? (
+                                    <p className="mt-1 text-[9px] font-semibold text-emerald-600">
+                                      Publicado
+                                    </p>
+                                  ) : horarioYaPasoArgentina(pieza) ? (
+                                    <div className="mt-1.5">
+                                      <p className="text-[9px] font-semibold text-amber-600">
+                                        Pendiente · horario pasado
+                                      </p>
+
+                                      {pieza.red === "threads" ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => publicarAhora(item, pieza)}
+                                          disabled={
+                                            publicandoPieza ===
+                                            `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`
+                                          }
+                                          className="mt-1.5 w-full rounded-md bg-slate-900 px-2 py-1.5 text-[9px] font-bold text-white disabled:bg-slate-400"
+                                        >
+                                          {publicandoPieza ===
+                                          `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`
+                                            ? "Publicando..."
+                                            : "Publicar ahora"}
+                                        </button>
+                                      ) : (
+                                        <p className="mt-1 text-[9px] text-slate-400">
+                                          Publicación automática pendiente de conectar {pieza.red === "instagram" ? "Instagram" : "Facebook"}.
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="mt-1 text-[9px] text-slate-400">
+                                      Programado · hora Argentina
+                                    </p>
+                                  )}
                                 </div>
                               ))}
                             </div>
