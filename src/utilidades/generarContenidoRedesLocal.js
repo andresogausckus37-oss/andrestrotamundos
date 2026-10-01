@@ -36,21 +36,15 @@ const obtenerBeneficios = (producto) =>
     ? producto.beneficios.filter(Boolean)
     : [];
 
-const obtenerImagenes = (producto) => {
-  const presentacion =
-    producto.imagenes?.portada || null;
+// =========================================================
+// IMÁGENES POR FORMATO
+// =========================================================
 
-  const incluye =
-    producto.imagenes?.preview || null;
-
-  const muestras =
-    producto.imagenes?.muestras || [];
-
-  const beneficios =
-    muestras[0] || null;
-
-  const comoFunciona =
-    muestras[1] || null;
+const normalizarGrupoImagenes = (grupo = {}) => {
+  const presentacion = grupo.presentacion || null;
+  const incluye = grupo.incluye || null;
+  const beneficios = grupo.beneficios || null;
+  const comoFunciona = grupo.comoFunciona || null;
 
   return {
     presentacion,
@@ -66,6 +60,23 @@ const obtenerImagenes = (producto) => {
     ].filter(Boolean),
   };
 };
+
+const obtenerImagenes = (producto) => ({
+  // 1:1 → Facebook + Threads
+  cuadradas: normalizarGrupoImagenes(
+    producto.imagenes?.cuadradas
+  ),
+
+  // 4:5 → Instagram Feed / Carrusel
+  feed: normalizarGrupoImagenes(
+    producto.imagenes?.feed
+  ),
+
+  // 9:16 → Instagram Stories / Reel
+  vertical: normalizarGrupoImagenes(
+    producto.imagenes?.vertical
+  ),
+});
 
 // =========================================================
 // EMOJIS
@@ -446,6 +457,7 @@ function generarThreads(
       producto,
       tipo: "interaccion",
       formato: "texto",
+
       texto: elegir(
         threadsInteraccion
       )(
@@ -458,21 +470,26 @@ function generarThreads(
       producto,
       tipo: "producto",
       formato: "imagen",
+
       texto: elegir(
         threadsProducto
       )(
         producto,
         eProducto
       ),
+
       cta:
         "Ver producto en la tienda",
-      imagen: imagenes.presentacion,
+
+      imagen:
+        imagenes.presentacion,
     }),
 
     crearPublicacion({
       producto,
       tipo: "tip",
       formato: "texto",
+
       texto: elegir(
         threadsTips
       )(
@@ -485,11 +502,14 @@ function generarThreads(
       producto,
       tipo: "encuesta",
       formato: "encuesta",
+
       texto:
         `Encuesta rápida ${eEncuesta[0]} Si hoy tuvieras que elegir una opción, ¿con cuál te quedarías? ${eEncuesta[1]} Vota y cuéntame por qué ${eEncuesta[2]}`,
+
       encuesta: {
         pregunta:
           "¿Con cuál te quedas?",
+
         opciones:
           encuestaOpciones,
       },
@@ -498,32 +518,40 @@ function generarThreads(
     crearPublicacion({
       producto,
       tipo: "beneficio",
+
       formato:
         imagenes.beneficios
           ? "imagen"
           : "texto",
+
       texto: elegir(
         threadsBeneficios
       )(
         producto,
         eBeneficio
       ),
-      imagen: imagenes.beneficios,
+
+      imagen:
+        imagenes.beneficios,
     }),
 
     crearPublicacion({
       producto,
       tipo: "venta",
       formato: "imagen",
+
       texto: elegir(
         threadsVenta
       )(
         producto,
         eVenta
       ),
+
       cta:
         "Ver producto en la tienda",
-      imagen: imagenes.comoFunciona,
+
+      imagen:
+        imagenes.comoFunciona,
     }),
   ];
 }
@@ -587,30 +615,38 @@ function generarStories(
       producto,
       tipo: "presentacion",
       formato: "imagen",
+
       texto: elegir(
         storiesPresentacion
       )(
         producto,
         e1
       ),
+
       cta: "Descúbrelo",
-      imagen: imagenes.presentacion,
+
+      imagen:
+        imagenes.presentacion,
     }),
 
     crearPublicacion({
       producto,
       tipo: "encuesta",
       formato: "encuesta",
+
       texto:
         `Elige tu estilo ${e2[0]}\n¿Prefieres resolver con calma o contra reloj? ${e2[1]}\nVota aquí ${e2[2]}`,
+
       encuesta: {
         pregunta:
           "¿Cómo prefieres jugar?",
+
         opciones: [
           "Con calma",
           "Contra reloj",
         ],
       },
+
       imagen: null,
     }),
 
@@ -618,21 +654,26 @@ function generarStories(
       producto,
       tipo: "beneficio",
       formato: "imagen",
+
       texto: elegir(
         storiesBeneficio
       )(
         producto,
         e3
       ),
-      imagen: imagenes.beneficios,
+
+      imagen:
+        imagenes.beneficios,
     }),
 
     crearPublicacion({
       producto,
       tipo: "desafio",
       formato: "texto",
+
       texto:
         `Te propongo un desafío ${e4[0]}\n¿Hasta dónde llegarías sin mirar una solución? ${e4[1]}\nAcepta el reto ${e4[2]}`,
+
       imagen: null,
     }),
 
@@ -640,19 +681,27 @@ function generarStories(
       producto,
       tipo: "incluye",
       formato: "imagen",
+
       texto:
         `¿Qué encontrarás? ${e5[0]}\n${incluyeAleatorio(producto)} ${e5[1]}\nTodo preparado para disfrutar ${e5[2]}`,
-      imagen: imagenes.incluye,
+
+      imagen:
+        imagenes.incluye,
     }),
 
     crearPublicacion({
       producto,
       tipo: "venta",
       formato: "imagen",
+
       texto:
         `${obtenerNombre(producto)} ${e6[0]}\nListo para descubrir en nuestra tienda ${e6[1]}\nEntra y conoce todos los detalles ${e6[2]}`,
-      cta: "Enlace en la bio",
-      imagen: imagenes.comoFunciona,
+
+      cta:
+        "Enlace en la bio",
+
+      imagen:
+        imagenes.comoFunciona,
     }),
   ];
 }
@@ -699,7 +748,8 @@ function generarCarrusel(
 
     cta: "Enlace en la bio",
 
-    imagen: imagenes.todas,
+    imagen:
+      imagenes.todas,
   });
 }
 
@@ -743,11 +793,18 @@ function generarReel(
 
       cta: "Enlace en la bio",
 
-      // Por ahora usamos las cuatro imágenes comerciales
-      // como referencia visual.
-      // Más adelante incorporaremos actividades reales
-      // y generaremos el video del Reel.
-      imagen: imagenes.todas,
+      /*
+       * Estas son las cuatro variantes
+       * verticales 9:16.
+       *
+       * Por ahora funcionan como recursos
+       * visuales de referencia para el Reel.
+       * Más adelante incorporaremos páginas
+       * reales de actividades y soluciones
+       * para generar el video.
+       */
+      imagen:
+        imagenes.todas,
     }),
 
     guion: [
@@ -935,8 +992,6 @@ function generarFacebook(
       cta:
         "Ver producto en la tienda",
 
-      // Imagen 1:
-      // presentación del producto.
       imagen:
         imagenes.presentacion,
     }),
@@ -970,7 +1025,6 @@ function generarFacebook(
           opcionesEncuesta,
       },
 
-      // No forzamos una imagen comercial.
       imagen: null,
     }),
 
@@ -990,8 +1044,6 @@ function generarFacebook(
         eBeneficio
       ),
 
-      // Imagen 3:
-      // beneficios / aprender jugando.
       imagen:
         imagenes.beneficios,
     }),
@@ -1011,8 +1063,6 @@ function generarFacebook(
       cta:
         "Ver producto en la tienda",
 
-      // Imagen 4:
-      // descarga, impresión y funcionamiento.
       imagen:
         imagenes.comoFunciona,
     }),
@@ -1036,6 +1086,20 @@ export function generarContenidoRedesLocal(
       producto
     );
 
+  /*
+   * Cada red recibe el grupo de imágenes
+   * correspondiente a su formato.
+   *
+   * Threads / Facebook:
+   * 1:1
+   *
+   * Instagram Carrusel:
+   * 4:5
+   *
+   * Instagram Stories / Reel:
+   * 9:16
+   */
+
   return {
     productoId:
       producto.id,
@@ -1049,33 +1113,33 @@ export function generarContenidoRedesLocal(
       carrusel:
         generarCarrusel(
           producto,
-          imagenes
+          imagenes.feed
         ),
 
       reel:
         generarReel(
           producto,
-          imagenes
+          imagenes.vertical
         ),
 
       stories:
         generarStories(
           producto,
-          imagenes
+          imagenes.vertical
         ),
     },
 
     threads:
       generarThreads(
         producto,
-        imagenes
+        imagenes.cuadradas
       ),
 
     facebook: {
       publicaciones:
         generarFacebook(
           producto,
-          imagenes
+          imagenes.cuadradas
         ),
     },
   };
