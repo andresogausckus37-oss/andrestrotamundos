@@ -720,6 +720,103 @@ const subirPdfProducto = async (req, res) => {
 };
 
 /* =========================
+   SUBIR VIDEO REEL PÚBLICO
+========================= */
+
+const subirVideoReel = async (req, res) => {
+  if (!process.env.BLOB_PUBLIC_READ_WRITE_TOKEN) {
+    return res.status(500).json({
+      error:
+        "No está configurado BLOB_PUBLIC_READ_WRITE_TOKEN.",
+    });
+  }
+
+  const resultado = await handleUpload({
+    body: req.body,
+    request: req,
+
+    token:
+      process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
+
+    onBeforeGenerateToken: async (
+      pathname,
+      clientPayload
+    ) => {
+      if (!adminAutorizado(req)) {
+        throw new Error("No autorizado");
+      }
+
+      let datos = {};
+
+      if (clientPayload) {
+        try {
+          datos = JSON.parse(clientPayload);
+        } catch {
+          throw new Error(
+            "Datos de subida inválidos."
+          );
+        }
+      }
+
+      const productoId =
+        datos?.productoId;
+
+      if (
+        !productoId ||
+        typeof productoId !== "string" ||
+        !/^[a-z0-9-]+$/.test(productoId)
+      ) {
+        throw new Error(
+          "productoId inválido."
+        );
+      }
+
+      const pathnameEsperado =
+        `productos/${productoId}/reel.mp4`;
+
+      if (pathname !== pathnameEsperado) {
+        throw new Error(
+          "La ruta del Reel no coincide con el producto."
+        );
+      }
+
+      return {
+        allowedContentTypes: [
+          "video/mp4",
+        ],
+
+        maximumSizeInBytes:
+          100 * 1024 * 1024,
+
+        addRandomSuffix: false,
+
+        allowOverwrite: true,
+
+        tokenPayload:
+          JSON.stringify({
+            productoId,
+          }),
+      };
+    },
+
+    onUploadCompleted: async ({
+      blob,
+      tokenPayload,
+    }) => {
+      console.log(
+        "Reel público subido:",
+        blob.pathname,
+        tokenPayload
+      );
+    },
+  });
+
+  return res.status(200).json(
+    resultado
+  );
+};
+
+/* =========================
    LISTAR PRODUCTOS PÚBLICOS
 ========================= */
 
@@ -1003,6 +1100,18 @@ const eliminarProducto = async (req, res) => {
   }
 
   /*
+ * 2. ELIMINAR VIDEO REEL PÚBLICO
+ */
+
+if (producto.videoReel) {
+  await del(producto.videoReel, {
+    token:
+      process.env
+        .BLOB_PUBLIC_READ_WRITE_TOKEN,
+  });
+}
+
+  /*
    * 2. ELIMINAR PDF PRIVADO
    */
 
@@ -1188,6 +1297,27 @@ export default async function handler(
         res
       );
     }
+
+    /* =========================
+   SUBIR VIDEO REEL
+========================= */
+
+if (
+  accion ===
+  "subir-video-reel"
+) {
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error:
+        "Método no permitido",
+    });
+  }
+
+  return await subirVideoReel(
+    req,
+    res
+  );
+}
 
     /* =========================
        AUTENTICACIÓN ADMIN

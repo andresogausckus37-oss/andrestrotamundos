@@ -676,6 +676,11 @@ export default function AdminNuevoProducto() {
   );
 
   const [
+  videoReel,
+  setVideoReel,
+] = useState(null);
+
+  const [
     procesandoImagen,
     setProcesandoImagen,
   ] = useState(false);
@@ -1632,6 +1637,36 @@ export default function AdminNuevoProducto() {
         }
 
         /*
+ * VIDEO REEL PÚBLICO
+ */
+
+let blobReel = null;
+
+if (videoReel) {
+  const pathnameReel =
+    `productos/${idGenerado}/reel.mp4`;
+
+  blobReel = await upload(
+    pathnameReel,
+    videoReel,
+    {
+      access: "public",
+
+      handleUploadUrl:
+        "/api/admin/pedidos?accion=subir-video-reel",
+
+      clientPayload:
+        JSON.stringify({
+          productoId:
+            idGenerado,
+        }),
+
+      multipart: true,
+    }
+  );
+}
+
+        /*
          * PDF PRIVADO
          */
 
@@ -1706,7 +1741,10 @@ export default function AdminNuevoProducto() {
             },
 
             archivoPDF:
-              blobPDF.pathname,
+  blobPDF.pathname,
+
+videoReel:
+  blobReel?.url || null,
           };
 
         /*
@@ -2402,6 +2440,35 @@ export default function AdminNuevoProducto() {
             </p>
           )}
         </Seccion>
+
+        {/* VIDEO REEL */}
+<div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+  <p className="text-xs font-bold text-slate-900">
+    Video Reel
+  </p>
+
+  <p className="mt-1 text-[10px] text-slate-500">
+    Video MP4 vertical 9:16, preferentemente 1080 × 1920.
+  </p>
+
+  <input
+    type="file"
+    accept="video/mp4"
+    onChange={(e) =>
+      setVideoReel(
+        e.target.files?.[0] || null
+      )
+    }
+    className="mt-3 block w-full text-xs"
+  />
+
+  {videoReel && (
+    <p className="mt-2 text-[10px] text-slate-600">
+      {videoReel.name} ·{" "}
+      {(videoReel.size / 1024 / 1024).toFixed(2)} MB
+    </p>
+  )}
+</div>
 
                   {/* ARMADOR DE PDF */}
 
