@@ -700,9 +700,11 @@ const [
 
       setMensajeCalendario(
         pieza.red === "instagram"
-          ? pieza.tipo === "story"
-            ? "Story publicada correctamente en Instagram."
-            : "Carrusel publicado correctamente en Instagram."
+  ? pieza.tipo === "story"
+    ? "Story publicada correctamente en Instagram."
+    : pieza.tipo === "reel"
+      ? "Reel publicado correctamente en Instagram."
+      : "Carrusel publicado correctamente en Instagram."
           : pieza.red === "facebook"
             ? "Publicación realizada correctamente en Facebook."
             : "Publicación realizada correctamente en Threads."
@@ -1848,11 +1850,12 @@ const aprobarContenido = async (
                                           {(
                                             pieza.red === "threads" ||
                                             pieza.red === "facebook" ||
-                                            (pieza.red === "instagram" &&
-                                              (
-                                                pieza.tipo === "carrusel" ||
-                                                pieza.tipo === "story"
-                                              ))
+                                      (pieza.red === "instagram" &&
+                                        (
+                                          pieza.tipo === "carrusel" ||
+                                          pieza.tipo === "story" ||
+                                          pieza.tipo === "reel"
+                                        ))
                                           ) ? (
                                         <button
                                           type="button"

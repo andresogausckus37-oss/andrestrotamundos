@@ -956,6 +956,122 @@ async function publicarStoryInstagram({
 }
 
 // =========================================================
+// INSTAGRAM - REEL
+// =========================================================
+
+async function publicarReelInstagram({
+  publicacion,
+  productoId,
+}) {
+  verificarConfiguracionInstagram();
+
+  const db =
+    await conectarMongoDB();
+
+  const producto = await db
+    .collection("productos")
+    .findOne({
+      id: productoId,
+    });
+
+  if (!producto) {
+    throw new Error(
+      "No se encontró el producto del Reel."
+    );
+  }
+
+  const videoUrl =
+    typeof producto.videoReel === "string"
+      ? producto.videoReel.trim()
+      : "";
+
+  if (
+    !videoUrl ||
+    !/^https:\/\//i.test(videoUrl)
+  ) {
+    throw new Error(
+      "El producto no tiene un video Reel público."
+    );
+  }
+
+  const texto =
+    typeof publicacion?.texto === "string"
+      ? publicacion.texto.trim()
+      : typeof publicacion?.caption === "string"
+        ? publicacion.caption.trim()
+        : "";
+
+  const cuenta =
+    await obtenerCuentaInstagram();
+
+  const parametros = {
+    media_type: "REELS",
+    video_url: videoUrl,
+  };
+
+  if (texto) {
+    parametros.caption = texto;
+  }
+
+  const contenedor =
+    await crearContenedorInstagram(
+      cuenta.id,
+      parametros
+    );
+
+  await esperarContenedorInstagram(
+    contenedor,
+    40
+  );
+
+  const publicacionId =
+    await publicarContenedorInstagram(
+      cuenta.id,
+      contenedor
+    );
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "instagram",
+      tipo: "reel",
+
+      productoId:
+        productoId || null,
+
+      publicacionId,
+
+      cuentaId: cuenta.id,
+
+      username:
+        cuenta.username || null,
+
+      texto,
+
+      videoUrl,
+
+      estado: "publicado",
+
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return {
+    ok: true,
+    proveedor: "instagram",
+    tipo: "reel",
+
+    publicacionId,
+
+    username:
+      cuenta.username || null,
+
+    mensaje:
+      "Reel publicado correctamente en Instagram.",
+  };
+}
+
+// =========================================================
 // FACEBOOK - PUBLICACIÓN
 // =========================================================
 
@@ -1851,6 +1967,35 @@ async function publicarProgramado(
       error:
         errorInstagram?.message ||
         "No se pudo publicar la Story en Instagram.",
+    });
+  }
+  }
+
+  if (
+  red === "instagram" &&
+  tipo === "reel"
+) {
+  try {
+    resultado =
+      await publicarReelInstagram({
+        publicacion:
+          pieza.publicacion,
+        productoId,
+      });
+
+    mensaje =
+      "Reel publicado correctamente en Instagram.";
+  } catch (errorInstagram) {
+    console.error(
+      "Error publicando Reel programado en Instagram:",
+      errorInstagram
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        errorInstagram?.message ||
+        "No se pudo publicar el Reel en Instagram.",
     });
   }
   }
