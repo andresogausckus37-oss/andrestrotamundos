@@ -383,7 +383,9 @@ export async function generarPdfLaminas({
 
   logoUrl = "",
 
-  coberturaInferior = {
+mostrarLogo = true,
+
+coberturaInferior = {
     activa: false,
     posicion: 18,
     altura: 22,
@@ -485,10 +487,12 @@ export async function generarPdfLaminas({
   ======================================================= */
 
   const logo =
-    await prepararLogo(
-      documentoFinal,
-      logoUrl
-    );
+  mostrarLogo
+    ? await prepararLogo(
+        documentoFinal,
+        logoUrl
+      )
+    : null;
 
   /* =======================================================
      PORTADA

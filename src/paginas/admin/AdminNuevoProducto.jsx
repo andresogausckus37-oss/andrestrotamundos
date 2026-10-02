@@ -685,6 +685,8 @@ export default function AdminNuevoProducto() {
     setGuardando,
   ] = useState(false);
 
+  const [mostrarLogoPdf, setMostrarLogoPdf] = useState(true);
+
   const [imagenPortadaPdf, setImagenPortadaPdf] = useState(null);
   const [imagenFinalPdf, setImagenFinalPdf] = useState(null);
   const [archivosPdf, setArchivosPdf] = useState([]);
@@ -1122,6 +1124,7 @@ export default function AdminNuevoProducto() {
         imagenFinal: imagenFinalPdf,
         archivosPdf: archivosPdf.map((item) => item.archivo),
         logoUrl: ESTILOS_IMPRIMIBLES.logo.url,
+        mostrarLogo: mostrarLogoPdf,
         nombreArchivo,
         coberturaInferior: {
           activa: true,
@@ -1793,6 +1796,29 @@ export default function AdminNuevoProducto() {
             Completá los datos básicos y el sistema preparará la ficha.
           </p>
         </div>
+
+        {/* LOGO EN PDF */}
+
+<label className="mb-5 flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+  <input
+    type="checkbox"
+    checked={mostrarLogoPdf}
+    onChange={(e) =>
+      setMostrarLogoPdf(e.target.checked)
+    }
+    className="h-4 w-4"
+  />
+
+  <div>
+    <p className="text-xs font-bold text-slate-900">
+      Mostrar logo en actividades y soluciones
+    </p>
+
+    <p className="mt-1 text-[10px] text-slate-500">
+      Agrega el logo de Andrés Imprimibles a las páginas interiores del PDF.
+    </p>
+  </div>
+</label>
 
         {/* ESTADO DE PRODUCTOS MONGODB */}
 
