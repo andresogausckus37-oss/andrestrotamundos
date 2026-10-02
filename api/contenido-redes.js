@@ -872,6 +872,90 @@ async function publicarCarruselInstagram({
 }
 
 // =========================================================
+// INSTAGRAM - STORY
+// =========================================================
+
+async function publicarStoryInstagram({
+  publicacion,
+  productoId,
+}) {
+  verificarConfiguracionInstagram();
+
+  const imagenes =
+    extraerImagenesInstagram(publicacion);
+
+  const imagen = imagenes[0] || null;
+
+  if (!imagen) {
+    throw new Error(
+      "La Story de Instagram no contiene una imagen pública."
+    );
+  }
+
+  const cuenta =
+    await obtenerCuentaInstagram();
+
+  const contenedor =
+    await crearContenedorInstagram(
+      cuenta.id,
+      {
+        image_url: imagen,
+        media_type: "STORIES",
+      }
+    );
+
+  await esperarContenedorInstagram(
+    contenedor
+  );
+
+  const publicacionId =
+    await publicarContenedorInstagram(
+      cuenta.id,
+      contenedor
+    );
+
+  const db =
+    await conectarMongoDB();
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "instagram",
+      tipo: "story",
+
+      productoId:
+        productoId || null,
+
+      publicacionId,
+
+      cuentaId: cuenta.id,
+
+      username:
+        cuenta.username || null,
+
+      imagen,
+
+      estado: "publicado",
+
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return {
+    ok: true,
+    proveedor: "instagram",
+    tipo: "story",
+    publicacionId,
+
+    username:
+      cuenta.username || null,
+
+    mensaje:
+      "Story publicada correctamente en Instagram.",
+  };
+}
+
+// =========================================================
 // FACEBOOK - PUBLICACIÓN
 // =========================================================
 
@@ -1587,14 +1671,15 @@ async function publicarProgramado(
   }
 
   if (
-    red === "instagram" &&
-    tipo !== "carrusel"
-  ) {
-    return res.status(400).json({
-      ok: false,
-      error:
-        "Por ahora Instagram está habilitado únicamente para carruseles.",
-    });
+  red === "instagram" &&
+  tipo !== "carrusel" &&
+  tipo !== "story"
+) {
+  return res.status(400).json({
+    ok: false,
+    error:
+      "Este formato de Instagram todavía no está habilitado para publicación automática.",
+  });
   }
 
   const db =
@@ -1739,6 +1824,35 @@ async function publicarProgramado(
           "No se pudo publicar el carrusel en Instagram.",
       });
     }
+  }
+
+  if (
+  red === "instagram" &&
+  tipo === "story"
+) {
+  try {
+    resultado =
+      await publicarStoryInstagram({
+        publicacion:
+          pieza.publicacion,
+        productoId,
+      });
+
+    mensaje =
+      "Story publicada correctamente en Instagram.";
+  } catch (errorInstagram) {
+    console.error(
+      "Error publicando Story programada en Instagram:",
+      errorInstagram
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        errorInstagram?.message ||
+        "No se pudo publicar la Story en Instagram.",
+    });
+  }
   }
 
   if (red === "facebook") {
