@@ -326,7 +326,7 @@ const archivoADataUrl = (
    UTILIDADES DEL ARMADOR PDF
 ========================================================= */
 
-const ALTURA_COBERTURA_MM = 12;
+const ALTURA_COBERTURA_MM = 20;
 const ANCHO_COBERTURA_MM = 210;
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;

@@ -19,7 +19,7 @@ import { LABERINTOS_50 } from "../generador/productos/laberintos50";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-const ALTURA_COBERTURA_MM = 12;
+const ALTURA_COBERTURA_MM = 20;
 const ANCHO_COBERTURA_MM = 210;
 
 function crearIdArchivo() {
