@@ -1789,7 +1789,8 @@ async function publicarProgramado(
   if (
   red === "instagram" &&
   tipo !== "carrusel" &&
-  tipo !== "story"
+  tipo !== "story" &&
+  tipo !== "reel"
 ) {
   return res.status(400).json({
     ok: false,
