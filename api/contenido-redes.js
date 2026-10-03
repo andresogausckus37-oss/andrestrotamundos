@@ -2703,6 +2703,8 @@ async function probarReelAprobado(req, res) {
 }
 
 const probarPublicacionAutomatica = async (item) => {
+  alert("BOTÓN FUNCIONANDO");
+
   try {
     setMensaje("");
 
