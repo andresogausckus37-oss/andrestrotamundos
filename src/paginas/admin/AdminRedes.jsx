@@ -688,9 +688,7 @@ const [mensajePruebaReel, setMensajePruebaReel] = useState("");
   }
 };
 
-  const publicarAhora = async (item, pieza) => {
-
-const probarReelAprobado = async (item) => {
+  const probarReelAprobado = async (item) => {
   try {
     setProbandoReelId(item.productoId);
     setMensajePruebaReel("");
@@ -707,6 +705,8 @@ const probarReelAprobado = async (item) => {
         }),
       }
     );
+
+  const publicarAhora = async (item, pieza) => {
 
     const datos =
       await leerRespuestaApi(respuesta);
