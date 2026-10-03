@@ -1392,21 +1392,43 @@ async function listarAprobados(
 // CALENDARIO DE REDES
 // =========================================================
 
-const crearCalendarioInicial = (contenido) => {
-  const dias = [
-    {
-      fecha: "2026-10-01",
-      dia: "Jueves",
-    },
-    {
-      fecha: "2026-10-02",
-      dia: "Viernes",
-    },
-    {
-      fecha: "2026-10-03",
-      dia: "Sábado",
-    },
+const crearCalendarioInicial = (
+  contenido,
+  bloqueSemana = 0
+) => {
+  const semanas = [
+    [
+      {
+        fecha: "2026-10-05",
+        dia: "Lunes",
+      },
+      {
+        fecha: "2026-10-06",
+        dia: "Martes",
+      },
+      {
+        fecha: "2026-10-07",
+        dia: "Miércoles",
+      },
+    ],
+    [
+      {
+        fecha: "2026-10-08",
+        dia: "Jueves",
+      },
+      {
+        fecha: "2026-10-09",
+        dia: "Viernes",
+      },
+      {
+        fecha: "2026-10-10",
+        dia: "Sábado",
+      },
+    ],
   ];
+
+  const dias =
+    semanas[Number(bloqueSemana) === 1 ? 1 : 0];
 
   const calendario = [];
 
@@ -1434,9 +1456,12 @@ const crearCalendarioInicial = (contenido) => {
     });
   };
 
-  // -------------------------------------------------------
+  // =======================================================
   // INSTAGRAM
-  // -------------------------------------------------------
+  // Día 1: Story + Carrusel + Story
+  // Día 2: Story + Reel + Story
+  // Día 3: Story + Story
+  // =======================================================
 
   agregar(
     0,
@@ -1510,15 +1535,12 @@ const crearCalendarioInicial = (contenido) => {
     contenido?.instagram?.stories?.[5]
   );
 
-  // -------------------------------------------------------
+  // =======================================================
   // THREADS + FACEBOOK
-  // -------------------------------------------------------
+  // 2 publicaciones diarias por red
+  // =======================================================
 
-  for (
-    let i = 0;
-    i < 6;
-    i += 1
-  ) {
+  for (let i = 0; i < 6; i += 1) {
     agregar(
       Math.floor(i / 2),
       i % 2 === 0
@@ -1544,7 +1566,7 @@ const crearCalendarioInicial = (contenido) => {
   }
 
   return calendario;
-};
+};  
 
 // =========================================================
 // PROGRAMAR CONTENIDO APROBADO
@@ -1587,10 +1609,36 @@ async function programarContenido(
 
   const ahora = new Date();
 
-  const calendario =
-    crearCalendarioInicial(
-      aprobado.contenido
-    );
+  const programadosSemana = await db
+  .collection("contenido_redes")
+  .countDocuments({
+    estado: "programado",
+    calendario: {
+      $elemMatch: {
+        fecha: {
+          $gte: "2026-10-05",
+          $lte: "2026-10-10",
+        },
+      },
+    },
+  });
+
+if (programadosSemana >= 2) {
+  return res.status(409).json({
+    ok: false,
+    error:
+      "Ya hay dos productos programados para esta semana.",
+  });
+}
+
+const bloqueSemana =
+  programadosSemana === 0 ? 0 : 1;
+
+const calendario =
+  crearCalendarioInicial(
+    aprobado.contenido,
+    bloqueSemana
+  );
 
   await db
     .collection("contenido_redes")
