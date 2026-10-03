@@ -35,6 +35,7 @@ import AdminRedes from "./paginas/admin/AdminRedes";
 import AdminNuevoProducto from "./paginas/admin/AdminNuevoProducto";
 import AdminProductos from "./paginas/admin/AdminProductos";
 import AdminEditarProducto from "./paginas/admin/AdminEditarProducto";
+import PoliticaPrivacidad from "./paginas/PoliticaPrivacidad";
 
 /* =========================
    REGISTRAR NUEVA VISITA
@@ -89,6 +90,7 @@ const RegistrarVisita = () => {
     ) {
       pagina = "Recomendados";
     }
+    
 
     /* MARCAR ANTES DEL FETCH PARA
        EVITAR NOTIFICACIONES DUPLICADAS */
@@ -252,6 +254,11 @@ const ContenidoApp = () => {
             path="/recomendados"
             element={<Recomendados />}
           />
+
+          <Route
+  path="/politica-de-privacidad"
+  element={<PoliticaPrivacidad />}
+/>
 
           <Route
             path="/generador-pdf"
