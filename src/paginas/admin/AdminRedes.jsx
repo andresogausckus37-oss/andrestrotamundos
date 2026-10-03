@@ -733,6 +733,47 @@ const [mensajePruebaReel, setMensajePruebaReel] = useState("");
   }
 };
 
+  const probarPublicacionAutomatica = async (item) => {
+  try {
+    setMensajeCalendario("");
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=crear-prueba-automatica",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          productoId: item.productoId,
+        }),
+      }
+    );
+
+    const datos =
+      await leerRespuestaApi(respuesta);
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos?.error ||
+          "No se pudo crear la prueba automática."
+      );
+    }
+
+    setMensajeCalendario(
+      `Prueba automática creada para Threads: ${datos.fecha} ${datos.hora}. Esperando al cron.`
+    );
+  } catch (error) {
+    setMensajeCalendario(
+      `Error: ${
+        error?.message ||
+        "No se pudo crear la prueba automática."
+      }`
+    );
+  }
+};
+
 const publicarAhora = async (item, pieza) => {
   const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`;
 
