@@ -706,8 +706,6 @@ const [mensajePruebaReel, setMensajePruebaReel] = useState("");
       }
     );
 
-  const publicarAhora = async (item, pieza) => {
-
     const datos =
       await leerRespuestaApi(respuesta);
 
@@ -732,8 +730,9 @@ const [mensajePruebaReel, setMensajePruebaReel] = useState("");
     setProbandoReelId("");
   }
 };
-    
-    const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`;
+
+const publicarAhora = async (item, pieza) => {
+  const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`;
 
     try {
       setPublicandoPieza(clave);
