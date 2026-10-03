@@ -515,7 +515,7 @@ async function obtenerCuentaInstagram() {
   ) {
     console.error(
       "Error obteniendo cuenta de Instagram:",
-      datos
+            datos
     );
 
     throw new Error(
@@ -1032,7 +1032,7 @@ async function publicarReelInstagram({
 
   await db
     .collection("publicaciones_redes")
-    .insertOne({
+      .insertOne({
       proveedor: "instagram",
       tipo: "reel",
 
@@ -1548,7 +1548,7 @@ const crearCalendarioInicial = (
 
   agregar(
     0,
-    "10:00",
+        "10:00",
     "instagram",
     "story",
     0,
@@ -2064,7 +2064,7 @@ async function publicarProgramado(
   ) {
     return res.status(400).json({
       ok: false,
-      error:
+            error:
         "Faltan datos de la publicación programada.",
     });
       }
@@ -2473,6 +2473,167 @@ async function ejecutarPublicacionesPendientes(
 }
 
 // =========================================================
+// PRUEBA CONTROLADA DEL EJECUTOR AUTOMÁTICO
+// Crea UNA sola pieza programada para Threads.
+// No toca el calendario semanal definitivo.
+// =========================================================
+
+async function crearPruebaAutomaticaControlada(
+  req,
+  res
+) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const aprobado = await db
+    .collection("contenido_redes")
+    .find({
+      productoId,
+      estado: "aprobado",
+    })
+    .sort({
+      aprobadoEn: -1,
+      actualizadoEn: -1,
+    })
+    .limit(1)
+    .next();
+
+  if (!aprobado) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró contenido aprobado para este producto.",
+    });
+  }
+
+  const publicacion =
+    aprobado.contenido?.threads?.[0];
+
+  const texto =
+    typeof publicacion?.texto === "string"
+      ? publicacion.texto.trim()
+      : "";
+
+  if (!texto) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "El contenido aprobado no tiene una publicación de Threads válida para la prueba.",
+    });
+  }
+
+  const pruebaExistente = await db
+    .collection("contenido_redes")
+    .findOne({
+      tipoDocumento:
+        "prueba_automatica_controlada",
+      estado: {
+        $in: ["programado", "publicando"],
+      },
+    });
+
+  if (pruebaExistente) {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "Ya existe una prueba automática pendiente. Espera a que termine o elimina esa prueba antes de crear otra.",
+    });
+  }
+
+  const ahora = new Date();
+
+  // La pieza queda vencida un minuto antes de la hora actual.
+  // Así el próximo ciclo de cron-job.org (cada 5 minutos)
+  // puede recogerla sin depender de calcular una hora futura.
+  const fechaHoraArgentina =
+    obtenerFechaHoraArgentina();
+
+  const [horaActual, minutoActual] =
+    fechaHoraArgentina.hora
+      .split(":")
+      .map(Number);
+
+  let minutos =
+    horaActual * 60 + minutoActual - 1;
+
+  let fechaPrueba =
+    fechaHoraArgentina.fecha;
+
+  if (minutos < 0) {
+    minutos += 24 * 60;
+    fechaPrueba =
+      sumarDiasFecha(fechaPrueba, -1);
+  }
+
+  const horaPrueba =
+    `${String(
+      Math.floor(minutos / 60)
+          ).padStart(2, "0")}:${String(
+      minutos % 60
+    ).padStart(2, "0")}`;
+
+  const documentoPrueba = {
+    productoId,
+    nombreProducto:
+      aprobado.nombreProducto ||
+      productoId,
+
+    tipoDocumento:
+      "prueba_automatica_controlada",
+
+    estado: "programado",
+
+    calendario: [
+      {
+        fecha: fechaPrueba,
+        dia: "Prueba",
+        hora: horaPrueba,
+        red: "threads",
+        tipo: "publicacion",
+        indice: 0,
+        publicacion,
+        estado: "programado",
+        zonaHoraria:
+          ZONA_HORARIA_RED,
+        pruebaControlada: true,
+      },
+    ],
+
+    creadoEn: ahora,
+    programadoEn: ahora,
+    actualizadoEn: ahora,
+  };
+
+  const insercion = await db
+    .collection("contenido_redes")
+    .insertOne(documentoPrueba);
+
+  return res.status(201).json({
+    ok: true,
+    mensaje:
+      "Prueba automática creada. El próximo ciclo del cron debe publicar una sola pieza en Threads.",
+    pruebaId:
+      String(insercion.insertedId),
+    productoId,
+    red: "threads",
+    fecha: fechaPrueba,
+    hora: horaPrueba,
+  });
+}
+
+// =========================================================
 // INSTAGRAM - PROBAR REEL APROBADO
 // =========================================================
 
@@ -2834,6 +2995,27 @@ if (
       }
 
       return publicarProgramado(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // CREAR PRUEBA AUTOMÁTICA CONTROLADA
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "crear-prueba-automatica"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return crearPruebaAutomaticaControlada(
         req,
         res
       );
