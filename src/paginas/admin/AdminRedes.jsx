@@ -1849,6 +1849,20 @@ const aprobarContenido = async (
                 </div>
               ))}
 
+              {mensajePruebaReel && (
+  <p
+    className={`mt-3 text-[11px] font-medium ${
+      mensajePruebaReel.startsWith(
+        "Error:"
+      )
+        ? "text-red-600"
+        : "text-emerald-600"
+    }`}
+  >
+    {mensajePruebaReel}
+  </p>
+)}
+
               {programados.map((item) => {
                 const calendario = Array.isArray(item.calendario)
                   ? item.calendario
