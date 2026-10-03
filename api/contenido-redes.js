@@ -2071,6 +2071,76 @@ async function publicarProgramado(
       resultado.publicacionId,
   });
 }
+
+// =========================================================
+// INSTAGRAM - PROBAR REEL APROBADO
+// =========================================================
+
+async function probarReelAprobado(req, res) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const aprobado = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "aprobado",
+    });
+
+  if (!aprobado) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró contenido aprobado para este producto.",
+    });
+  }
+
+  const reel =
+    aprobado.contenido?.instagram?.reel;
+
+  if (!reel) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "El contenido aprobado no contiene un Reel.",
+    });
+  }
+
+  try {
+    const resultado =
+      await publicarReelInstagram({
+        publicacion: reel,
+        productoId,
+      });
+
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error(
+      "Error probando Reel de Instagram:",
+      error
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        error?.message ||
+        "No se pudo publicar el Reel en Instagram.",
+    });
+  }
+}
+
 // =========================================================
 // OPENAI - GENERAR CONTENIDO
 // =========================================================
@@ -2368,6 +2438,27 @@ if (
         res
       );
     }
+
+    // -----------------------------------------------------
+// PROBAR REEL APROBADO
+// -----------------------------------------------------
+
+if (
+  req.method === "POST" &&
+  accion === "probar-reel"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return probarReelAprobado(
+    req,
+    res
+  );
+}
 
     // -----------------------------------------------------
     // GENERACIÓN DE CONTENIDO

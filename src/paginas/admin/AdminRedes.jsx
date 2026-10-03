@@ -425,6 +425,8 @@ const [
   const [programandoId, setProgramandoId] = useState("");
   const [mensajeCalendario, setMensajeCalendario] = useState("");
   const [publicandoPieza, setPublicandoPieza] = useState("");
+  const [probandoReelId, setProbandoReelId] = useState("");
+const [mensajePruebaReel, setMensajePruebaReel] = useState("");
   const [
   regenerandoId,
   setRegenerandoId,
@@ -687,6 +689,50 @@ const [
 };
 
   const publicarAhora = async (item, pieza) => {
+
+const probarReelAprobado = async (item) => {
+  try {
+    setProbandoReelId(item.productoId);
+    setMensajePruebaReel("");
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=probar-reel",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productoId: item.productoId,
+        }),
+      }
+    );
+
+    const datos =
+      await leerRespuestaApi(respuesta);
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos.error ||
+          "No se pudo publicar el Reel."
+      );
+    }
+
+    setMensajePruebaReel(
+      `Reel publicado correctamente en Instagram: ${item.nombreProducto}`
+    );
+  } catch (error) {
+    setMensajePruebaReel(
+      `Error: ${
+        error.message ||
+        "No se pudo publicar el Reel."
+      }`
+    );
+  } finally {
+    setProbandoReelId("");
+  }
+};
+    
     const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`;
 
     try {
@@ -1729,6 +1775,39 @@ const aprobarContenido = async (
               </p>
             </div>
           </div>
+
+          {productosDigitales.find(
+  (producto) =>
+    producto.id === item.productoId
+)?.videoReel && (
+  <button
+    type="button"
+    onClick={() =>
+      probarReelAprobado(item)
+    }
+    disabled={
+      probandoReelId ===
+      item.productoId
+    }
+    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-pink-600 px-3 py-2 text-[11px] font-bold text-white disabled:bg-pink-300"
+  >
+    {probandoReelId ===
+    item.productoId ? (
+      <>
+        <Loader2
+          size={14}
+          className="animate-spin"
+        />
+        Publicando Reel...
+      </>
+    ) : (
+      <>
+        <CheckCircle2 size={14} />
+        Probar Reel en Instagram
+      </>
+    )}
+  </button>
+)}
 
           {cargandoCalendario ? (
             <div className="mt-3 flex items-center justify-center gap-2 py-4 text-[11px] text-slate-500">
