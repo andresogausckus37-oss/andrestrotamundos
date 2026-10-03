@@ -2702,6 +2702,44 @@ async function probarReelAprobado(req, res) {
   }
 }
 
+const probarPublicacionAutomatica = async (item) => {
+  try {
+    setMensaje("");
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=crear-prueba-automatica",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          productoId: item.productoId,
+        }),
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos?.error ||
+          "No se pudo crear la prueba automática."
+      );
+    }
+
+    setMensaje(
+      `Prueba creada. El cron publicará automáticamente en Threads. Programada: ${datos.fecha} ${datos.hora}.`
+    );
+  } catch (error) {
+    setMensaje(
+      error?.message ||
+        "Error creando la prueba automática."
+    );
+  }
+};
+
 // =========================================================
 // OPENAI - GENERAR CONTENIDO
 // =========================================================

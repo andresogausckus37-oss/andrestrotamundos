@@ -1844,10 +1844,20 @@ const aprobarContenido = async (
                     ) : (
                       <>
   <CalendarDays size={14} />
-  Incorporar al calendario semanal
+  incorporarlo  al calendario semanal al calendario semanal
 </>
                     )}
                   </button>
+
+                  <button
+  type="button"
+  onClick={() =>
+    probarPublicacionAutomatica(item)
+  }
+  className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700"
+>
+  Probar publicación automática
+</button>
                 </div>
               ))}
 
