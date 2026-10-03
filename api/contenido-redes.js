@@ -1392,43 +1392,132 @@ async function listarAprobados(
 // CALENDARIO DE REDES
 // =========================================================
 
+const ZONA_HORARIA_RED =
+  "America/Argentina/Buenos_Aires";
+
+const formatearFechaUTC = (fecha) => {
+  const anio = fecha.getUTCFullYear();
+  const mes = String(
+    fecha.getUTCMonth() + 1
+  ).padStart(2, "0");
+  const dia = String(
+    fecha.getUTCDate()
+  ).padStart(2, "0");
+
+  return `${anio}-${mes}-${dia}`;
+};
+
+const sumarDiasFecha = (
+  fechaBase,
+  cantidad
+) => {
+  const [anio, mes, dia] =
+    fechaBase.split("-").map(Number);
+
+  const fecha = new Date(
+    Date.UTC(anio, mes - 1, dia)
+  );
+
+  fecha.setUTCDate(
+    fecha.getUTCDate() + cantidad
+  );
+
+  return formatearFechaUTC(fecha);
+};
+
+const obtenerFechaArgentina = () => {
+  const partes = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: ZONA_HORARIA_RED,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }
+  ).formatToParts(new Date());
+
+  const valores = {};
+
+  for (const parte of partes) {
+    if (parte.type !== "literal") {
+      valores[parte.type] = parte.value;
+    }
+  }
+
+  return `${valores.year}-${valores.month}-${valores.day}`;
+};
+
+const obtenerInicioSemana = () => {
+  const hoy = obtenerFechaArgentina();
+
+  const [anio, mes, dia] =
+    hoy.split("-").map(Number);
+
+  const fecha = new Date(
+    Date.UTC(anio, mes - 1, dia)
+  );
+
+  const diaSemana = fecha.getUTCDay();
+
+  // 0 domingo, 1 lunes ... 6 sábado
+  const distanciaLunes =
+    diaSemana === 0
+      ? -6
+      : 1 - diaSemana;
+
+  fecha.setUTCDate(
+    fecha.getUTCDate() + distanciaLunes
+  );
+
+  let inicio =
+    formatearFechaUTC(fecha);
+
+  // Si ya estamos en sábado o domingo,
+  // programamos directamente la semana siguiente.
+  if (
+    diaSemana === 6 ||
+    diaSemana === 0
+  ) {
+    inicio =
+      sumarDiasFecha(inicio, 7);
+  }
+
+  return inicio;
+};
+
 const crearCalendarioInicial = (
   contenido,
-  bloqueSemana = 0
+  bloqueSemana = 0,
+  semanaInicio = obtenerInicioSemana()
 ) => {
-  const semanas = [
-    [
-      {
-        fecha: "2026-10-05",
-        dia: "Lunes",
-      },
-      {
-        fecha: "2026-10-06",
-        dia: "Martes",
-      },
-      {
-        fecha: "2026-10-07",
-        dia: "Miércoles",
-      },
-    ],
-    [
-      {
-        fecha: "2026-10-08",
-        dia: "Jueves",
-      },
-      {
-        fecha: "2026-10-09",
-        dia: "Viernes",
-              },
-      {
-        fecha: "2026-10-10",
-        dia: "Sábado",
-      },
-    ],
-  ];
+  const bloque =
+    Number(bloqueSemana) === 1 ? 1 : 0;
 
-  const dias =
-    semanas[Number(bloqueSemana) === 1 ? 1 : 0];
+  const desplazamiento =
+    bloque === 0 ? 0 : 3;
+
+  const nombresDias =
+    bloque === 0
+      ? [
+          "Lunes",
+          "Martes",
+          "Miércoles",
+        ]
+      : [
+          "Jueves",
+          "Viernes",
+          "Sábado",
+        ];
+
+  const dias = nombresDias.map(
+    (dia, indice) => ({
+      fecha: sumarDiasFecha(
+        semanaInicio,
+        desplazamiento + indice
+      ),
+      dia,
+    })
+  );
 
   const calendario = [];
 
@@ -1451,17 +1540,11 @@ const crearCalendarioInicial = (
       indice,
       publicacion,
       estado: "programado",
-      zonaHoraria:
-        "America/Argentina/Buenos_Aires",
+      zonaHoraria: ZONA_HORARIA_RED,
     });
   };
 
-  // =======================================================
   // INSTAGRAM
-  // Día 1: Story + Carrusel + Story
-  // Día 2: Story + Reel + Story
-  // Día 3: Story + Story
-  // =======================================================
 
   agregar(
     0,
@@ -1535,10 +1618,7 @@ const crearCalendarioInicial = (
     contenido?.instagram?.stories?.[5]
   );
 
-  // =======================================================
   // THREADS + FACEBOOK
-  // 2 publicaciones diarias por red
-  // =======================================================
 
   for (let i = 0; i < 6; i += 1) {
     agregar(
@@ -1566,7 +1646,7 @@ const crearCalendarioInicial = (
   }
 
   return calendario;
-};  
+};
 
 // =========================================================
 // PROGRAMAR CONTENIDO APROBADO
@@ -1594,10 +1674,16 @@ async function programarContenido(
 
   const aprobado = await db
     .collection("contenido_redes")
-    .findOne({
+    .find({
       productoId,
       estado: "aprobado",
-    });
+    })
+    .sort({
+      aprobadoEn: -1,
+      actualizadoEn: -1,
+    })
+    .limit(1)
+    .next();
 
   if (!aprobado) {
     return res.status(404).json({
@@ -1609,47 +1695,78 @@ async function programarContenido(
 
   const ahora = new Date();
 
+  const semanaInicio =
+    obtenerInicioSemana();
+
+  const semanaFin =
+    sumarDiasFecha(
+      semanaInicio,
+      5
+    );
+
   const programadosSemana = await db
-  .collection("contenido_redes")
-  .countDocuments({
-    estado: "programado",
-    calendario: {
-      $elemMatch: {
-        fecha: {
-          $gte: "2026-10-05",
-          $lte: "2026-10-10",
-        },
-      },
-    },
-  });
+    .collection("contenido_redes")
+    .find({
+      estado: "programado",
+      semanaInicio,
+    })
+    .sort({
+      programadoEn: 1,
+    })
+    .toArray();
 
-if (programadosSemana >= 2) {
-  return res.status(409).json({
-    ok: false,
-    error:
-      "Ya hay dos productos programados para esta semana.",
-  });
-}
+  const bloquesOcupados =
+    new Set(
+      programadosSemana
+        .map((item) =>
+          Number(item.bloqueSemana)
+        )
+        .filter(
+          (bloque) =>
+            bloque === 0 ||
+            bloque === 1
+        )
+    );
 
-const bloqueSemana =
-  programadosSemana === 0 ? 0 : 1;
+  let bloqueSemana = null;
 
-const calendario =
-  crearCalendarioInicial(
-    aprobado.contenido,
-    bloqueSemana
-  );
+  if (!bloquesOcupados.has(0)) {
+    bloqueSemana = 0;
+  } else if (!bloquesOcupados.has(1)) {
+    bloqueSemana = 1;
+  }
+
+  if (bloqueSemana === null) {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "Ya hay dos productos programados para esta semana.",
+    });
+  }
+
+  const calendario =
+    crearCalendarioInicial(
+      aprobado.contenido,
+      bloqueSemana,
+      semanaInicio
+    );
 
   await db
     .collection("contenido_redes")
     .updateOne(
       {
         _id: aprobado._id,
+        estado: "aprobado",
       },
       {
         $set: {
           estado: "programado",
           calendario,
+
+          semanaInicio,
+          semanaFin,
+          bloqueSemana,
+
           programadoEn: ahora,
           actualizadoEn: ahora,
         },
@@ -1658,8 +1775,15 @@ const calendario =
 
   return res.status(200).json({
     ok: true,
+
     mensaje:
-      "Contenido incorporado al calendario.",
+      bloqueSemana === 0
+        ? "Producto programado para lunes, martes y miércoles."
+        : "Producto programado para jueves, viernes y sábado.",
+
+    semanaInicio,
+    semanaFin,
+    bloqueSemana,
     calendario,
   });
 }
@@ -1728,8 +1852,22 @@ async function regenerarContenidoProgramado(
   // Crea nuevamente las 20 piezas.
   // Todas quedan en estado "programado"
   // y sin publicacionId/publicadoEn anteriores.
-  const calendario =
-    crearCalendarioInicial(contenido);
+  const semanaInicio =
+  documento.semanaInicio ||
+  documento.calendario?.[0]?.fecha ||
+  obtenerInicioSemana();
+
+const bloqueSemana =
+  Number(documento.bloqueSemana) === 1
+    ? 1
+    : 0;
+
+const calendario =
+  crearCalendarioInicial(
+    contenido,
+    bloqueSemana,
+    semanaInicio
+  );
 
   await db
     .collection("contenido_redes")
@@ -1747,6 +1885,14 @@ async function regenerarContenidoProgramado(
             documento.nombreProducto,
 
           estado: "programado",
+
+          semanaInicio,
+semanaFin:
+  sumarDiasFecha(
+    semanaInicio,
+    5
+  ),
+bloqueSemana,
 
           regeneradoEn: ahora,
           actualizadoEn: ahora,
