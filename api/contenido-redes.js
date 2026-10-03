@@ -925,7 +925,7 @@ async function publicarStoryInstagram({
 
       productoId:
         productoId || null,
-
+      
       publicacionId,
 
       cuentaId: cuenta.id,
@@ -1419,7 +1419,7 @@ const crearCalendarioInicial = (
       {
         fecha: "2026-10-09",
         dia: "Viernes",
-      },
+              },
       {
         fecha: "2026-10-10",
         dia: "Sábado",
@@ -1796,6 +1796,107 @@ async function listarProgramados(
 // Publicación real: Threads e Instagram (carrusel).
 // =========================================================
 
+async function ejecutarPublicacionPieza({
+  req,
+  pieza,
+  productoId,
+}) {
+  const red = pieza.red;
+  const tipo = pieza.tipo;
+
+  if (red === "threads") {
+    const texto =
+      typeof pieza.publicacion?.texto === "string"
+        ? pieza.publicacion.texto.trim()
+        : "";
+
+    if (!texto) {
+      throw new Error(
+        "La publicación de Threads no contiene texto."
+      );
+    }
+
+    let resultadoThreads = null;
+    let estadoHttp = 200;
+
+    const respuestaInterna = {
+      status(codigo) {
+        estadoHttp = codigo;
+        return this;
+      },
+      json(datos) {
+        resultadoThreads = datos;
+        return datos;
+      },
+    };
+
+    await publicarThreads(
+      {
+        ...req,
+        body: {
+          texto,
+          productoId,
+        },
+      },
+      respuestaInterna
+    );
+
+    if (
+      estadoHttp < 200 ||
+      estadoHttp >= 300 ||
+      !resultadoThreads?.ok
+    ) {
+      throw new Error(
+        resultadoThreads?.error ||
+          "No se pudo publicar en Threads."
+      );
+    }
+
+    return resultadoThreads;
+  }
+
+  if (
+    red === "instagram" &&
+    tipo === "carrusel"
+  ) {
+    return publicarCarruselInstagram({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  if (
+    red === "instagram" &&
+    tipo === "story"
+  ) {
+    return publicarStoryInstagram({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  if (
+    red === "instagram" &&
+    tipo === "reel"
+  ) {
+    return publicarReelInstagram({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  if (red === "facebook") {
+    return publicarFacebook({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  throw new Error(
+    "La red o el formato no están habilitados para publicación automática."
+  );
+}
+
 async function publicarProgramado(
   req,
   res
@@ -1820,13 +1921,13 @@ async function publicarProgramado(
       error:
         "Faltan datos de la publicación programada.",
     });
-  }
+      }
 
   if (
-  red !== "threads" &&
-  red !== "instagram" &&
-  red !== "facebook"
-) {
+    red !== "threads" &&
+    red !== "instagram" &&
+    red !== "facebook"
+  ) {
     return res.status(400).json({
       ok: false,
       error:
@@ -1835,20 +1936,19 @@ async function publicarProgramado(
   }
 
   if (
-  red === "instagram" &&
-  tipo !== "carrusel" &&
-  tipo !== "story" &&
-  tipo !== "reel"
-) {
-  return res.status(400).json({
-    ok: false,
-    error:
-      "Este formato de Instagram todavía no está habilitado para publicación automática.",
-  });
+    red === "instagram" &&
+    tipo !== "carrusel" &&
+    tipo !== "story" &&
+    tipo !== "reel"
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Este formato de Instagram todavía no está habilitado para publicación automática.",
+    });
   }
 
-  const db =
-    await conectarMongoDB();
+  const db = await conectarMongoDB();
 
   const documento = await db
     .collection("contenido_redes")
@@ -1897,226 +1997,332 @@ async function publicarProgramado(
     });
   }
 
-  let resultado = null;
-  let mensaje = "";
+  if (pieza.estado === "publicando") {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "Esta publicación ya está siendo procesada.",
+    });
+  }
 
-  if (red === "threads") {
-    const texto =
-      typeof pieza.publicacion?.texto ===
-      "string"
-        ? pieza.publicacion.texto.trim()
-        : "";
+  const inicio = new Date();
 
-    if (!texto) {
-      return res.status(400).json({
-        ok: false,
-        error:
-          "La publicación de Threads no contiene texto.",
+  const reclamo = await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        _id: documento._id,
+        [`calendario.${posicion}.estado`]:
+          "programado",
+      },
+      {
+        $set: {
+          [`calendario.${posicion}.estado`]:
+            "publicando",
+          [`calendario.${posicion}.procesandoDesde`]:
+            inicio,
+          actualizadoEn: inicio,
+        },
+        $unset: {
+          [`calendario.${posicion}.ultimoError`]:
+            "",
+          [`calendario.${posicion}.ultimoErrorEn`]:
+            "",
+        },
+      }
+    );
+
+  if (reclamo.modifiedCount === 0) {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "La publicación ya fue tomada por otro proceso.",
+    });
+  }
+
+  try {
+    const resultado =
+      await ejecutarPublicacionPieza({
+        req,
+        pieza,
+        productoId,
       });
+
+    if (
+      !resultado?.ok ||
+      !resultado?.publicacionId
+    ) {
+      throw new Error(
+        "La red no devolvió un identificador de publicación válido."
+      );
     }
 
-    let resultadoThreads = null;
+    const ahora = new Date();
+
+    await db
+      .collection("contenido_redes")
+      .updateOne(
+        {
+          _id: documento._id,
+        },
+        {
+          $set: {
+            [`calendario.${posicion}.estado`]:
+              "publicado",
+            [`calendario.${posicion}.publicadoEn`]:
+              ahora,
+            [`calendario.${posicion}.publicacionId`]:
+              resultado.publicacionId,
+            actualizadoEn: ahora,
+          },
+          $unset: {
+            [`calendario.${posicion}.procesandoDesde`]:
+              "",
+            [`calendario.${posicion}.ultimoError`]:
+              "",
+            [`calendario.${posicion}.ultimoErrorEn`]:
+              "",
+          },
+        }
+      );
+
+    const actualizado = await db
+      .collection("contenido_redes")
+      .findOne({
+        _id: documento._id,
+      });
+
+    const completo =
+      Array.isArray(actualizado?.calendario) &&
+      actualizado.calendario.length > 0 &&
+      actualizado.calendario.every(
+        (item) => item.estado === "publicado"
+      );
+
+    if (completo) {
+      await db
+        .collection("contenido_redes")
+        .updateOne(
+          {
+            _id: documento._id,
+            estado: "programado",
+          },
+          {
+            $set: {
+              estado: "publicado",
+              publicadoEn: ahora,
+              actualizadoEn: ahora,
+            },
+          }
+        );
+    }
+
+    return res.status(200).json({
+      ok: true,
+      mensaje:
+        resultado.mensaje ||
+        "Publicación realizada correctamente.",
+      proveedor: red,
+      tipo,
+      publicacionId:
+        resultado.publicacionId,
+    });
+  } catch (errorPublicacion) {
+    const ahoraError = new Date();
+
+    await db
+      .collection("contenido_redes")
+      .updateOne(
+        {
+          _id: documento._id,
+          [`calendario.${posicion}.estado`]:
+            "publicando",
+        },
+        {
+          $set: {
+            [`calendario.${posicion}.estado`]:
+              "programado",
+            [`calendario.${posicion}.ultimoError`]:
+              errorPublicacion?.message ||
+              "Error publicando contenido.",
+            [`calendario.${posicion}.ultimoErrorEn`]:
+              ahoraError,
+            actualizadoEn: ahoraError,
+          },
+          $unset: {
+            [`calendario.${posicion}.procesandoDesde`]:
+              "",
+          },
+        }
+      );
+
+    console.error(
+      "Error publicando pieza programada:",
+      errorPublicacion
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        errorPublicacion?.message ||
+        "No se pudo publicar el contenido programado.",
+    });
+  }
+}
+
+const obtenerFechaHoraArgentina = () => {
+  const partes = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone:
+        "America/Argentina/Buenos_Aires",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }
+  ).formatToParts(new Date());
+
+  const valor = (tipo) =>
+    partes.find(
+      (parte) => parte.type === tipo
+    )?.value || "";
+
+  return {
+    fecha: `${valor("year")}-${valor("month")}-${valor("day")}`,
+    hora: `${valor("hour")}:${valor("minute")}`,
+  };
+};
+
+const cronAutorizado = (req) => {
+  const secreto = process.env.CRON_SECRET;
+
+  if (!secreto) return false;
+
+  const recibido =
+    req.headers?.authorization || "";
+
+  const esperado = `Bearer ${secreto}`;
+
+  const a = Buffer.from(recibido);
+  const b = Buffer.from(esperado);
+
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(a, b);
+};
+
+async function ejecutarPublicacionesPendientes(
+  req,
+  res
+) {
+  const db = await conectarMongoDB();
+
+  const { fecha, hora } =
+    obtenerFechaHoraArgentina();
+
+  const documentos = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "programado",
+    })
+    .toArray();
+
+  const pendientes = [];
+
+  for (const documento of documentos) {
+    if (!Array.isArray(documento.calendario)) {
+      continue;
+    }
+
+    documento.calendario.forEach(
+      (pieza) => {
+        if (pieza?.estado !== "programado") {
+          return;
+        }
+
+        const vencida =
+          pieza.fecha < fecha ||
+          (pieza.fecha === fecha &&
+            pieza.hora <= hora);
+
+        if (!vencida) return;
+
+        pendientes.push({
+          productoId:
+            documento.productoId,
+          fecha: pieza.fecha,
+          hora: pieza.hora,
+          red: pieza.red,
+          tipo: pieza.tipo,
+          indice: pieza.indice,
+        });
+      }
+    );
+  }
+
+  pendientes.sort((a, b) =>
+    `${a.fecha} ${a.hora}`.localeCompare(
+      `${b.fecha} ${b.hora}`
+    )
+  );
+
+  // Procesamos pocas piezas por invocación para no agotar
+  // el tiempo máximo de una función de Vercel.
+  const lote = pendientes.slice(0, 3);
+  const resultados = [];
+
+  for (const pieza of lote) {
     let estadoHttp = 200;
+    let respuesta = null;
 
     const respuestaInterna = {
       status(codigo) {
         estadoHttp = codigo;
         return this;
       },
-
       json(datos) {
-        resultadoThreads = datos;
+        respuesta = datos;
         return datos;
       },
     };
 
-    await publicarThreads(
+    await publicarProgramado(
       {
         ...req,
-        body: {
-          texto,
-          productoId,
-        },
+        body: pieza,
       },
       respuestaInterna
     );
 
-    if (
-      estadoHttp < 200 ||
-      estadoHttp >= 300 ||
-      !resultadoThreads?.ok
-    ) {
-      return res
-        .status(estadoHttp || 502)
-        .json(
-          resultadoThreads || {
-            ok: false,
-            error:
-              "No se pudo publicar en Threads.",
-          }
-        );
-    }
-
-    resultado = resultadoThreads;
-    mensaje =
-      "Publicación realizada correctamente en Threads.";
-  }
-
-  if (
-    red === "instagram" &&
-    tipo === "carrusel"
-  ) {
-    try {
-      resultado =
-        await publicarCarruselInstagram({
-          publicacion:
-            pieza.publicacion,
-          productoId,
-        });
-
-      mensaje =
-        "Carrusel publicado correctamente en Instagram.";
-    } catch (errorInstagram) {
-      console.error(
-        "Error publicando carrusel programado en Instagram:",
-        errorInstagram
-      );
-
-      return res.status(502).json({
-        ok: false,
-        error:
-          errorInstagram?.message ||
-          "No se pudo publicar el carrusel en Instagram.",
-      });
-    }
-  }
-
-  if (
-  red === "instagram" &&
-  tipo === "story"
-) {
-  try {
-    resultado =
-      await publicarStoryInstagram({
-        publicacion:
-          pieza.publicacion,
-        productoId,
-      });
-
-    mensaje =
-      "Story publicada correctamente en Instagram.";
-  } catch (errorInstagram) {
-    console.error(
-      "Error publicando Story programada en Instagram:",
-      errorInstagram
-    );
-
-    return res.status(502).json({
-      ok: false,
+    resultados.push({
+      ...pieza,
+      estadoHttp,
+      ok: Boolean(respuesta?.ok),
+      publicacionId:
+        respuesta?.publicacionId || null,
       error:
-        errorInstagram?.message ||
-        "No se pudo publicar la Story en Instagram.",
+        respuesta?.ok
+          ? null
+          : respuesta?.error ||
+            "Error desconocido",
     });
   }
-  }
-
-  if (
-  red === "instagram" &&
-  tipo === "reel"
-) {
-  try {
-    resultado =
-      await publicarReelInstagram({
-        publicacion:
-          pieza.publicacion,
-        productoId,
-      });
-
-    mensaje =
-      "Reel publicado correctamente en Instagram.";
-  } catch (errorInstagram) {
-    console.error(
-      "Error publicando Reel programado en Instagram:",
-      errorInstagram
-    );
-
-    return res.status(502).json({
-      ok: false,
-      error:
-        errorInstagram?.message ||
-        "No se pudo publicar el Reel en Instagram.",
-    });
-  }
-  }
-
-  if (red === "facebook") {
-  try {
-    resultado =
-      await publicarFacebook({
-        publicacion:
-          pieza.publicacion,
-        productoId,
-      });
-
-    mensaje =
-      "Publicación realizada correctamente en Facebook.";
-  } catch (errorFacebook) {
-    console.error(
-      "Error publicando contenido programado en Facebook:",
-      errorFacebook
-    );
-
-    return res.status(502).json({
-      ok: false,
-      error:
-        errorFacebook?.message ||
-        "No se pudo publicar en Facebook.",
-    });
-  }
-  }
-
-  if (
-    !resultado?.ok ||
-    !resultado?.publicacionId
-  ) {
-    return res.status(502).json({
-      ok: false,
-      error:
-        "La red no devolvió un identificador de publicación válido.",
-    });
-  }
-
-  const ahora = new Date();
-
-  await db
-    .collection("contenido_redes")
-    .updateOne(
-      {
-        _id: documento._id,
-      },
-      {
-        $set: {
-          [`calendario.${posicion}.estado`]:
-            "publicado",
-
-          [`calendario.${posicion}.publicadoEn`]:
-            ahora,
-
-          [`calendario.${posicion}.publicacionId`]:
-            resultado.publicacionId,
-
-          actualizadoEn: ahora,
-        },
-      }
-    );
 
   return res.status(200).json({
     ok: true,
-    mensaje,
-    proveedor: red,
-    tipo,
-    publicacionId:
-      resultado.publicacionId,
+    zonaHoraria:
+      "America/Argentina/Buenos_Aires",
+    fecha,
+    hora,
+    pendientesEncontradas:
+      pendientes.length,
+    procesadas: resultados.length,
+    resultados,
   });
 }
 
@@ -2128,7 +2334,7 @@ async function probarReelAprobado(req, res) {
   const productoId =
     typeof req.body?.productoId === "string"
       ? req.body.productoId.trim()
-      : "";
+          : "";
 
   if (!productoId) {
     return res.status(400).json({
@@ -2482,6 +2688,27 @@ if (
       }
 
       return publicarProgramado(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // EJECUTAR PUBLICACIONES PROGRAMADAS - CRON
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "ejecutar-programadas"
+    ) {
+      if (!cronAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "Cron no autorizado",
+        });
+      }
+
+      return ejecutarPublicacionesPendientes(
         req,
         res
       );

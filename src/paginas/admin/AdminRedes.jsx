@@ -596,7 +596,9 @@ const [mensajePruebaReel, setMensajePruebaReel] = useState("");
         throw new Error(datos.error || "No se pudo programar el contenido.");
       }
 
-      setMensajeCalendario("Contenido programado para jueves, viernes y sábado.");
+      setMensajeCalendario(
+  "Contenido incorporado correctamente al calendario semanal."
+);
       await cargarCalendario();
     } catch (e) {
       setMensajeCalendario(`Error: ${e.message || "No se pudo programar."}`);
@@ -1770,8 +1772,8 @@ const aprobarContenido = async (
             <div>
               <h2 className="text-sm font-bold text-slate-900">Calendario</h2>
               <p className="text-[10px] text-slate-500">
-                Jueves 1 · Viernes 2 · Sábado 3 de octubre · Hora Argentina
-              </p>
+  Lunes 5 al sábado 10 de octubre · Hora Argentina
+</p>
             </div>
           </div>
        
@@ -1841,9 +1843,9 @@ const aprobarContenido = async (
                       </>
                     ) : (
                       <>
-                        <CalendarDays size={14} />
-                        Programar jueves, viernes y sábado
-                      </>
+  <CalendarDays size={14} />
+  Incorporar al calendario semanal
+</>
                     )}
                   </button>
                 </div>
