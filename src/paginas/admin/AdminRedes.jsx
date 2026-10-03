@@ -24,6 +24,7 @@ function PublicacionEditable({
   publicacion,
   onCambiar,
   relacionAspecto = "1:1",
+  videoUrl = "",
 }) {
   const [abierta, setAbierta] =
     useState(false);
@@ -111,9 +112,25 @@ function PublicacionEditable({
         )}
       </button>
 
+      {videoUrl && (
+  <div className="mb-3">
+    <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
+      Video Reel
+    </p>
+
+    <video
+      src={videoUrl}
+      controls
+      playsInline
+      preload="metadata"
+      className={`${claseAspecto} ${anchoVista} rounded-lg border border-slate-200 bg-black object-contain`}
+    />
+  </div>
+)}
+
       {abierta && (
         <div className="border-t border-slate-100 p-3">
-          {publicacion.imagen && (
+          {!videoUrl && publicacion.imagen && (
             <div className="mb-3">
               <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
                 Imagen
@@ -1439,14 +1456,17 @@ const aprobarContenido = async (
                         <PublicacionEditable
                           titulo="Reel"
                           relacionAspecto="9:16"
-                          publicacion={
-                            contenido
-                              .instagram
-                              .reel
+                          videoUrl={
+                            productosDigitales.find(
+                              (producto) =>
+                                producto.id ===
+                                item.productoId
+                            )?.videoReel || ""
                           }
-                          onCambiar={(
-                            publicacion
-                          ) =>
+                          publicacion={
+                            contenido.instagram.reel
+                          }
+                          onCambiar={(publicacion) =>
                             actualizarReel(
                               indiceProducto,
                               publicacion
