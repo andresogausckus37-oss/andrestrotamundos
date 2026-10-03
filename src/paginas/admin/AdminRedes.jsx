@@ -376,7 +376,7 @@ export default function AdminRedes() {
 
   const [
     cargandoProductos,
-    setCargandoProductos,
+        setCargandoProductos,
   ] = useState(true);
 
   const [
@@ -418,14 +418,12 @@ const [
   mensajeAprobacion,
   setMensajeAprobacion,
 ] = useState({});
+
   const [aprobados, setAprobados] = useState([]);
   const [programados, setProgramados] = useState([]);
   const [cargandoCalendario, setCargandoCalendario] = useState(true);
   const [programandoId, setProgramandoId] = useState("");
   const [mensajeCalendario, setMensajeCalendario] = useState("");
-  const [publicandoPieza, setPublicandoPieza] = useState("");
-  const [probandoReelId, setProbandoReelId] = useState("");
-const [mensajePruebaReel, setMensajePruebaReel] = useState("");
   const [
   regenerandoId,
   setRegenerandoId,
@@ -689,139 +687,6 @@ const [mensajePruebaReel, setMensajePruebaReel] = useState("");
   }
 };
 
-  const probarReelAprobado = async (item) => {
-  try {
-    setProbandoReelId(item.productoId);
-    setMensajePruebaReel("");
-
-    const respuesta = await fetch(
-      "/api/contenido-redes?accion=probar-reel",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productoId: item.productoId,
-        }),
-      }
-    );
-
-    const datos =
-      await leerRespuestaApi(respuesta);
-
-    if (!respuesta.ok) {
-      throw new Error(
-        datos.error ||
-          "No se pudo publicar el Reel."
-      );
-    }
-
-    setMensajePruebaReel(
-      `Reel publicado correctamente en Instagram: ${item.nombreProducto}`
-    );
-  } catch (error) {
-    setMensajePruebaReel(
-      `Error: ${
-        error.message ||
-        "No se pudo publicar el Reel."
-      }`
-    );
-  } finally {
-    setProbandoReelId("");
-  }
-};
-
-  const probarPublicacionAutomatica = async (item) => {
-  try {
-    setMensajeCalendario("");
-
-    const respuesta = await fetch(
-      "/api/contenido-redes?accion=crear-prueba-automatica",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          productoId: item.productoId,
-        }),
-      }
-    );
-
-    const datos =
-      await leerRespuestaApi(respuesta);
-
-    if (!respuesta.ok) {
-      throw new Error(
-        datos?.error ||
-          "No se pudo crear la prueba automática."
-      );
-    }
-
-    setMensajeCalendario(
-      `Prueba automática creada para Threads: ${datos.fecha} ${datos.hora}. Esperando al cron.`
-    );
-  } catch (error) {
-    setMensajeCalendario(
-      `Error: ${
-        error?.message ||
-        "No se pudo crear la prueba automática."
-      }`
-    );
-  }
-};
-
-const publicarAhora = async (item, pieza) => {
-  const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`;
-
-    try {
-      setPublicandoPieza(clave);
-      setMensajeCalendario("");
-
-      const respuesta = await fetch(
-        "/api/contenido-redes?accion=publicar-programado",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            productoId: item.productoId,
-            fecha: pieza.fecha,
-            hora: pieza.hora,
-            red: pieza.red,
-            tipo: pieza.tipo,
-            indice: pieza.indice,
-          }),
-        }
-      );
-
-      const datos = await leerRespuestaApi(respuesta);
-
-      if (!respuesta.ok) {
-        throw new Error(datos.error || "No se pudo publicar ahora.");
-      }
-
-      setMensajeCalendario(
-        pieza.red === "instagram"
-  ? pieza.tipo === "story"
-    ? "Story publicada correctamente en Instagram."
-    : pieza.tipo === "reel"
-      ? "Reel publicado correctamente en Instagram."
-      : "Carrusel publicado correctamente en Instagram."
-          : pieza.red === "facebook"
-            ? "Publicación realizada correctamente en Facebook."
-            : "Publicación realizada correctamente en Threads."
-      );
-      
-      await cargarCalendario();
-    } catch (error) {
-      setMensajeCalendario(`Error: ${error.message || "No se pudo publicar ahora."}`);
-    } finally {
-      setPublicandoPieza("");
-    }
-  };
-
   const producto1 =
     productosDigitales.find(
       (producto) =>
@@ -837,7 +702,8 @@ const publicarAhora = async (item, pieza) => {
   // =======================================================
   // GENERAR BORRADORES LOCALES
   // =======================================================
-    const generarContenido = () => {
+
+  const generarContenido = () => {
     const seleccionados = [
       producto1,
       producto2,
@@ -888,7 +754,7 @@ const publicarAhora = async (item, pieza) => {
       setGenerando(false);
     }
   };
-
+  
   // =======================================================
   // EDITAR UNA PUBLICACIÓN
   // =======================================================
@@ -1244,7 +1110,7 @@ const aprobarContenido = async (
 
         {/* PRODUCTOS */}
 
-        <section className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <Sparkles
               size={18}
@@ -1257,7 +1123,7 @@ const aprobarContenido = async (
           </div>
 
           <p className="mt-2 text-xs text-slate-500">
-                        Selecciona uno o dos productos
+            Selecciona uno o dos productos
             para preparar su contenido.
           </p>
 
@@ -1265,7 +1131,7 @@ const aprobarContenido = async (
             <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-slate-50 py-8 text-xs text-slate-500">
               <Loader2
                 size={16}
-                className="animate-spin"
+                                className="animate-spin"
               />
 
               Cargando productos...
@@ -1370,7 +1236,7 @@ const aprobarContenido = async (
               generando ||
               cargandoProductos
             }
-            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
             {generando ? (
               <>
@@ -1406,7 +1272,7 @@ const aprobarContenido = async (
 
         {!cargandoBorradores &&
           contenidos.length > 0 && (
-          <div className="mt-4 space-y-5">
+          <div className="mt-3 space-y-3">
             {contenidos.map(
               (
                 item,
@@ -1498,7 +1364,7 @@ const aprobarContenido = async (
 
                     {/* REDES */}
 
-                    <div className="space-y-3 p-3.5">
+                    <div className="space-y-2.5 p-3">
                       {/* INSTAGRAM */}
 
                       <BloqueRed
@@ -1604,6 +1470,18 @@ const aprobarContenido = async (
                         </div>
                       </BloqueRed>
 
+                      {indiceProducto === 0 && mensajeCalendario && (
+                        <div
+                          className={`rounded-lg border px-3 py-2 text-[11px] font-medium ${
+                            mensajeCalendario.startsWith("Error:")
+                              ? "border-red-200 bg-red-50 text-red-700"
+                              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          }`}
+                        >
+                          {mensajeCalendario}
+                        </div>
+                      )}
+
                       {/* THREADS */}
 
                       <BloqueRed
@@ -1630,7 +1508,7 @@ const aprobarContenido = async (
                               publicacion={
                                 publicacion
                               }
-                              onCambiar={(
+                                                            onCambiar={(
                                 nuevaPublicacion
                               ) =>
                                 actualizarThreads(
@@ -1677,8 +1555,7 @@ const aprobarContenido = async (
                                   indiceProducto,
                                   indice,
                                   nuevaPublicacion
-
-                                               )
+                                )
                               }
                             />
                           )
@@ -1687,7 +1564,7 @@ const aprobarContenido = async (
 
 {/* GUARDAR BORRADOR */}
 
-<div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
+<div className="rounded-xl border border-violet-200 bg-violet-50 p-2.5">
   <div className="flex items-start gap-3">
     <Save
       size={17}
@@ -1717,7 +1594,7 @@ const aprobarContenido = async (
       guardandoId ===
       item.productoId
     }
-    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
+    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
   >
     {guardandoId ===
     item.productoId ? (
@@ -1806,14 +1683,14 @@ const aprobarContenido = async (
 
         {/* CALENDARIO */}
 
-        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+        <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <CalendarDays size={17} className="text-violet-600" />
             <div>
               <h2 className="text-sm font-bold text-slate-900">Calendario</h2>
               <p className="text-[10px] text-slate-500">
-  Lunes 5 al sábado 10 de octubre · Hora Argentina
-</p>
+                Semana programada · Hora Argentina
+              </p>
             </div>
           </div>
        
@@ -1838,82 +1715,26 @@ const aprobarContenido = async (
                       Aprobado · listo para programar
                     </p>
 
-                    {productosDigitales.find(
-                      (producto) =>
-                        producto.id === item.productoId
-                    )?.videoReel && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          probarReelAprobado(item)
-                        }
-                        disabled={
-                          probandoReelId === item.productoId
-                        }
-                        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-pink-600 px-3 py-2 text-[11px] font-bold text-white disabled:bg-pink-300"
-                      >
-                        {probandoReelId === item.productoId ? (
-                          <>
-                            <Loader2
-                              size={14}
-                              className="animate-spin"
-                            />
-                            Publicando Reel...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 size={14} />
-                            Probar Reel en Instagram
-                          </>
-                        )}
-                      </button>
-                    )}
-
                     <button
                       type="button"
                       onClick={() => programarAprobado(item)}
-                      
-                    disabled={programandoId === item.productoId}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white disabled:bg-violet-300"
-                  >
-                    {programandoId === item.productoId ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        Programando...
-                      </>
-                    ) : (
-                      <>
-  <CalendarDays size={14} />
-  incorporarlo  al calendario semanal al calendario semanal
-</>
-                    )}
-                  </button>
-
-                  <button
-  type="button"
-  onClick={() =>
-    probarPublicacionAutomatica(item)
-  }
-  className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700"
->
-  Probar publicación automática
-</button>
+                      disabled={programandoId === item.productoId}
+                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
+                    >
+                      {programandoId === item.productoId ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          Incorporando...
+                        </>
+                      ) : (
+                        <>
+                          <CalendarDays size={14} />
+                          Incorporar al calendario semanal
+                        </>
+                      )}
+                    </button>
                 </div>
               ))}
-
-              {mensajePruebaReel && (
-  <p
-    className={`mt-3 text-[11px] font-medium ${
-      mensajePruebaReel.startsWith(
-        "Error:"
-      )
-        ? "text-red-600"
-        : "text-emerald-600"
-    }`}
-  >
-    {mensajePruebaReel}
-  </p>
-)}
 
               {programados.map((item) => {
                 const calendario = Array.isArray(item.calendario)
@@ -1967,11 +1788,15 @@ const aprobarContenido = async (
 </button>
 
                     <div className="grid gap-2 md:grid-cols-3">
-                      {[
-                        ["2026-10-01", "Jueves 1"],
-                        ["2026-10-02", "Viernes 2"],
-                        ["2026-10-03", "Sábado 3"],
-                      ].map(([fecha, nombre]) => {
+                      {[...new Set(calendario.map((pieza) => pieza.fecha))]
+                        .sort()
+                        .map((fecha) => {
+                        const nombre = new Intl.DateTimeFormat("es-AR", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "short",
+                          timeZone: "America/Argentina/Buenos_Aires",
+                        }).format(new Date(`${fecha}T12:00:00-03:00`));
                         const piezas = calendario
                           .filter((pieza) => pieza.fecha === fecha)
                           .sort((a, b) =>
@@ -2007,46 +1832,14 @@ const aprobarContenido = async (
                                       Publicado
                                     </p>
                                   ) : horarioYaPasoArgentina(pieza) ? (
-                                    <div className="mt-1.5">
+                                    <div className="mt-1">
                                       <p className="text-[9px] font-semibold text-amber-600">
-                                        Pendiente · horario pasado
+                                        Pendiente · el cron reintentará automáticamente
                                       </p>
-
-                                          {(
-                                            pieza.red === "threads" ||
-                                            pieza.red === "facebook" ||
-                                      (pieza.red === "instagram" &&
-                                        (
-                                          pieza.tipo === "carrusel" ||
-                                          pieza.tipo === "story" ||
-                                          pieza.tipo === "reel"
-                                        ))
-                                          ) ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => publicarAhora(item, pieza)}
-                                          disabled={
-                                            publicandoPieza ===
-                                            `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`
-                                          }
-                                          className="mt-1.5 w-full rounded-md bg-slate-900 px-2 py-1.5 text-[9px] font-bold text-white disabled:bg-slate-400"
-                                        >
-                                          {publicandoPieza ===
-                                          `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.red}-${pieza.tipo}-${pieza.indice}`
-                                            ? "Publicando..."
-                                            : "Publicar ahora"}
-                                        </button>
-                                      ) : (
-                                        <p className="mt-1 text-[9px] text-slate-400">
-                                          {pieza.red === "instagram"
-                                            ? "Publicación automática de Stories/Reels pendiente de conectar."
-                                            : "Publicación automática pendiente de conectar Facebook."}
-                                        </p>
-                                      )}
                                     </div>
                                   ) : (
                                     <p className="mt-1 text-[9px] text-slate-400">
-                                      Programado · hora Argentina
+                                      Programado · publicación automática
                                     </p>
                                   )}
                                 </div>
@@ -2066,12 +1859,6 @@ const aprobarContenido = async (
                 </p>
               )}
             </>
-          )}
-
-          {mensajeCalendario && (
-            <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] text-violet-700">
-              {mensajeCalendario}
-            </div>
           )}
         </section>
 
@@ -2097,4 +1884,4 @@ const aprobarContenido = async (
       </div>
     </main>
   );
-}                   
+}
