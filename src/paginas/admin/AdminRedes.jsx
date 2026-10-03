@@ -418,7 +418,6 @@ const [
   mensajeAprobacion,
   setMensajeAprobacion,
 ] = useState({});
-
   const [aprobados, setAprobados] = useState([]);
   const [programados, setProgramados] = useState([]);
   const [cargandoCalendario, setCargandoCalendario] = useState(true);
@@ -838,8 +837,7 @@ const publicarAhora = async (item, pieza) => {
   // =======================================================
   // GENERAR BORRADORES LOCALES
   // =======================================================
-
-  const generarContenido = () => {
+    const generarContenido = () => {
     const seleccionados = [
       producto1,
       producto2,
@@ -1259,7 +1257,7 @@ const aprobarContenido = async (
           </div>
 
           <p className="mt-2 text-xs text-slate-500">
-            Selecciona uno o dos productos
+                        Selecciona uno o dos productos
             para preparar su contenido.
           </p>
 
@@ -1679,7 +1677,8 @@ const aprobarContenido = async (
                                   indiceProducto,
                                   indice,
                                   nuevaPublicacion
-                                )
+
+                                               )
                               }
                             />
                           )
@@ -2098,4 +2097,4 @@ const aprobarContenido = async (
       </div>
     </main>
   );
-}
+}                   
