@@ -45,6 +45,51 @@ const [cargandoProductos, setCargandoProductos] =
   useState(true);
 
   /* =========================================================
+     RELOJ GLOBAL — OFERTA DE VENTA CRUZADA
+  ========================================================= */
+
+  const [ahora, setAhora] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalo = window.setInterval(() => {
+      setAhora(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalo);
+    };
+  }, []);
+
+  const obtenerTiempoRestante = (finalizaEn) => {
+    const final = new Date(finalizaEn).getTime();
+
+    if (!Number.isFinite(final)) {
+      return null;
+    }
+
+    const diferencia = final - ahora;
+
+    if (diferencia <= 0) {
+      return null;
+    }
+
+    const totalSegundos = Math.floor(
+      diferencia / 1000
+    );
+
+    return {
+      dias: Math.floor(totalSegundos / 86400),
+      horas: Math.floor(
+        (totalSegundos % 86400) / 3600
+      ),
+      minutos: Math.floor(
+        (totalSegundos % 3600) / 60
+      ),
+      segundos: totalSegundos % 60,
+    };
+  };
+
+  /* =========================================================
      MERCADO
   ========================================================= */
 
@@ -130,11 +175,44 @@ const productoVentaCruzada =
       )
     : null;
 
-const precioVentaCruzada =
+const precioVentaCruzadaCalculado =
   obtenerPrecioMercado(
     productoVentaCruzada,
     mercado || MERCADO_ARGENTINA
   );
+
+const finalizaOfertaVentaCruzada =
+  productoVentaCruzada
+    ?.ofertaLanzamiento?.finalizaEn;
+
+const ofertaVentaCruzadaVigente =
+  finalizaOfertaVentaCruzada
+    ? new Date(
+        finalizaOfertaVentaCruzada
+      ).getTime() > ahora
+    : true;
+
+const precioNormalVentaCruzada =
+  mercado === MERCADO_INTERNACIONAL
+    ? Number(
+        productoVentaCruzada?.precioUSD
+      )
+    : Number(
+        productoVentaCruzada?.precioARS
+      );
+
+const precioVentaCruzada =
+  ofertaVentaCruzadaVigente
+    ? precioVentaCruzadaCalculado
+    : precioNormalVentaCruzada;
+
+const tiempoRestanteVentaCruzada =
+  ofertaVentaCruzadaVigente &&
+  finalizaOfertaVentaCruzada
+    ? obtenerTiempoRestante(
+        finalizaOfertaVentaCruzada
+      )
+    : null;
 
 const resenasVentaCruzada =
   productoVentaCruzada
@@ -629,8 +707,7 @@ const promedioVentaCruzada =
 
     pagarMercadoPago();
   };
-
-  return (
+    return (
     <main className="min-h-screen bg-slate-50 px-4 pb-10 pt-4 sm:px-5 sm:pt-6">
       <div className="mx-auto max-w-3xl">
 
@@ -766,6 +843,7 @@ const promedioVentaCruzada =
 
                   {mercado ===
                     MERCADO_ARGENTINA &&
+                    ofertaVentaCruzadaVigente &&
                     productoVentaCruzada
                       .oferta?.activa &&
                     Number(
@@ -783,6 +861,7 @@ const promedioVentaCruzada =
 
                   {mercado ===
                     MERCADO_INTERNACIONAL &&
+                    ofertaVentaCruzadaVigente &&
                     productoVentaCruzada
                       .ofertaUSD
                       ?.activa &&
@@ -799,6 +878,37 @@ const promedioVentaCruzada =
                       </span>
                     )}
                 </div>
+
+                {tiempoRestanteVentaCruzada && (
+                  <div className="mt-2 rounded-md border border-orange-300 bg-white px-2.5 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-orange-700">
+                      Oferta por tiempo limitado
+                    </p>
+
+                    <p className="mt-0.5 text-[12px] font-semibold leading-5 text-orange-900">
+                      Finaliza en{" "}
+                      {tiempoRestanteVentaCruzada.dias >
+                        0 &&
+                        `${tiempoRestanteVentaCruzada.dias}d `}
+                      {String(
+                        tiempoRestanteVentaCruzada.horas
+                      ).padStart(2, "0")}
+                      h{" "}
+                      {String(
+                        tiempoRestanteVentaCruzada.minutos
+                      ).padStart(2, "0")}
+                      m{" "}
+                      {String(
+                        tiempoRestanteVentaCruzada.segundos
+                      ).padStart(2, "0")}
+                      s
+                    </p>
+
+                    <p className="mt-0.5 text-[9px] font-medium leading-4 text-orange-700">
+                      Agrégalo ahora antes de que finalice la oferta.
+                    </p>
+                  </div>
+                )}
 
                 {resenasVentaCruzada.length >
                   0 && (
@@ -1078,233 +1188,232 @@ const promedioVentaCruzada =
                 </div>
               </button>
 
-              {/* TRANSFERENCIA */}
+                        {/* TRANSFERENCIA */}
 
-              <button
-                type="button"
-                onClick={() => {
-                  setMetodoPago(
-                    "transferencia"
-                  );
-                  setError("");
-                }}
-                className={`w-full rounded-md border bg-white p-4 text-left transition-colors ${
-                  metodoPago ===
-                  "transferencia"
-                    ? "border-slate-900"
-                    : "border-slate-200 hover:border-slate-400"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                      metodoPago ===
-                      "transferencia"
-                        ? "border-slate-900"
-                        : "border-slate-300"
-                    }`}
-                  >
-                    {metodoPago ===
-                      "transferencia" && (
-                      <div className="h-2 w-2 rounded-full bg-slate-900" />
-                    )}
-                  </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMetodoPago(
+                                            "transferencia"
+                                          );
+                                          setError("");
+                                        }}
+                                        className={`w-full rounded-md border bg-white p-4 text-left transition-colors ${
+                                          metodoPago ===
+                                          "transferencia"
+                                            ? "border-slate-900"
+                                            : "border-slate-200 hover:border-slate-400"
+                                        }`}
+                                      >
+                                        <div className="flex items-start gap-3">
+                                          <div
+                                            className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                                              metodoPago ===
+                                              "transferencia"
+                                                ? "border-slate-900"
+                                                : "border-slate-300"
+                                            }`}
+                                          >
+                                            {metodoPago ===
+                                              "transferencia" && (
+                                              <div className="h-2 w-2 rounded-full bg-slate-900" />
+                                            )}
+                                          </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Building2
-                          size={17}
-                          strokeWidth={1.8}
-                          className="text-slate-600"
-                        />
+                                          <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                              <div className="flex items-center gap-2">
+                                                <Building2
+                                                  size={17}
+                                                  strokeWidth={1.8}
+                                                  className="text-slate-600"
+                                                />
 
-                        <span className="text-sm font-medium text-slate-900">
-                          Transferencia bancaria
-                        </span>
-                      </div>
+                                                <span className="text-sm font-medium text-slate-900">
+                                                  Transferencia bancaria
+                                                </span>
+                                              </div>
 
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-700">
-                        <BadgePercent
-                          size={12}
-                          strokeWidth={1.8}
-                        />
+                                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-700">
+                                                <BadgePercent
+                                                  size={12}
+                                                  strokeWidth={1.8}
+                                                />
 
-                        {
-                          DESCUENTO_TRANSFERENCIA
+                                                {
+                                                  DESCUENTO_TRANSFERENCIA
+                                                }
+                                                % OFF
+                                              </span>
+                                            </div>
+
+                                            <p className="mt-2 text-[12px] font-normal leading-5 text-slate-600 sm:text-xs">
+                                              Paga mediante
+                                              transferencia y ahorra{" "}
+                                              {
+                                                DESCUENTO_TRANSFERENCIA
+                                              }
+                                              % adicional
+                                            </p>
+
+                                            <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
+                                              <span className="text-[11px] font-normal text-slate-600">
+                                                Total por transferencia
+                                              </span>
+
+                                              <span className="text-base font-medium text-slate-900">
+                                                {formatearPrecio(
+                                                  total
+                                                )}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </button>
+                                    </div>
+                                  </section>
+                                )}
+
+                                        {/* =====================================================
+                                    ERROR
+                                ====================================================== */}
+
+                                {error && (
+                                  <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">
+                                    {error}
+                                  </div>
+                                )}
+
+                                {/* =====================================================
+                                    RESUMEN FINAL
+                                ====================================================== */}
+
+                                <section className="mt-5 rounded-md border border-slate-200 bg-white p-4">
+                                  {ventaCruzadaAgregada &&
+                                    productoVentaCruzada && (
+                                      <div className="mb-3 border-b border-slate-200 pb-3">
+                                        <div className="flex items-start justify-between gap-3 text-[11px]">
+                                          <span className="max-w-[70%] font-normal leading-4 text-slate-600">
+                                            {
+                                              productoVentaCruzada.nombre
+                                            }
+                                          </span>
+
+                                          <span className="shrink-0 font-medium text-slate-900">
+                                            {formatearPrecio(
+                                              precioVentaCruzada
+                                            )}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                  {metodoPago ===
+                                    "transferencia" &&
+                                    descuentoTransferencia >
+                                      0 && (
+                                      <div className="mb-3 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                                        <span className="text-[11px] font-normal text-slate-600">
+                                          Descuento por
+                                          transferencia
+                                        </span>
+
+                                        <span className="text-[11px] font-medium text-orange-700">
+                                          -
+                                          {formatearPrecio(
+                                            descuentoTransferencia
+                                          )}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                  <div className="mb-4 flex items-end justify-between gap-3">
+                                    <span className="text-sm font-normal text-slate-600">
+                                      Total a pagar
+                                    </span>
+
+                                    <span className="text-2xl font-medium tracking-tight text-slate-950">
+                                      {formatearPrecio(
+                                        total
+                                      )}
+                                    </span>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={continuarPago}
+                                    disabled={
+                                      procesando ||
+                                      cargandoMercado
+                                    }
+                                    className={`flex w-full items-center justify-center rounded-md px-4 py-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                                      metodoPago === "paypal"
+                                        ? "bg-[#FFC439] text-[#111820] hover:bg-[#F2BA36]"
+                                        : "gap-2 bg-[#285861] text-white hover:bg-[#204850]"
+                                    }`}
+                                  >
+                                    {metodoPago ===
+                                    "paypal" ? (
+                                      procesando ||
+                                      cargandoMercado ? (
+                                        "Redirigiendo..."
+                                      ) : (
+                                        <span className="flex items-center justify-center gap-1">
+                                          <span>
+                                            Pay with
+                                          </span>
+
+                                          <img
+                                            src={LOGO_PAYPAL}
+                                            alt="PayPal"
+                                            className="h-6 w-auto object-contain"
+                                          />
+                                        </span>
+                                      )
+                                    ) : (
+                                      <>
+                                        <LockKeyhole
+                                          size={16}
+                                          strokeWidth={1.8}
+                                        />
+
+                                        {cargandoMercado
+                                          ? "Cargando..."
+                                          : procesando
+                                            ? "Redirigiendo..."
+                                            : metodoPago ===
+                                                "mercadopago"
+                                              ? "Pagar con Mercado Pago"
+                                              : "Continuar con transferencia"}
+                                      </>
+                                    )}
+                                  </button>
+
+                                  {/* TEXTOS INFERIORES */}
+
+                                  <div className="mb-20 mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
+                                      <ShieldCheck
+                                        size={13}
+                                        strokeWidth={1.8}
+                                        className="text-slate-500"
+                                      />
+
+                                      Compra segura
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
+                                      <Check
+                                        size={13}
+                                        strokeWidth={1.8}
+                                        className="text-slate-500"
+                                      />
+
+                                      Descarga digital
+                                    </div>
+                                  </div>
+                                </section>
+                              </div>
+                            </main>
+                          );
                         }
-                        % OFF
-                      </span>
-                    </div>
-
-                    <p className="mt-2 text-[12px] font-normal leading-5 text-slate-600 sm:text-xs">
-                      Paga mediante
-                      transferencia y ahorra{" "}
-                      {
-                        DESCUENTO_TRANSFERENCIA
-                      }
-                      % adicional
-                    </p>
-
-                    <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
-                      <span className="text-[11px] font-normal text-slate-600">
-                        Total por transferencia
-                      </span>
-
-                      <span className="text-base font-medium text-slate-900">
-                        {formatearPrecio(
-                          total
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </section>
-        )}
-
-                {/* =====================================================
-            ERROR
-        ====================================================== */}
-
-        {error && (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">
-            {error}
-          </div>
-        )}
-
-        {/* =====================================================
-            RESUMEN FINAL
-        ====================================================== */}
-
-        <section className="mt-5 rounded-md border border-slate-200 bg-white p-4">
-          {ventaCruzadaAgregada &&
-            productoVentaCruzada && (
-              <div className="mb-3 border-b border-slate-200 pb-3">
-                <div className="flex items-start justify-between gap-3 text-[11px]">
-                  <span className="max-w-[70%] font-normal leading-4 text-slate-600">
-                    {
-                      productoVentaCruzada.nombre
-                    }
-                  </span>
-
-                  <span className="shrink-0 font-medium text-slate-900">
-                    {formatearPrecio(
-                      precioVentaCruzada
-                    )}
-                  </span>
-                </div>
-              </div>
-            )}
-
-          {metodoPago ===
-            "transferencia" &&
-            descuentoTransferencia >
-              0 && (
-              <div className="mb-3 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                <span className="text-[11px] font-normal text-slate-600">
-                  Descuento por
-                  transferencia
-                </span>
-
-                <span className="text-[11px] font-medium text-orange-700">
-                  -
-                  {formatearPrecio(
-                    descuentoTransferencia
-                  )}
-                </span>
-              </div>
-            )}
-
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <span className="text-sm font-normal text-slate-600">
-              Total a pagar
-            </span>
-
-            <span className="text-2xl font-medium tracking-tight text-slate-950">
-              {formatearPrecio(
-                total
-              )}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={continuarPago}
-            disabled={
-              procesando ||
-              cargandoMercado
-            }
-            className={`flex w-full items-center justify-center rounded-md px-4 py-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-              metodoPago === "paypal"
-                ? "bg-[#FFC439] text-[#111820] hover:bg-[#F2BA36]"
-                : "gap-2 bg-[#285861] text-white hover:bg-[#204850]"
-            }`}
-          >
-            {metodoPago ===
-            "paypal" ? (
-              procesando ||
-              cargandoMercado ? (
-                "Redirigiendo..."
-              ) : (
-                <span className="flex items-center justify-center gap-1">
-                  <span>
-                    Pay with
-                  </span>
-
-                  <img
-                    src={LOGO_PAYPAL}
-                    alt="PayPal"
-                    className="h-6 w-auto object-contain"
-                  />
-                </span>
-              )
-            ) : (
-              <>
-                <LockKeyhole
-                  size={16}
-                  strokeWidth={1.8}
-                />
-
-                {cargandoMercado
-                  ? "Cargando..."
-                  : procesando
-                    ? "Redirigiendo..."
-                    : metodoPago ===
-                        "mercadopago"
-                      ? "Pagar con Mercado Pago"
-                      : "Continuar con transferencia"}
-              </>
-            )}
-          </button>
-
-          {/* TEXTOS INFERIORES */}
-
-          <div className="mb-20 mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2">
-            <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
-              <ShieldCheck
-                size={13}
-                strokeWidth={1.8}
-                className="text-slate-500"
-              />
-
-              Compra segura
-            </div>
-
-            <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
-              <Check
-                size={13}
-                strokeWidth={1.8}
-                className="text-slate-500"
-              />
-
-              Descarga digital
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
-        
