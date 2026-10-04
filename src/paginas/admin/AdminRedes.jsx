@@ -1261,6 +1261,7 @@ const aprobarContenido = async (
     >
       {mensajeMerchant}
     </p>
+  ) : null}
 
 {mensajeProductoMerchant ? (
   <p
