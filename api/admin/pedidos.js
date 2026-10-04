@@ -455,10 +455,60 @@ const crearProducto = async (req, res) => {
 
   const fecha = new Date();
 
+  /*
+   * La fecha de creación y el vencimiento de la oferta
+   * se calculan en el servidor. No confiamos en el reloj
+   * del navegador para definir estas fechas.
+   */
+  let ofertaLanzamiento = producto?.ofertaLanzamiento;
+
+  if (
+    ofertaLanzamiento &&
+    typeof ofertaLanzamiento === "object" &&
+    !Array.isArray(ofertaLanzamiento) &&
+    ofertaLanzamiento.activa === true
+  ) {
+    const duracionDias = Number(
+      ofertaLanzamiento.duracionDias
+    );
+
+    if (
+      !Number.isInteger(duracionDias) ||
+      duracionDias < 1 ||
+      duracionDias > 7
+    ) {
+      return res.status(400).json({
+        error:
+          "La duración de la oferta debe ser de 1 a 7 días.",
+      });
+    }
+
+    const finalizaEn = new Date(
+      fecha.getTime() +
+        duracionDias * 24 * 60 * 60 * 1000
+    );
+
+    ofertaLanzamiento = {
+      ...ofertaLanzamiento,
+      activa: true,
+      duracionDias,
+      iniciaEn: fecha,
+      finalizaEn,
+    };
+  } else if (ofertaLanzamiento) {
+    ofertaLanzamiento = {
+      ...ofertaLanzamiento,
+      activa: false,
+    };
+  }
+
   const nuevoProducto = {
     ...producto,
+    ...(ofertaLanzamiento
+      ? { ofertaLanzamiento }
+      : {}),
     creadoEn: fecha,
-        actualizadoEn: fecha,
+    actualizadoEn: fecha,
   };
 
   const resultado = await productos.insertOne(
@@ -469,7 +519,7 @@ const crearProducto = async (req, res) => {
     ok: true,
     mensaje: "Producto guardado correctamente.",
     productoId: resultado.insertedId.toString(),
-  });
+      });
 };
 
 /* =========================
@@ -843,7 +893,6 @@ const listarProductosPublicos = async (
   const resultado = productos.map(
     ({
       _id,
-      creadoEn,
       actualizadoEn,
       archivoPDF,
       ...producto
@@ -989,7 +1038,6 @@ const editarProducto = async (req, res) => {
     creadoEn:
       productoActual.creadoEn ||
       new Date(),
-
     actualizadoEn: new Date(),
   };
 
