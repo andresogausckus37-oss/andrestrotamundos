@@ -492,7 +492,7 @@ function PreviewPaginaPdf({
   return (
     <div className="min-w-0">
       <p className="mb-2 text-center text-[11px] font-bold text-slate-700">
-        {titulo}
+                {titulo}
       </p>
 
       <div className="relative overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
@@ -618,6 +618,7 @@ export default function AdminNuevoProducto() {
 
     etiquetaOferta:
       "Oferta lanzamiento",
+    duracionOfertaDias: "3",
 
     ventaCruzadaId: "",
     destacado: false,
@@ -985,7 +986,7 @@ export default function AdminNuevoProducto() {
       const imagenBase64 =
         await archivoADataUrl(
           imagen
-            .archivoOptimizado
+                      .archivoOptimizado
         );
 
       const respuesta =
@@ -1367,6 +1368,11 @@ export default function AdminNuevoProducto() {
               .etiquetaOferta
               .trim()
           : "",
+
+      duracionDias:
+        formulario.ofertaActiva
+          ? Number(formulario.duracionOfertaDias) || 3
+          : 0,
     },
 
     precioUSD:
@@ -1397,6 +1403,11 @@ export default function AdminNuevoProducto() {
               .etiquetaOferta
               .trim()
           : "",
+
+      duracionDias:
+        formulario.ofertaUSDActiva
+          ? Number(formulario.duracionOfertaDias) || 3
+          : 0,
     },
 
     imagenes: {
@@ -1469,7 +1480,7 @@ export default function AdminNuevoProducto() {
     async () => {
       if (
         !formulario.nombre.trim()
-      ) {
+              ) {
         alert(
           "Falta el nombre del producto."
         );
@@ -1964,7 +1975,7 @@ videoReel:
                 "publico",
                 v
               )
-            }
+                          }
           >
             <option value="">
               Seleccionar público
@@ -2014,7 +2025,7 @@ videoReel:
             )}
           </Selector>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3">
             <Campo
               titulo="Actividades"
               tipo="number"
@@ -2043,130 +2054,105 @@ videoReel:
               }
             />
 
-            <Campo
-              titulo="Páginas"
-              tipo="number"
-              valor={
-                formulario.paginas
-              }
-              onChange={(v) =>
-                cambiar(
-                  "paginas",
-                  v
-                )
-              }
-            />
+            <div className="col-span-2">
+              <Campo
+                titulo="Páginas"
+                tipo="number"
+                valor={
+                  formulario.paginas
+                }
+                onChange={(v) =>
+                  cambiar(
+                    "paginas",
+                    v
+                  )
+                }
+              />
+            </div>
           </div>
         </Seccion>
 
         {/* PRECIOS ARGENTINA */}
 
         <Seccion titulo="Precio en Argentina">
-          <Campo
-            titulo="Precio ARS"
-            tipo="number"
-            valor={
-              formulario.precioARS
-            }
-            onChange={(v) =>
-              cambiar(
-                "precioARS",
-                v
-              )
-            }
-          />
-
           <Check
             titulo="Activar oferta en ARS"
-            marcado={
-              formulario.ofertaActiva
-            }
-            onChange={(v) =>
-              cambiar(
-                "ofertaActiva",
-                v
-              )
-            }
+            marcado={formulario.ofertaActiva}
+            onChange={(v) => cambiar("ofertaActiva", v)}
           />
 
-          {formulario.ofertaActiva && (
-            <>
+          <div className="grid grid-cols-2 gap-3">
+            <Campo
+              titulo="Precio normal ARS"
+              tipo="number"
+              valor={formulario.precioARS}
+              onChange={(v) => cambiar("precioARS", v)}
+            />
+
+            {formulario.ofertaActiva ? (
               <Campo
                 titulo="Precio oferta ARS"
                 tipo="number"
-                valor={
-                  formulario.precioOfertaARS
-                }
-                onChange={(v) =>
-                  cambiar(
-                    "precioOfertaARS",
-                    v
-                  )
-                }
+                valor={formulario.precioOfertaARS}
+                onChange={(v) => cambiar("precioOfertaARS", v)}
               />
+            ) : (
+              <div />
+            )}
+          </div>
 
-              <Campo
-                titulo="Etiqueta de oferta"
-                valor={
-                  formulario.etiquetaOferta
-                }
-                onChange={(v) =>
-                  cambiar(
-                    "etiquetaOferta",
-                    v
-                  )
-                }
-              />
-            </>
+          {formulario.ofertaActiva && (
+            <Campo
+              titulo="Etiqueta de oferta"
+              valor={formulario.etiquetaOferta}
+              onChange={(v) => cambiar("etiquetaOferta", v)}
+            />
           )}
         </Seccion>
 
         {/* PRECIOS INTERNACIONALES */}
 
         <Seccion titulo="Precio internacional">
-          <Campo
-            titulo="Precio USD"
-            tipo="number"
-            paso="0.01"
-            valor={
-              formulario.precioUSD
-            }
-            onChange={(v) =>
-              cambiar(
-                "precioUSD",
-                v
-              )
-            }
-          />
-
           <Check
             titulo="Activar oferta en USD"
-            marcado={
-              formulario.ofertaUSDActiva
-            }
-            onChange={(v) =>
-              cambiar(
-                "ofertaUSDActiva",
-                v
-              )
-            }
+            marcado={formulario.ofertaUSDActiva}
+            onChange={(v) => cambiar("ofertaUSDActiva", v)}
           />
 
-          {formulario.ofertaUSDActiva && (
+          <div className="grid grid-cols-2 gap-3">
             <Campo
-              titulo="Precio oferta USD"
+              titulo="Precio normal USD"
               tipo="number"
               paso="0.01"
-              valor={
-                formulario.precioOfertaUSD
-              }
-              onChange={(v) =>
-                cambiar(
-                  "precioOfertaUSD",
-                  v
-                )
-              }
+              valor={formulario.precioUSD}
+              onChange={(v) => cambiar("precioUSD", v)}
             />
+
+            {formulario.ofertaUSDActiva ? (
+              <Campo
+                titulo="Precio oferta USD"
+                tipo="number"
+                paso="0.01"
+                valor={formulario.precioOfertaUSD}
+                onChange={(v) => cambiar("precioOfertaUSD", v)}
+              />
+            ) : (
+              <div />
+            )}
+          </div>
+
+          {(formulario.ofertaActiva || formulario.ofertaUSDActiva) && (
+            <Selector
+              titulo="Duración de la oferta de lanzamiento"
+              valor={formulario.duracionOfertaDias}
+              onChange={(v) => cambiar("duracionOfertaDias", v)}
+            >
+              {[1, 2, 3, 4, 5, 6, 7].map((dias) => (
+                <option key={dias} value={dias}>
+                  {dias} {dias === 1 ? "día" : "días"}
+                </option>
+              ))}
+            </Selector>
           )}
         </Seccion>
 
@@ -2342,7 +2328,7 @@ videoReel:
             Seleccioná las 4 imágenes comerciales de la tienda. Se optimizan automáticamente a WebP, con un ancho máximo de 794 px.
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {NOMBRES_IMAGENES.map(
               (
                 titulo,
@@ -2360,6 +2346,7 @@ videoReel:
                       indice
                     ]
                   }
+                  formato="cuadrado"
                   deshabilitado={
                     procesandoImagen ||
                     guardando
@@ -2390,12 +2377,13 @@ videoReel:
               Selecciona las 4 variantes de 1080 × 1350 px. Se conservan hasta 1080 px de ancho y se convierten a WebP.
             </p>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {NOMBRES_IMAGENES_FEED.map((titulo, indice) => (
                 <ImagenProducto
                   key={titulo}
                   titulo={titulo}
                   imagen={imagenesFeed[indice]}
+                  formato="feed"
                   deshabilitado={procesandoImagen || guardando}
                   onSeleccionar={(archivo) =>
                     seleccionarImagenRed(indice, archivo, "feed")
@@ -2416,12 +2404,13 @@ videoReel:
               Selecciona las 4 variantes de 1080 × 1920 px. Se conservan hasta 1080 px de ancho y se convierten a WebP.
             </p>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {NOMBRES_IMAGENES_VERTICAL.map((titulo, indice) => (
                 <ImagenProducto
                   key={titulo}
                   titulo={titulo}
                   imagen={imagenesVertical[indice]}
+                  formato="vertical"
                   deshabilitado={procesandoImagen || guardando}
                   onSeleccionar={(archivo) =>
                     seleccionarImagenRed(indice, archivo, "vertical")
@@ -2480,7 +2469,7 @@ videoReel:
                     <div className="grid gap-4 sm:grid-cols-2">
                       <SelectorArchivoSimple
                         titulo="1. Portada del PDF"
-                        archivo={imagenPortadaPdf}
+                                                archivo={imagenPortadaPdf}
                         accept="image/png,image/jpeg,image/webp"
                         textoVacio="Seleccionar portada"
                         deshabilitado={guardando || generandoPdf}
@@ -2685,101 +2674,82 @@ videoReel:
 function ImagenProducto({
   titulo,
   imagen,
+  formato = "cuadrado",
   deshabilitado,
   onSeleccionar,
   onEliminar,
 }) {
+  const claseFormato =
+    formato === "feed"
+      ? "aspect-[4/5]"
+      : formato === "vertical"
+        ? "aspect-[9/16]"
+        : "aspect-square";
+
+  const anchoPreview =
+    formato === "vertical"
+      ? "max-w-[82px]"
+      : formato === "feed"
+        ? "max-w-[104px]"
+        : "max-w-[112px]";
+
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs font-bold text-slate-700">
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+      <p className="truncate text-[11px] font-bold text-slate-700">
         {titulo}
       </p>
 
       {!imagen ? (
-        <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-white px-3 py-6 text-center">
-          <Upload
-            size={22}
-            className="text-sky-600"
-          />
-
-          <span className="mt-2 text-xs font-semibold text-slate-600">
-            Seleccionar imagen
-          </span>
-
-          <span className="mt-1 text-[10px] text-slate-400">
-            JPG, PNG o WebP
-          </span>
+        <label className="mt-2 flex min-h-[76px] cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white px-2 py-2 text-center">
+          <Upload size={17} className="shrink-0 text-sky-600" />
+          <div className="min-w-0">
+            <span className="block text-[10px] font-semibold text-slate-600">
+              Seleccionar
+            </span>
+            <span className="block text-[9px] text-slate-400">
+              JPG, PNG o WebP
+            </span>
+          </div>
 
           <input
             type="file"
             accept="image/*"
-            disabled={
-              deshabilitado
-            }
+            disabled={deshabilitado}
             className="hidden"
             onChange={(e) => {
-              const archivo =
-                e.target.files?.[0];
-
-              if (archivo) {
-                onSeleccionar(
-                  archivo
-                );
-              }
-
-              /*
-               * Permite volver a
-               * seleccionar el mismo
-               * archivo si fuera
-               * necesario.
-               */
-
-              e.target.value =
-                "";
+              const archivo = e.target.files?.[0];
+              if (archivo) onSeleccionar(archivo);
+              e.target.value = "";
             }}
           />
         </label>
       ) : (
-        <div className="mt-3">
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-            <img
-              src={
-                imagen.urlOptimizada
-              }
-              alt={titulo}
-              className="aspect-square w-full object-cover"
-            />
+        <div className="mt-2 flex items-center gap-3">
+          <div className={`w-full shrink-0 ${anchoPreview}`}>
+            <div className={`overflow-hidden rounded-md border border-slate-200 bg-white ${claseFormato}`}>
+              <img
+                src={imagen.urlOptimizada}
+                alt={titulo}
+                className="h-full w-full object-cover"
+              />
+            </div>
           </div>
 
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-emerald-600">
-                Imagen optimizada
-              </p>
-
-              <p className="mt-0.5 text-[10px] text-slate-400">
-                {(
-                  imagen.pesoOptimizado /
-                  1024
-                ).toFixed(0)}{" "}
-                KB
-              </p>
-            </div>
-
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-semibold text-emerald-600">
+              Optimizada
+            </p>
+            <p className="mt-0.5 text-[9px] text-slate-400">
+              {(imagen.pesoOptimizado / 1024).toFixed(0)} KB
+            </p>
             <button
               type="button"
-              disabled={
-                deshabilitado
-              }
-              onClick={
-                onEliminar
-              }
-              className="rounded-lg p-2 text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"
+              disabled={deshabilitado}
+              onClick={onEliminar}
+              className="mt-1 rounded-md p-1.5 text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"
               aria-label={`Eliminar ${titulo}`}
             >
-              <Trash2
-                size={16}
-              />
+              <Trash2 size={14} />
             </button>
           </div>
         </div>
