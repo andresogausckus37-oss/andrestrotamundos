@@ -2748,6 +2748,9 @@ const probarPublicacionAutomatica = async (item) => {
 const GOOGLE_MERCHANT_CLIENT_EMAIL =
   process.env.GOOGLE_MERCHANT_CLIENT_EMAIL;
 
+const GOOGLE_MERCHANT_DEVELOPER_EMAIL =
+  process.env.GOOGLE_MERCHANT_DEVELOPER_EMAIL;
+
 const GOOGLE_MERCHANT_PRIVATE_KEY =
   process.env.GOOGLE_MERCHANT_PRIVATE_KEY;
 
@@ -2759,10 +2762,11 @@ const GOOGLE_MERCHANT_SCOPE =
 
 function verificarConfiguracionMerchant() {
   if (
-    !GOOGLE_MERCHANT_CLIENT_EMAIL ||
-    !GOOGLE_MERCHANT_PRIVATE_KEY ||
-    !GOOGLE_MERCHANT_ACCOUNT_ID
-  ) {
+  !GOOGLE_MERCHANT_CLIENT_EMAIL ||
+  !GOOGLE_MERCHANT_PRIVATE_KEY ||
+  !GOOGLE_MERCHANT_ACCOUNT_ID ||
+  !GOOGLE_MERCHANT_DEVELOPER_EMAIL
+) {
     throw new Error(
       "Faltan variables de entorno de Google Merchant API."
     );
@@ -2849,9 +2853,7 @@ async function obtenerTokenMerchant() {
 
 async function registrarProyectoMerchant(req, res) {
   const developerEmail =
-    typeof req.body?.developerEmail === "string"
-      ? req.body.developerEmail.trim()
-      : "";
+    GOOGLE_MERCHANT_DEVELOPER_EMAIL.trim();
 
   if (!developerEmail || !developerEmail.includes("@")) {
     return res.status(400).json({
