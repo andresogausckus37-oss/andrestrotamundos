@@ -424,6 +424,9 @@ const [
   const [cargandoCalendario, setCargandoCalendario] = useState(true);
   const [programandoId, setProgramandoId] = useState("");
   const [mensajeCalendario, setMensajeCalendario] = useState("");
+
+  const [registrandoMerchant, setRegistrandoMerchant] = useState(false);
+const [mensajeMerchant, setMensajeMerchant] = useState("");
   const [
   regenerandoId,
   setRegenerandoId,
@@ -1081,6 +1084,49 @@ const aprobarContenido = async (
   }
 };
 
+  const registrarGoogleMerchant = async () => {
+  try {
+    setRegistrandoMerchant(true);
+    setMensajeMerchant("");
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=merchant-registrar-proyecto",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const datos = await leerRespuestaApi(respuesta);
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos?.error ||
+          datos?.detalle ||
+          "No se pudo registrar el proyecto en Google Merchant."
+      );
+    }
+
+    setMensajeMerchant(
+      datos?.mensaje ||
+        "Proyecto registrado correctamente en Google Merchant."
+    );
+  } catch (error) {
+    console.error("Error registrando Google Merchant:", error);
+
+    setMensajeMerchant(
+      `Error: ${
+        error?.message ||
+        "No se pudo registrar el proyecto en Google Merchant."
+      }`
+    );
+  } finally {
+    setRegistrandoMerchant(false);
+  }
+};
+
     // =======================================================
   // RENDER
   // =======================================================
@@ -1107,6 +1153,45 @@ const aprobarContenido = async (
             contenido antes de aprobarlo.
           </p>
         </div>
+
+        {/* GOOGLE MERCHANT */}
+
+<section className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h2 className="text-sm font-bold text-slate-900">
+        Google Merchant
+      </h2>
+
+      <p className="mt-1 text-xs text-slate-500">
+        Registra el proyecto antes de enviar el primer producto.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={registrarGoogleMerchant}
+      disabled={registrandoMerchant}
+      className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+    >
+      {registrandoMerchant
+        ? "Registrando..."
+        : "Registrar Google Merchant"}
+    </button>
+  </div>
+
+  {mensajeMerchant ? (
+    <p
+      className={`mt-3 text-xs font-medium ${
+        mensajeMerchant.startsWith("Error:")
+          ? "text-red-600"
+          : "text-emerald-600"
+      }`}
+    >
+      {mensajeMerchant}
+    </p>
+  ) : null}
+</section>
 
         {/* PRODUCTOS */}
 
