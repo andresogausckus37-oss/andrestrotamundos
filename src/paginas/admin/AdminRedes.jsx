@@ -376,7 +376,7 @@ export default function AdminRedes() {
 
   const [
     cargandoProductos,
-        setCargandoProductos,
+            setCargandoProductos,
   ] = useState(true);
 
   const [
@@ -425,10 +425,6 @@ const [
   const [programandoId, setProgramandoId] = useState("");
   const [mensajeCalendario, setMensajeCalendario] = useState("");
 
-  const [registrandoMerchant, setRegistrandoMerchant] = useState(false);
-const [mensajeMerchant, setMensajeMerchant] = useState("");
-  const [enviandoMerchant, setEnviandoMerchant] = useState(false);
-const [mensajeProductoMerchant, setMensajeProductoMerchant] = useState("");
   const [
   regenerandoId,
   setRegenerandoId,
@@ -757,7 +753,7 @@ const [mensajeProductoMerchant, setMensajeProductoMerchant] = useState("");
       );
     } finally {
       setGenerando(false);
-    }
+          }
   };
   
   // =======================================================
@@ -1086,111 +1082,6 @@ const aprobarContenido = async (
   }
 };
 
-  const registrarGoogleMerchant = async () => {
-  try {
-    setRegistrandoMerchant(true);
-    setMensajeMerchant("");
-
-    const respuesta = await fetch(
-      "/api/contenido-redes?accion=merchant-registrar-proyecto",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const datos = await leerRespuestaApi(respuesta);
-
-    if (!respuesta.ok) {
-      throw new Error(
-        datos?.error ||
-          datos?.detalle ||
-          "No se pudo registrar el proyecto en Google Merchant."
-      );
-    }
-
-    setMensajeMerchant(
-      datos?.mensaje ||
-        "Proyecto registrado correctamente en Google Merchant."
-    );
-  } catch (error) {
-    console.error("Error registrando Google Merchant:", error);
-
-    setMensajeMerchant(
-      `Error: ${
-        error?.message ||
-        "No se pudo registrar el proyecto en Google Merchant."
-      }`
-    );
-  } finally {
-    setRegistrandoMerchant(false);
-  }
-};
-
-  const enviarProductoPruebaMerchant = async () => {
-  const productoId =
-  producto1?.id ||
-  producto1?.productoId ||
-  producto2?.id ||
-  producto2?.productoId ||
-  "";
-
-  if (!productoId) {
-    setMensajeProductoMerchant(
-      "Error: selecciona primero un producto."
-    );
-    return;
-  }
-
-  try {
-    setEnviandoMerchant(true);
-    setMensajeProductoMerchant("");
-
-    const respuesta = await fetch(
-      "/api/contenido-redes?accion=merchant-probar-producto",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productoId,
-        }),
-      }
-    );
-
-    const datos = await leerRespuestaApi(respuesta);
-
-    if (!respuesta.ok) {
-      throw new Error(
-        datos?.error ||
-          "No se pudo enviar el producto a Google Merchant."
-      );
-    }
-
-    setMensajeProductoMerchant(
-      datos?.mensaje ||
-        "Producto enviado correctamente a Google Merchant."
-    );
-  } catch (error) {
-    console.error(
-      "Error enviando producto a Google Merchant:",
-      error
-    );
-
-    setMensajeProductoMerchant(
-      `Error: ${
-        error?.message ||
-        "No se pudo enviar el producto a Google Merchant."
-      }`
-    );
-  } finally {
-    setEnviandoMerchant(false);
-  }
-};
-
     // =======================================================
   // RENDER
   // =======================================================
@@ -1218,70 +1109,6 @@ const aprobarContenido = async (
           </p>
         </div>
 
-        {/* GOOGLE MERCHANT */}
-
-<section className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-  <div className="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h2 className="text-sm font-bold text-slate-900">
-        Google Merchant
-      </h2>
-
-      <p className="mt-1 text-xs text-slate-500">
-        Registra el proyecto antes de enviar el primer producto.
-      </p>
-    </div>
-
-    <button
-      type="button"
-      onClick={registrarGoogleMerchant}
-      disabled={registrandoMerchant}
-      className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
-    >
-      {registrandoMerchant
-        ? "Registrando..."
-        : "Registrar Google Merchant"}
-    </button>
-
-<button
-  type="button"
-  onClick={enviarProductoPruebaMerchant}
-  disabled={enviandoMerchant || !producto1}
-  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
->
-  {enviandoMerchant
-    ? "Enviando..."
-    : "Enviar producto de prueba"}
-</button>
-    
-  </div>
-
-  {mensajeMerchant ? (
-    <p
-      className={`mt-3 text-xs font-medium ${
-        mensajeMerchant.startsWith("Error:")
-          ? "text-red-600"
-          : "text-emerald-600"
-      }`}
-    >
-      {mensajeMerchant}
-    </p>
-  ) : null}
-
-{mensajeProductoMerchant ? (
-  <p
-    className={`mt-3 text-xs font-medium ${
-      mensajeProductoMerchant.startsWith("Error:")
-        ? "text-red-600"
-        : "text-emerald-600"
-    }`}
-  >
-    {mensajeProductoMerchant}
-  </p>
-  
-  ) : null}
-</section>
-
         {/* PRODUCTOS */}
 
         <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -1304,7 +1131,7 @@ const aprobarContenido = async (
           {cargandoProductos ? (
             <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-slate-50 py-8 text-xs text-slate-500">
               <Loader2
-                size={16}
+                                size={16}
                                 className="animate-spin"
               />
 
@@ -1681,7 +1508,7 @@ const aprobarContenido = async (
                               relacionAspecto="1:1"
                               publicacion={
                                 publicacion
-                              }
+                                                        }
                                                             onCambiar={(
                                 nuevaPublicacion
                               ) =>
@@ -2058,4 +1885,4 @@ const aprobarContenido = async (
       </div>
     </main>
   );
-}
+}      
