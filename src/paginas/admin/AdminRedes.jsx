@@ -1130,7 +1130,12 @@ const aprobarContenido = async (
 };
 
   const enviarProductoPruebaMerchant = async () => {
-  const productoId = producto1 || producto2;
+  const productoId =
+  producto1?.id ||
+  producto1?.productoId ||
+  producto2?.id ||
+  producto2?.productoId ||
+  "";
 
   if (!productoId) {
     setMensajeProductoMerchant(
