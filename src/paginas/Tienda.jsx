@@ -20,7 +20,6 @@ import { useNavigate } from "react-router-dom";
 import {
   MERCADO_ARGENTINA,
   MERCADO_INTERNACIONAL,
-  obtenerPrecioMercado,
   formatearPrecioMercado,
 } from "../utilidades/mercado";
 
@@ -85,6 +84,61 @@ const Tienda = () => {
   }, []);
 
   const productosTienda = productosMongo;
+
+  /* =======================================================
+     RELOJ GLOBAL — OFERTAS Y PRODUCTOS NUEVOS
+  ======================================================= */
+
+  const [ahora, setAhora] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalo = window.setInterval(() => {
+      setAhora(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalo);
+    };
+  }, []);
+
+  const DURACION_NUEVO_PRODUCTO_MS =
+    72 * 60 * 60 * 1000;
+
+  const obtenerTiempoRestante = (finalizaEn) => {
+    const final = new Date(finalizaEn).getTime();
+
+    if (!Number.isFinite(final)) {
+      return null;
+    }
+
+    const diferencia = final - ahora;
+
+    if (diferencia <= 0) {
+      return null;
+    }
+
+    const totalSegundos = Math.floor(
+      diferencia / 1000
+    );
+
+    const dias = Math.floor(
+      totalSegundos / 86400
+    );
+    const horas = Math.floor(
+      (totalSegundos % 86400) / 3600
+    );
+    const minutos = Math.floor(
+      (totalSegundos % 3600) / 60
+    );
+    const segundos = totalSegundos % 60;
+
+    return {
+      dias,
+      horas,
+      minutos,
+      segundos,
+    };
+  };
 
   /* =======================================================
      MERCADO
@@ -553,7 +607,6 @@ const Tienda = () => {
   categoriaActiva,
   productosTienda,
 ]);
-
   /* =======================================================
      PRODUCTOS VISIBLES
   ======================================================= */
@@ -758,19 +811,51 @@ const Tienda = () => {
                             ?.precioUSD
                         );
 
+                  const finalizaOferta =
+                    producto.ofertaLanzamiento
+                      ?.finalizaEn;
+
+                  const ofertaDentroDePlazo =
+                    finalizaOferta
+                      ? new Date(
+                          finalizaOferta
+                        ).getTime() > ahora
+                      : true;
+
                   const tieneOferta =
                     ofertaActual?.activa ===
                       true &&
                     Number.isFinite(
                       precioOferta
                     ) &&
-                    precioOferta > 0;
+                    precioOferta > 0 &&
+                    ofertaDentroDePlazo;
 
                   const precioFinal =
-                    obtenerPrecioMercado(
-                      producto,
-                      mercado
-                    );
+                    tieneOferta
+                      ? precioOferta
+                      : precioNormal;
+
+                  const tiempoRestante =
+                    tieneOferta &&
+                    finalizaOferta
+                      ? obtenerTiempoRestante(
+                          finalizaOferta
+                        )
+                      : null;
+
+                  const fechaCreacion =
+                    new Date(
+                      producto.creadoEn
+                    ).getTime();
+
+                  const esNuevoProducto =
+                    Number.isFinite(
+                      fechaCreacion
+                    ) &&
+                    ahora >= fechaCreacion &&
+                    ahora - fechaCreacion <
+                      DURACION_NUEVO_PRODUCTO_MS;
 
                   const ahorro =
                     tieneOferta
@@ -872,9 +957,9 @@ const Tienda = () => {
                               className="shrink-0"
                             />
 
-                            {
-                              t.descargaDigital
-                            }
+                            {esNuevoProducto
+                              ? "NUEVO PRODUCTO"
+                              : t.descargaDigital}
                           </span>
                         </div>
 
@@ -933,6 +1018,38 @@ const Tienda = () => {
                                     etiquetaOferta
                                   }
                                 </p>
+                              )}
+
+                              {tiempoRestante && (
+                                <div className="mt-2 inline-flex max-w-full items-center rounded-md border border-orange-200 bg-orange-50 px-2 py-1">
+                                  <span className="text-[10px] font-medium leading-4 text-orange-800 sm:text-[11px]">
+                                    Finaliza en{" "}
+                                    {tiempoRestante.dias >
+                                      0 &&
+                                      `${tiempoRestante.dias}d `}
+                                    {String(
+                                      tiempoRestante.horas
+                                    ).padStart(
+                                      2,
+                                      "0"
+                                    )}
+                                    h{" "}
+                                    {String(
+                                      tiempoRestante.minutos
+                                    ).padStart(
+                                      2,
+                                      "0"
+                                    )}
+                                    m{" "}
+                                    {String(
+                                      tiempoRestante.segundos
+                                    ).padStart(
+                                      2,
+                                      "0"
+                                    )}
+                                    s
+                                  </span>
+                                </div>
                               )}
                             </>
                           ) : (
