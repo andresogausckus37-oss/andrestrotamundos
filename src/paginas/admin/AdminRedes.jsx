@@ -427,6 +427,8 @@ const [
 
   const [registrandoMerchant, setRegistrandoMerchant] = useState(false);
 const [mensajeMerchant, setMensajeMerchant] = useState("");
+  const [enviandoMerchant, setEnviandoMerchant] = useState(false);
+const [mensajeProductoMerchant, setMensajeProductoMerchant] = useState("");
   const [
   regenerandoId,
   setRegenerandoId,
@@ -1127,6 +1129,63 @@ const aprobarContenido = async (
   }
 };
 
+  const enviarProductoPruebaMerchant = async () => {
+  const productoId = producto1 || producto2;
+
+  if (!productoId) {
+    setMensajeProductoMerchant(
+      "Error: selecciona primero un producto."
+    );
+    return;
+  }
+
+  try {
+    setEnviandoMerchant(true);
+    setMensajeProductoMerchant("");
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=merchant-probar-producto",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productoId,
+        }),
+      }
+    );
+
+    const datos = await leerRespuestaApi(respuesta);
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos?.error ||
+          "No se pudo enviar el producto a Google Merchant."
+      );
+    }
+
+    setMensajeProductoMerchant(
+      datos?.mensaje ||
+        "Producto enviado correctamente a Google Merchant."
+    );
+  } catch (error) {
+    console.error(
+      "Error enviando producto a Google Merchant:",
+      error
+    );
+
+    setMensajeProductoMerchant(
+      `Error: ${
+        error?.message ||
+        "No se pudo enviar el producto a Google Merchant."
+      }`
+    );
+  } finally {
+    setEnviandoMerchant(false);
+  }
+};
+
     // =======================================================
   // RENDER
   // =======================================================
@@ -1178,6 +1237,18 @@ const aprobarContenido = async (
         ? "Registrando..."
         : "Registrar Google Merchant"}
     </button>
+
+<button
+  type="button"
+  onClick={enviarProductoPruebaMerchant}
+  disabled={enviandoMerchant || !producto1}
+  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {enviandoMerchant
+    ? "Enviando..."
+    : "Enviar producto de prueba"}
+</button>
+    
   </div>
 
   {mensajeMerchant ? (
@@ -1190,6 +1261,18 @@ const aprobarContenido = async (
     >
       {mensajeMerchant}
     </p>
+
+{mensajeProductoMerchant ? (
+  <p
+    className={`mt-3 text-xs font-medium ${
+      mensajeProductoMerchant.startsWith("Error:")
+        ? "text-red-600"
+        : "text-emerald-600"
+    }`}
+  >
+    {mensajeProductoMerchant}
+  </p>
+  
   ) : null}
 </section>
 
