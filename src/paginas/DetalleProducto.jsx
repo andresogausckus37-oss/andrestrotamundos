@@ -31,6 +31,31 @@ import {
 
 const DESCUENTO_TRANSFERENCIA = 5;
 const CUOTAS_SIN_INTERES = 3;
+const DURACION_NUEVO_PRODUCTO_MS = 72 * 60 * 60 * 1000;
+
+const obtenerFechaOferta = (producto, mercado) => {
+  const fecha =
+    producto?.ofertaLanzamiento?.finalizaEn ||
+    (mercado === MERCADO_ARGENTINA
+      ? producto?.oferta?.finalizaEn
+      : producto?.ofertaUSD?.finalizaEn) ||
+    null;
+
+  if (!fecha) return null;
+
+  const tiempo = new Date(fecha).getTime();
+  return Number.isFinite(tiempo) ? tiempo : null;
+};
+
+const formatearTiempoRestante = (milisegundos) => {
+  const totalSegundos = Math.max(0, Math.floor(milisegundos / 1000));
+  const dias = Math.floor(totalSegundos / 86400);
+  const horas = Math.floor((totalSegundos % 86400) / 3600);
+  const minutos = Math.floor((totalSegundos % 3600) / 60);
+  const segundos = totalSegundos % 60;
+
+  return `${dias}d ${String(horas).padStart(2, "0")}h ${String(minutos).padStart(2, "0")}m ${String(segundos).padStart(2, "0")}s`;
+};
 
 const DetalleProducto = () => {
   const { id } = useParams();
@@ -50,6 +75,16 @@ const DetalleProducto = () => {
 
   const [cargandoProducto, setCargandoProducto] =
     useState(true);
+
+  const [ahora, setAhora] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalo = window.setInterval(() => {
+      setAhora(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalo);
+  }, []);
 
   /* =========================================================
      CARGAR PRODUCTO DESDE MONGODB
@@ -526,49 +561,65 @@ const DetalleProducto = () => {
       ? Number(producto.precioARS)
       : Number(producto.precioUSD);
 
-  const tieneOferta =
-    mercado === MERCADO_ARGENTINA
-      ? producto.oferta?.activa ===
-          true &&
-        Number(
-          producto.oferta
-            ?.precioARS
-        ) > 0
-      : producto.ofertaUSD
-          ?.activa === true &&
-        Number(
-          producto.ofertaUSD
-            ?.precioUSD
-        ) > 0;
+  const fechaFinOferta = obtenerFechaOferta(
+    producto,
+    mercado
+  );
 
-  const precioFinal =
-    obtenerPrecioMercado(
-      producto,
-      mercado
-    );
+  const ofertaNoVencida =
+    !fechaFinOferta || ahora < fechaFinOferta;
+
+  const tieneOfertaConfigurada =
+    mercado === MERCADO_ARGENTINA
+      ? producto.oferta?.activa === true &&
+        Number(producto.oferta?.precioARS) > 0
+      : producto.ofertaUSD?.activa === true &&
+        Number(producto.ofertaUSD?.precioUSD) > 0;
+
+  const tieneOferta =
+    tieneOfertaConfigurada && ofertaNoVencida;
+
+  const precioOferta =
+    mercado === MERCADO_ARGENTINA
+      ? Number(producto.oferta?.precioARS)
+      : Number(producto.ofertaUSD?.precioUSD);
+
+  const precioFinal = tieneOferta
+    ? precioOferta
+    : precioNormal;
+
+  const tiempoRestanteOferta =
+    tieneOferta && fechaFinOferta
+      ? Math.max(0, fechaFinOferta - ahora)
+      : 0;
+
+  const fechaCreacion = producto.creadoEn
+    ? new Date(producto.creadoEn).getTime()
+    : null;
+
+  const esNuevoProducto =
+    Number.isFinite(fechaCreacion) &&
+    ahora >= fechaCreacion &&
+    ahora - fechaCreacion < DURACION_NUEVO_PRODUCTO_MS;
 
   const ahorro =
     tieneOferta &&
     precioNormal > precioFinal
-      ? precioNormal -
-        precioFinal
+      ? precioNormal - precioFinal
       : 0;
 
   const descuento =
-    tieneOferta &&
+        tieneOferta &&
     precioNormal > 0
       ? Math.round(
-          (ahorro /
-            precioNormal) *
-            100
+          (ahorro / precioNormal) * 100
         )
       : 0;
 
   const etiquetaOferta =
     mercado === MERCADO_ARGENTINA
       ? producto.oferta?.etiqueta
-      : producto.ofertaUSD
-          ?.etiqueta;
+      : producto.ofertaUSD?.etiqueta;
 
   const precioTransferencia =
     mercado === MERCADO_ARGENTINA
@@ -824,6 +875,14 @@ const DetalleProducto = () => {
                         </span>
                       )}
                     </div>
+
+                    {fechaFinOferta && (
+                      <div className="mt-3 inline-flex rounded-md border border-orange-200 px-3 py-2">
+                        <p className="text-sm font-medium text-orange-700 sm:text-base">
+                          Finaliza en {formatearTiempoRestante(tiempoRestanteOferta)}
+                        </p>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <span className="text-3xl font-medium tracking-tight text-[#263238]">
@@ -1042,7 +1101,9 @@ const DetalleProducto = () => {
 
                   <div>
                     <p className="text-sm font-medium text-[#263238]">
-                      Descarga digital
+                      {esNuevoProducto
+                        ? "NUEVO PRODUCTO"
+                        : "Descarga digital"}
                     </p>
 
                     <p className="mt-1 text-xs font-normal leading-5 text-[#687477]">
@@ -1107,7 +1168,7 @@ const DetalleProducto = () => {
 
                             {/* ESTRELLAS */}
 
-                            <div className="flex text-[13px] leading-none text-amber-500">
+                             <div className="flex text-[13px] leading-none text-amber-500">
                               {[
                                 1,
                                 2,
