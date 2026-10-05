@@ -62,12 +62,7 @@ const normalizarGrupoImagenes = (grupo = {}) => {
 };
 
 const obtenerImagenes = (producto) => ({
-  // 1:1 → Facebook + Threads
-  cuadradas: normalizarGrupoImagenes(
-    producto.imagenes?.cuadradas
-  ),
-
-  // 4:5 → Instagram Feed / Carrusel
+  // 4:5 → Instagram Feed + Facebook + Threads
   feed: normalizarGrupoImagenes(
     producto.imagenes?.feed
   ),
@@ -1151,14 +1146,14 @@ export function generarContenidoRedesLocal(
     threads:
       generarThreads(
         producto,
-        imagenes.cuadradas
+        imagenes.feed
       ),
 
     facebook: {
       publicaciones:
         generarFacebook(
           producto,
-          imagenes.cuadradas
+          imagenes.feed
         ),
     },
   };
