@@ -913,23 +913,19 @@ const Tienda = () => {
                       <button
                         type="button"
                         onClick={() =>
-                          irAProducto(
-                            producto.id
-                          )
+                          irAProducto(producto.id)
                         }
-                        className="w-[42%] max-w-[170px] shrink-0 bg-[#F7FAFA] sm:w-[180px] object-contain sm:max-w-none"
+                        className="w-[42%] max-w-[180px] shrink-0 bg-[#F7FAFA] sm:w-[180px] sm:max-w-none"
                         aria-label={`${t.ver} ${nombreProducto}`}
                       >
-                        <div className="aspect-[4/5] w-full overflow-hidden object-contain bg-[#F7FAFA]">
+                        <div className="aspect-[4/5] w-full overflow-hidden bg-[#F7FAFA] flex items-center justify-center">
                           <img
                             src={
                               producto.imagenes
                                 ?.portada
                             }
-                            alt={
-                              nombreProducto
-                            }
-                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                            alt={nombreProducto}
+                            className="h-full w-full object-contain object-center transition duration-300 group-hover:scale-[1.02]"
                           />
                         </div>
                       </button>
