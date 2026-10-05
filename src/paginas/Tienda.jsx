@@ -986,7 +986,7 @@ const Tienda = () => {
 
                         {/* PRECIO */}
 
-                        <div className="mt-auto pt-3">
+                        <div className="pt-3">
                           {tieneOferta ? (
                             <>
                               {/* PRECIO + ANTERIOR + DESCUENTO */}
