@@ -211,6 +211,49 @@ export default function AdminProductos() {
             <Plus size={13} />
             Nuevo producto
           </button>
+
+          <button
+  type="button"
+  onClick={async () => {
+    try {
+      const respuesta = await fetch(
+        "/api/contenido-redes?accion=merchant-probar-producto",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            productoId:
+              "25-sopas-de-letras-para-ninos-7-anos-nivel-principiante",
+          }),
+        }
+      );
+
+      const datos = await respuesta.json();
+
+      alert(
+        JSON.stringify(
+          {
+            status: respuesta.status,
+            ...datos,
+          },
+          null,
+          2
+        )
+      );
+    } catch (error) {
+      alert(
+        error?.message ||
+          "Error enviando producto a Merchant Center."
+      );
+    }
+  }}
+  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
+>
+  Probar Merchant
+</button>
         </div>
 
         {/* ACTUALIZAR */}
