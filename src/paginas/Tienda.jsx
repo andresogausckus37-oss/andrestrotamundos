@@ -609,7 +609,7 @@ const Tienda = () => {
     );
   }, [
   filtroActivo,
-  categoriaActiva,
+      categoriaActiva,
   productosTienda,
 ]);
   /* =======================================================
@@ -618,7 +618,7 @@ const Tienda = () => {
 
   const productosMostrados =
     mostrarTodos
-      ? productosFiltrados
+        ? productosFiltrados
       : productosFiltrados.slice(0, 5);
 
   /* =======================================================
@@ -784,7 +784,7 @@ const Tienda = () => {
           {/* PRODUCTOS */}
 
           {productosMostrados.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
               {productosMostrados.map(
                 (producto) => {
                   const esArgentina =
@@ -906,7 +906,7 @@ const Tienda = () => {
                   return (
                     <article
                       key={producto.id}
-                      className="group flex flex-col overflow-hidden rounded-md border border-[#DCE5E4] bg-white transition-colors duration-200 hover:border-[#8EAAAC]"
+                      className="group flex w-full overflow-hidden rounded-md border border-[#DCE5E4] bg-white transition-colors duration-200 hover:border-[#8EAAAC]"
                     >
                       {/* IMAGEN */}
 
@@ -917,10 +917,10 @@ const Tienda = () => {
                             producto.id
                           )
                         }
-                        className="w-full bg-[#F7FAFA]"
+                        className="w-[42%] max-w-[170px] shrink-0 bg-[#F7FAFA] sm:w-[180px] object-contain sm:max-w-none"
                         aria-label={`${t.ver} ${nombreProducto}`}
                       >
-                        <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-[#F7FAFA]">
+                        <div className="aspect-[4/5] w-full overflow-hidden object-contain bg-[#F7FAFA]">
                           <img
                             src={
                               producto.imagenes
@@ -936,11 +936,11 @@ const Tienda = () => {
 
                       {/* INFORMACIÓN */}
 
-                      <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-4">
+                      <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-3">
 
                         {/* BADGES */}
 
-                        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                        <div className="mb-1 flex flex-wrap items-center gap-1">
                           <span className="inline-flex items-center gap-1 rounded-md border border-[#D9E6E7] bg-[#EEF5F5] px-1 py-0.5 text-[8px] font-medium uppercase tracking-wide text-[#285861] sm:px-2 sm:py-1 sm:text-[10px]">
                             <Download
                               size={10}
@@ -970,13 +970,13 @@ const Tienda = () => {
 
                         {/* TÍTULO */}
 
-                        <h3 className="line-clamp-2 text-[14px] font-normal leading-5 text-[#263238] sm:text-[15px]">
+                        <h3 className="line-clamp-2 text-[14px] font-normal leading-[1.15rem] text-[#263238] sm:text-[15px] sm:leading-5">
                           {nombreProducto}
                         </h3>
 
                         {/* RESEÑAS */}
 
-                        <div className="mt-1.5 min-h-[16px] origin-left scale-[0.9]">
+                        <div className="mt-0.5 min-h-[14px] origin-left scale-[0.85]">
                           <CalificacionProducto
                             productoId={
                               producto.id
@@ -986,13 +986,13 @@ const Tienda = () => {
 
                         {/* PRECIO */}
 
-                        <div className="pt-3">
+                        <div className="flex flex-1 flex-col pt-1.5">
                           {tieneOferta ? (
                             <>
                               {/* PRECIO + ANTERIOR + DESCUENTO */}
 
-                              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                                <p className="text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
+                              <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                                <p className="text-base font-medium tracking-tight text-[#263238] sm:text-xl">
                                   {formatearPrecio(
                                     precioFinal
                                   )}
@@ -1018,7 +1018,7 @@ const Tienda = () => {
                               </div>
 
                               {etiquetaOferta && (
-                                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-orange-700">
+                                <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.06em] text-orange-700">
                                   {
                                     etiquetaOferta
                                   }
@@ -1026,7 +1026,7 @@ const Tienda = () => {
                               )}
 
                               {tiempoRestante && (
-                                <div className="mt-2 inline-flex max-w-full items-center rounded-md border border-black bg-white px-2 py-1">
+                                <div className="mt-1 inline-flex max-w-full items-center rounded-md border border-black bg-white px-1.5 py-0.5">
   <span className="text-[10px] font-medium leading-4 text-black sm:text-[11px]">
                                     Finaliza en{" "}
                                     {tiempoRestante.dias >
@@ -1058,21 +1058,22 @@ const Tienda = () => {
                               )}
                             </>
                           ) : (
-                            <p className="text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
+                            <p className="text-base font-medium tracking-tight text-[#263238] sm:text-xl">
                               {formatearPrecio(
                                 precioFinal
                               )}
                             </p>
                           )}
 
-                          {/* OPCIONES DE PAGO */}
+                          <div className="mt-auto pt-1.5">
+                            {/* OPCIONES DE PAGO */}
 
-                          {esArgentina && (
-                            <div className="mt-3 border-t border-[#E3E8E7] pt-2.5">
+                            {esArgentina && (
+                            <div className="border-t border-[#E3E8E7] pt-1.5">
 
                               {/* TRANSFERENCIA */}
 
-                              <div className="flex items-start gap-2">
+                              <div className="flex items-start gap-1.5">
                                 <Landmark
                                   size={14}
                                   strokeWidth={
@@ -1081,7 +1082,7 @@ const Tienda = () => {
                                   className="mt-0.5 shrink-0 text-[#285861]"
                                 />
 
-                                <p className="text-[11px] font-normal leading-4 text-[#687477] sm:text-xs">
+                                <p className="text-[10px] font-normal leading-[0.9rem] text-[#687477] sm:text-[11px] sm:leading-4">
                                   <span className="font-medium text-[#285861]">
                                     {
                                       DESCUENTO_TRANSFERENCIA
@@ -1101,7 +1102,7 @@ const Tienda = () => {
 
                               {/* CUOTAS */}
 
-                              <div className="mt-1.5 flex items-start gap-2">
+                              <div className="mt-1 flex items-start gap-1.5">
                                 <CreditCard
                                   size={14}
                                   strokeWidth={
@@ -1110,7 +1111,7 @@ const Tienda = () => {
                                   className="mt-0.5 shrink-0 text-[#B59672]"
                                 />
 
-                                <p className="text-[11px] font-normal leading-4 text-[#687477] sm:text-xs">
+                                <p className="text-[10px] font-normal leading-[0.9rem] text-[#687477] sm:text-[11px] sm:leading-4">
                                   <span className="font-medium text-[#263238]">
                                     {
                                       CUOTAS_SIN_INTERES
@@ -1126,95 +1127,97 @@ const Tienda = () => {
                             </div>
                           )}
 
-                          {/* BOTÓN */}
+                              {/* BOTÓN */}
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              irAProducto(
-                                producto.id
-                              )
-                            }
-                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-3 py-2.5 text-xs font-medium text-white transition-colors hover:bg-[#204850] sm:text-sm"
-                          >
-                            <ShoppingBag
-                              size={14}
-                              strokeWidth={
-                                1.8
-                              }
-                              className="shrink-0"
-                            />
+                                                        <button
+                                                          type="button"
+                                                          onClick={() =>
+                                                            irAProducto(
+                                                              producto.id
+                                                            )
+                                                          }
+                                                          className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-[#285861] px-2.5 py-1.5 text-[10px] font-medium text-white transition-colors hover:bg-[#204850] sm:px-3 sm:py-2 sm:text-xs"
+                                                        >
+                                                          <ShoppingBag
+                                                            size={14}
+                                                            strokeWidth={
+                                                              1.8
+                                                            }
+                                                            className="shrink-0"
+                                                          />
 
-                            {t.verProducto}
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                }
-              )}
-            </div>
-          ) : (
-            /* SIN PRODUCTOS */
+                                                          {t.verProducto}
+                                                        </button>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  </article>
+                                                );
+                                              }
+                                            )}
+                                          </div>
+                                        ) : (
+                                          /* SIN PRODUCTOS */
 
-            <div className="mx-auto max-w-xl rounded-md border border-dashed border-[#D6DFDE] bg-[#F7FAFA] px-5 py-10 text-center">
-              <Home
-                size={30}
-                strokeWidth={1.7}
-                className="mx-auto text-[#8BA0A1]"
-              />
+                                          <div className="mx-auto max-w-xl rounded-md border border-dashed border-[#D6DFDE] bg-[#F7FAFA] px-5 py-10 text-center">
+                                            <Home
+                                              size={30}
+                                              strokeWidth={1.7}
+                                              className="mx-auto text-[#8BA0A1]"
+                                            />
 
-              <p className="mt-3 text-sm font-normal leading-6 text-[#687477]">
-                {t.proximamente}
-              </p>
-            </div>
-          )}
+                                            <p className="mt-3 text-sm font-normal leading-6 text-[#687477]">
+                                              {t.proximamente}
+                                            </p>
+                                          </div>
+                                        )}
 
-          {/* VER TODOS / VER MENOS */}
+                                        {/* VER TODOS / VER MENOS */}
 
-          {productosFiltrados.length >
-            3 && (
-            <div className="mt-7 flex justify-center">
-              <button
-                type="button"
-                onClick={() =>
-                  setMostrarTodos(
-                    (actual) =>
-                      !actual
-                  )
-                }
-                className="inline-flex min-w-[160px] items-center justify-center gap-2 rounded-md border border-[#B9CCCD] bg-white px-5 py-2.5 text-xs font-medium text-[#285861] transition-colors hover:border-[#7FA0A3] hover:bg-[#EEF5F5] sm:text-sm"
-              >
-                {mostrarTodos ? (
-                  <>
-                    <ChevronUp
-                      size={16}
-                      strokeWidth={
-                        1.8
-                      }
-                    />
+                                        {productosFiltrados.length >
+                                          3 && (
+                                          <div className="mt-7 flex justify-center">
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                setMostrarTodos(
+                                                  (actual) =>
+                                                    !actual
+                                                )
+                                              }
+                                              className="inline-flex min-w-[160px] items-center justify-center gap-2 rounded-md border border-[#B9CCCD] bg-white px-5 py-2.5 text-xs font-medium text-[#285861] transition-colors hover:border-[#7FA0A3] hover:bg-[#EEF5F5] sm:text-sm"
+                                            >
+                                              {mostrarTodos ? (
+                                                <>
+                                                  <ChevronUp
+                                                    size={16}
+                                                    strokeWidth={
+                                                      1.8
+                                                    }
+                                                  />
 
-                    {t.verMenos}
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown
-                      size={16}
-                      strokeWidth={
-                        1.8
-                      }
-                    />
+                                                  {t.verMenos}
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <ChevronDown
+                                                    size={16}
+                                                    strokeWidth={
+                                                      1.8
+                                                    }
+                                                  />
 
-                    {t.verTodos}
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-    </main>
-  );
-};
+                                                  {t.verTodos}
+                                                </>
+                                              )}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </section>
+                                  </main>
+                                );
+                              };
 
-export default Tienda;
+                              export default Tienda;
+                         
