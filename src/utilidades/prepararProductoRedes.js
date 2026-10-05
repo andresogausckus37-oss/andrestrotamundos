@@ -38,10 +38,11 @@ export function prepararProductoRedes(producto) {
 
     imagenes: {
       // ==========================================
-      // CUADRADAS 1:1
-      // Tienda + Facebook + Threads
+      // COMERCIALES 4:5
+      // Tienda + Instagram Feed + Facebook + Threads
+      // 1080 × 1350
       // ==========================================
-      cuadradas: {
+      feed: {
         presentacion:
           producto.imagenes?.portada || "",
 
@@ -55,28 +56,6 @@ export function prepararProductoRedes(producto) {
         comoFunciona:
           producto.imagenes
             ?.previewsIndividuales?.[1] || "",
-      },
-
-      // ==========================================
-      // INSTAGRAM FEED / CARRUSEL 4:5
-      // 1080 × 1350
-      // ==========================================
-      feed: {
-        presentacion:
-          producto.imagenes?.redes
-            ?.feed?.presentacion || "",
-
-        incluye:
-          producto.imagenes?.redes
-            ?.feed?.incluye || "",
-
-        beneficios:
-          producto.imagenes?.redes
-            ?.feed?.beneficios || "",
-
-        comoFunciona:
-          producto.imagenes?.redes
-            ?.feed?.comoFunciona || "",
       },
 
       // ==========================================
