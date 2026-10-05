@@ -745,7 +745,7 @@ const Tienda = () => {
                         onClick={() =>
                           cambiarCategoria(
                             categoria.id
-                          )
+                                                      )
                         }
                         className={`rounded-md border px-3 py-1.5 text-[10px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-xs ${
                           activa
