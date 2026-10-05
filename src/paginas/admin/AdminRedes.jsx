@@ -1505,7 +1505,7 @@ const aprobarContenido = async (
                                 indice +
                                 1
                               }`}
-                              relacionAspecto="1:1"
+                              relacionAspecto="4:5"
                               publicacion={
                                 publicacion
                                                         }
@@ -1545,7 +1545,7 @@ const aprobarContenido = async (
                                 indice +
                                 1
                               }`}
-                              relacionAspecto="1:1"
+                              relacionAspecto="4:5"
                               publicacion={
                                 publicacion
                               }
