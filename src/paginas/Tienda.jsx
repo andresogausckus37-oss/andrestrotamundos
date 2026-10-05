@@ -909,21 +909,18 @@ const Tienda = () => {
                       className="group flex w-full overflow-hidden rounded-md border border-[#DCE5E4] bg-white transition-colors duration-200 hover:border-[#8EAAAC]"
                     >
                       {/* IMAGEN */}
-
                       <button
                         type="button"
-                        onClick={() =>
-                          irAProducto(producto.id)
-                        }
-                        className="w-[40%] max-w-[190px] shrink-0 self-stretch sm:w-[180px] sm:max-w-none"
+                        onClick={() => irAProducto(producto.id)}
+                        className="w-[44%] shrink-0 self-start sm:w-[200px]"
                         aria-label={`${t.ver} ${nombreProducto}`}
                       >
-                        <div className="w-full h-full overflow-hidden bg-white flex items-center justify-center">
+                        <div className="aspect-[4/5] w-full overflow-hidden bg-white">
                           <img
-  src={producto.imagenes?.portada}
-  alt={nombreProducto}
-  className="w-full h-full object-contain object-center transition duration-300 group-hover:scale-[1.02]"
-/>
+                            src={producto.imagenes?.portada}
+                            alt={nombreProducto}
+                            className="h-full w-full object-contain object-center transition duration-300 group-hover:scale-[1.02]"
+                          />
                         </div>
                       </button>
 
