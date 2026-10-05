@@ -2955,8 +2955,8 @@ function obtenerTextoProducto(producto, claves) {
 
 function obtenerImagenMerchant(producto) {
   const candidatos = [
-    producto?.imagenes?.redes?.feed?.presentacion,
     producto?.imagenes?.portada,
+    producto?.imagenes?.redes?.feed?.presentacion,
     producto?.imagenes?.preview,
     producto?.imagen,
     producto?.imageUrl,
