@@ -1021,8 +1021,8 @@ const Tienda = () => {
                               )}
 
                               {tiempoRestante && (
-                                <div className="mt-2 inline-flex max-w-full items-center rounded-md border border-orange-200 bg-orange-50 px-2 py-1">
-                                  <span className="text-[10px] font-medium leading-4 text-orange-800 sm:text-[11px]">
+                                <div className="mt-2 inline-flex max-w-full items-center rounded-md border border-black bg-white px-2 py-1">
+  <span className="text-[10px] font-medium leading-4 text-black sm:text-[11px]">
                                     Finaliza en{" "}
                                     {tiempoRestante.dias >
                                       0 &&
