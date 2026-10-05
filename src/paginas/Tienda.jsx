@@ -963,7 +963,7 @@ const Tienda = () => {
                             />
 
                             {esNuevoProducto
-                              ? "NUEVO PRODUCTO"
+                              ? "¡NUEVO!"
                               : t.descargaDigital}
                           </span>
                         </div>
