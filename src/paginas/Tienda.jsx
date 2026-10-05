@@ -915,7 +915,7 @@ const Tienda = () => {
                         onClick={() =>
                           irAProducto(producto.id)
                         }
-                        className="w-[42%] max-w-[170px] shrink-0 self-stretch sm:w-[180px] sm:max-w-none"
+                        className="w-[46%] max-w-[190px] shrink-0 self-stretch sm:w-[180px] sm:max-w-none"
                         aria-label={`${t.ver} ${nombreProducto}`}
                       >
                         <div className="w-full h-full overflow-hidden bg-white flex items-center justify-center">
