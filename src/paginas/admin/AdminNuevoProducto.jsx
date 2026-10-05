@@ -71,7 +71,7 @@ const NIVELES = [
   "Dificultad progresiva",
 ];
 
-const ANCHO_OBJETIVO = 794;
+const ANCHO_OBJETIVO = 1080;
 const ANCHO_REDES = 1080;
 const CALIDAD_WEBP = 0.82;
 
@@ -82,12 +82,6 @@ const NOMBRES_IMAGENES = [
   "Imagen 4 — Cómo funciona",
 ];
 
-const NOMBRES_IMAGENES_FEED = [
-  "Feed 1 — Presentación",
-  "Feed 2 — Qué incluye",
-  "Feed 3 — Beneficios",
-  "Feed 4 — Cómo funciona",
-];
 
 const NOMBRES_IMAGENES_VERTICAL = [
   "Vertical 1 — Presentación",
@@ -586,7 +580,7 @@ function PreviewActividadYSolucion({
           Este archivo tiene una sola página, por eso se muestra únicamente la actividad.
         </p>
       )}
-    </div>
+          </div>
   );
 }
 
@@ -662,12 +656,6 @@ export default function AdminNuevoProducto() {
     Array(4).fill(null)
   );
 
-  const [
-    imagenesFeed,
-    setImagenesFeed,
-  ] = useState(
-    Array(4).fill(null)
-  );
 
   const [
     imagenesVertical,
@@ -912,9 +900,7 @@ export default function AdminNuevoProducto() {
       }
 
       const setter =
-        tipo === "feed"
-          ? setImagenesFeed
-          : setImagenesVertical;
+        setImagenesVertical;
 
       try {
         setProcesandoImagen(true);
@@ -956,9 +942,7 @@ export default function AdminNuevoProducto() {
     tipo
   ) => {
     const setter =
-      tipo === "feed"
-        ? setImagenesFeed
-        : setImagenesVertical;
+      setImagenesVertical;
 
     setter((actuales) => {
       const nuevas = [...actuales];
@@ -1178,7 +1162,7 @@ export default function AdminNuevoProducto() {
       );
 
     const categoria =
-      obtenerNombreCategoria(
+            obtenerNombreCategoria(
         formulario.categoria
       );
 
@@ -1570,16 +1554,6 @@ export default function AdminNuevoProducto() {
         return;
       }
 
-      if (
-        imagenesFeed.some(
-          (imagen) => !imagen
-        )
-      ) {
-        alert(
-          "Falta seleccionar alguna de las 4 imágenes 4:5 para Instagram Feed."
-        );
-        return;
-      }
 
       if (
         imagenesVertical.some(
@@ -1626,21 +1600,6 @@ export default function AdminNuevoProducto() {
           urls.push(url);
         }
 
-        const urlsFeed = [];
-
-        for (
-          let i = 0;
-          i < imagenesFeed.length;
-          i += 1
-        ) {
-          const url =
-            await subirImagen(
-              imagenesFeed[i],
-              i + 5
-            );
-
-          urlsFeed.push(url);
-        }
 
         const urlsVertical = [];
 
@@ -1652,7 +1611,7 @@ export default function AdminNuevoProducto() {
           const url =
             await subirImagen(
               imagenesVertical[i],
-              i + 9
+              i + 5
             );
 
           urlsVertical.push(url);
@@ -1740,13 +1699,13 @@ if (videoReel) {
               redes: {
                 feed: {
                   presentacion:
-                    urlsFeed[0],
+                    urls[0],
                   incluye:
-                    urlsFeed[1],
+                    urls[1],
                   beneficios:
-                    urlsFeed[2],
+                    urls[2],
                   comoFunciona:
-                    urlsFeed[3],
+                    urls[3],
                 },
 
                 vertical: {
@@ -1784,8 +1743,7 @@ videoReel:
                 "Content-Type":
                   "application/json",
               },
-
-              body:
+                            body:
                 JSON.stringify(
                   productoConImagenes
                 ),
@@ -2336,7 +2294,7 @@ videoReel:
 
         <Seccion titulo="Imágenes del producto">
           <p className="text-xs leading-5 text-slate-500">
-            Seleccioná las 4 imágenes comerciales de la tienda. Se optimizan automáticamente a WebP, con un ancho máximo de 794 px.
+            Selecciona las 4 imágenes comerciales en formato 4:5 (1080 × 1350 px). Se utilizarán en la tienda, Instagram Feed, Facebook y Threads.
           </p>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -2357,7 +2315,7 @@ videoReel:
                       indice
                     ]
                   }
-                  formato="cuadrado"
+                  formato="feed"
                   deshabilitado={
                     procesandoImagen ||
                     guardando
@@ -2367,7 +2325,7 @@ videoReel:
                   ) =>
                     seleccionarImagen(
                       indice,
-                      archivo
+                                            archivo
                     )
                   }
                   onEliminar={() =>
@@ -2378,33 +2336,6 @@ videoReel:
                 />
               )
             )}
-          </div>
-
-          <div className="mt-6 border-t border-slate-200 pt-5">
-            <h3 className="text-sm font-bold text-slate-900">
-              Instagram Feed — 4:5
-            </h3>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
-              Selecciona las 4 variantes de 1080 × 1350 px. Se conservan hasta 1080 px de ancho y se convierten a WebP.
-            </p>
-
-            <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {NOMBRES_IMAGENES_FEED.map((titulo, indice) => (
-                <ImagenProducto
-                  key={titulo}
-                  titulo={titulo}
-                  imagen={imagenesFeed[indice]}
-                  formato="feed"
-                  deshabilitado={procesandoImagen || guardando}
-                  onSeleccionar={(archivo) =>
-                    seleccionarImagenRed(indice, archivo, "feed")
-                  }
-                  onEliminar={() =>
-                    eliminarImagenRed(indice, "feed")
-                  }
-                />
-              ))}
-            </div>
           </div>
 
           <div className="mt-6 border-t border-slate-200 pt-5">
