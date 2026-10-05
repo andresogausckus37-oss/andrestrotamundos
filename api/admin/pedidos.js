@@ -485,7 +485,7 @@ const crearProducto = async (req, res) => {
 
     const finalizaEn = new Date(
   fecha.getTime() +
-    5 * 60 * 1000
+    duracionDias * 24 * 60 * 60 * 1000
 );
 
     ofertaLanzamiento = {
