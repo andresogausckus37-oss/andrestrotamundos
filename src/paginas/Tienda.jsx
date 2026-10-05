@@ -912,7 +912,7 @@ const Tienda = () => {
                       <button
                         type="button"
                         onClick={() => irAProducto(producto.id)}
-                        className="w-[44%] shrink-0 self-start sm:w-[200px]"
+                        className="w-[46%] shrink-0 self-start sm:w-[200px]"
                         aria-label={`${t.ver} ${nombreProducto}`}
                       >
                         <div className="aspect-[4/5] w-full overflow-hidden bg-white">
