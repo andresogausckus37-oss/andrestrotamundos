@@ -877,8 +877,8 @@ const DetalleProducto = () => {
                     </div>
 
                     {fechaFinOferta && (
-                      <div className="mt-3 inline-flex rounded-md border border-orange-200 px-3 py-2">
-                        <p className="text-sm font-medium text-orange-700 sm:text-base">
+                      <div className="mt-3 inline-flex rounded-md border border-black px-3 py-2">
+                        <p className="text-sm font-medium text-black sm:text-base">
                           Finaliza en {formatearTiempoRestante(tiempoRestanteOferta)}
                         </p>
                       </div>
@@ -1100,11 +1100,7 @@ const DetalleProducto = () => {
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-[#263238]">
-                      {esNuevoProducto
-                        ? "NUEVO PRODUCTO"
-                        : "Descarga digital"}
-                    </p>
+                    
 
                     <p className="mt-1 text-xs font-normal leading-5 text-[#687477]">
                       Descarga automática luego de

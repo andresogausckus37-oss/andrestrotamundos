@@ -807,7 +807,7 @@ const promedioVentaCruzada =
 
         {productoVentaCruzada && (
           <section className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-4">
-            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.12em] text-orange-700">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-orange-700">
               También te recomendamos
             </p>
 
@@ -882,10 +882,10 @@ const promedioVentaCruzada =
                 {tiempoRestanteVentaCruzada && (
                   <div className="mt-2 rounded-md border border-orange-300 bg-white px-2.5 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-orange-700">
-                      Oferta por tiempo limitado
+                      ¡Oferta limitada!
                     </p>
 
-                    <p className="mt-0.5 text-[12px] font-semibold leading-5 text-orange-900">
+                    <p className="mt-0.5 text-[11px] font-semibold leading-5 text-orange-900">
                       Finaliza en{" "}
                       {tiempoRestanteVentaCruzada.dias >
                         0 &&
@@ -905,7 +905,7 @@ const promedioVentaCruzada =
                     </p>
 
                     <p className="mt-0.5 text-[9px] font-medium leading-4 text-orange-700">
-                      Agrégalo ahora antes de que finalice la oferta.
+                      Agrégalo ahoraantes de que finalice la oferta.
                     </p>
                   </div>
                 )}
