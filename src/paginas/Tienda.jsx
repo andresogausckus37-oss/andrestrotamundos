@@ -915,10 +915,10 @@ const Tienda = () => {
                         onClick={() =>
                           irAProducto(producto.id)
                         }
-                        className="w-[42%] max-w-[180px] shrink-0 bg-[#F7FAFA] sm:w-[180px] sm:max-w-none"
+                        className="w-[40%] max-w-[180px] shrink-0 bg-[#F7FAFA] sm:w-[180px] sm:max-w-none"
                         aria-label={`${t.ver} ${nombreProducto}`}
                       >
-                        <div className="aspect-[4/5] w-full overflow-hidden bg-[#F7FAFA] flex items-center justify-center">
+                        <div className="aspect-[4/4] w-full overflow-hidden bg-[#F7FAFA] flex items-center justify-center">
                           <img
                             src={
                               producto.imagenes
@@ -936,32 +936,7 @@ const Tienda = () => {
 
                         {/* BADGES */}
 
-                        <div className="mb-1 flex flex-wrap items-center gap-1">
-                          <span className="inline-flex items-center gap-1 rounded-md border border-[#D9E6E7] bg-[#EEF5F5] px-1 py-0.5 text-[8px] font-medium uppercase tracking-wide text-[#285861] sm:px-2 sm:py-1 sm:text-[10px]">
-                            <Download
-                              size={10}
-                              strokeWidth={
-                                1.8
-                              }
-                              className="shrink-0"
-                            />
-
-                            {t.pdf}
-                          </span>
-
-                          <span className="inline-flex items-center gap-1 rounded-md border border-[#E4DDD3] bg-[#F7F2EB] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-[#756451] sm:px-2 sm:py-1 sm:text-[10px]">
-                            <FileDown
-                              size={10}
-                              strokeWidth={
-                                1.8
-                              }
-                              className="shrink-0"
-                            />
-
-                            {esNuevoProducto
-                              ? "¡NUEVO!"
-                              : t.descargaDigital}
-                          </span>
+                        <div className="mb-1 flex flex-wrap items-center gap-1">                        
                         </div>
 
                         {/* TÍTULO */}
