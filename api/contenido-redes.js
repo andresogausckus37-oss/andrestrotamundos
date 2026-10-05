@@ -3059,9 +3059,9 @@ function crearEntradaMerchant(producto) {
       : `${URL_BASE}/producto/${encodeURIComponent(productoId)}`;
 
   return {
-    offerId: productoId,
-    contentLanguage: "es",
-    feedLabel: "AR",
+  offerId: productoId.slice(0, 50),
+  contentLanguage: "es",
+  feedLabel: "AR",
     productAttributes: {
       title: titulo.slice(0, 150),
       description: descripcion.slice(0, 5000),
