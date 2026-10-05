@@ -66,11 +66,29 @@ const obtenerAccessToken = async () => {
 ===================================================== */
 
 const obtenerPrecioFinalUSD = (producto) => {
+  const precioNormal =
+    Number(producto.precioUSD);
+
+  const precioOferta =
+    Number(producto.ofertaUSD?.precioUSD);
+
+  const finalizaEn =
+    producto.ofertaLanzamiento?.finalizaEn;
+
+  const ofertaVigente =
+    producto.ofertaUSD?.activa === true &&
+    Number.isFinite(precioOferta) &&
+    precioOferta > 0 &&
+    (
+      !finalizaEn ||
+      new Date(finalizaEn).getTime() >
+        Date.now()
+    );
+
   const precio =
-    producto.ofertaUSD?.activa &&
-    Number(producto.ofertaUSD.precioUSD) > 0
-      ? Number(producto.ofertaUSD.precioUSD)
-      : Number(producto.precioUSD);
+    ofertaVigente
+      ? precioOferta
+      : precioNormal;
 
   if (
     !Number.isFinite(precio) ||

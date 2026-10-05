@@ -1410,6 +1410,17 @@ export default function AdminNuevoProducto() {
           : 0,
     },
 
+    ofertaLanzamiento: {
+  activa:
+    formulario.ofertaActiva ||
+    formulario.ofertaUSDActiva,
+
+  duracionDias:
+    Number(
+      formulario.duracionOfertaDias
+    ) || 3,
+},
+
     imagenes: {
       portada: "",
       preview: "",

@@ -8,11 +8,29 @@ import { enviarNotificacionTelegram } from "../../lib/telegram.js";
 ===================================================== */
 
 const obtenerPrecioFinal = (producto) => {
+  const precioNormal =
+    Number(producto.precioARS);
+
+  const precioOferta =
+    Number(producto.oferta?.precioARS);
+
+  const finalizaEn =
+    producto.ofertaLanzamiento?.finalizaEn;
+
+  const ofertaVigente =
+    producto.oferta?.activa === true &&
+    Number.isFinite(precioOferta) &&
+    precioOferta > 0 &&
+    (
+      !finalizaEn ||
+      new Date(finalizaEn).getTime() >
+        Date.now()
+    );
+
   const precio =
-    producto.oferta?.activa &&
-    Number(producto.oferta.precioARS) > 0
-      ? Number(producto.oferta.precioARS)
-      : Number(producto.precioARS);
+    ofertaVigente
+      ? precioOferta
+      : precioNormal;
 
   if (
     !Number.isFinite(precio) ||
