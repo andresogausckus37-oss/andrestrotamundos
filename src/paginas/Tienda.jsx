@@ -915,18 +915,15 @@ const Tienda = () => {
                         onClick={() =>
                           irAProducto(producto.id)
                         }
-                        className="w-[42%] max-w-[170px] shrink-0 sm:w-[180px] sm:max-w-none"
+                        className="w-[42%] max-w-[170px] shrink-0 self-stretch sm:w-[180px] sm:max-w-none"
                         aria-label={`${t.ver} ${nombreProducto}`}
                       >
-                        <div className="aspect-[4/5] w-full overflow-hidden bg-white flex items-center justify-center">
+                        <div className="w-full h-full overflow-hidden bg-white flex items-center justify-center">
                           <img
-                            src={
-                              producto.imagenes
-                                ?.portada
-                            }
-                            alt={nombreProducto}
-                            className="h-full w-full object-contain object-center transition duration-300 group-hover:scale-[1.02]"
-                          />
+  src={producto.imagenes?.portada}
+  alt={nombreProducto}
+  className="w-full h-full object-contain object-center transition duration-300 group-hover:scale-[1.02]"
+/>
                         </div>
                       </button>
 
