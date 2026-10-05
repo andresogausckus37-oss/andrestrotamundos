@@ -355,6 +355,7 @@ const Tienda = () => {
       "Encontrar las diferencias",
     colorear: "Colorear",
     crucigramas: "Crucigramas",
+    rompecabezas: "Rompecabezas",
 
     mascotas: "Mascotas",
     organizacion: "Organización",
@@ -474,13 +475,17 @@ const Tienda = () => {
   const categorias = {
     juegos: [
       {
-        id: "laberintos",
-        nombre: t.laberintos,
-      },
-      {
-        id: "sopa-de-letras",
-        nombre: t.sopaLetras,
-      },
+  id: "laberintos",
+  nombre: t.laberintos,
+},
+{
+  id: "rompecabezas",
+  nombre: t.rompecabezas,
+},
+{
+  id: "sopa-de-letras",
+  nombre: t.sopaLetras,
+},
 
       {
         id: "unir-los-puntos",
