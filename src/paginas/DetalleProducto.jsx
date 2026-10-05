@@ -722,8 +722,8 @@ const DetalleProducto = () => {
 
               {/* IMAGEN PRINCIPAL */}
 
-              <div className="relative mx-auto max-w-[420px] overflow-hidden rounded-md border border-[#DCE5E4] bg-white">
-                <div className="aspect-square w-full overflow-hidden bg-white">
+              <div className="relative mx-auto w-full max-w-[510px] overflow-hidden rounded-md border border-[#DCE5E4] bg-white">
+  <div className="aspect-[4/5] w-full overflow-hidden bg-white">
                   {imagenActual &&
                     (imagenActiva === 0 ? (
                       <img
@@ -766,7 +766,7 @@ const DetalleProducto = () => {
                             index
                           )
                         }
-                        className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-white p-1 transition-colors ${
+                        className={`aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-md border bg-white p-1 transition-colors ${
                           imagenActiva ===
                           index
                             ? "border-[#285861]"
