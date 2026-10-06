@@ -460,7 +460,7 @@ const promedioVentaCruzada =
         emailLimpio
       )
     ) {
-      setError(
+            setError(
         "Ingresa un correo electrónico válido."
       );
 
@@ -752,7 +752,7 @@ const promedioVentaCruzada =
                     .portada
                 }
                 alt={producto.nombre}
-                className="h-20 w-20 shrink-0 rounded-md border border-slate-200 object-cover"
+                className="aspect-[4/5] w-24 shrink-0 rounded-md border border-slate-200 bg-white object-contain sm:w-28"
               />
             )}
 
@@ -805,164 +805,129 @@ const promedioVentaCruzada =
             PRODUCTO ADICIONAL
         ====================================================== */}
 
-        {productoVentaCruzada && (
-          <section className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-orange-700">
-              También te recomendamos
-            </p>
+        {productoVentaCruzada && (() => {
+          const precioOriginalVentaCruzada =
+            mercado === MERCADO_INTERNACIONAL
+              ? Number(productoVentaCruzada.precioUSD)
+              : Number(productoVentaCruzada.precioARS);
 
-            <div className="flex items-center gap-3">
-              {productoVentaCruzada
-                .imagenes?.portada && (
-                <img
-                  src={
-                    productoVentaCruzada
-                      .imagenes.portada
-                  }
-                  alt={
-                    productoVentaCruzada
-                      .nombre
-                  }
-                  className="h-20 w-20 shrink-0 rounded-md border border-orange-200 bg-white object-cover"
-                />
-              )}
+          const porcentajeDescuentoVentaCruzada =
+            Number.isFinite(precioOriginalVentaCruzada) &&
+            precioOriginalVentaCruzada > precioVentaCruzada &&
+            precioOriginalVentaCruzada > 0
+              ? Math.round(
+                  ((precioOriginalVentaCruzada - precioVentaCruzada) /
+                    precioOriginalVentaCruzada) *
+                    100
+                )
+              : 0;
 
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium leading-4 text-slate-900">
-                  {
-                    productoVentaCruzada.nombre
-                  }
-                </p>
+          return (
+            <section className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-4">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-orange-700">
+                También te recomendamos
+              </p>
 
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="text-md font-medium text-slate-900">
-                    {formatearPrecio(
-                      precioVentaCruzada
-                    )}
-                  </span>
-
-                  {mercado ===
-                    MERCADO_ARGENTINA &&
-                    ofertaVentaCruzadaVigente &&
-                    productoVentaCruzada
-                      .oferta?.activa &&
-                    Number(
-                      productoVentaCruzada
-                        .precioARS
-                    ) >
-                      precioVentaCruzada && (
-                      <span className="text-[12px] font-normal text-slate-400 line-through">
-                        {formatearPrecio(
-                          productoVentaCruzada
-                            .precioARS
-                        )}
-                      </span>
-                    )}
-
-                  {mercado ===
-                    MERCADO_INTERNACIONAL &&
-                    ofertaVentaCruzadaVigente &&
-                    productoVentaCruzada
-                      .ofertaUSD
-                      ?.activa &&
-                    Number(
-                      productoVentaCruzada
-                        .precioUSD
-                    ) >
-                      precioVentaCruzada && (
-                      <span className="text-[12px] font-normal text-slate-400 line-through">
-                        {formatearPrecio(
-                          productoVentaCruzada
-                            .precioUSD
-                        )}
-                      </span>
-                    )}
-                </div>
-
-                {tiempoRestanteVentaCruzada && (
-                  <div className="mt-2 rounded-md border border-orange-300 bg-white px-2.5 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-orange-700">
-                      ¡Oferta limitada!
-                    </p>
-
-                    <p className="mt-0.5 text-[11px] font-semibold leading-5 text-orange-900">
-                      Finaliza en{" "}
-                      {tiempoRestanteVentaCruzada.dias >
-                        0 &&
-                        `${tiempoRestanteVentaCruzada.dias}d `}
-                      {String(
-                        tiempoRestanteVentaCruzada.horas
-                      ).padStart(2, "0")}
-                      h{" "}
-                      {String(
-                        tiempoRestanteVentaCruzada.minutos
-                      ).padStart(2, "0")}
-                      m{" "}
-                      {String(
-                        tiempoRestanteVentaCruzada.segundos
-                      ).padStart(2, "0")}
-                      s
-                    </p>
-
-                    <p className="mt-0.5 text-[9px] font-medium leading-4 text-orange-700">
-                      Agrégalo ahoraantes de que finalice la oferta.
-                    </p>
-                  </div>
+              <div className="flex items-start gap-3 sm:gap-4">
+                {productoVentaCruzada.imagenes?.portada && (
+                  <img
+                    src={productoVentaCruzada.imagenes.portada}
+                    alt={productoVentaCruzada.nombre}
+                    className="aspect-[4/5] w-28 shrink-0 rounded-md border border-orange-200 bg-white object-contain sm:w-32"
+                  />
                 )}
 
-                {resenasVentaCruzada.length >
-                  0 && (
-                  <div className="mt-1 flex items-center gap-1">
-                    <div className="flex text-[11px] text-amber-500">
-                      {[1, 2, 3, 4, 5].map(
-                        (estrella) => (
-                          <span
-                            key={
-                              estrella
-                            }
-                          >
-                            {estrella <=
-                            Math.round(
-                              promedioVentaCruzada
-                            )
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium leading-5 text-slate-900">
+                    {productoVentaCruzada.nombre}
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-lg font-medium text-slate-950">
+                      {formatearPrecio(precioVentaCruzada)}
+                    </span>
+
+                    {porcentajeDescuentoVentaCruzada > 0 && (
+                      <>
+                        <span className="text-xs font-normal text-slate-400 line-through">
+                          {formatearPrecio(precioOriginalVentaCruzada)}
+                        </span>
+
+                        <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[11px] font-semibold text-orange-700">
+                          -{porcentajeDescuentoVentaCruzada}%
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {resenasVentaCruzada.length > 0 && (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <div className="flex text-[15px] leading-none text-amber-500">
+                        {[1, 2, 3, 4, 5].map((estrella) => (
+                          <span key={estrella}>
+                            {estrella <= Math.round(promedioVentaCruzada)
                               ? "★"
                               : "☆"}
                           </span>
-                        )
-                      )}
-                    </div>
+                        ))}
+                      </div>
 
-                    <span className="text-[9px] font-normal text-slate-500">
-                      (
-                      {
-                        resenasVentaCruzada.length
-                      }
-                      )
-                    </span>
-                  </div>
-                )}
+                      <span className="text-xs font-normal text-slate-500">
+                        ({resenasVentaCruzada.length})
+                      </span>
+                    </div>
+                  )}
+
+                  {tiempoRestanteVentaCruzada && (
+                    <div className="mt-2.5 rounded-md border border-orange-300 bg-white px-2.5 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-orange-700">
+                        ¡Oferta limitada!
+                      </p>
+
+                      <p className="mt-0.5 text-[11px] font-semibold leading-5 text-orange-900">
+                        Finaliza en{" "}
+                        {tiempoRestanteVentaCruzada.dias > 0 &&
+                          `${tiempoRestanteVentaCruzada.dias}d `}
+                        {String(tiempoRestanteVentaCruzada.horas).padStart(2, "0")}h{" "}
+                        {String(tiempoRestanteVentaCruzada.minutos).padStart(2, "0")}m{" "}
+                        {String(tiempoRestanteVentaCruzada.segundos).padStart(2, "0")}s
+                      </p>
+
+                      <p className="mt-0.5 text-[9px] font-medium leading-4 text-orange-700">
+                        Agrégalo ahora antes de que finalice la oferta.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  setVentaCruzadaAgregada(
-                    !ventaCruzadaAgregada
-                  )
-                }
-                className={`shrink-0 rounded-md border px-3 py-2 text-[10px] font-medium transition-colors ${
-                  ventaCruzadaAgregada
-                    ? "border-orange-300 bg-white text-orange-700"
-                    : "border-orange-700 bg-orange-700 text-white hover:bg-orange-800"
-                }`}
-              >
-                {ventaCruzadaAgregada
-                  ? "Agregado ✓"
-                  : "Agregar +"}
-              </button>
-            </div>
-          </section>
-        )}
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                <a
+                  href={`/tienda/${productoVentaCruzada.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center rounded-md border border-orange-300 bg-white px-3 py-2.5 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-100"
+                >
+                  Ver producto
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVentaCruzadaAgregada(!ventaCruzadaAgregada)
+                  }
+                  className={`rounded-md border px-3 py-2.5 text-xs font-medium transition-colors ${
+                    ventaCruzadaAgregada
+                      ? "border-orange-300 bg-white text-orange-700"
+                      : "border-orange-700 bg-orange-700 text-white hover:bg-orange-800"
+                  }`}
+                                  >
+                  {ventaCruzadaAgregada ? "Agregado ✓" : "Agregar +"}
+                </button>
+              </div>
+            </section>
+          );
+        })()}
 
         {/* =====================================================
             DATOS
@@ -1358,62 +1323,62 @@ const promedioVentaCruzada =
                                       cargandoMercado ? (
                                         "Redirigiendo..."
                                       ) : (
-                                        <span className="flex items-center justify-center gap-1">
-                                          <span>
-                                            Pay with
-                                          </span>
+                                            <span className="flex items-center justify-center gap-1">
+                                                              <span>
+                                                                Pay with
+                                                              </span>
 
-                                          <img
-                                            src={LOGO_PAYPAL}
-                                            alt="PayPal"
-                                            className="h-6 w-auto object-contain"
-                                          />
-                                        </span>
-                                      )
-                                    ) : (
-                                      <>
-                                        <LockKeyhole
-                                          size={16}
-                                          strokeWidth={1.8}
-                                        />
+                                                              <img
+                                                                src={LOGO_PAYPAL}
+                                                                alt="PayPal"
+                                                                className="h-6 w-auto object-contain"
+                                                              />
+                                                            </span>
+                                                          )
+                                                        ) : (
+                                                          <>
+                                                            <LockKeyhole
+                                                              size={16}
+                                                              strokeWidth={1.8}
+                                                            />
 
-                                        {cargandoMercado
-                                          ? "Cargando..."
-                                          : procesando
-                                            ? "Redirigiendo..."
-                                            : metodoPago ===
-                                                "mercadopago"
-                                              ? "Pagar con Mercado Pago"
-                                              : "Continuar con transferencia"}
-                                      </>
-                                    )}
-                                  </button>
+                                                            {cargandoMercado
+                                                              ? "Cargando..."
+                                                              : procesando
+                                                                ? "Redirigiendo..."
+                                                                : metodoPago ===
+                                                                    "mercadopago"
+                                                                  ? "Pagar con Mercado Pago"
+                                                                  : "Continuar con transferencia"}
+                                                          </>
+                                                        )}
+                                                      </button>
 
-                                  {/* TEXTOS INFERIORES */}
+                                                      {/* TEXTOS INFERIORES */}
 
-                                  <div className="mb-20 mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2">
-                                    <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
-                                      <ShieldCheck
-                                        size={13}
-                                        strokeWidth={1.8}
-                                        className="text-slate-500"
-                                      />
+                                                      <div className="mb-20 mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2">
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
+                                                          <ShieldCheck
+                                                            size={13}
+                                                            strokeWidth={1.8}
+                                                            className="text-slate-500"
+                                                          />
 
-                                      Compra segura
-                                    </div>
+                                                          Compra segura
+                                                        </div>
 
-                                    <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
-                                      <Check
-                                        size={13}
-                                        strokeWidth={1.8}
-                                        className="text-slate-500"
-                                      />
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
+                                                          <Check
+                                                            size={13}
+                                                            strokeWidth={1.8}
+                                                            className="text-slate-500"
+                                                          />
 
-                                      Descarga digital
-                                    </div>
-                                  </div>
-                                </section>
-                              </div>
-                            </main>
-                          );
-                        }
+                                                          Descarga digital
+                                                        </div>
+                                                      </div>
+                                                    </section>
+                                                  </div>
+                                                </main>
+                                              );
+                                            }
