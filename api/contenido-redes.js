@@ -2167,13 +2167,14 @@ async function publicarProgramado(
             "publicando",
           [`calendario.${posicion}.procesandoDesde`]:
             inicio,
+          [`calendario.${posicion}.ultimoIntentoEn`]:
+            inicio,
+          [`calendario.${posicion}.imagenesIntentadas`]:
+            extraerImagenesInstagram(pieza.publicacion),
           actualizadoEn: inicio,
         },
-        $unset: {
-          [`calendario.${posicion}.ultimoError`]:
-            "",
-          [`calendario.${posicion}.ultimoErrorEn`]:
-            "",
+        $inc: {
+          [`calendario.${posicion}.intentosPublicacion`]: 1,
         },
       }
     );
@@ -2227,6 +2228,8 @@ async function publicarProgramado(
             [`calendario.${posicion}.ultimoError`]:
               "",
             [`calendario.${posicion}.ultimoErrorEn`]:
+              "",
+            [`calendario.${posicion}.imagenesIntentadas`]:
               "",
           },
         }
@@ -2405,16 +2408,28 @@ async function ejecutarPublicacionesPendientes(
           red: pieza.red,
           tipo: pieza.tipo,
           indice: pieza.indice,
+          intentosPublicacion:
+            Number(pieza.intentosPublicacion) || 0,
+          ultimoIntentoEn:
+            pieza.ultimoIntentoEn || null,
         });
       }
     );
   }
 
-  pendientes.sort((a, b) =>
-    `${a.fecha} ${a.hora}`.localeCompare(
+  pendientes.sort((a, b) => {
+    const diferenciaIntentos =
+      (a.intentosPublicacion || 0) -
+      (b.intentosPublicacion || 0);
+
+    if (diferenciaIntentos !== 0) {
+      return diferenciaIntentos;
+    }
+
+    return `${a.fecha} ${a.hora}`.localeCompare(
       `${b.fecha} ${b.hora}`
-    )
-  );
+    );
+  });
 
   // Procesamos pocas piezas por invocación para no agotar
   // el tiempo máximo de una función de Vercel.
@@ -2740,433 +2755,6 @@ const probarPublicacionAutomatica = async (item) => {
     );
   }
 };
-
-// =========================================================
-// GOOGLE MERCHANT API
-// =========================================================
-
-const GOOGLE_MERCHANT_CLIENT_EMAIL =
-  process.env.GOOGLE_MERCHANT_CLIENT_EMAIL;
-
-const GOOGLE_MERCHANT_DEVELOPER_EMAIL =
-  process.env.GOOGLE_MERCHANT_DEVELOPER_EMAIL;
-
-const GOOGLE_MERCHANT_PRIVATE_KEY =
-  process.env.GOOGLE_MERCHANT_PRIVATE_KEY;
-
-const GOOGLE_MERCHANT_ACCOUNT_ID =
-  process.env.GOOGLE_MERCHANT_ACCOUNT_ID;
-
-const GOOGLE_MERCHANT_SCOPE =
-  "https://www.googleapis.com/auth/content";
-
-function verificarConfiguracionMerchant() {
-  if (
-  !GOOGLE_MERCHANT_CLIENT_EMAIL ||
-  !GOOGLE_MERCHANT_PRIVATE_KEY ||
-  !GOOGLE_MERCHANT_ACCOUNT_ID ||
-  !GOOGLE_MERCHANT_DEVELOPER_EMAIL
-) {
-    throw new Error(
-      "Faltan variables de entorno de Google Merchant API."
-    );
-  }
-}
-
-function base64Url(valor) {
-  return Buffer.from(valor)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
-
-async function obtenerTokenMerchant() {
-  verificarConfiguracionMerchant();
-
-  const ahora = Math.floor(Date.now() / 1000);
-
-  const encabezado = base64Url(
-    JSON.stringify({ alg: "RS256", typ: "JWT" })
-  );
-
-  const carga = base64Url(
-    JSON.stringify({
-      iss: GOOGLE_MERCHANT_CLIENT_EMAIL,
-      scope: GOOGLE_MERCHANT_SCOPE,
-      aud: "https://oauth2.googleapis.com/token",
-      iat: ahora,
-      exp: ahora + 3600,
-    })
-  );
-
-  const contenidoFirma = `${encabezado}.${carga}`;
-
-  const clavePrivada = GOOGLE_MERCHANT_PRIVATE_KEY
-    .replace(/\\n/g, "\n")
-    .trim();
-
-  const firma = crypto
-    .sign("RSA-SHA256", Buffer.from(contenidoFirma), clavePrivada)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-
-  const assertion = `${contenidoFirma}.${firma}`;
-
-  const body = new URLSearchParams({
-    grant_type:
-      "urn:ietf:params:oauth:grant-type:jwt-bearer",
-    assertion,
-  });
-
-  const respuesta = await fetch(
-    "https://oauth2.googleapis.com/token",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type":
-          "application/x-www-form-urlencoded",
-      },
-      body: body.toString(),
-    }
-  );
-
-  const datos = await leerJsonSeguro(respuesta);
-
-  if (!respuesta.ok || !datos?.access_token) {
-    console.error(
-      "Error autenticando Google Merchant:",
-      datos
-    );
-
-    throw new Error(
-      datos?.error_description ||
-        datos?.error ||
-        "No se pudo autenticar con Google Merchant API."
-    );
-  }
-
-  return datos.access_token;
-}
-
-async function registrarProyectoMerchant(req, res) {
-  const developerEmail =
-    GOOGLE_MERCHANT_DEVELOPER_EMAIL.trim();
-
-  if (!developerEmail || !developerEmail.includes("@")) {
-    return res.status(400).json({
-      ok: false,
-      error:
-        "Debes indicar un correo de Google válido como developerEmail. No uses el correo de la cuenta de servicio.",
-    });
-  }
-
-  const token = await obtenerTokenMerchant();
-
-  const nombre =
-    `accounts/${GOOGLE_MERCHANT_ACCOUNT_ID}/developerRegistration`;
-
-  const respuesta = await fetch(
-    `https://merchantapi.googleapis.com/accounts/v1/${nombre}:registerGcp`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ developerEmail }),
-    }
-  );
-
-  const datos = await leerJsonSeguro(respuesta);
-
-  if (!respuesta.ok) {
-    console.error(
-      "Error registrando proyecto en Merchant API:",
-      datos
-    );
-
-    return res.status(respuesta.status || 502).json({
-      ok: false,
-      error:
-        datos?.error?.message ||
-        "No se pudo registrar el proyecto de Google Cloud en Merchant API.",
-      detalle: datos,
-    });
-  }
-
-  return res.status(200).json({
-    ok: true,
-    mensaje:
-      "Proyecto de Google Cloud registrado correctamente en Merchant API.",
-    registro: datos,
-  });
-}
-
-async function obtenerFuenteApiMerchant(token) {
-  const respuesta = await fetch(
-    `https://merchantapi.googleapis.com/datasources/v1/accounts/${GOOGLE_MERCHANT_ACCOUNT_ID}/dataSources?pageSize=100`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  const datos = await leerJsonSeguro(respuesta);
-
-  if (!respuesta.ok) {
-    throw new Error(
-      datos?.error?.message ||
-        "No se pudieron consultar las fuentes de datos de Merchant Center."
-    );
-  }
-
-  const fuentes = Array.isArray(datos?.dataSources)
-    ? datos.dataSources
-    : [];
-
-  const fuente = fuentes.find(
-    (item) =>
-      item?.name &&
-      item?.primaryProductDataSource
-  );
-
-  if (!fuente?.name) {
-    throw new Error(
-      "No se encontró una fuente principal de productos compatible con Merchant API."
-    );
-  }
-
-  return fuente;
-}
-
-function obtenerTextoProducto(producto, claves) {
-  for (const clave of claves) {
-    const valor = producto?.[clave];
-    if (typeof valor === "string" && valor.trim()) {
-      return valor.trim();
-    }
-  }
-  return "";
-}
-
-function obtenerImagenMerchant(producto) {
-  const candidatos = [
-    producto?.imagenes?.portada,
-    producto?.imagenes?.redes?.feed?.presentacion,
-    producto?.imagenes?.preview,
-    producto?.imagen,
-    producto?.imageUrl,
-  ];
-
-  return candidatos.find(
-    (valor) =>
-      typeof valor === "string" &&
-      /^https:\/\//i.test(valor.trim())
-  )?.trim() || "";
-}
-
-function obtenerPrecioMerchant(producto) {
-  const precioUSD = Number(
-    producto?.precioUSD ?? producto?.precioUsd
-  );
-
-  if (Number.isFinite(precioUSD) && precioUSD > 0) {
-    return {
-      amountMicros: String(
-        Math.round(precioUSD * 1000000)
-      ),
-      currencyCode: "USD",
-    };
-  }
-
-  const precioARS = Number(
-    producto?.precioARS ?? producto?.precio
-  );
-
-  if (Number.isFinite(precioARS) && precioARS > 0) {
-    return {
-      amountMicros: String(
-        Math.round(precioARS * 1000000)
-      ),
-      currencyCode: "ARS",
-    };
-  }
-
-  return null;
-}
-function crearEntradaMerchant(producto) {
-  const productoId = String(producto?.id || "").trim();
-  const titulo = obtenerTextoProducto(
-    producto,
-    ["nombre", "titulo", "name"]
-  );
-
-  const descripcion = obtenerTextoProducto(
-    producto,
-    [
-      "descripcion",
-      "descripcionLarga",
-      "descripcionCorta",
-      "description",
-    ]
-  );
-
-  const imagen = obtenerImagenMerchant(producto);
-  const precio = obtenerPrecioMerchant(producto);
-
-  if (!productoId) {
-    throw new Error(
-      "El producto de MongoDB no tiene id."
-    );
-  }
-
-  if (!titulo) {
-    throw new Error(
-      "El producto no tiene nombre o título."
-    );
-  }
-
-  if (!descripcion) {
-    throw new Error(
-      "El producto no tiene descripción."
-    );
-  }
-
-  if (!imagen) {
-    throw new Error(
-      "El producto no tiene una imagen pública HTTPS compatible con Merchant Center."
-    );
-  }
-
-  if (!precio) {
-    throw new Error(
-      "El producto no tiene un precio USD o ARS válido."
-    );
-  }
-
-  const enlaceGuardado = obtenerTextoProducto(
-    producto,
-    ["url", "link", "enlace", "urlProducto"]
-  );
-
-  const link =
-    /^https:\/\//i.test(enlaceGuardado)
-      ? enlaceGuardado
-      : `${URL_BASE}/producto/${encodeURIComponent(productoId)}`;
-
-  return {
-  offerId: productoId.slice(0, 50),
-  contentLanguage: "es",
-  feedLabel: "AR",
-    productAttributes: {
-      title: titulo.slice(0, 150),
-      description: descripcion.slice(0, 5000),
-      link,
-      imageLink: imagen,
-      availability: "IN_STOCK",
-      price: precio,
-      condition: "NEW",
-      brand: "Andrés Imprimibles",
-      identifierExists: false,
-    },
-  };
-}
-
-async function probarProductoMerchant(req, res) {
-  const productoId =
-    typeof req.body?.productoId === "string"
-      ? req.body.productoId.trim()
-      : "";
-
-  if (!productoId) {
-    return res.status(400).json({
-      ok: false,
-      error:
-        "Falta productoId para realizar la prueba de Merchant Center.",
-    });
-  }
-
-  const db = await conectarMongoDB();
-
-  const producto = await db
-    .collection("productos")
-    .findOne({ id: productoId });
-
-  if (!producto) {
-    return res.status(404).json({
-      ok: false,
-      error:
-        "No se encontró el producto en MongoDB.",
-    });
-  }
-
-  const token = await obtenerTokenMerchant();
-  const fuente = await obtenerFuenteApiMerchant(token);
-  const entrada = crearEntradaMerchant(producto);
-
-  const endpoint =
-    `https://merchantapi.googleapis.com/products/v1/accounts/${GOOGLE_MERCHANT_ACCOUNT_ID}/productInputs:insert?dataSource=${encodeURIComponent(fuente.name)}`;
-
-  const respuesta = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(entrada),
-  });
-
-  const datos = await leerJsonSeguro(respuesta);
-
-  if (!respuesta.ok) {
-    console.error(
-      "Error insertando producto en Merchant API:",
-      datos
-    );
-
-    return res.status(respuesta.status || 502).json({
-      ok: false,
-      error:
-        datos?.error?.message ||
-        "Google Merchant API rechazó el producto.",
-      detalle: datos,
-    });
-  }
-
-  await db.collection("integraciones").updateOne(
-    { proveedor: "google_merchant" },
-    {
-      $set: {
-        proveedor: "google_merchant",
-        conectado: true,
-        accountId: GOOGLE_MERCHANT_ACCOUNT_ID,
-        dataSource: fuente.name,
-        ultimoProductoId: productoId,
-        ultimoProductInput: datos?.name || null,
-        actualizadoEn: new Date(),
-      },
-      $setOnInsert: {
-        creadoEn: new Date(),
-      },
-    },
-    { upsert: true }
-  );
-
-  return res.status(200).json({
-    ok: true,
-    mensaje:
-      "Producto enviado correctamente a Google Merchant Center. Google todavía debe procesarlo y evaluar su elegibilidad.",
-    productoId,
-    dataSource: fuente.name,
-    productInput: datos?.name || null,
-    product: datos?.product || null,
-    respuestaMerchant: datos,
-  });
-}
 
 // =========================================================
 // OPENAI - GENERAR CONTENIDO
@@ -3528,42 +3116,6 @@ if (
     res
   );
 }
-
-    // -----------------------------------------------------
-    // GOOGLE MERCHANT - REGISTRAR PROYECTO GCP
-    // -----------------------------------------------------
-
-    if (
-      req.method === "POST" &&
-      accion === "merchant-registrar-proyecto"
-    ) {
-      if (!adminAutorizado(req)) {
-        return res.status(401).json({
-          ok: false,
-          error: "No autorizado",
-        });
-      }
-
-      return registrarProyectoMerchant(req, res);
-    }
-
-    // -----------------------------------------------------
-    // GOOGLE MERCHANT - ENVIAR PRODUCTO DE PRUEBA
-    // -----------------------------------------------------
-
-    if (
-      req.method === "POST" &&
-      accion === "merchant-probar-producto"
-    ) {
-      if (!adminAutorizado(req)) {
-        return res.status(401).json({
-          ok: false,
-          error: "No autorizado",
-        });
-      }
-
-      return probarProductoMerchant(req, res);
-    }
 
     // -----------------------------------------------------
     // GENERACIÓN DE CONTENIDO

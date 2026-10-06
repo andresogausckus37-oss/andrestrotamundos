@@ -358,6 +358,20 @@ const horarioYaPasoArgentina = (pieza) => {
   );
 };
 
+const formatearHoraDiagnostico = (valor) => {
+  if (!valor) return null;
+
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return null;
+
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(fecha);
+};
+
 export default function AdminRedes() {
   const [
     productosDigitales,
@@ -1833,10 +1847,35 @@ const aprobarContenido = async (
                                       Publicado
                                     </p>
                                   ) : horarioYaPasoArgentina(pieza) ? (
-                                    <div className="mt-1">
+                                    <div className="mt-1 space-y-0.5">
                                       <p className="text-[9px] font-semibold text-amber-600">
-                                        Pendiente · el cron reintentará automáticamente
+                                        {Number(pieza.intentosPublicacion) > 0
+                                          ? `Reintentando · ${pieza.intentosPublicacion} ${Number(pieza.intentosPublicacion) === 1 ? "intento" : "intentos"}`
+                                          : "Pendiente · esperando al cron"}
                                       </p>
+
+                                      {formatearHoraDiagnostico(
+                                        pieza.ultimoIntentoEn || pieza.ultimoErrorEn
+                                      ) && (
+                                        <p className="text-[9px] text-slate-500">
+                                          Último intento: {formatearHoraDiagnostico(
+                                            pieza.ultimoIntentoEn || pieza.ultimoErrorEn
+                                          )} AR
+                                        </p>
+                                      )}
+
+                                      {pieza.ultimoError && (
+                                        <p className="break-words text-[9px] font-medium text-red-600">
+                                          Error: {pieza.ultimoError}
+                                        </p>
+                                      )}
+
+                                      {Array.isArray(pieza.imagenesIntentadas) &&
+                                        pieza.imagenesIntentadas.length > 0 && (
+                                          <p className="text-[9px] text-slate-400">
+                                            Imágenes enviadas: {pieza.imagenesIntentadas.length}
+                                          </p>
+                                        )}
                                     </div>
                                   ) : (
                                     <p className="mt-1 text-[9px] text-slate-400">
