@@ -20,6 +20,9 @@ const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
 const FACEBOOK_API_VERSION = "v26.0";
 const FACEBOOK_API = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
 
+const MAX_INTENTOS_PUBLICACION = 3;
+const ZONA_HORARIA_RED = "America/Argentina/Buenos_Aires";
+
 function verificarConfiguracionFacebook() {
   if (!FACEBOOK_PAGE_ID || !FACEBOOK_PAGE_ACCESS_TOKEN) {
     throw new Error("Faltan FACEBOOK_PAGE_ID o FACEBOOK_PAGE_ACCESS_TOKEN");
@@ -221,6 +224,7 @@ async function publicarContenedorInstagram(cuentaId, contenedorId) {
   if (!datos?.id) throw new Error("Error publicando contenedor IG");
   return String(datos.id);
 }
+
 async function publicarCarruselInstagram({ publicacion, productoId }) {
   verificarConfiguracionInstagram();
   const imagenes = extraerImagenesInstagram(publicacion);
@@ -350,8 +354,6 @@ async function listarAprobados(req, res) {
   const aprobados = await db.collection("contenido_redes").find({ estado: "aprobado" }).sort({ aprobadoEn: -1 }).toArray();
   return res.status(200).json({ ok: true, aprobados });
 }
-
-const ZONA_HORARIA_RED = "America/Argentina/Buenos_Aires";
 const formatearFechaUTC = (fecha) => {
   const anio = fecha.getUTCFullYear();
   const mes = String(fecha.getUTCMonth() + 1).padStart(2, "0");
@@ -393,11 +395,16 @@ const crearCalendarioInicial = (contenido, bloqueSemana = 0, semanaInicio = obte
     dia,
   }));
   const calendario = [];
+  const huecos = [];
   const agregar = (d, hora, red, tipo, indice, publicacion) => {
-    if (!publicacion) return;
+    if (!publicacion) {
+      huecos.push({ dia: nombresDias[d], hora, red, tipo, mensaje: "Sin contenido" });
+      return;
+    }
     calendario.push({
       fecha: dias[d].fecha, dia: dias[d].dia, hora, red, tipo, indice,
       publicacion, estado: "programado", zonaHoraria: ZONA_HORARIA_RED,
+      intentos: 0,
     });
   };
 
@@ -414,8 +421,9 @@ const crearCalendarioInicial = (contenido, bloqueSemana = 0, semanaInicio = obte
     agregar(Math.floor(i / 2), i % 2 === 0 ? "11:00" : "19:00", "threads", "publicacion", i, contenido?.threads?.[i]);
     agregar(Math.floor(i / 2), i % 2 === 0 ? "17:00" : "21:00", "facebook", "publicacion", i, contenido?.facebook?.publicaciones?.[i]);
   }
-  return calendario;
+  return { calendario, huecos };
 };
+
 async function programarContenido(req, res) {
   const { productoId } = req.body || {};
   if (!productoId) return res.status(400).json({ ok: false, error: "Falta productoId" });
@@ -433,13 +441,13 @@ async function programarContenido(req, res) {
   else if (!ocupados.has(1)) bloque = 1;
   if (bloque === null) return res.status(409).json({ ok: false, error: "Semana completa" });
 
-  const calendario = crearCalendarioInicial(aprobado.contenido, bloque, semanaInicio);
+  const { calendario, huecos } = crearCalendarioInicial(aprobado.contenido, bloque, semanaInicio);
   await db.collection("contenido_redes").updateOne(
     { _id: aprobado._id },
     { $set: { estado: "programado", calendario, semanaInicio, semanaFin: sumarDiasFecha(semanaInicio, 5),
       bloqueSemana: bloque, programadoEn: new Date(), actualizadoEn: new Date() } }
   );
-  return res.status(200).json({ ok: true, bloqueSemana: bloque, calendario });
+  return res.status(200).json({ ok: true, bloqueSemana: bloque, calendario, huecos });
 }
 
 async function regenerarContenidoProgramado(req, res) {
@@ -448,12 +456,12 @@ async function regenerarContenidoProgramado(req, res) {
   const db = await conectarMongoDB();
   const doc = await db.collection("contenido_redes").findOne({ productoId, estado: "programado" });
   if (!doc) return res.status(404).json({ ok: false, error: "Sin programado" });
-  const calendario = crearCalendarioInicial(contenido, Number(doc.bloqueSemana) || 0, doc.semanaInicio);
+  const { calendario, huecos } = crearCalendarioInicial(contenido, Number(doc.bloqueSemana) || 0, doc.semanaInicio);
   await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
     $set: { contenido, calendario, nombreProducto: nombreProducto || doc.nombreProducto,
       regeneradoEn: new Date(), actualizadoEn: new Date() }
   });
-  return res.status(200).json({ ok: true, calendario });
+  return res.status(200).json({ ok: true, calendario, huecos });
 }
 
 async function listarProgramados(req, res) {
@@ -495,6 +503,13 @@ async function publicarProgramado(req, res) {
   const pieza = doc.calendario[pos];
   if (pieza.estado === "publicado") return res.status(409).json({ ok: false, error: "Ya publicado" });
   if (pieza.estado === "publicando") return res.status(409).json({ ok: false, error: "En proceso" });
+  if (pieza.estado === "fallido") return res.status(409).json({ ok: false, error: "Marcada como fallida" });
+  if ((pieza.intentos || 0) >= MAX_INTENTOS_PUBLICACION) {
+    await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
+      $set: { [`calendario.${pos}.estado`]: "fallido", [`calendario.${pos}.fallidoEn`]: new Date(), actualizadoEn: new Date() }
+    });
+    return res.status(409).json({ ok: false, error: `Máximo ${MAX_INTENTOS_PUBLICACION} intentos alcanzados — marcada como fallida` });
+  }
 
   const inicio = new Date();
   const reclamo = await db.collection("contenido_redes").updateOne(
@@ -509,22 +524,43 @@ async function publicarProgramado(req, res) {
     const ahora = new Date();
     await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
       $set: { [`calendario.${pos}.estado`]: "publicado", [`calendario.${pos}.publicadoEn`]: ahora, actualizadoEn: ahora },
-      $unset: { [`calendario.${pos}.procesandoDesde`]: "" }
+      $unset: { [`calendario.${pos}.procesandoDesde`]: "", [`calendario.${pos}.ultimoError`]: "", [`calendario.${pos}.fallidoEn`]: "" }
     });
     const actualizado = await db.collection("contenido_redes").findOne({ _id: doc._id });
-    const completo = actualizado.calendario.every(i => i.estado === "publicado");
-    if (completo) await db.collection("contenido_redes").updateOne({ _id: doc._id }, { $set: { estado: "publicado", publicadoEn: ahora } });
+    const completo = actualizado.calendario.every(i => i.estado === "publicado" || i.estado === "fallido");
+    if (completo) {
+      const hayFallidas = actualizado.calendario.some(i => i.estado === "fallido");
+      await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
+        $set: { estado: hayFallidas ? "completado-con-errores" : "publicado", publicadoEn: ahora }
+      });
+    }
     return res.status(200).json({ ok: true, publicacionId: resultado.publicacionId });
   } catch (err) {
+    const nuevosIntentos = (pieza.intentos || 0) + 1;
+    const esUltimoIntento = nuevosIntentos >= MAX_INTENTOS_PUBLICACION;
+    const ahora = new Date();
     await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
-      $set: { [`calendario.${pos}.estado`]: "programado", [`calendario.${pos}.ultimoError`]: err.message, actualizadoEn: new Date() }
+      $set: {
+        [`calendario.${pos}.estado`]: esUltimoIntento ? "fallido" : "programado",
+        [`calendario.${pos}.intentos`]: nuevosIntentos,
+        [`calendario.${pos}.ultimoError`]: err.message,
+        [`calendario.${pos}.ultimoIntentoEn`]: ahora,
+        ...(esUltimoIntento && { [`calendario.${pos}.fallidoEn`]: ahora }),
+        actualizadoEn: ahora,
+      },
+      $unset: { [`calendario.${pos}.procesandoDesde`]: "" }
     });
-    return res.status(502).json({ ok: false, error: err.message });
+    return res.status(esUltimoIntento ? 410 : 502).json({
+      ok: false,
+      error: esUltimoIntento ? `Fallido tras ${MAX_INTENTOS_PUBLICACION} intentos` : err.message,
+      intentos: nuevosIntentos,
+      maximo: MAX_INTENTOS_PUBLICACION,
+    });
   }
 }
 
 const obtenerFechaHoraArgentina = () => {
-  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires",
+  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: ZONA_HORARIA_RED,
     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts();
   const v = {};
   for (const p of partes) if (p.type !== "literal") v[p.type] = p.value;
@@ -550,6 +586,7 @@ async function ejecutarPublicacionesPendientes(req, res) {
     if (!Array.isArray(doc.calendario)) continue;
     for (const p of doc.calendario) {
       if (p.estado !== "programado") continue;
+      if ((p.intentos || 0) >= MAX_INTENTOS_PUBLICACION) continue;
       const vencida = p.fecha < fecha || (p.fecha === fecha && p.hora <= hora);
       if (vencida) pendientes.push({ productoId: doc.productoId, fecha: p.fecha, hora: p.hora, red: p.red, tipo: p.tipo, indice: p.indice });
     }
@@ -560,7 +597,7 @@ async function ejecutarPublicacionesPendientes(req, res) {
     await publicarProgramado({ ...req, body: pieza }, { status(c) { r = { ok: c < 300 }; return this; }, json(d) { r = d; return d; } });
     resultados.push(r);
   }
-  return res.status(200).json({ ok: true, pendientes: resultados.length, resultados });
+  return res.status(200).json({ ok: true, fechaActual: fecha, horaActual: hora, pendientes: resultados.length, resultados });
 }
 
 export default async function manejarSolicitud(req, res) {
