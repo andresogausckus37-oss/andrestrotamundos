@@ -527,7 +527,7 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
           const borradores =
             Array.isArray(datos.borradores)
               ? datos.borradores
-              : [];
+                          : [];
 
           setContenidos(
             borradores.map(
@@ -1057,7 +1057,7 @@ const guardarBorrador = async (
         datos.error ||
           "No se pudo guardar el borrador."
       );
-    }
+          }
 
     setMensajesGuardado(
       (actuales) => ({
@@ -1586,7 +1586,7 @@ const aprobarContenido = async (
                               indiceProducto,
                               publicacion
                             )
-                          }
+                                                      }
                         />
 
                         <PublicacionEditable
@@ -2051,16 +2051,38 @@ const aprobarContenido = async (
                                       Programado · publicación automática
                                     </p>
                                   )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+                           </div>
+
+{pieza.red === "facebook" &&
+  destinosCompartir
+    .filter(
+      (destino) =>
+        destino.plataforma === "facebook" &&
+        destino.tipo === "grupo"
+    )
+    .map((destino) => (
+      <button
+        key={String(destino._id)}
+        type="button"
+        onClick={() => {
+          window.open(
+            destino.url,
+            "_blank",
+            "noopener,noreferrer"
+          );
+        }}
+        className="mt-2 w-full rounded-md bg-red-600 px-2 py-1.5 text-[10px] font-bold text-white transition hover:bg-red-700"
+      >
+        Compartir en {destino.nombre}
+      </button>
+    ))}
+
+</div>
+))}
+</div>
+</div>
+);
+})}
 
               {aprobados.length === 0 && programados.length === 0 && (
                 <p className="mt-3 rounded-lg bg-slate-50 px-3 py-3 text-center text-[11px] text-slate-500">
