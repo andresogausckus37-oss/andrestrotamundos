@@ -6,616 +6,3147 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const THREADS_APP_ID = process.env.THREADS_APP_ID;
-const THREADS_APP_SECRET = process.env.THREADS_APP_SECRET;
-const URL_BASE = "https://andreshousesitter.com";
-const THREADS_REDIRECT_URI = `${URL_BASE}/api/contenido-redes?accion=threads-callback`;
-const THREADS_API = "https://graph.threads.net/v1.0";
-const INSTAGRAM_ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
+const THREADS_APP_ID =
+  process.env.THREADS_APP_ID;
+
+const THREADS_APP_SECRET =
+  process.env.THREADS_APP_SECRET;
+
+const URL_BASE =
+  "https://andreshousesitter.com";
+
+const THREADS_REDIRECT_URI =
+  `${URL_BASE}/api/contenido-redes?accion=threads-callback`;
+
+const THREADS_API =
+  "https://graph.threads.net";
+
+const INSTAGRAM_ACCESS_TOKEN =
+  process.env.INSTAGRAM_ACCESS_TOKEN;
+
 const INSTAGRAM_API_VERSION = "v26.0";
-const INSTAGRAM_API = `https://graph.instagram.com/${INSTAGRAM_API_VERSION}`;
 
-const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID;
-const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+const INSTAGRAM_API =
+  `https://graph.instagram.com/${INSTAGRAM_API_VERSION}`;
+
+// =========================================================
+// FACEBOOK - CONFIGURACIÓN
+// =========================================================
+
+const FACEBOOK_PAGE_ID =
+  process.env.FACEBOOK_PAGE_ID;
+
+const FACEBOOK_PAGE_ACCESS_TOKEN =
+  process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+
 const FACEBOOK_API_VERSION = "v26.0";
-const FACEBOOK_API = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
 
-const MAX_INTENTOS_PUBLICACION = 3;
-const ZONA_HORARIA_RED = "America/Argentina/Buenos_Aires";
+const FACEBOOK_API =
+  `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
 
 function verificarConfiguracionFacebook() {
-  if (!FACEBOOK_PAGE_ID || !FACEBOOK_PAGE_ACCESS_TOKEN) {
-    throw new Error("Faltan FACEBOOK_PAGE_ID o FACEBOOK_PAGE_ACCESS_TOKEN");
+  if (
+    !FACEBOOK_PAGE_ID ||
+    !FACEBOOK_PAGE_ACCESS_TOKEN
+  ) {
+    throw new Error(
+      "Faltan FACEBOOK_PAGE_ID o FACEBOOK_PAGE_ACCESS_TOKEN"
+    );
   }
 }
+
+// =========================================================
+// AUTENTICACIÓN ADMIN
+// =========================================================
 
 const obtenerCookies = (req) => {
   const cookies = {};
   const header = req.headers.cookie || "";
+
   header.split(";").forEach((cookie) => {
-    const [nombre, ...valor] = cookie.trim().split("=");
-    if (nombre) cookies[nombre] = decodeURIComponent(valor.join("="));
+    const [nombre, ...valor] =
+      cookie.trim().split("=");
+
+    if (nombre) {
+      cookies[nombre] =
+        decodeURIComponent(valor.join("="));
+    }
   });
+
   return cookies;
 };
 
 const adminAutorizado = (req) => {
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminPassword =
+    process.env.ADMIN_PASSWORD;
+
   if (!adminPassword) return false;
+
   const tokenEsperado = crypto
     .createHmac("sha256", adminPassword)
     .update("andres-imprimibles-admin")
     .digest("hex");
-  const token = obtenerCookies(req).admin_token;
+
+  const cookies = obtenerCookies(req);
+  const token = cookies.admin_token;
+
   if (!token) return false;
+
   const a = Buffer.from(token);
   const b = Buffer.from(tokenEsperado);
-  if (a.length !== b.length) return false;
+
+  if (a.length !== b.length) {
+    return false;
+  }
+
   return crypto.timingSafeEqual(a, b);
 };
 
+// =========================================================
+// THREADS - CONFIGURACIÓN
+// =========================================================
+
 function verificarConfiguracionThreads() {
   if (!THREADS_APP_ID || !THREADS_APP_SECRET) {
-    throw new Error("Faltan THREADS_APP_ID o THREADS_APP_SECRET");
+    throw new Error(
+      "Faltan THREADS_APP_ID o THREADS_APP_SECRET"
+    );
   }
 }
 
-async function renovarTokenThreadsSiNecesario(integracion) {
-  if (!integracion?.expiraEn) return integracion;
-  const ahora = new Date();
-  const expiraEn = new Date(integracion.expiraEn);
-  if (expiraEn > new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000)) return integracion;
-  try {
-    const parametros = new URLSearchParams({
-      grant_type: "th_refresh_token",
-      refresh_token: integracion.refreshToken || integracion.accessToken,
-      client_secret: THREADS_APP_SECRET,
-    });
-    const res = await fetch(`${THREADS_API}/refresh_access_token?${parametros}`);
-    const datos = await res.json();
-    if (!res.ok || !datos.access_token) throw new Error("Falló renovación");
-    const db = await conectarMongoDB();
-    const expira = new Date(Date.now() + (Number(datos.expires_in) || 5184000) * 1000);
-    await db.collection("integraciones").updateOne({ proveedor: "threads" }, {
-      $set: { accessToken: datos.access_token, expiraEn: expira, actualizadoEn: ahora },
-    });
-    return { ...integracion, accessToken: datos.access_token, expiraEn: expira };
-  } catch { return integracion; }
-}
+// =========================================================
+// THREADS - INICIAR CONEXIÓN
+// =========================================================
 
 async function conectarThreads(req, res) {
-  const params = new URLSearchParams({
+  verificarConfiguracionThreads();
+
+  const parametros = new URLSearchParams({
     client_id: THREADS_APP_ID,
     redirect_uri: THREADS_REDIRECT_URI,
-    scope: "threads_basic,threads_content_publish",
+    scope:
+      "threads_basic,threads_content_publish",
     response_type: "code",
   });
-  return res.redirect(`https://threads.net/oauth/authorize?${params}`);
+
+  const urlAutorizacion =
+    `https://threads.net/oauth/authorize?${parametros.toString()}`;
+
+  return res.redirect(urlAutorizacion);
 }
+
+// =========================================================
+// THREADS - CALLBACK OAUTH
+// =========================================================
 
 async function callbackThreads(req, res) {
-  const { code, error, error_description } = req.query;
-  if (error) return res.status(400).json({ ok: false, error, detalle: error_description });
-  if (!code) return res.status(400).json({ ok: false, error: "Sin código de autorización" });
+  verificarConfiguracionThreads();
 
-  const tokenCorto = await (await fetch(`${THREADS_API}/oauth/access_token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: THREADS_APP_ID, client_secret: THREADS_APP_SECRET,
-      grant_type: "authorization_code", redirect_uri: THREADS_REDIRECT_URI, code,
-    }).toString(),
-  })).json();
-  if (!tokenCorto.access_token) throw new Error("Token corto inválido");
+  const {
+    code,
+    error,
+    error_description,
+  } = req.query;
 
-  const tokenLargo = await (await fetch(`${THREADS_API}/access_token?${new URLSearchParams({
-    grant_type: "th_exchange_token", client_secret: THREADS_APP_SECRET,
-    access_token: tokenCorto.access_token,
-  })}`)).json();
-  if (!tokenLargo.access_token) throw new Error("Token largo inválido");
+  if (error) {
+    return res.status(400).json({
+      ok: false,
+      error,
+      detalle:
+        error_description || null,
+    });
+  }
 
-  const db = await conectarMongoDB();
-  const expiraEn = new Date(Date.now() + (Number(tokenLargo.expires_in) || 5184000) * 1000);
-  await db.collection("integraciones").updateOne({ proveedor: "threads" }, {
-    $set: {
-      userId: String(tokenCorto.user_id || ""),
-      accessToken: tokenLargo.access_token,
-      tokenType: tokenLargo.token_type || "bearer",
-      conectado: true, permisos: ["threads_basic", "threads_content_publish"],
-      expiraEn, actualizadoEn: new Date(),
-    },
-    $setOnInsert: { creadoEn: new Date() },
-  }, { upsert: true });
-  return res.redirect("/admin/redes?threads=conectado");
+  if (!code) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Threads no devolvió el código de autorización.",
+    });
+  }
+
+  const parametrosToken =
+    new URLSearchParams({
+      client_id: THREADS_APP_ID,
+      client_secret:
+        THREADS_APP_SECRET,
+      grant_type:
+        "authorization_code",
+      redirect_uri:
+        THREADS_REDIRECT_URI,
+      code,
+    });
+
+  const respuestaToken = await fetch(
+    `${THREADS_API}/oauth/access_token`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded",
+      },
+      body: parametrosToken.toString(),
+    }
+  );
+
+  const tokenCorto =
+    await respuestaToken.json();
+
+  if (
+    !respuestaToken.ok ||
+    !tokenCorto.access_token
+  ) {
+    console.error(
+      "Error obteniendo token corto de Threads:",
+      tokenCorto
+    );
+
+    return res.status(500).json({
+      ok: false,
+      error:
+        "No se pudo obtener el token de Threads.",
+    });
+  }
+
+  const parametrosLargo =
+    new URLSearchParams({
+      grant_type:
+        "th_exchange_token",
+      client_secret:
+        THREADS_APP_SECRET,
+      access_token:
+        tokenCorto.access_token,
+    });
+
+  const respuestaLargo = await fetch(
+    `${THREADS_API}/access_token?${parametrosLargo.toString()}`
+  );
+
+  const tokenLargo =
+    await respuestaLargo.json();
+
+  if (
+    !respuestaLargo.ok ||
+    !tokenLargo.access_token
+  ) {
+    console.error(
+      "Error obteniendo token largo de Threads:",
+      tokenLargo
+    );
+
+    return res.status(500).json({
+      ok: false,
+      error:
+        "No se pudo obtener el token de larga duración.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const ahora = new Date();
+
+  const segundosExpiracion =
+    Number(tokenLargo.expires_in) ||
+    5184000;
+
+  const expiraEn = new Date(
+    ahora.getTime() +
+      segundosExpiracion * 1000
+  );
+
+  await db
+    .collection("integraciones")
+    .updateOne(
+      {
+        proveedor: "threads",
+      },
+      {
+        $set: {
+          proveedor: "threads",
+
+          userId: String(
+            tokenCorto.user_id || ""
+          ),
+
+          accessToken:
+            tokenLargo.access_token,
+
+          tokenType:
+            tokenLargo.token_type ||
+            "bearer",
+
+          conectado: true,
+
+          permisos: [
+            "threads_basic",
+            "threads_content_publish",
+          ],
+
+          expiraEn,
+          actualizadoEn: ahora,
+        },
+
+        $setOnInsert: {
+          creadoEn: ahora,
+        },
+      },
+      {
+        upsert: true,
+      }
+    );
+
+  return res.redirect(
+    "/admin/redes?threads=conectado"
+  );
 }
+
+// =========================================================
+// THREADS - PUBLICAR TEXTO
+// =========================================================
 
 async function publicarThreads(req, res) {
-  const texto = (req.body?.texto || "").trim();
-  const productoId = (req.body?.productoId || "").trim();
-  if (!texto) return res.status(400).json({ ok: false, error: "Falta el texto" });
+  const texto =
+    typeof req.body?.texto === "string"
+      ? req.body.texto.trim()
+      : "";
 
-  const db = await conectarMongoDB();
-  let integracion = await db.collection("integraciones").findOne({ proveedor: "threads", conectado: true });
-  if (!integracion?.accessToken) return res.status(400).json({ ok: false, error: "Threads no conectado" });
-  integracion = await renovarTokenThreadsSiNecesario(integracion);
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
 
-  const contenedor = await (await fetch(`${THREADS_API}/me/threads`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ media_type: "TEXT", text: texto, access_token: integracion.accessToken }),
-  })).json();
-  if (!contenedor?.id) return res.status(502).json({ ok: false, error: "No se pudo crear el contenedor" });
+  if (!texto) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el texto de la publicación.",
+    });
+  }
 
-  const publicacion = await (await fetch(`${THREADS_API}/me/threads_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ creation_id: contenedor.id, access_token: integracion.accessToken }),
-  })).json();
-  if (!publicacion?.id) return res.status(502).json({ ok: false, error: "No se pudo publicar" });
+  const db =
+    await conectarMongoDB();
 
-  await db.collection("publicaciones_redes").insertOne({
-    proveedor: "threads", productoId: productoId || null,
-    publicacionId: String(publicacion.id), texto, estado: "publicado",
-    publicadoEn: new Date(), creadoEn: new Date(),
+  const integracion = await db
+    .collection("integraciones")
+    .findOne({
+      proveedor: "threads",
+      conectado: true,
+    });
+
+  if (
+    !integracion?.accessToken ||
+    !integracion?.userId
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Threads no está conectado.",
+    });
+  }
+
+  const accessToken =
+    integracion.accessToken;
+
+  const parametrosContenedor =
+    new URLSearchParams({
+      media_type: "TEXT",
+      text: texto,
+      access_token: accessToken,
+    });
+
+  const respuestaContenedor =
+    await fetch(
+      `${THREADS_API}/me/threads`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded",
+        },
+        body:
+          parametrosContenedor.toString(),
+      }
+    );
+
+  const contenedor =
+    await respuestaContenedor.json();
+
+  if (
+    !respuestaContenedor.ok ||
+    !contenedor?.id
+  ) {
+    console.error(
+      "Error creando publicación de Threads:",
+      contenedor
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        "Threads no pudo crear la publicación.",
+      detalle:
+        contenedor?.error?.message ||
+        null,
+    });
+  }
+
+  const parametrosPublicacion =
+    new URLSearchParams({
+      creation_id: contenedor.id,
+      access_token: accessToken,
+    });
+
+  const respuestaPublicacion =
+    await fetch(
+      `${THREADS_API}/me/threads_publish`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded",
+        },
+        body:
+          parametrosPublicacion.toString(),
+      }
+    );
+
+  const publicacion =
+    await respuestaPublicacion.json();
+
+  if (
+    !respuestaPublicacion.ok ||
+    !publicacion?.id
+  ) {
+    console.error(
+      "Error publicando en Threads:",
+      publicacion
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        "Threads creó el contenido pero no pudo publicarlo.",
+      detalle:
+        publicacion?.error?.message ||
+        null,
+    });
+  }
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "threads",
+
+      productoId:
+        productoId || null,
+
+      publicacionId: String(
+        publicacion.id
+      ),
+
+      texto,
+
+      estado: "publicado",
+
+      publicadoEn: new Date(),
+
+      creadoEn: new Date(),
+    });
+
+  return res.status(200).json({
+    ok: true,
+    proveedor: "threads",
+    publicacionId: String(
+      publicacion.id
+    ),
+    mensaje:
+      "Publicación realizada correctamente en Threads.",
   });
-  return res.status(200).json({ ok: true, publicacionId: String(publicacion.id), mensaje: "Publicado en Threads" });
 }
+
+// =========================================================
+// INSTAGRAM - PUBLICACIÓN
+// =========================================================
 
 function verificarConfiguracionInstagram() {
-  if (!INSTAGRAM_ACCESS_TOKEN) throw new Error("Falta INSTAGRAM_ACCESS_TOKEN");
+  if (!INSTAGRAM_ACCESS_TOKEN) {
+    throw new Error(
+      "Falta INSTAGRAM_ACCESS_TOKEN"
+    );
+  }
 }
 
-async function leerJsonSeguro(res) {
-  const t = await res.text();
-  try { return t ? JSON.parse(t) : {}; } catch { return { error: { message: t } }; }
+async function leerJsonSeguro(respuesta) {
+  const texto = await respuesta.text();
+
+  if (!texto) return {};
+
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return {
+      error: {
+        message: texto,
+      },
+    };
+  }
 }
 
 async function obtenerCuentaInstagram() {
   verificarConfiguracionInstagram();
-  const datos = await leerJsonSeguro(await fetch(`${INSTAGRAM_API}/me?fields=id,username&access_token=${INSTAGRAM_ACCESS_TOKEN}`));
-  if (!datos?.id) throw new Error("No se pudo verificar cuenta IG");
-  return { id: String(datos.id), username: datos.username || null };
-}
 
-function normalizarUrlImagen(v) {
-  return typeof v === "string" && /^https?:\/\//i.test(v.trim()) ? v.trim() : null;
-}
+  const parametros = new URLSearchParams({
+    fields: "id,username",
+    access_token: INSTAGRAM_ACCESS_TOKEN,
+  });
 
-function extraerImagenesInstagram(pub) {
-  if (!pub || typeof pub !== "object") return [];
-  const urls = [];
-  const rec = (v) => {
-    if (Array.isArray(v)) v.forEach(rec);
-    else if (v && typeof v === "object") Object.values(v).forEach(rec);
-    else { const u = normalizarUrlImagen(v); if (u && !urls.includes(u)) urls.push(u); }
+  const respuesta = await fetch(
+    `${INSTAGRAM_API}/me?${parametros.toString()}`
+  );
+
+  const datos = await leerJsonSeguro(
+    respuesta
+  );
+
+  if (
+    !respuesta.ok ||
+    !datos?.id
+  ) {
+    console.error(
+      "Error obteniendo cuenta de Instagram:",
+            datos
+    );
+
+    throw new Error(
+      datos?.error?.message ||
+        "No se pudo verificar la cuenta de Instagram."
+    );
+  }
+
+  return {
+    id: String(datos.id),
+    username:
+      typeof datos.username === "string"
+        ? datos.username
+        : null,
   };
-  ["imagenes", "images", "media", "slides", "imagen", "image", "imageUrl", "image_url"].forEach(k => rec(pub[k]));
+}
+
+function normalizarUrlImagen(valor) {
+  if (typeof valor !== "string") {
+    return null;
+  }
+
+  const url = valor.trim();
+
+  if (
+    !url ||
+    !/^https:\/\//i.test(url)
+  ) {
+    return null;
+  }
+
+  return url;
+}
+
+function extraerImagenesInstagram(
+  publicacion
+) {
+  if (
+    !publicacion ||
+    typeof publicacion !== "object"
+  ) {
+    return [];
+  }
+
+  const candidatos = [
+    publicacion.imagenes,
+    publicacion.images,
+    publicacion.media,
+    publicacion.slides,
+    publicacion.imagen,
+    publicacion.image,
+    publicacion.imageUrl,
+    publicacion.image_url,
+  ];
+
+  const urls = [];
+
+  const agregarValor = (valor) => {
+    if (Array.isArray(valor)) {
+      valor.forEach(agregarValor);
+      return;
+    }
+
+    if (
+      valor &&
+      typeof valor === "object"
+    ) {
+      [
+        valor.url,
+        valor.imageUrl,
+        valor.image_url,
+        valor.imagen,
+        valor.image,
+      ].forEach(agregarValor);
+
+      return;
+    }
+
+    const url =
+      normalizarUrlImagen(valor);
+
+    if (
+            url &&
+      !urls.includes(url)
+    ) {
+      urls.push(url);
+    }
+  };
+
+  candidatos.forEach(agregarValor);
+
   return urls;
 }
 
-async function crearContenedorInstagram(cuentaId, params) {
-  const datos = await leerJsonSeguro(await fetch(`${INSTAGRAM_API}/${cuentaId}/media`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ ...params, access_token: INSTAGRAM_ACCESS_TOKEN }).toString(),
-  }));
-  if (!datos?.id) throw new Error("Error creando contenedor IG");
+async function crearContenedorInstagram(
+  cuentaId,
+  parametros
+) {
+  const body = new URLSearchParams({
+    ...parametros,
+    access_token:
+      INSTAGRAM_ACCESS_TOKEN,
+  });
+
+  const respuesta = await fetch(
+    `${INSTAGRAM_API}/${cuentaId}/media`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    }
+  );
+
+  const datos = await leerJsonSeguro(
+    respuesta
+  );
+
+  if (
+    !respuesta.ok ||
+    !datos?.id
+  ) {
+    console.error(
+      "Error creando contenedor de Instagram:",
+      datos
+    );
+
+    throw new Error(
+      datos?.error?.message ||
+        "Instagram no pudo crear el contenedor multimedia."
+    );
+  }
+
   return String(datos.id);
 }
 
-const esperar = ms => new Promise(r => setTimeout(r, ms));
+const esperar = (milisegundos) =>
+  new Promise((resolver) =>
+    setTimeout(resolver, milisegundos)
+  );
 
-async function esperarContenedorInstagram(id, intentos = 10) {
-  for (let i = 0; i < intentos; i++) {
-    const datos = await leerJsonSeguro(await fetch(`${INSTAGRAM_API}/${id}?fields=status_code,status&access_token=${INSTAGRAM_ACCESS_TOKEN}`));
-    if (datos?.status_code === "FINISHED") return datos;
-    if (datos?.status_code === "ERROR" || datos?.status_code === "EXPIRED") throw new Error(datos?.status || "Error procesando contenido IG");
+async function esperarContenedorInstagram(
+  contenedorId,
+  intentos = 10
+) {
+  for (
+    let intento = 0;
+    intento < intentos;
+    intento += 1
+  ) {
+    const parametros =
+      new URLSearchParams({
+        fields: "status_code,status",
+        access_token:
+          INSTAGRAM_ACCESS_TOKEN,
+      });
+
+    const respuesta = await fetch(
+      `${INSTAGRAM_API}/${contenedorId}?${parametros.toString()}`
+    );
+
+    const datos = await leerJsonSeguro(
+      respuesta
+    );
+
+    if (!respuesta.ok) {
+      console.error(
+        "Error consultando contenedor de Instagram:",
+        datos
+      );
+
+      throw new Error(
+        datos?.error?.message ||
+          "No se pudo consultar el estado del contenido de Instagram."
+      );
+    }
+
+    if (
+      datos?.status_code === "FINISHED"
+    ) {
+      return datos;
+    }
+
+    if (
+      datos?.status_code === "ERROR" ||
+      datos?.status_code === "EXPIRED"
+    ) {
+      throw new Error(
+        datos?.status ||
+          "Instagram no pudo procesar el contenido."
+      );
+    }
+
     await esperar(1500);
   }
-  throw new Error("IG tardó demasiado en procesar");
-}
 
-async function publicarContenedorInstagram(cuentaId, contenedorId) {
-  const datos = await leerJsonSeguro(await fetch(`${INSTAGRAM_API}/${cuentaId}/media_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ creation_id: contenedorId, access_token: INSTAGRAM_ACCESS_TOKEN }).toString(),
-  }));
-  if (!datos?.id) throw new Error("Error publicando contenedor IG");
+  throw new Error(
+    "Instagram todavía está procesando el contenido. Intenta nuevamente en unos segundos."
+  );
+}
+async function publicarContenedorInstagram(
+  cuentaId,
+  contenedorId
+) {
+  const body = new URLSearchParams({
+    creation_id: contenedorId,
+    access_token:
+      INSTAGRAM_ACCESS_TOKEN,
+  });
+
+  const respuesta = await fetch(
+    `${INSTAGRAM_API}/${cuentaId}/media_publish`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    }
+  );
+
+  const datos = await leerJsonSeguro(
+    respuesta
+  );
+
+  if (
+    !respuesta.ok ||
+    !datos?.id
+  ) {
+    console.error(
+      "Error publicando en Instagram:",
+      datos
+    );
+
+    throw new Error(
+      datos?.error?.message ||
+        "Instagram no pudo publicar el contenido."
+    );
+  }
+
   return String(datos.id);
 }
 
-async function publicarCarruselInstagram({ publicacion, productoId }) {
+async function publicarCarruselInstagram({
+  publicacion,
+  productoId,
+}) {
   verificarConfiguracionInstagram();
-  const imagenes = extraerImagenesInstagram(publicacion);
-  if (imagenes.length < 2 || imagenes.length > 10) throw new Error(`Carrusel necesita 2-10 imágenes, hay ${imagenes.length}`);
-  const texto = publicacion?.texto?.trim() || publicacion?.caption?.trim() || "";
-  const cuenta = await obtenerCuentaInstagram();
+
+  const imagenes =
+    extraerImagenesInstagram(
+      publicacion
+    );
+
+  if (
+    imagenes.length < 2 ||
+    imagenes.length > 10
+  ) {
+    throw new Error(
+      `El carrusel necesita entre 2 y 10 imágenes públicas. Se encontraron ${imagenes.length}.`
+    );
+  }
+
+  const texto =
+    typeof publicacion?.texto ===
+    "string"
+      ? publicacion.texto.trim()
+      : typeof publicacion?.caption ===
+          "string"
+        ? publicacion.caption.trim()
+        : "";
+
+  const cuenta =
+    await obtenerCuentaInstagram();
+
   const hijos = [];
-  for (const url of imagenes) {
-    const h = await crearContenedorInstagram(cuenta.id, { image_url: url, is_carousel_item: "true" });
-    await esperarContenedorInstagram(h);
-    hijos.push(h);
+
+  for (const imageUrl of imagenes) {
+    const hijo =
+      await crearContenedorInstagram(
+        cuenta.id,
+        {
+          image_url: imageUrl,
+          is_carousel_item: "true",
+        }
+      );
+
+    await esperarContenedorInstagram(
+      hijo
+    );
+
+    hijos.push(hijo);
   }
-  const carrusel = await crearContenedorInstagram(cuenta.id, {
-    media_type: "CAROUSEL", children: hijos.join(","), ...(texto && { caption: texto }),
-  });
-  await esperarContenedorInstagram(carrusel);
-  const pid = await publicarContenedorInstagram(cuenta.id, carrusel);
-  const db = await conectarMongoDB();
-  await db.collection("publicaciones_redes").insertOne({
-    proveedor: "instagram", tipo: "carrusel", productoId: productoId || null,
-    publicacionId: pid, cuentaId: cuenta.id, username: cuenta.username,
-    texto, imagenes, estado: "publicado", publicadoEn: new Date(), creadoEn: new Date(),
-  });
-  return { ok: true, tipo: "carrusel", publicacionId: pid, mensaje: "Carrusel publicado" };
-}
 
-async function publicarStoryInstagram({ publicacion, productoId }) {
-  verificarConfiguracionInstagram();
-  const imagenes = extraerImagenesInstagram(publicacion);
-  const imagen = imagenes[0];
-  if (!imagen) throw new Error("La Story necesita una imagen");
-  const cuenta = await obtenerCuentaInstagram();
-  const contenedor = await crearContenedorInstagram(cuenta.id, { image_url: imagen, media_type: "STORIES" });
-  await esperarContenedorInstagram(contenedor);
-  const pid = await publicarContenedorInstagram(cuenta.id, contenedor);
-  const db = await conectarMongoDB();
-  await db.collection("publicaciones_redes").insertOne({
-    proveedor: "instagram", tipo: "story", productoId: productoId || null,
-    publicacionId: pid, imagen, estado: "publicado", publicadoEn: new Date(),
-  });
-  return { ok: true, tipo: "story", publicacionId: pid, mensaje: "Story publicada" };
-}
+  const parametrosCarrusel = {
+    media_type: "CAROUSEL",
+    children: hijos.join(","),
+  };
 
-async function publicarReelInstagram({ publicacion, productoId }) {
-  verificarConfiguracionInstagram();
-  const db = await conectarMongoDB();
-  const prod = await db.collection("productos").findOne({ id: productoId });
-  const videoUrl = prod?.videoReel?.trim();
-  if (!videoUrl || !/^https?:\/\//i.test(videoUrl)) throw new Error("Falta video Reel válido");
-  const texto = publicacion?.texto?.trim() || publicacion?.caption?.trim() || "";
-  const cuenta = await obtenerCuentaInstagram();
-  const contenedor = await crearContenedorInstagram(cuenta.id, {
-    media_type: "REELS", video_url: videoUrl, ...(texto && { caption: texto }),
-  });
-  await esperarContenedorInstagram(contenedor, 40);
-  const pid = await publicarContenedorInstagram(cuenta.id, contenedor);
-  await db.collection("publicaciones_redes").insertOne({
-    proveedor: "instagram", tipo: "reel", productoId, publicacionId: pid,
-    texto, videoUrl, estado: "publicado", publicadoEn: new Date(),
-  });
-  return { ok: true, tipo: "reel", publicacionId: pid, mensaje: "Reel publicado" };
-}
-
-async function publicarFacebook({ publicacion, productoId }) {
-  verificarConfiguracionFacebook();
-  const texto = publicacion?.texto?.trim() || "";
-  const imagenes = extraerImagenesInstagram(publicacion);
-  const imagen = imagenes[0];
-  if (!texto && !imagen) throw new Error("Publicación FB sin texto ni imagen");
-  const params = new URLSearchParams({ access_token: FACEBOOK_PAGE_ACCESS_TOKEN });
-  if (texto) params.set(imagen ? "caption" : "message", texto);
-  const endpoint = imagen
-    ? `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/photos`
-    : `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/feed`;
-  if (imagen) params.set("url", imagen);
-  const datos = await leerJsonSeguro(await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  }));
-  if (!datos?.id) throw new Error("Error publicando en Facebook");
-  const pid = String(datos.id);
-  const db = await conectarMongoDB();
-  await db.collection("publicaciones_redes").insertOne({
-    proveedor: "facebook", tipo: "publicacion", productoId: productoId || null,
-    publicacionId: pid, texto, imagen, estado: "publicado", publicadoEn: new Date(),
-  });
-  return { ok: true, proveedor: "facebook", publicacionId: pid, mensaje: "Publicado en Facebook" };
-}
-
-async function guardarBorrador(req, res) {
-  const { productoId, nombreProducto, contenido } = req.body || {};
-  if (!productoId || !nombreProducto || !contenido || typeof contenido !== "object") {
-    return res.status(400).json({ ok: false, error: "Datos inválidos" });
+  if (texto) {
+    parametrosCarrusel.caption = texto;
   }
-  const db = await conectarMongoDB();
-  const ahora = new Date();
-  await db.collection("contenido_redes").updateOne(
-    { productoId, estado: "borrador" },
-    { $set: { productoId, nombreProducto, contenido, estado: "borrador", actualizadoEn: ahora },
-      $setOnInsert: { creadoEn: ahora } },
-    { upsert: true }
+
+  const carrusel =
+    await crearContenedorInstagram(
+      cuenta.id,
+      parametrosCarrusel
+    );
+
+  await esperarContenedorInstagram(
+    carrusel
   );
-  return res.status(200).json({ ok: true, mensaje: "Borrador guardado" });
+
+  const publicacionId =
+    await publicarContenedorInstagram(
+      cuenta.id,
+      carrusel
+    );
+
+  const db =
+    await conectarMongoDB();
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "instagram",
+      tipo: "carrusel",
+      productoId:
+        productoId || null,
+      publicacionId,
+      cuentaId: cuenta.id,
+      username:
+        cuenta.username || null,
+      texto,
+      imagenes,
+      estado: "publicado",
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return {
+    ok: true,
+    proveedor: "instagram",
+    tipo: "carrusel",
+    publicacionId,
+    username:
+      cuenta.username || null,
+    mensaje:
+      "Carrusel publicado correctamente en Instagram.",
+  };
 }
 
-async function listarBorradores(req, res) {
-  const db = await conectarMongoDB();
-  const borradores = await db.collection("contenido_redes").find({ estado: "borrador" }).sort({ actualizadoEn: -1 }).toArray();
-  return res.status(200).json({ ok: true, borradores });
+// =========================================================
+// INSTAGRAM - STORY
+// =========================================================
+
+async function publicarStoryInstagram({
+  publicacion,
+  productoId,
+}) {
+  verificarConfiguracionInstagram();
+
+  const imagenes =
+    extraerImagenesInstagram(publicacion);
+
+  const imagen = imagenes[0] || null;
+
+  if (!imagen) {
+    throw new Error(
+      "La Story de Instagram no contiene una imagen pública."
+    );
+  }
+
+  const cuenta =
+    await obtenerCuentaInstagram();
+
+  const contenedor =
+    await crearContenedorInstagram(
+      cuenta.id,
+      {
+        image_url: imagen,
+        media_type: "STORIES",
+      }
+    );
+
+  await esperarContenedorInstagram(
+    contenedor
+  );
+
+  const publicacionId =
+    await publicarContenedorInstagram(
+      cuenta.id,
+      contenedor
+    );
+
+  const db =
+    await conectarMongoDB();
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "instagram",
+      tipo: "story",
+
+      productoId:
+        productoId || null,
+      
+      publicacionId,
+
+      cuentaId: cuenta.id,
+
+      username:
+        cuenta.username || null,
+
+      imagen,
+
+      estado: "publicado",
+
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return {
+    ok: true,
+    proveedor: "instagram",
+    tipo: "story",
+    publicacionId,
+
+    username:
+      cuenta.username || null,
+
+    mensaje:
+      "Story publicada correctamente en Instagram.",
+  };
 }
+
+// =========================================================
+// INSTAGRAM - REEL
+// =========================================================
+
+async function publicarReelInstagram({
+  publicacion,
+  productoId,
+}) {
+  verificarConfiguracionInstagram();
+
+  const db =
+    await conectarMongoDB();
+
+  const producto = await db
+    .collection("productos")
+    .findOne({
+      id: productoId,
+    });
+
+  if (!producto) {
+    throw new Error(
+      "No se encontró el producto del Reel."
+    );
+  }
+
+  const videoUrl =
+    typeof producto.videoReel === "string"
+      ? producto.videoReel.trim()
+      : "";
+
+  if (
+    !videoUrl ||
+    !/^https:\/\//i.test(videoUrl)
+  ) {
+    throw new Error(
+      "El producto no tiene un video Reel público."
+    );
+  }
+
+  const texto =
+    typeof publicacion?.texto === "string"
+      ? publicacion.texto.trim()
+      : typeof publicacion?.caption === "string"
+        ? publicacion.caption.trim()
+        : "";
+
+  const cuenta =
+    await obtenerCuentaInstagram();
+
+  const parametros = {
+    media_type: "REELS",
+    video_url: videoUrl,
+  };
+
+  if (texto) {
+    parametros.caption = texto;
+  }
+
+  const contenedor =
+    await crearContenedorInstagram(
+      cuenta.id,
+      parametros
+    );
+
+  await esperarContenedorInstagram(
+    contenedor,
+    40
+  );
+
+  const publicacionId =
+    await publicarContenedorInstagram(
+      cuenta.id,
+      contenedor
+    );
+
+  await db
+    .collection("publicaciones_redes")
+      .insertOne({
+      proveedor: "instagram",
+      tipo: "reel",
+
+      productoId:
+        productoId || null,
+
+      publicacionId,
+
+      cuentaId: cuenta.id,
+
+      username:
+        cuenta.username || null,
+
+      texto,
+
+      videoUrl,
+
+      estado: "publicado",
+
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return {
+    ok: true,
+    proveedor: "instagram",
+    tipo: "reel",
+
+    publicacionId,
+
+    username:
+      cuenta.username || null,
+
+    mensaje:
+      "Reel publicado correctamente en Instagram.",
+  };
+}
+
+// =========================================================
+// FACEBOOK - PUBLICACIÓN
+// =========================================================
+
+async function publicarFacebook({
+  publicacion,
+  productoId,
+}) {
+  verificarConfiguracionFacebook();
+
+  const texto =
+    typeof publicacion?.texto === "string"
+      ? publicacion.texto.trim()
+      : "";
+
+  const imagenes =
+    extraerImagenesInstagram(publicacion);
+
+  const imagen = imagenes[0] || null;
+
+  if (!texto && !imagen) {
+    throw new Error(
+      "La publicación de Facebook no contiene texto ni imagen."
+    );
+  }
+
+  const parametros = new URLSearchParams({
+    access_token: FACEBOOK_PAGE_ACCESS_TOKEN,
+  });
+
+  if (texto) {
+    parametros.set(
+      imagen ? "caption" : "message",
+      texto
+    );
+  }
+
+  let endpoint;
+
+  if (imagen) {
+    parametros.set("url", imagen);
+
+    endpoint =
+      `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/photos`;
+  } else {
+    endpoint =
+      `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/feed`;
+  }
+
+  const respuesta = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type":
+        "application/x-www-form-urlencoded",
+    },
+    body: parametros.toString(),
+  });
+
+  const datos =
+    await leerJsonSeguro(respuesta);
+
+  if (!respuesta.ok || !datos?.id) {
+    console.error(
+      "Error publicando en Facebook:",
+      datos
+    );
+
+    throw new Error(
+      datos?.error?.message ||
+        "Facebook no pudo publicar el contenido."
+    );
+  }
+
+  const publicacionId = String(datos.id);
+
+  const db =
+    await conectarMongoDB();
+
+  await db
+    .collection("publicaciones_redes")
+    .insertOne({
+      proveedor: "facebook",
+      tipo: "publicacion",
+
+      productoId:
+        productoId || null,
+
+      publicacionId,
+
+      paginaId:
+        FACEBOOK_PAGE_ID,
+
+      texto,
+
+      imagen,
+
+      estado: "publicado",
+
+      publicadoEn: new Date(),
+      creadoEn: new Date(),
+    });
+
+  return {
+    ok: true,
+    proveedor: "facebook",
+    tipo: "publicacion",
+    publicacionId,
+
+    mensaje:
+      "Publicación realizada correctamente en Facebook.",
+  };
+}
+
+// =========================================================
+// BORRADORES DE CONTENIDO
+// =========================================================
+
+async function guardarBorrador(
+  req,
+  res
+) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
+  const nombreProducto =
+        typeof req.body?.nombreProducto === "string"
+      ? req.body.nombreProducto.trim()
+      : "";
+
+  const contenido =
+    req.body?.contenido;
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  if (!nombreProducto) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el nombre del producto.",
+    });
+  }
+
+  if (
+    !contenido ||
+    typeof contenido !== "object" ||
+    Array.isArray(contenido)
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "El contenido del borrador no es válido.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const ahora =
+    new Date();
+
+  await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        productoId,
+        estado: "borrador",
+      },
+      {
+        $set: {
+          productoId,
+          nombreProducto,
+          contenido,
+          estado: "borrador",
+          actualizadoEn: ahora,
+        },
+
+        $setOnInsert: {
+          creadoEn: ahora,
+          aprobadoEn: null,
+        },
+      },
+      {
+        upsert: true,
+      }
+    );
+
+  const borrador = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "borrador",
+    });
+
+  return res.status(200).json({
+    ok: true,
+    mensaje:
+      "Borrador guardado correctamente.",
+    borrador,
+  });
+}
+
+// =========================================================
+// LISTAR BORRADORES
+// =========================================================
+
+async function listarBorradores(
+  req,
+  res
+) {
+  const db =
+    await conectarMongoDB();
+
+  const borradores = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "borrador",
+    })
+    .sort({
+      actualizadoEn: -1,
+    })
+    .toArray();
+
+  return res.status(200).json({
+    ok: true,
+    borradores,
+  });
+}
+
+// =========================================================
+// APROBAR BORRADOR
+// =========================================================
 
 async function aprobarBorrador(req, res) {
-  const { productoId } = req.body || {};
-  if (!productoId) return res.status(400).json({ ok: false, error: "Falta productoId" });
-  const db = await conectarMongoDB();
-  const resu = await db.collection("contenido_redes").updateOne(
-    { productoId, estado: "borrador" },
-    { $set: { estado: "aprobado", aprobadoEn: new Date(), actualizadoEn: new Date() } }
-  );
-  if (resu.matchedCount === 0) return res.status(404).json({ ok: false, error: "Sin borrador para aprobar" });
-  return res.status(200).json({ ok: true, mensaje: "Aprobado" });
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const ahora = new Date();
+
+  const resultado = await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        productoId,
+        estado: "borrador",
+      },
+      {
+        $set: {
+          estado: "aprobado",
+          aprobadoEn: ahora,
+          actualizadoEn: ahora,
+        },
+      }
+    );
+
+  if (resultado.matchedCount === 0) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró un borrador para aprobar.",
+    });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    mensaje:
+      "Contenido aprobado correctamente.",
+  });
 }
 
-async function listarAprobados(req, res) {
-  const db = await conectarMongoDB();
-  const aprobados = await db.collection("contenido_redes").find({ estado: "aprobado" }).sort({ aprobadoEn: -1 }).toArray();
-  return res.status(200).json({ ok: true, aprobados });
+// =========================================================
+// LISTAR CONTENIDOS APROBADOS
+// =========================================================
+
+async function listarAprobados(
+  req,
+  res
+) {
+  const db =
+    await conectarMongoDB();
+
+  const aprobados = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "aprobado",
+    })
+    .sort({
+      aprobadoEn: -1,
+    })
+    .toArray();
+
+  return res.status(200).json({
+    ok: true,
+    aprobados,
+  });
 }
+
+// =========================================================
+// CALENDARIO DE REDES
+// =========================================================
+
+const ZONA_HORARIA_RED =
+  "America/Argentina/Buenos_Aires";
+
 const formatearFechaUTC = (fecha) => {
   const anio = fecha.getUTCFullYear();
-  const mes = String(fecha.getUTCMonth() + 1).padStart(2, "0");
-  const dia = String(fecha.getUTCDate()).padStart(2, "0");
+  const mes = String(
+    fecha.getUTCMonth() + 1
+  ).padStart(2, "0");
+  const dia = String(
+    fecha.getUTCDate()
+  ).padStart(2, "0");
+
   return `${anio}-${mes}-${dia}`;
 };
-const sumarDiasFecha = (fechaBase, cantidad) => {
-  const [anio, mes, dia] = fechaBase.split("-").map(Number);
-  const fecha = new Date(Date.UTC(anio, mes - 1, dia));
-  fecha.setUTCDate(fecha.getUTCDate() + cantidad);
+
+const sumarDiasFecha = (
+  fechaBase,
+  cantidad
+) => {
+  const [anio, mes, dia] =
+    fechaBase.split("-").map(Number);
+
+  const fecha = new Date(
+    Date.UTC(anio, mes - 1, dia)
+  );
+
+  fecha.setUTCDate(
+    fecha.getUTCDate() + cantidad
+  );
+
   return formatearFechaUTC(fecha);
 };
+
 const obtenerFechaArgentina = () => {
-  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: ZONA_HORARIA_RED, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts();
-  const v = {};
-  for (const p of partes) if (p.type !== "literal") v[p.type] = p.value;
-  return `${v.year}-${v.month}-${v.day}`;
+  const partes = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: ZONA_HORARIA_RED,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }
+  ).formatToParts(new Date());
+
+  const valores = {};
+
+  for (const parte of partes) {
+    if (parte.type !== "literal") {
+      valores[parte.type] = parte.value;
+    }
+  }
+
+  return `${valores.year}-${valores.month}-${valores.day}`;
 };
+
 const obtenerInicioSemana = () => {
   const hoy = obtenerFechaArgentina();
-  const [anio, mes, dia] = hoy.split("-").map(Number);
-  const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+
+  const [anio, mes, dia] =
+    hoy.split("-").map(Number);
+
+  const fecha = new Date(
+    Date.UTC(anio, mes - 1, dia)
+  );
+
   const diaSemana = fecha.getUTCDay();
-  const distLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-  fecha.setUTCDate(fecha.getUTCDate() + distLunes);
-  let inicio = formatearFechaUTC(fecha);
-  if (diaSemana === 6 || diaSemana === 0) inicio = sumarDiasFecha(inicio, 7);
+
+  // 0 domingo, 1 lunes ... 6 sábado
+  const distanciaLunes =
+    diaSemana === 0
+      ? -6
+      : 1 - diaSemana;
+
+  fecha.setUTCDate(
+    fecha.getUTCDate() + distanciaLunes
+  );
+
+  let inicio =
+    formatearFechaUTC(fecha);
+
+  // Si ya estamos en sábado o domingo,
+  // programamos directamente la semana siguiente.
+  if (
+    diaSemana === 6 ||
+    diaSemana === 0
+  ) {
+    inicio =
+      sumarDiasFecha(inicio, 7);
+  }
+
   return inicio;
 };
 
-const crearCalendarioInicial = (contenido, bloqueSemana = 0, semanaInicio = obtenerInicioSemana()) => {
-  const bloque = Number(bloqueSemana) === 1 ? 1 : 0;
-  const desplazamiento = bloque === 0 ? 0 : 3;
-  const nombresDias = bloque === 0
-    ? ["Lunes", "Martes", "Miércoles"]
-    : ["Jueves", "Viernes", "Sábado"];
-  const dias = nombresDias.map((dia, idx) => ({
-    fecha: sumarDiasFecha(semanaInicio, desplazamiento + idx),
-    dia,
-  }));
+const crearCalendarioInicial = (
+  contenido,
+  bloqueSemana = 0,
+  semanaInicio = obtenerInicioSemana()
+) => {
+  const bloque =
+    Number(bloqueSemana) === 1 ? 1 : 0;
+
+  const desplazamiento =
+    bloque === 0 ? 0 : 3;
+
+  const nombresDias =
+    bloque === 0
+      ? [
+          "Lunes",
+          "Martes",
+          "Miércoles",
+        ]
+      : [
+          "Jueves",
+          "Viernes",
+          "Sábado",
+        ];
+
+  const dias = nombresDias.map(
+    (dia, indice) => ({
+      fecha: sumarDiasFecha(
+        semanaInicio,
+        desplazamiento + indice
+      ),
+      dia,
+    })
+  );
+
   const calendario = [];
-  const huecos = [];
-  const agregar = (d, hora, red, tipo, indice, publicacion) => {
-    if (!publicacion) {
-      huecos.push({ dia: nombresDias[d], hora, red, tipo, mensaje: "Sin contenido" });
-      return;
-    }
+
+  const agregar = (
+    d,
+    hora,
+    red,
+    tipo,
+    indice,
+    publicacion
+  ) => {
+    if (!publicacion) return;
+
     calendario.push({
-      fecha: dias[d].fecha, dia: dias[d].dia, hora, red, tipo, indice,
-      publicacion, estado: "programado", zonaHoraria: ZONA_HORARIA_RED,
-      intentos: 0,
+      fecha: dias[d].fecha,
+      dia: dias[d].dia,
+      hora,
+      red,
+      tipo,
+      indice,
+      publicacion,
+      estado: "programado",
+      zonaHoraria: ZONA_HORARIA_RED,
     });
   };
 
-  agregar(0, "10:00", "instagram", "story", 0, contenido?.instagram?.stories?.[0]);
-  agregar(0, "12:00", "instagram", "carrusel", 0, contenido?.instagram?.carrusel);
-  agregar(0, "20:00", "instagram", "story", 1, contenido?.instagram?.stories?.[1]);
-  agregar(1, "10:00", "instagram", "story", 2, contenido?.instagram?.stories?.[2]);
-  agregar(1, "18:00", "instagram", "reel", 0, contenido?.instagram?.reel);
-  agregar(1, "20:00", "instagram", "story", 3, contenido?.instagram?.stories?.[3]);
-  agregar(2, "10:00", "instagram", "story", 4, contenido?.instagram?.stories?.[4]);
-  agregar(2, "20:00", "instagram", "story", 5, contenido?.instagram?.stories?.[5]);
+  // INSTAGRAM
+
+  agregar(
+    0,
+        "10:00",
+    "instagram",
+    "story",
+    0,
+    contenido?.instagram?.stories?.[0]
+  );
+
+  agregar(
+    0,
+    "12:00",
+    "instagram",
+    "carrusel",
+    0,
+    contenido?.instagram?.carrusel
+  );
+
+  agregar(
+    0,
+    "20:00",
+    "instagram",
+    "story",
+    1,
+    contenido?.instagram?.stories?.[1]
+  );
+
+  agregar(
+    1,
+    "10:00",
+    "instagram",
+    "story",
+    2,
+    contenido?.instagram?.stories?.[2]
+  );
+
+  agregar(
+    1,
+    "18:00",
+    "instagram",
+    "reel",
+    0,
+    contenido?.instagram?.reel
+  );
+
+  agregar(
+    1,
+    "20:00",
+    "instagram",
+    "story",
+    3,
+    contenido?.instagram?.stories?.[3]
+  );
+
+  agregar(
+    2,
+    "10:00",
+    "instagram",
+    "story",
+    4,
+    contenido?.instagram?.stories?.[4]
+  );
+
+  agregar(
+    2,
+    "20:00",
+    "instagram",
+    "story",
+    5,
+    contenido?.instagram?.stories?.[5]
+  );
+
+  // THREADS + FACEBOOK
 
   for (let i = 0; i < 6; i += 1) {
-    agregar(Math.floor(i / 2), i % 2 === 0 ? "11:00" : "19:00", "threads", "publicacion", i, contenido?.threads?.[i]);
-    agregar(Math.floor(i / 2), i % 2 === 0 ? "17:00" : "21:00", "facebook", "publicacion", i, contenido?.facebook?.publicaciones?.[i]);
+    agregar(
+      Math.floor(i / 2),
+      i % 2 === 0
+        ? "11:00"
+        : "19:00",
+      "threads",
+      "publicacion",
+      i,
+      contenido?.threads?.[i]
+    );
+
+    agregar(
+      Math.floor(i / 2),
+      i % 2 === 0
+        ? "17:00"
+        : "21:00",
+      "facebook",
+      "publicacion",
+      i,
+      contenido?.facebook
+        ?.publicaciones?.[i]
+    );
   }
-  return { calendario, huecos };
+
+  return calendario;
 };
 
-async function programarContenido(req, res) {
-  const { productoId } = req.body || {};
-  if (!productoId) return res.status(400).json({ ok: false, error: "Falta productoId" });
-  const db = await conectarMongoDB();
-  const aprobado = await db.collection("contenido_redes")
-    .find({ productoId, estado: "aprobado" })
-    .sort({ aprobadoEn: -1 }).limit(1).next();
-  if (!aprobado) return res.status(404).json({ ok: false, error: "Sin contenido aprobado" });
+// =========================================================
+// PROGRAMAR CONTENIDO APROBADO
+// =========================================================
 
-  const semanaInicio = obtenerInicioSemana();
-  const programados = await db.collection("contenido_redes").find({ estado: "programado", semanaInicio }).toArray();
-  const ocupados = new Set(programados.map(i => Number(i.bloqueSemana)).filter(b => b === 0 || b === 1));
-  let bloque = null;
-  if (!ocupados.has(0)) bloque = 0;
-  else if (!ocupados.has(1)) bloque = 1;
-  if (bloque === null) return res.status(409).json({ ok: false, error: "Semana completa" });
+async function programarContenido(
+  req,
+  res
+) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
 
-  const { calendario, huecos } = crearCalendarioInicial(aprobado.contenido, bloque, semanaInicio);
-  await db.collection("contenido_redes").updateOne(
-    { _id: aprobado._id },
-    { $set: { estado: "programado", calendario, semanaInicio, semanaFin: sumarDiasFecha(semanaInicio, 5),
-      bloqueSemana: bloque, programadoEn: new Date(), actualizadoEn: new Date() } }
-  );
-  return res.status(200).json({ ok: true, bloqueSemana: bloque, calendario, huecos });
-}
-
-async function regenerarContenidoProgramado(req, res) {
-  const { productoId, nombreProducto, contenido } = req.body || {};
-  if (!productoId || !contenido) return res.status(400).json({ ok: false, error: "Datos incompletos" });
-  const db = await conectarMongoDB();
-  const doc = await db.collection("contenido_redes").findOne({ productoId, estado: "programado" });
-  if (!doc) return res.status(404).json({ ok: false, error: "Sin programado" });
-  const { calendario, huecos } = crearCalendarioInicial(contenido, Number(doc.bloqueSemana) || 0, doc.semanaInicio);
-  await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
-    $set: { contenido, calendario, nombreProducto: nombreProducto || doc.nombreProducto,
-      regeneradoEn: new Date(), actualizadoEn: new Date() }
-  });
-  return res.status(200).json({ ok: true, calendario, huecos });
-}
-
-async function listarProgramados(req, res) {
-  const db = await conectarMongoDB();
-  const programados = await db.collection("contenido_redes").find({ estado: "programado" }).sort({ programadoEn: -1 }).toArray();
-  return res.status(200).json({ ok: true, programados });
-}
-
-async function ejecutarPublicacionPieza({ req, pieza, productoId }) {
-  const { red, tipo } = pieza;
-  if (red === "threads") {
-    const texto = pieza.publicacion?.texto?.trim();
-    if (!texto) throw new Error("Falta texto Threads");
-    let resultado;
-    await publicarThreads({ ...req, body: { texto, productoId } }, {
-      status() { return this; },
-      json(datos) { resultado = datos; return datos; },
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
     });
-    if (!resultado?.ok) throw new Error(resultado?.error || "Fallo Threads");
-    return resultado;
   }
-  if (red === "instagram" && tipo === "carrusel") return publicarCarruselInstagram({ publicacion: pieza.publicacion, productoId });
-  if (red === "instagram" && tipo === "story") return publicarStoryInstagram({ publicacion: pieza.publicacion, productoId });
-  if (red === "instagram" && tipo === "reel") return publicarReelInstagram({ publicacion: pieza.publicacion, productoId });
-  if (red === "facebook") return publicarFacebook({ publicacion: pieza.publicacion, productoId });
-  throw new Error("Red/formato no habilitado");
+
+  const db =
+    await conectarMongoDB();
+
+  const aprobado = await db
+    .collection("contenido_redes")
+    .find({
+      productoId,
+      estado: "aprobado",
+    })
+    .sort({
+      aprobadoEn: -1,
+      actualizadoEn: -1,
+    })
+    .limit(1)
+    .next();
+
+  if (!aprobado) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró contenido aprobado para este producto.",
+    });
+  }
+
+  const ahora = new Date();
+
+  const semanaInicio =
+    obtenerInicioSemana();
+
+  const semanaFin =
+    sumarDiasFecha(
+      semanaInicio,
+      5
+    );
+
+  const programadosSemana = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "programado",
+      semanaInicio,
+    })
+    .sort({
+      programadoEn: 1,
+    })
+    .toArray();
+
+  const bloquesOcupados =
+    new Set(
+      programadosSemana
+        .map((item) =>
+          Number(item.bloqueSemana)
+        )
+        .filter(
+          (bloque) =>
+            bloque === 0 ||
+            bloque === 1
+        )
+    );
+
+  let bloqueSemana = null;
+
+  if (!bloquesOcupados.has(0)) {
+    bloqueSemana = 0;
+  } else if (!bloquesOcupados.has(1)) {
+    bloqueSemana = 1;
+  }
+
+  if (bloqueSemana === null) {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "Ya hay dos productos programados para esta semana.",
+    });
+  }
+
+  const calendario =
+    crearCalendarioInicial(
+      aprobado.contenido,
+      bloqueSemana,
+      semanaInicio
+    );
+
+  await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        _id: aprobado._id,
+        estado: "aprobado",
+      },
+      {
+        $set: {
+          estado: "programado",
+          calendario,
+
+          semanaInicio,
+          semanaFin,
+          bloqueSemana,
+
+          programadoEn: ahora,
+          actualizadoEn: ahora,
+        },
+      }
+    );
+
+  return res.status(200).json({
+    ok: true,
+
+    mensaje:
+      bloqueSemana === 0
+        ? "Producto programado para lunes, martes y miércoles."
+        : "Producto programado para jueves, viernes y sábado.",
+
+    semanaInicio,
+    semanaFin,
+    bloqueSemana,
+    calendario,
+  });
 }
 
-async function publicarProgramado(req, res) {
-  const { productoId, fecha, hora, red, tipo, indice } = req.body || {};
-  if (!productoId || !fecha || !hora || !red) return res.status(400).json({ ok: false, error: "Faltan datos" });
-  const db = await conectarMongoDB();
-  const doc = await db.collection("contenido_redes").findOne({ productoId, estado: "programado" });
-  if (!doc) return res.status(404).json({ ok: false, error: "No encontrado" });
-  const pos = Array.isArray(doc.calendario) ? doc.calendario.findIndex(p =>
-    p.fecha === fecha && p.hora === hora && p.red === red && p.tipo === tipo && Number(p.indice) === Number(indice)
-  ) : -1;
-  if (pos < 0) return res.status(404).json({ ok: false, error: "Pieza no encontrada" });
-  const pieza = doc.calendario[pos];
-  if (pieza.estado === "publicado") return res.status(409).json({ ok: false, error: "Ya publicado" });
-  if (pieza.estado === "publicando") return res.status(409).json({ ok: false, error: "En proceso" });
-  if (pieza.estado === "fallido") return res.status(409).json({ ok: false, error: "Marcada como fallida" });
-  if ((pieza.intentos || 0) >= MAX_INTENTOS_PUBLICACION) {
-    await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
-      $set: { [`calendario.${pos}.estado`]: "fallido", [`calendario.${pos}.fallidoEn`]: new Date(), actualizadoEn: new Date() }
+// =========================================================
+// REGENERAR CONTENIDO PROGRAMADO
+// =========================================================
+
+async function regenerarContenidoProgramado(
+  req,
+  res
+) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+        ? req.body.productoId.trim()
+      : "";
+
+  const nombreProducto =
+    typeof req.body?.nombreProducto === "string"
+      ? req.body.nombreProducto.trim()
+      : "";
+
+  const contenido =
+    req.body?.contenido;
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
     });
-    return res.status(409).json({ ok: false, error: `Máximo ${MAX_INTENTOS_PUBLICACION} intentos alcanzados — marcada como fallida` });
+  }
+
+  if (
+    !contenido ||
+    typeof contenido !== "object" ||
+    Array.isArray(contenido)
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "El contenido regenerado no es válido.",
+    });
+  }
+
+  const db =
+    await conectarMongoDB();
+
+  const documento = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "programado",
+    });
+
+  if (!documento) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró contenido programado para este producto.",
+    });
+  }
+
+  const ahora = new Date();
+
+  // Crea nuevamente las 20 piezas.
+  // Todas quedan en estado "programado"
+  // y sin publicacionId/publicadoEn anteriores.
+  const semanaInicio =
+  documento.semanaInicio ||
+  documento.calendario?.[0]?.fecha ||
+  obtenerInicioSemana();
+
+const bloqueSemana =
+  Number(documento.bloqueSemana) === 1
+    ? 1
+    : 0;
+
+const calendario =
+  crearCalendarioInicial(
+    contenido,
+    bloqueSemana,
+    semanaInicio
+  );
+
+  await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        _id: documento._id,
+      },
+      {
+        $set: {
+          contenido,
+          calendario,
+
+          nombreProducto:
+            nombreProducto ||
+            documento.nombreProducto,
+
+          estado: "programado",
+
+          semanaInicio,
+semanaFin:
+  sumarDiasFecha(
+    semanaInicio,
+    5
+  ),
+bloqueSemana,
+
+          regeneradoEn: ahora,
+          actualizadoEn: ahora,
+        },
+      }
+    );
+
+  return res.status(200).json({
+    ok: true,
+
+    mensaje:
+      "Contenido programado regenerado correctamente.",
+
+    calendario,
+  });
+}
+
+// =========================================================
+// LISTAR CONTENIDO PROGRAMADO
+// =========================================================
+
+async function listarProgramados(
+  req,
+  res
+) {
+  const db =
+    await conectarMongoDB();
+
+  const programados = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "programado",
+    })
+    .sort({
+      programadoEn: -1,
+    })
+    .toArray();
+
+  return res.status(200).json({
+    ok: true,
+    programados,
+  });
+}
+
+// =========================================================
+// PUBLICAR AHORA - PIEZA PROGRAMADA
+// Publicación real: Threads e Instagram (carrusel).
+// =========================================================
+
+async function ejecutarPublicacionPieza({
+  req,
+  pieza,
+  productoId,
+}) {
+  const red = pieza.red;
+  const tipo = pieza.tipo;
+
+  if (red === "threads") {
+    const texto =
+      typeof pieza.publicacion?.texto === "string"
+        ? pieza.publicacion.texto.trim()
+        : "";
+
+    if (!texto) {
+      throw new Error(
+        "La publicación de Threads no contiene texto."
+      );
+    }
+
+    let resultadoThreads = null;
+    let estadoHttp = 200;
+
+    const respuestaInterna = {
+      status(codigo) {
+        estadoHttp = codigo;
+        return this;
+      },
+      json(datos) {
+        resultadoThreads = datos;
+        return datos;
+      },
+    };
+
+    await publicarThreads(
+      {
+        ...req,
+        body: {
+          texto,
+          productoId,
+        },
+      },
+      respuestaInterna
+    );
+
+    if (
+      estadoHttp < 200 ||
+      estadoHttp >= 300 ||
+      !resultadoThreads?.ok
+    ) {
+      throw new Error(
+        resultadoThreads?.error ||
+          "No se pudo publicar en Threads."
+      );
+    }
+
+    return resultadoThreads;
+  }
+
+  if (
+    red === "instagram" &&
+    tipo === "carrusel"
+  ) {
+    return publicarCarruselInstagram({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  if (
+    red === "instagram" &&
+    tipo === "story"
+  ) {
+    return publicarStoryInstagram({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  if (
+    red === "instagram" &&
+    tipo === "reel"
+  ) {
+    return publicarReelInstagram({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  if (red === "facebook") {
+    return publicarFacebook({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  throw new Error(
+    "La red o el formato no están habilitados para publicación automática."
+  );
+}
+
+async function publicarProgramado(
+  req,
+  res
+) {
+  const {
+    productoId,
+    fecha,
+    hora,
+    red,
+    tipo,
+    indice,
+  } = req.body || {};
+
+  if (
+    !productoId ||
+    !fecha ||
+    !hora ||
+    !red
+  ) {
+    return res.status(400).json({
+      ok: false,
+            error:
+        "Faltan datos de la publicación programada.",
+    });
+      }
+
+  if (
+    red !== "threads" &&
+    red !== "instagram" &&
+    red !== "facebook"
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "La publicación automática todavía no está habilitada para esta red.",
+    });
+  }
+
+  if (
+    red === "instagram" &&
+    tipo !== "carrusel" &&
+    tipo !== "story" &&
+    tipo !== "reel"
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Este formato de Instagram todavía no está habilitado para publicación automática.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const documento = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "programado",
+    });
+
+  if (!documento) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró el contenido programado.",
+    });
+  }
+
+  const posicion =
+    Array.isArray(documento.calendario)
+      ? documento.calendario.findIndex(
+          (pieza) =>
+            pieza.fecha === fecha &&
+            pieza.hora === hora &&
+            pieza.red === red &&
+            pieza.tipo === tipo &&
+            Number(pieza.indice) ===
+              Number(indice)
+        )
+      : -1;
+
+  if (posicion < 0) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró la pieza en el calendario.",
+    });
+  }
+
+  const pieza =
+    documento.calendario[posicion];
+
+  if (pieza.estado === "publicado") {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "Esta publicación ya fue publicada.",
+    });
+  }
+
+  if (pieza.estado === "publicando") {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "Esta publicación ya está siendo procesada.",
+    });
   }
 
   const inicio = new Date();
-  const reclamo = await db.collection("contenido_redes").updateOne(
-    { _id: doc._id, [`calendario.${pos}.estado`]: "programado" },
-    { $set: { [`calendario.${pos}.estado`]: "publicando", [`calendario.${pos}.procesandoDesde`]: inicio, actualizadoEn: inicio } }
-  );
-  if (reclamo.modifiedCount === 0) return res.status(409).json({ ok: false, error: "Tomado por otro proceso" });
+
+  const reclamo = await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        _id: documento._id,
+        [`calendario.${posicion}.estado`]:
+          "programado",
+      },
+      {
+        $set: {
+          [`calendario.${posicion}.estado`]:
+            "publicando",
+          [`calendario.${posicion}.procesandoDesde`]:
+            inicio,
+          [`calendario.${posicion}.ultimoIntentoEn`]:
+            inicio,
+          [`calendario.${posicion}.imagenesIntentadas`]:
+            extraerImagenesInstagram(pieza.publicacion),
+          actualizadoEn: inicio,
+        },
+        $inc: {
+          [`calendario.${posicion}.intentosPublicacion`]: 1,
+        },
+      }
+    );
+
+  if (reclamo.modifiedCount === 0) {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "La publicación ya fue tomada por otro proceso.",
+    });
+  }
 
   try {
-    const resultado = await ejecutarPublicacionPieza({ req, pieza, productoId });
-    if (!resultado?.ok || !resultado?.publicacionId) throw new Error("Fallo publicación");
-    const ahora = new Date();
-    await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
-      $set: { [`calendario.${pos}.estado`]: "publicado", [`calendario.${pos}.publicadoEn`]: ahora, actualizadoEn: ahora },
-      $unset: { [`calendario.${pos}.procesandoDesde`]: "", [`calendario.${pos}.ultimoError`]: "", [`calendario.${pos}.fallidoEn`]: "" }
-    });
-    const actualizado = await db.collection("contenido_redes").findOne({ _id: doc._id });
-    const completo = actualizado.calendario.every(i => i.estado === "publicado" || i.estado === "fallido");
-    if (completo) {
-      const hayFallidas = actualizado.calendario.some(i => i.estado === "fallido");
-      await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
-        $set: { estado: hayFallidas ? "completado-con-errores" : "publicado", publicadoEn: ahora }
+    const resultado =
+      await ejecutarPublicacionPieza({
+        req,
+        pieza,
+        productoId,
       });
+
+    if (
+      !resultado?.ok ||
+      !resultado?.publicacionId
+    ) {
+      throw new Error(
+        "La red no devolvió un identificador de publicación válido."
+      );
     }
-    return res.status(200).json({ ok: true, publicacionId: resultado.publicacionId });
-  } catch (err) {
-    const nuevosIntentos = (pieza.intentos || 0) + 1;
-    const esUltimoIntento = nuevosIntentos >= MAX_INTENTOS_PUBLICACION;
+
     const ahora = new Date();
-    await db.collection("contenido_redes").updateOne({ _id: doc._id }, {
-      $set: {
-        [`calendario.${pos}.estado`]: esUltimoIntento ? "fallido" : "programado",
-        [`calendario.${pos}.intentos`]: nuevosIntentos,
-        [`calendario.${pos}.ultimoError`]: err.message,
-        [`calendario.${pos}.ultimoIntentoEn`]: ahora,
-        ...(esUltimoIntento && { [`calendario.${pos}.fallidoEn`]: ahora }),
-        actualizadoEn: ahora,
-      },
-      $unset: { [`calendario.${pos}.procesandoDesde`]: "" }
+
+    await db
+      .collection("contenido_redes")
+      .updateOne(
+        {
+          _id: documento._id,
+        },
+        {
+          $set: {
+            [`calendario.${posicion}.estado`]:
+              "publicado",
+            [`calendario.${posicion}.publicadoEn`]:
+              ahora,
+            [`calendario.${posicion}.publicacionId`]:
+              resultado.publicacionId,
+            actualizadoEn: ahora,
+          },
+          $unset: {
+            [`calendario.${posicion}.procesandoDesde`]:
+              "",
+            [`calendario.${posicion}.ultimoError`]:
+              "",
+            [`calendario.${posicion}.ultimoErrorEn`]:
+              "",
+            [`calendario.${posicion}.imagenesIntentadas`]:
+              "",
+          },
+        }
+      );
+
+    const actualizado = await db
+      .collection("contenido_redes")
+      .findOne({
+        _id: documento._id,
+      });
+
+    const completo =
+      Array.isArray(actualizado?.calendario) &&
+      actualizado.calendario.length > 0 &&
+      actualizado.calendario.every(
+        (item) => item.estado === "publicado"
+      );
+
+    if (completo) {
+      await db
+        .collection("contenido_redes")
+        .updateOne(
+          {
+            _id: documento._id,
+            estado: "programado",
+          },
+          {
+            $set: {
+              estado: "publicado",
+              publicadoEn: ahora,
+              actualizadoEn: ahora,
+            },
+          }
+        );
+    }
+
+    return res.status(200).json({
+      ok: true,
+      mensaje:
+        resultado.mensaje ||
+        "Publicación realizada correctamente.",
+      proveedor: red,
+      tipo,
+      publicacionId:
+        resultado.publicacionId,
     });
-    return res.status(esUltimoIntento ? 410 : 502).json({
+  } catch (errorPublicacion) {
+    const ahoraError = new Date();
+
+    await db
+      .collection("contenido_redes")
+      .updateOne(
+        {
+          _id: documento._id,
+          [`calendario.${posicion}.estado`]:
+            "publicando",
+        },
+        {
+          $set: {
+            [`calendario.${posicion}.estado`]:
+              "programado",
+            [`calendario.${posicion}.ultimoError`]:
+              errorPublicacion?.message ||
+              "Error publicando contenido.",
+            [`calendario.${posicion}.ultimoErrorEn`]:
+              ahoraError,
+            actualizadoEn: ahoraError,
+          },
+          $unset: {
+            [`calendario.${posicion}.procesandoDesde`]:
+              "",
+          },
+        }
+      );
+
+    console.error(
+      "Error publicando pieza programada:",
+      errorPublicacion
+    );
+
+    return res.status(502).json({
       ok: false,
-      error: esUltimoIntento ? `Fallido tras ${MAX_INTENTOS_PUBLICACION} intentos` : err.message,
-      intentos: nuevosIntentos,
-      maximo: MAX_INTENTOS_PUBLICACION,
+      error:
+        errorPublicacion?.message ||
+        "No se pudo publicar el contenido programado.",
     });
   }
 }
 
 const obtenerFechaHoraArgentina = () => {
-  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: ZONA_HORARIA_RED,
-    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts();
-  const v = {};
-  for (const p of partes) if (p.type !== "literal") v[p.type] = p.value;
-  return { fecha: `${v.year}-${v.month}-${v.day}`, hora: `${v.hour}:${v.minute}` };
+  const partes = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone:
+        "America/Argentina/Buenos_Aires",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }
+  ).formatToParts(new Date());
+
+  const valor = (tipo) =>
+    partes.find(
+      (parte) => parte.type === tipo
+    )?.value || "";
+
+  return {
+    fecha: `${valor("year")}-${valor("month")}-${valor("day")}`,
+    hora: `${valor("hour")}:${valor("minute")}`,
+  };
 };
 
 const cronAutorizado = (req) => {
   const secreto = process.env.CRON_SECRET;
+
   if (!secreto) return false;
-  const recibido = req.headers?.authorization || "";
+
+  const recibido =
+    req.headers?.authorization || "";
+
   const esperado = `Bearer ${secreto}`;
-  if (recibido.length !== esperado.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(recibido), Buffer.from(esperado));
+
+  const a = Buffer.from(recibido);
+  const b = Buffer.from(esperado);
+
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(a, b);
 };
 
-async function ejecutarPublicacionesPendientes(req, res) {
-  if (!cronAutorizado(req)) return res.status(403).json({ ok: false, error: "No autorizado" });
+async function ejecutarPublicacionesPendientes(
+  req,
+  res
+) {
   const db = await conectarMongoDB();
-  const { fecha, hora } = obtenerFechaHoraArgentina();
-  const docs = await db.collection("contenido_redes").find({ estado: "programado" }).toArray();
+
+  const { fecha, hora } =
+    obtenerFechaHoraArgentina();
+
+  const documentos = await db
+    .collection("contenido_redes")
+    .find({
+      estado: "programado",
+    })
+    .toArray();
+
   const pendientes = [];
-  for (const doc of docs) {
-    if (!Array.isArray(doc.calendario)) continue;
-    for (const p of doc.calendario) {
-      if (p.estado !== "programado") continue;
-      if ((p.intentos || 0) >= MAX_INTENTOS_PUBLICACION) continue;
-      const vencida = p.fecha < fecha || (p.fecha === fecha && p.hora <= hora);
-      if (vencida) pendientes.push({ productoId: doc.productoId, fecha: p.fecha, hora: p.hora, red: p.red, tipo: p.tipo, indice: p.indice });
+
+  for (const documento of documentos) {
+    if (!Array.isArray(documento.calendario)) {
+      continue;
     }
+
+    documento.calendario.forEach(
+      (pieza) => {
+        if (pieza?.estado !== "programado") {
+          return;
+        }
+
+        const vencida =
+          pieza.fecha < fecha ||
+          (pieza.fecha === fecha &&
+            pieza.hora <= hora);
+
+        if (!vencida) return;
+                pendientes.push({
+          productoId:
+            documento.productoId,
+          fecha: pieza.fecha,
+          hora: pieza.hora,
+          red: pieza.red,
+          tipo: pieza.tipo,
+          indice: pieza.indice,
+          intentosPublicacion:
+            Number(pieza.intentosPublicacion) || 0,
+          ultimoIntentoEn:
+            pieza.ultimoIntentoEn || null,
+        });
+      }
+    );
   }
+
+  pendientes.sort((a, b) => {
+    const diferenciaIntentos =
+      (a.intentosPublicacion || 0) -
+      (b.intentosPublicacion || 0);
+
+    if (diferenciaIntentos !== 0) {
+      return diferenciaIntentos;
+    }
+
+    return `${a.fecha} ${a.hora}`.localeCompare(
+      `${b.fecha} ${b.hora}`
+    );
+  });
+
+  // Procesamos pocas piezas por invocación para no agotar
+  // el tiempo máximo de una función de Vercel.
+  const lote = pendientes.slice(0, 3);
   const resultados = [];
-  for (const pieza of pendientes.slice(0, 3)) {
-    let r;
-    await publicarProgramado({ ...req, body: pieza }, { status(c) { r = { ok: c < 300 }; return this; }, json(d) { r = d; return d; } });
-    resultados.push(r);
+
+  for (const pieza of lote) {
+    let estadoHttp = 200;
+    let respuesta = null;
+
+    const respuestaInterna = {
+      status(codigo) {
+        estadoHttp = codigo;
+        return this;
+      },
+      json(datos) {
+        respuesta = datos;
+        return datos;
+      },
+    };
+
+    await publicarProgramado(
+      {
+        ...req,
+        body: pieza,
+      },
+      respuestaInterna
+    );
+
+    resultados.push({
+      ...pieza,
+      estadoHttp,
+      ok: Boolean(respuesta?.ok),
+      publicacionId:
+        respuesta?.publicacionId || null,
+      error:
+        respuesta?.ok
+          ? null
+          : respuesta?.error ||
+            "Error desconocido",
+    });
   }
-  return res.status(200).json({ ok: true, fechaActual: fecha, horaActual: hora, pendientes: resultados.length, resultados });
+
+  return res.status(200).json({
+    ok: true,
+    zonaHoraria:
+      "America/Argentina/Buenos_Aires",
+    fecha,
+    hora,
+    pendientesEncontradas:
+      pendientes.length,
+    procesadas: resultados.length,
+    resultados,
+  });
 }
 
-export default async function manejarSolicitud(req, res) {
-  const accion = req.query.accion || req.body?.accion;
-  const metodo = req.method;
+// =========================================================
+// PRUEBA CONTROLADA DEL EJECUTOR AUTOMÁTICO
+// Crea UNA sola pieza programada para Threads.
+// No toca el calendario semanal definitivo.
+// =========================================================
 
-  if (accion === "threads-callback") return callbackThreads(req, res);
-  if (accion === "conectar-threads" && metodo === "GET") return conectarThreads(req, res);
-  if (accion === "publicar-threads" && metodo === "POST") return publicarThreads(req, res);
-  if (accion === "guardar-borrador" && metodo === "POST") return guardarBorrador(req, res);
-  if (accion === "listar-borradores" && metodo === "GET") return listarBorradores(req, res);
-  if (accion === "aprobar-borrador" && metodo === "POST") return aprobarBorrador(req, res);
-  if (accion === "listar-aprobados" && metodo === "GET") return listarAprobados(req, res);
-  if (accion === "programar-contenido" && metodo === "POST") return programarContenido(req, res);
-  if (accion === "regenerar-programado" && metodo === "POST") return regenerarContenidoProgramado(req, res);
-  if (accion === "listar-programados" && metodo === "GET") return listarProgramados(req, res);
-  if (accion === "publicar-programado" && metodo === "POST") return publicarProgramado(req, res);
-  if (accion === "cron-ejecutar" && metodo === "POST") return ejecutarPublicacionesPendientes(req, res);
+async function crearPruebaAutomaticaControlada(
+  req,
+  res
+) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+      : "";
 
-  return res.status(400).json({ ok: false, error: "Acción no reconocida" });
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const aprobado = await db
+    .collection("contenido_redes")
+    .find({
+      productoId,
+      estado: "aprobado",
+    })
+    .sort({
+      aprobadoEn: -1,
+      actualizadoEn: -1,
+    })
+    .limit(1)
+    .next();
+
+  if (!aprobado) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró contenido aprobado para este producto.",
+    });
+  }
+
+  const publicacion =
+    aprobado.contenido?.threads?.[0];
+
+  const texto =
+    typeof publicacion?.texto === "string"
+      ? publicacion.texto.trim()
+      : "";
+
+  if (!texto) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "El contenido aprobado no tiene una publicación de Threads válida para la prueba.",
+    });
+  }
+
+  const pruebaExistente = await db
+    .collection("contenido_redes")
+    .findOne({
+      tipoDocumento:
+        "prueba_automatica_controlada",
+      estado: {
+        $in: ["programado", "publicando"],
+      },
+    });
+
+  if (pruebaExistente) {
+    return res.status(409).json({
+      ok: false,
+      error:
+        "Ya existe una prueba automática pendiente. Espera a que termine o elimina esa prueba antes de crear otra.",
+    });
+  }
+
+  const ahora = new Date();
+
+  // La pieza queda vencida un minuto antes de la hora actual.
+  // Así el próximo ciclo de cron-job.org (cada 5 minutos)
+  // puede recogerla sin depender de calcular una hora futura.
+  const fechaHoraArgentina =
+    obtenerFechaHoraArgentina();
+
+  const [horaActual, minutoActual] =
+    fechaHoraArgentina.hora
+      .split(":")
+      .map(Number);
+
+  let minutos =
+    horaActual * 60 + minutoActual - 1;
+
+  let fechaPrueba =
+    fechaHoraArgentina.fecha;
+
+  if (minutos < 0) {
+    minutos += 24 * 60;
+    fechaPrueba =
+      sumarDiasFecha(fechaPrueba, -1);
+  }
+
+  const horaPrueba =
+    `${String(
+      Math.floor(minutos / 60)
+          ).padStart(2, "0")}:${String(
+      minutos % 60
+    ).padStart(2, "0")}`;
+
+  const documentoPrueba = {
+    productoId,
+    nombreProducto:
+      aprobado.nombreProducto ||
+      productoId,
+
+    tipoDocumento:
+      "prueba_automatica_controlada",
+
+    estado: "programado",
+
+    calendario: [
+      {
+        fecha: fechaPrueba,
+        dia: "Prueba",
+        hora: horaPrueba,
+        red: "threads",
+        tipo: "publicacion",
+        indice: 0,
+        publicacion,
+        estado: "programado",
+        zonaHoraria:
+          ZONA_HORARIA_RED,
+        pruebaControlada: true,
+      },
+    ],
+
+    creadoEn: ahora,
+    programadoEn: ahora,
+    actualizadoEn: ahora,
+  };
+
+  const insercion = await db
+    .collection("contenido_redes")
+    .insertOne(documentoPrueba);
+
+  return res.status(201).json({
+    ok: true,
+    mensaje:
+      "Prueba automática creada. El próximo ciclo del cron debe publicar una sola pieza en Threads.",
+    pruebaId:
+      String(insercion.insertedId),
+    productoId,
+    red: "threads",
+    fecha: fechaPrueba,
+    hora: horaPrueba,
+  });
+}
+
+// =========================================================
+// INSTAGRAM - PROBAR REEL APROBADO
+// =========================================================
+
+async function probarReelAprobado(req, res) {
+  const productoId =
+    typeof req.body?.productoId === "string"
+      ? req.body.productoId.trim()
+          : "";
+
+  if (!productoId) {
+    return res.status(400).json({
+      ok: false,
+      error:
+        "Falta el identificador del producto.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const aprobado = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "aprobado",
+    });
+
+  if (!aprobado) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "No se encontró contenido aprobado para este producto.",
+    });
+  }
+
+  const reel =
+    aprobado.contenido?.instagram?.reel;
+
+  if (!reel) {
+    return res.status(404).json({
+      ok: false,
+      error:
+        "El contenido aprobado no contiene un Reel.",
+    });
+  }
+
+  try {
+    const resultado =
+      await publicarReelInstagram({
+        publicacion: reel,
+        productoId,
+      });
+
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error(
+      "Error probando Reel de Instagram:",
+      error
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error:
+        error?.message ||
+        "No se pudo publicar el Reel en Instagram.",
+    });
+  }
+}
+
+const probarPublicacionAutomatica = async (item) => {
+  alert("BOTÓN FUNCIONANDO");
+
+  try {
+    setMensaje("");
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=crear-prueba-automatica",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          productoId: item.productoId,
+        }),
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos?.error ||
+          "No se pudo crear la prueba automática."
+      );
+    }
+
+    setMensaje(
+      `Prueba creada. El cron publicará automáticamente en Threads. Programada: ${datos.fecha} ${datos.hora}.`
+    );
+  } catch (error) {
+    setMensaje(
+      error?.message ||
+        "Error creando la prueba automática."
+    );
+  }
+};
+
+// =========================================================
+// OPENAI - GENERAR CONTENIDO
+// =========================================================
+
+async function generarContenido(req, res) {
+  try {
+    const { prompt } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({
+        error: "Falta el prompt",
+      });
+    }
+
+    const respuesta =
+      await openai.responses.create({
+        model: "gpt-5.6-luna",
+        input: prompt,
+      });
+
+    const texto =
+      respuesta.output_text;
+
+    let contenido;
+
+    try {
+      contenido =
+        JSON.parse(texto);
+    } catch (errorJson) {
+      console.error(
+        "JSON inválido recibido:",
+        texto
+      );
+
+      return res.status(500).json({
+        error:
+          "La IA no devolvió JSON válido",
+        respuesta: texto,
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      contenido,
+    });
+  } catch (error) {
+    console.error(
+      "Error generando contenido:",
+      error
+    );
+
+    return res.status(500).json({
+      error:
+        error?.message ||
+        "No se pudo generar el contenido",
+      tipo:
+        error?.name || "Error",
+      status:
+        error?.status || null,
+    });
+  }
+}
+
+// =========================================================
+// HANDLER
+// =========================================================
+
+export default async function handler(
+  req,
+  res
+) {
+  try {
+    const { accion } = req.query;
+
+    // -----------------------------------------------------
+    // CALLBACK THREADS
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "threads-callback"
+    ) {
+      return callbackThreads(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // CONECTAR THREADS
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "threads-conectar"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return conectarThreads(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // PUBLICAR THREADS
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "threads-publicar"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return publicarThreads(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // GUARDAR BORRADOR
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "guardar-borrador"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return guardarBorrador(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // LISTAR BORRADORES
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "listar-borradores"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return listarBorradores(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // APROBAR BORRADOR
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "aprobar-borrador"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return aprobarBorrador(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // LISTAR APROBADOS
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "listar-aprobados"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return listarAprobados(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // PROGRAMAR CONTENIDO
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "programar-contenido"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return programarContenido(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+// REGENERAR CONTENIDO PROGRAMADO
+// -----------------------------------------------------
+
+if (
+  req.method === "POST" &&
+  accion === "regenerar-programado"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return regenerarContenidoProgramado(
+    req,
+    res
+  );
+}
+
+    // -----------------------------------------------------
+    // LISTAR PROGRAMADOS
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "listar-programados"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return listarProgramados(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // PUBLICAR AHORA UNA PIEZA PROGRAMADA
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "publicar-programado"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return publicarProgramado(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // CREAR PRUEBA AUTOMÁTICA CONTROLADA
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      accion === "crear-prueba-automatica"
+    ) {
+      if (!adminAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "No autorizado",
+        });
+      }
+
+      return crearPruebaAutomaticaControlada(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+    // EJECUTAR PUBLICACIONES PROGRAMADAS - CRON
+    // -----------------------------------------------------
+
+    if (
+      req.method === "GET" &&
+      accion === "ejecutar-programadas"
+    ) {
+      if (!cronAutorizado(req)) {
+        return res.status(401).json({
+          ok: false,
+          error: "Cron no autorizado",
+        });
+      }
+
+      return ejecutarPublicacionesPendientes(
+        req,
+        res
+      );
+    }
+
+    // -----------------------------------------------------
+// PROBAR REEL APROBADO
+// -----------------------------------------------------
+
+if (
+  req.method === "POST" &&
+  accion === "probar-reel"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return probarReelAprobado(
+    req,
+    res
+  );
+}
+
+    // -----------------------------------------------------
+    // GENERACIÓN DE CONTENIDO
+    // -----------------------------------------------------
+
+    if (
+      req.method === "POST" &&
+      !accion
+    ) {
+      return generarContenido(
+        req,
+        res
+      );
+    }
+
+    return res.status(405).json({
+      ok: false,
+      error:
+        "Método o acción no permitidos.",
+    });
+  } catch (error) {
+    console.error(
+      "Error API contenido-redes:",
+      error
+    );
+
+    return res.status(500).json({
+      ok: false,
+      error:
+        error?.message ||
+        "Error interno del servidor.",
+    });
+  }
 }
