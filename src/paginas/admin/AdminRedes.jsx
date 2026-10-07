@@ -1135,9 +1135,9 @@ export default function AdminRedes() {
                         </div>
                       </div>
                     );
-                  })
-                }
-              </div>
+                  })}
+                </div>
+              )}
             </>
           )}
         </section>
