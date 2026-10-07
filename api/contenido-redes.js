@@ -2894,6 +2894,94 @@ async function guardarDestinoCompartir(req, res) {
 }
 
 // =========================================================
+// FACEBOOK - CONFIRMAR COMPARTIDO MANUAL
+// =========================================================
+
+async function marcarCompartidoFacebook(req, res) {
+  const {
+    productoId,
+    fecha,
+    hora,
+    tipo,
+    indice,
+  } = req.body || {};
+
+  if (
+    !productoId ||
+    !fecha ||
+    !hora ||
+    !tipo ||
+    indice === undefined ||
+    indice === null
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error: "Faltan datos de la publicación.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const documento = await db
+    .collection("contenido_redes")
+    .findOne({
+      productoId,
+      estado: "programado",
+    });
+
+  if (!documento) {
+    return res.status(404).json({
+      ok: false,
+      error: "No se encontró el contenido programado.",
+    });
+  }
+
+  const posicion = Array.isArray(documento.calendario)
+    ? documento.calendario.findIndex(
+        (pieza) =>
+          pieza.fecha === fecha &&
+          pieza.hora === hora &&
+          pieza.red === "facebook" &&
+          pieza.tipo === tipo &&
+          Number(pieza.indice) === Number(indice)
+      )
+    : -1;
+
+  if (posicion < 0) {
+    return res.status(404).json({
+      ok: false,
+      error: "No se encontró la publicación de Facebook.",
+    });
+  }
+
+  const ahora = new Date();
+
+  await db
+    .collection("contenido_redes")
+    .updateOne(
+      {
+        _id: documento._id,
+      },
+      {
+        $set: {
+          [`calendario.${posicion}.compartidoManualFacebook`]: {
+            estado: "compartido",
+            compartidoEn: ahora,
+          },
+          actualizadoEn: ahora,
+        },
+      }
+    );
+
+  return res.status(200).json({
+    ok: true,
+    estado: "compartido",
+    compartidoEn: ahora,
+    mensaje: "Publicación marcada como compartida.",
+  });
+}
+
+// =========================================================
 // HANDLER
 // =========================================================
 
@@ -3222,6 +3310,20 @@ if (
 
   return guardarDestinoCompartir(req, res);
 }
+
+    if (
+  req.method === "POST" &&
+  accion === "marcar-compartido-facebook"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return marcarCompartidoFacebook(req, res);
+    }
 
     // -----------------------------------------------------
     // GENERACIÓN DE CONTENIDO

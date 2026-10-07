@@ -439,6 +439,9 @@ const [urlGrupoFacebook, setUrlGrupoFacebook] = useState("");
 const [guardandoGrupoFacebook, setGuardandoGrupoFacebook] = useState(false);
 const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
 
+  const [confirmandoCompartidoFacebook, setConfirmandoCompartidoFacebook] =
+  useState("");
+
   const [aprobados, setAprobados] = useState([]);
   const [programados, setProgramados] = useState([]);
   const [cargandoCalendario, setCargandoCalendario] = useState(true);
@@ -1313,6 +1316,88 @@ const urlProducto = productoId
     );
 
     alert("No se pudieron descargar las imágenes.");
+  }
+};
+
+  const confirmarCompartidoFacebook = async (item, pieza) => {
+  const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.indice}`;
+
+  try {
+    setConfirmandoCompartidoFacebook(clave);
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=marcar-compartido-facebook",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          productoId: item.productoId,
+          fecha: pieza.fecha,
+          hora: pieza.hora,
+          tipo: pieza.tipo,
+          indice: pieza.indice,
+        }),
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos?.error ||
+          "No se pudo confirmar la publicación."
+      );
+    }
+
+    setProgramados((actuales) =>
+      actuales.map((programado) => {
+        if (programado.productoId !== item.productoId) {
+          return programado;
+        }
+
+        return {
+          ...programado,
+          calendario: programado.calendario.map(
+            (piezaActual) => {
+              const esLaMisma =
+                piezaActual.fecha === pieza.fecha &&
+                piezaActual.hora === pieza.hora &&
+                piezaActual.red === "facebook" &&
+                piezaActual.tipo === pieza.tipo &&
+                Number(piezaActual.indice) ===
+                  Number(pieza.indice);
+
+              if (!esLaMisma) {
+                return piezaActual;
+              }
+
+              return {
+                ...piezaActual,
+                compartidoManualFacebook: {
+                  estado: "compartido",
+                  compartidoEn: datos.compartidoEn,
+                },
+              };
+            }
+          ),
+        };
+      })
+    );
+  } catch (error) {
+    console.error(
+      "Error confirmando publicación en Facebook:",
+      error
+    );
+
+    alert(
+      error.message ||
+        "No se pudo confirmar la publicación."
+    );
+  } finally {
+    setConfirmandoCompartidoFacebook("");
   }
 };
 
@@ -2208,6 +2293,33 @@ const urlProducto = productoId
       Descargar imágenes
     </button>
   )}
+
+                                  {pieza.red === "facebook" && (
+  <button
+    type="button"
+    onClick={() =>
+      confirmarCompartidoFacebook(item, pieza)
+    }
+    disabled={
+      confirmandoCompartidoFacebook ===
+      `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.indice}`
+    }
+    className={`mt-2 w-full rounded-md px-2 py-1.5 text-[10px] font-bold text-white transition ${
+      pieza.compartidoManualFacebook?.estado ===
+      "compartido"
+        ? "bg-green-600 hover:bg-green-700"
+        : "bg-slate-700 hover:bg-slate-800"
+    }`}
+  >
+    {confirmandoCompartidoFacebook ===
+    `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.indice}`
+      ? "Guardando..."
+      : pieza.compartidoManualFacebook?.estado ===
+          "compartido"
+        ? "✓ Compartido en Facebook"
+        : "Confirmar publicación en Facebook"}
+  </button>
+)}
                                   
                                 </div>
                               ))}
