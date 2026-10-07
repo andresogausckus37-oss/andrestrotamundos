@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { generarContenidoRedesLocal } from "../../utilidades/generarContenidoRedesLocal";
+import JSZip from "jszip";
 
 // =========================================================
 // COMPONENTE PUBLICACIÓN EDITABLE
@@ -1222,7 +1223,7 @@ const aprobarContenido = async (
   }
 };
 
-  const compartirImagenesFacebook = async (pieza) => {
+  const descargarImagenesFacebook = async (pieza) => {
   try {
     const imagen = pieza?.publicacion?.imagen;
 
@@ -1237,7 +1238,9 @@ const aprobarContenido = async (
       return;
     }
 
-    const archivos = await Promise.all(
+    const zip = new JSZip();
+
+    await Promise.all(
       urls.map(async (url, indice) => {
         const respuesta = await fetch(url);
 
@@ -1256,43 +1259,37 @@ const aprobarContenido = async (
               ? "webp"
               : "jpg";
 
-        return new File(
-          [blob],
-          `publicacion-${indice + 1}.${extension}`,
-          {
-            type: blob.type || "image/jpeg",
-          }
+        zip.file(
+          `imagen-${indice + 1}.${extension}`,
+          blob
         );
       })
     );
 
-    if (
-      !navigator.share ||
-      !navigator.canShare?.({
-        files: archivos,
-      })
-    ) {
-      alert(
-        "Tu dispositivo no permite compartir estas imágenes directamente."
-      );
-      return;
-    }
-
-    await navigator.share({
-      files: archivos,
+    const archivoZip = await zip.generateAsync({
+      type: "blob",
     });
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      return;
-    }
 
+    const urlZip = URL.createObjectURL(archivoZip);
+
+    const enlace = document.createElement("a");
+
+    enlace.href = urlZip;
+    enlace.download = "imagenes-facebook.zip";
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    URL.revokeObjectURL(urlZip);
+  } catch (error) {
     console.error(
-      "Error compartiendo imágenes:",
+      "Error descargando imágenes:",
       error
     );
 
     alert(
-      "No se pudieron preparar las imágenes para compartir."
+      "No se pudieron descargar las imágenes."
     );
   }
 };
@@ -2182,12 +2179,11 @@ const aprobarContenido = async (
     <button
       type="button"
       onClick={() =>
-        compartirImagenesFacebook(pieza)
+        descargarImagenesFacebook(pieza)
       }
       className="mt-1.5 w-full rounded-md border border-violet-200 bg-violet-50 px-2 py-1.5 text-[10px] font-bold text-violet-700"
     >
-      Compartir imagen
-      {Array.isArray(pieza.publicacion.imagen) ? "es" : ""}
+      Descargar imágenes
     </button>
   )}
                                   
