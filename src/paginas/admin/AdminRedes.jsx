@@ -1222,6 +1222,81 @@ const aprobarContenido = async (
   }
 };
 
+  const compartirImagenesFacebook = async (pieza) => {
+  try {
+    const imagen = pieza?.publicacion?.imagen;
+
+    const urls = Array.isArray(imagen)
+      ? imagen.filter(Boolean)
+      : imagen
+        ? [imagen]
+        : [];
+
+    if (urls.length === 0) {
+      alert("Esta publicación no tiene imágenes.");
+      return;
+    }
+
+    const archivos = await Promise.all(
+      urls.map(async (url, indice) => {
+        const respuesta = await fetch(url);
+
+        if (!respuesta.ok) {
+          throw new Error(
+            `No se pudo descargar la imagen ${indice + 1}.`
+          );
+        }
+
+        const blob = await respuesta.blob();
+
+        const extension =
+          blob.type === "image/png"
+            ? "png"
+            : blob.type === "image/webp"
+              ? "webp"
+              : "jpg";
+
+        return new File(
+          [blob],
+          `publicacion-${indice + 1}.${extension}`,
+          {
+            type: blob.type || "image/jpeg",
+          }
+        );
+      })
+    );
+
+    if (
+      !navigator.share ||
+      !navigator.canShare?.({
+        files: archivos,
+      })
+    ) {
+      alert(
+        "Tu dispositivo no permite compartir estas imágenes directamente."
+      );
+      return;
+    }
+
+    await navigator.share({
+      files: archivos,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      return;
+    }
+
+    console.error(
+      "Error compartiendo imágenes:",
+      error
+    );
+
+    alert(
+      "No se pudieron preparar las imágenes para compartir."
+    );
+  }
+};
+
   return (
     <main className="min-h-screen bg-slate-50 px-3 pb-10 pt-20">
       <div className="mx-auto max-w-5xl">
@@ -2101,6 +2176,21 @@ const aprobarContenido = async (
                                           Compartir en {destino.nombre}
                                         </button>
                                       ))}
+
+{pieza.red === "facebook" &&
+  pieza?.publicacion?.imagen && (
+    <button
+      type="button"
+      onClick={() =>
+        compartirImagenesFacebook(pieza)
+      }
+      className="mt-1.5 w-full rounded-md border border-violet-200 bg-violet-50 px-2 py-1.5 text-[10px] font-bold text-violet-700"
+    >
+      Compartir imagen
+      {Array.isArray(pieza.publicacion.imagen) ? "es" : ""}
+    </button>
+  )}
+                                  
                                 </div>
                               ))}
                             </div>
