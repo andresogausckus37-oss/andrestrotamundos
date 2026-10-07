@@ -1192,35 +1192,66 @@ const aprobarContenido = async (
   const hayProductoSeleccionado =
     Boolean(producto1 || producto2);
 
-  const compartirEnGrupoFacebook = async (pieza, destino) => {
-  try {
-    const textoBase =
-      typeof pieza?.publicacion?.texto === "string"
-        ? pieza.publicacion.texto.trim()
-        : "";
+  const compartirEnGrupoFacebook = async (pieza, destino, item) => {
+    try {
+      const textoBase =
+        typeof pieza?.publicacion?.texto === "string"
+          ? pieza.publicacion.texto.trim()
+          : "";
 
-    if (textoBase) {
-      await navigator.clipboard.writeText(textoBase);
+      const productoId =
+  item?.productoId || "";
+
+const urlProducto = productoId
+  ? `https://andreshousesitter.com/tienda/${encodeURIComponent(
+      productoId
+    )}`
+  : "";
+
+      let textoFinal = textoBase;
+
+      if (urlProducto) {
+        const lineas = textoBase.split("\n");
+
+        const indiceHashtags = lineas.findIndex((linea) =>
+          linea.trim().startsWith("#")
+        );
+
+        if (indiceHashtags !== -1) {
+          lineas.splice(
+            indiceHashtags,
+            0,
+            "",
+            urlProducto,
+            ""
+          );
+
+          textoFinal = lineas.join("\n");
+        } else {
+          textoFinal = `${textoBase}\n\n${urlProducto}`;
+        }
+      }
+
+      await navigator.clipboard.writeText(textoFinal);
+
+      window.open(
+        destino.url,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    } catch (error) {
+      console.error(
+        "Error preparando publicación para Facebook:",
+        error
+      );
+
+      window.open(
+        destino.url,
+        "_blank",
+        "noopener,noreferrer"
+      );
     }
-
-    window.open(
-      destino.url,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  } catch (error) {
-    console.error(
-      "Error preparando publicación para Facebook:",
-      error
-    );
-
-    window.open(
-      destino.url,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  }
-};
+  };
 
   const descargarImagenesFacebook = async (pieza) => {
   try {
@@ -2157,7 +2188,7 @@ const aprobarContenido = async (
                                           key={String(destino._id)}
                                           type="button"
                                           onClick={() =>
-  compartirEnGrupoFacebook(pieza, destino)
+  compartirEnGrupoFacebook(pieza, destino, item)
 }
                                           className="mt-2 w-full rounded-md bg-red-600 px-2 py-1.5 text-[10px] font-bold text-white transition hover:bg-red-700"
                                         >
