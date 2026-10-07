@@ -433,6 +433,12 @@ const [
   setMensajeAprobacion,
 ] = useState({});
 
+  const [destinosCompartir, setDestinosCompartir] = useState([]);
+  const [nombreGrupoFacebook, setNombreGrupoFacebook] = useState("");
+const [urlGrupoFacebook, setUrlGrupoFacebook] = useState("");
+const [guardandoGrupoFacebook, setGuardandoGrupoFacebook] = useState(false);
+const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
+
   const [aprobados, setAprobados] = useState([]);
   const [programados, setProgramados] = useState([]);
   const [cargandoCalendario, setCargandoCalendario] = useState(true);
@@ -555,6 +561,63 @@ const [
     cargarBorradores();
   }, []);
 
+useEffect(() => {
+  cargarDestinosCompartir();
+}, []);
+
+  const guardarGrupoFacebook = async () => {
+  const nombre = nombreGrupoFacebook.trim();
+  const url = urlGrupoFacebook.trim();
+
+  if (!nombre || !url) {
+    setMensajeGrupoFacebook(
+      "Completa el nombre y la URL del grupo."
+    );
+    return;
+  }
+
+  try {
+    setGuardandoGrupoFacebook(true);
+    setMensajeGrupoFacebook("");
+
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=guardar-destino-compartir",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          plataforma: "facebook",
+          tipo: "grupo",
+          nombre,
+          url,
+        }),
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos?.error || "No se pudo guardar el grupo."
+      );
+    }
+
+    setNombreGrupoFacebook("");
+    setUrlGrupoFacebook("");
+    setMensajeGrupoFacebook("Grupo guardado correctamente.");
+
+    await cargarDestinosCompartir();
+  } catch (error) {
+    setMensajeGrupoFacebook(
+      error.message || "No se pudo guardar el grupo."
+    );
+  } finally {
+    setGuardandoGrupoFacebook(false);
+  }
+};
 
   // =======================================================
   // CALENDARIO
@@ -584,6 +647,32 @@ const [
       setCargandoCalendario(false);
     }
   };
+
+  const cargarDestinosCompartir = async () => {
+  try {
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=listar-destinos-compartir",
+      {
+        credentials: "include",
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos?.error || "No se pudieron cargar los destinos."
+      );
+    }
+
+    setDestinosCompartir(datos.destinos || []);
+  } catch (error) {
+    console.error(
+      "Error cargando destinos para compartir:",
+      error
+    );
+  }
+};
 
   useEffect(() => {
     cargarCalendario();
@@ -1122,6 +1211,86 @@ const aprobarContenido = async (
             contenido antes de aprobarlo.
           </p>
         </div>
+
+                {/* GRUPOS DE FACEBOOK */}
+
+        <section className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <h2 className="text-sm font-bold text-slate-900">
+            Grupos de Facebook
+          </h2>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Agrega los grupos donde compartirás el contenido.
+          </p>
+
+          <div className="mt-3 space-y-2">
+            <input
+              type="text"
+              value={nombreGrupoFacebook}
+              onChange={(event) =>
+                setNombreGrupoFacebook(event.target.value)
+              }
+              placeholder="Nombre del grupo"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400"
+            />
+
+            <input
+              type="url"
+              value={urlGrupoFacebook}
+              onChange={(event) =>
+                setUrlGrupoFacebook(event.target.value)
+              }
+              placeholder="URL del grupo de Facebook"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400"
+            />
+
+            <button
+              type="button"
+              onClick={guardarGrupoFacebook}
+              disabled={guardandoGrupoFacebook}
+              className="w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300"
+            >
+              {guardandoGrupoFacebook
+                ? "Guardando..."
+                : "Agregar grupo"}
+            </button>
+
+            {mensajeGrupoFacebook && (
+              <p className="text-xs text-slate-600">
+                {mensajeGrupoFacebook}
+              </p>
+            )}
+          </div>
+
+          {destinosCompartir.filter(
+            (destino) =>
+              destino.plataforma === "facebook" &&
+              destino.tipo === "grupo"
+          ).length > 0 && (
+            <div className="mt-3 space-y-2">
+              {destinosCompartir
+                .filter(
+                  (destino) =>
+                    destino.plataforma === "facebook" &&
+                    destino.tipo === "grupo"
+                )
+                .map((destino) => (
+                  <div
+                    key={String(destino._id)}
+                    className="rounded-lg bg-slate-50 px-3 py-2"
+                  >
+                    <p className="text-xs font-bold text-slate-800">
+                      {destino.nombre}
+                    </p>
+
+                    <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                      {destino.url}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          )}
+        </section>
 
         {/* PRODUCTOS */}
 

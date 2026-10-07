@@ -2820,6 +2820,80 @@ async function generarContenido(req, res) {
 }
 
 // =========================================================
+// DESTINOS PARA COMPARTIR MANUALMENTE
+// =========================================================
+
+async function listarDestinosCompartir(req, res) {
+  const db = await conectarMongoDB();
+
+  const destinos = await db
+    .collection("destinos_compartir")
+    .find({
+      activo: true,
+    })
+    .sort({
+      creadoEn: 1,
+    })
+    .toArray();
+
+  return res.status(200).json({
+    ok: true,
+    destinos,
+  });
+}
+
+async function guardarDestinoCompartir(req, res) {
+  const plataforma =
+    typeof req.body?.plataforma === "string"
+      ? req.body.plataforma.trim()
+      : "";
+
+  const tipo =
+    typeof req.body?.tipo === "string"
+      ? req.body.tipo.trim()
+      : "";
+
+  const nombre =
+    typeof req.body?.nombre === "string"
+      ? req.body.nombre.trim()
+      : "";
+
+  const url =
+    typeof req.body?.url === "string"
+      ? req.body.url.trim()
+      : "";
+
+  if (!plataforma || !tipo || !nombre || !url) {
+    return res.status(400).json({
+      ok: false,
+      error: "Faltan datos del destino.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const ahora = new Date();
+
+  const resultado = await db
+    .collection("destinos_compartir")
+    .insertOne({
+      plataforma,
+      tipo,
+      nombre,
+      url,
+      activo: true,
+      creadoEn: ahora,
+      actualizadoEn: ahora,
+    });
+
+  return res.status(201).json({
+    ok: true,
+    destinoId: resultado.insertedId.toString(),
+    mensaje: "Destino guardado correctamente.",
+  });
+}
+
+// =========================================================
 // HANDLER
 // =========================================================
 
@@ -3115,6 +3189,38 @@ if (
     req,
     res
   );
+}
+
+    // -----------------------------------------------------
+// DESTINOS PARA COMPARTIR
+// -----------------------------------------------------
+
+if (
+  req.method === "GET" &&
+  accion === "listar-destinos-compartir"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return listarDestinosCompartir(req, res);
+}
+
+if (
+  req.method === "POST" &&
+  accion === "guardar-destino-compartir"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return guardarDestinoCompartir(req, res);
 }
 
     // -----------------------------------------------------
