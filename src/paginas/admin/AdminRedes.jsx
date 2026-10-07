@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 
 import { generarContenidoRedesLocal } from "../../utilidades/generarContenidoRedesLocal";
-import JSZip from "jszip";
 
 // =========================================================
 // COMPONENTE PUBLICACIÓN EDITABLE
@@ -1238,59 +1237,51 @@ const aprobarContenido = async (
       return;
     }
 
-    const zip = new JSZip();
+    for (let indice = 0; indice < urls.length; indice++) {
+      const respuesta = await fetch(urls[indice]);
 
-    await Promise.all(
-      urls.map(async (url, indice) => {
-        const respuesta = await fetch(url);
-
-        if (!respuesta.ok) {
-          throw new Error(
-            `No se pudo descargar la imagen ${indice + 1}.`
-          );
-        }
-
-        const blob = await respuesta.blob();
-
-        const extension =
-          blob.type === "image/png"
-            ? "png"
-            : blob.type === "image/webp"
-              ? "webp"
-              : "jpg";
-
-        zip.file(
-          `imagen-${indice + 1}.${extension}`,
-          blob
+      if (!respuesta.ok) {
+        throw new Error(
+          `No se pudo descargar la imagen ${indice + 1}.`
         );
-      })
-    );
+      }
 
-    const archivoZip = await zip.generateAsync({
-      type: "blob",
-    });
+      const blob = await respuesta.blob();
 
-    const urlZip = URL.createObjectURL(archivoZip);
+      const extension =
+        blob.type === "image/png"
+          ? "png"
+          : blob.type === "image/webp"
+            ? "webp"
+            : "jpg";
 
-    const enlace = document.createElement("a");
+      const urlTemporal = URL.createObjectURL(blob);
 
-    enlace.href = urlZip;
-    enlace.download = "imagenes-facebook.zip";
+      const enlace = document.createElement("a");
 
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
+      enlace.href = urlTemporal;
+      enlace.download = `facebook-${indice + 1}.${extension}`;
 
-    URL.revokeObjectURL(urlZip);
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+
+      setTimeout(() => {
+        URL.revokeObjectURL(urlTemporal);
+      }, 1000);
+
+      // Pequeña separación entre descargas para Android
+      await new Promise((resolve) =>
+        setTimeout(resolve, 350)
+      );
+    }
   } catch (error) {
     console.error(
       "Error descargando imágenes:",
       error
     );
 
-    alert(
-      "No se pudieron descargar las imágenes."
-    );
+    alert("No se pudieron descargar las imágenes.");
   }
 };
 
