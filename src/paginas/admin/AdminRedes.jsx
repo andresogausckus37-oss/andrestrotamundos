@@ -266,15 +266,23 @@ const obtenerAhoraArgentina = () => {
 };
 
 const horarioYaPasoArgentina = (pieza) => {
-  if (!pieza?.fecha || !pieza?.hora || pieza.estado === "publicado") {
-    return false;
-  }
+  if (!pieza?.fecha || !pieza?.hora) return false;
+  if (pieza.estado === "publicado" || pieza.estado === "fallido") return false;
+
   const ahora = obtenerAhoraArgentina();
-  return (
-    pieza.fecha < ahora.fecha ||
-    (pieza.fecha === ahora.fecha && pieza.hora <= ahora.hora)
-  );
+
+  // Convertir a números para comparar sin errores de formato
+  const [hP, mP] = String(pieza.hora).split(":").map(Number);
+  const [hA, mA] = String(ahora.hora).split(":").map(Number);
+
+  const fechaVencida = pieza.fecha < ahora.fecha;
+  const mismaFechaHoraVencida = 
+    pieza.fecha === ahora.fecha &&
+    (hP < hA || (hP === hA && mP <= mA));
+
+  return fechaVencida || mismaFechaHoraVencida;
 };
+
 
 const MAX_INTENTOS_PUBLICACION = 3;
 
