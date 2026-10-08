@@ -1279,6 +1279,7 @@ const generarPreviewProducto = async (
   req,
   res
 ) => {
+  
   const productoId =
     typeof req.query?.id === "string"
       ? req.query.id.trim()
@@ -1432,7 +1433,15 @@ const generarPreviewProducto = async (
 </head>
 
 <body>
-  <p>${tituloSeguro}</p>
+  <script>
+    window.location.replace(${JSON.stringify(urlProducto)});
+  </script>
+
+  <noscript>
+    <a href="${urlSegura}">
+      Ver producto
+    </a>
+  </noscript>
 </body>
 </html>`);
 };
