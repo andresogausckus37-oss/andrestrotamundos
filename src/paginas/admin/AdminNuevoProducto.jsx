@@ -665,6 +665,11 @@ export default function AdminNuevoProducto() {
   );
 
   const [
+    imagenFacebook,
+    setImagenFacebook,
+  ] = useState(null);
+
+  const [
   videoReel,
   setVideoReel,
 ] = useState(null);
@@ -959,6 +964,54 @@ export default function AdminNuevoProducto() {
 
       nuevas[indice] = null;
       return nuevas;
+    });
+  };
+
+  const seleccionarImagenFacebook =
+    async (archivo) => {
+      if (!archivo) {
+        return;
+      }
+
+      try {
+        setProcesandoImagen(true);
+
+        const resultado =
+          await procesarImagen(
+            archivo,
+            900
+          );
+
+        setImagenFacebook(
+          (actual) => {
+            if (
+              actual?.urlOptimizada
+            ) {
+              URL.revokeObjectURL(
+                actual.urlOptimizada
+              );
+            }
+
+            return resultado;
+          }
+        );
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      } finally {
+        setProcesandoImagen(false);
+      }
+    };
+
+  const eliminarImagenFacebook = () => {
+    setImagenFacebook((actual) => {
+      if (actual?.urlOptimizada) {
+        URL.revokeObjectURL(
+          actual.urlOptimizada
+        );
+      }
+
+      return null;
     });
   };
 
@@ -1407,6 +1460,7 @@ export default function AdminNuevoProducto() {
 
     imagenes: {
       portada: "",
+      portadaFacebook: "",
       preview: "",
       previewsIndividuales: [],
       redes: {
@@ -1555,6 +1609,14 @@ export default function AdminNuevoProducto() {
       }
 
 
+      if (!imagenFacebook) {
+        alert(
+          "Falta seleccionar la imagen para Facebook de 900 × 630 px."
+        );
+
+        return;
+      }
+
       if (
         imagenesVertical.some(
           (imagen) => !imagen
@@ -1616,6 +1678,12 @@ export default function AdminNuevoProducto() {
 
           urlsVertical.push(url);
         }
+
+        const urlFacebook =
+          await subirImagen(
+            imagenFacebook,
+            9
+          );
 
         /*
  * VIDEO REEL PÚBLICO
@@ -1686,6 +1754,9 @@ if (videoReel) {
             imagenes: {
               portada:
                 urls[0],
+
+              portadaFacebook:
+                urlFacebook,
 
               preview:
                 urls[1],
@@ -2340,6 +2411,27 @@ videoReel:
 
           <div className="mt-6 border-t border-slate-200 pt-5">
             <h3 className="text-sm font-bold text-slate-900">
+              Facebook — 900 × 630
+            </h3>
+
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Imagen específica para la vista previa del producto al compartir desde el Admin en Facebook.
+            </p>
+
+            <div className="mt-3 max-w-[360px]">
+              <ImagenProducto
+                titulo="Imagen principal Facebook"
+                imagen={imagenFacebook}
+                formato="facebook"
+                deshabilitado={procesandoImagen || guardando}
+                onSeleccionar={seleccionarImagenFacebook}
+                onEliminar={eliminarImagenFacebook}
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-slate-200 pt-5">
+            <h3 className="text-sm font-bold text-slate-900">
               Stories / Reels — 9:16
             </h3>
             <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -2626,14 +2718,18 @@ function ImagenProducto({
       ? "aspect-[4/5]"
       : formato === "vertical"
         ? "aspect-[9/16]"
-        : "aspect-square";
+        : formato === "facebook"
+          ? "aspect-[10/7]"
+          : "aspect-square";
 
   const anchoPreview =
     formato === "vertical"
       ? "max-w-[82px]"
       : formato === "feed"
         ? "max-w-[104px]"
-        : "max-w-[112px]";
+        : formato === "facebook"
+          ? "max-w-[180px]"
+          : "max-w-[112px]";
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
@@ -2713,9 +2809,38 @@ function SelectorArchivoSimple({
   onSeleccionar,
   onEliminar,
 }) {
+  const [urlPreview, setUrlPreview] = useState("");
+
+  useEffect(() => {
+    if (!archivo || !archivo.type?.startsWith("image/")) {
+      setUrlPreview("");
+      return;
+    }
+
+    const url = URL.createObjectURL(archivo);
+    setUrlPreview(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [archivo]);
+
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
       <p className="text-xs font-bold text-slate-700">{titulo}</p>
+
+      {urlPreview && (
+        <div className="mt-3 flex justify-center">
+          <div className="w-[112px] overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm aspect-[210/297]">
+            <img
+              src={urlPreview}
+              alt={`Vista previa de ${titulo}`}
+              className="h-full w-full object-contain"
+            />
+          </div>
+        </div>
+      )}
+
       <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white px-3 py-5 text-center">
         <Upload size={18} className="text-sky-600" />
         <span className="min-w-0 truncate text-[10px] font-semibold text-slate-700">
@@ -2726,11 +2851,20 @@ function SelectorArchivoSimple({
           accept={accept}
           disabled={deshabilitado}
           className="hidden"
-          onChange={(e) => onSeleccionar(e.target.files?.[0] || null)}
+          onChange={(e) => {
+            onSeleccionar(e.target.files?.[0] || null);
+            e.target.value = "";
+          }}
         />
       </label>
+
       {archivo && (
-        <button type="button" disabled={deshabilitado} onClick={onEliminar} className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-600 disabled:opacity-40">
+        <button
+          type="button"
+          disabled={deshabilitado}
+          onClick={onEliminar}
+          className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-600 disabled:opacity-40"
+        >
           <Trash2 size={12} /> Eliminar
         </button>
       )}
