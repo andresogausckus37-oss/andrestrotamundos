@@ -1277,7 +1277,8 @@ function escaparHtml(valor = "") {
 
 const generarPreviewProducto = async (
   req,
-  res
+  res,
+  usarImagenFacebook = false
 ) => {
   
   const productoId =
@@ -1315,9 +1316,11 @@ const generarPreviewProducto = async (
     producto.descripcionCorta ||
     "Producto digital imprimible.";
 
-  // ÚNICAMENTE la imagen principal
-  const imagen =
-    producto.imagenes?.portada || "";
+  const imagen = usarImagenFacebook
+  ? producto.imagenes?.portadaFacebook ||
+    producto.imagenes?.portada ||
+    ""
+  : producto.imagenes?.portada || "";
 
   if (!imagen) {
     return res
@@ -1327,8 +1330,12 @@ const generarPreviewProducto = async (
       );
   }
 
-  const urlCompartir =
-  `https://andreshousesitter.com/compartir/${encodeURIComponent(
+  const rutaCompartir = usarImagenFacebook
+  ? "compartir-facebook"
+  : "compartir";
+
+const urlCompartir =
+  `https://andreshousesitter.com/${rutaCompartir}/${encodeURIComponent(
     producto.id
   )}`;
 
@@ -1524,6 +1531,24 @@ if (
     res
   );
 }
+
+    if (
+  accion ===
+  "preview-producto-facebook"
+) {
+  if (req.method !== "GET") {
+    return res.status(405).json({
+      error:
+        "Método no permitido",
+    });
+  }
+
+  return await generarPreviewProducto(
+    req,
+    res,
+    true
+  );
+    }
 
     /* =========================
        SUBIR PDF PRODUCTO

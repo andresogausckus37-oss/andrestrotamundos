@@ -5,6 +5,10 @@
       "destination": "/api/admin/pedidos?accion=sitemap"
     },
     {
+      "source": "/compartir-facebook/:id",
+      "destination": "/api/admin/pedidos?accion=preview-producto-facebook&id=:id"
+    },
+    {
       "source": "/compartir/:id",
       "destination": "/api/admin/pedidos?accion=preview-producto&id=:id"
     },
