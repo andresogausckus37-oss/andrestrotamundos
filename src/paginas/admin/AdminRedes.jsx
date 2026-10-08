@@ -1256,6 +1256,62 @@ const urlProducto = productoId
     }
   };
 
+  const compartirEnWhatsapp = async (pieza, item) => {
+  try {
+    const textoBase =
+      typeof pieza?.publicacion?.texto === "string"
+        ? pieza.publicacion.texto.trim()
+        : "";
+
+    const productoId = item?.productoId || "";
+
+    const urlProducto = productoId
+      ? `https://andreshousesitter.com/tienda/${encodeURIComponent(
+          productoId
+        )}`
+      : "";
+
+    // Eliminar hashtags del copy.
+    const lineasSinHashtags = textoBase
+      .split("\n")
+      .filter(
+        (linea) => !linea.trim().startsWith("#")
+      );
+
+    const copy = lineasSinHashtags
+      .join("\n")
+      .trim();
+
+    const textoFinal = urlProducto
+      ? `${copy}\n\n${urlProducto}`
+      : copy;
+
+    // Copiar para poder pegarlo manualmente si hace falta.
+    await navigator.clipboard.writeText(textoFinal);
+
+    // Abrir WhatsApp con el texto preparado.
+    const urlWhatsapp =
+      `https://wa.me/?text=${encodeURIComponent(
+        textoFinal
+      )}`;
+
+    window.open(
+      urlWhatsapp,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  } catch (error) {
+    console.error(
+      "Error preparando publicación para WhatsApp:",
+      error
+    );
+
+    alert(
+      "No se pudo preparar la publicación para WhatsApp."
+    );
+  }
+};
+
   const descargarImagenesFacebook = async (pieza) => {
   try {
     const imagen = pieza?.publicacion?.imagen;
@@ -2320,6 +2376,19 @@ const urlProducto = productoId
         : "Confirmar publicación en Facebook"}
   </button>
 )}
+
+{pieza.red === "facebook" && (
+  <button
+    type="button"
+    onClick={() =>
+      compartirEnWhatsapp(pieza, item)
+    }
+    className="mt-2 w-full rounded-md bg-green-600 px-2 py-1.5 text-[10px] font-bold text-white transition hover:bg-green-700"
+  >
+    Compartir en WhatsApp
+  </button>
+)}
+                                  
                                   
                                 </div>
                               ))}
