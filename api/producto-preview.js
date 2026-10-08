@@ -1,4 +1,4 @@
-import { conectarMongoDB } from "./_lib/mongodb.js";
+import { conectarMongoDB } from "../lib/mongodb.js";
 
 function escaparHtml(valor = "") {
   return String(valor)
