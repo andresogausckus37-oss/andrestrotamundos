@@ -1327,10 +1327,15 @@ const generarPreviewProducto = async (
       );
   }
 
-  const urlProducto =
-    `https://andreshousesitter.com/tienda/${encodeURIComponent(
-      producto.id
-    )}`;
+  const urlCompartir =
+  `https://andreshousesitter.com/compartir/${encodeURIComponent(
+    producto.id
+  )}`;
+
+const urlProducto =
+  `https://andreshousesitter.com/tienda/${encodeURIComponent(
+    producto.id
+  )}`;
 
   const tituloSeguro =
     escaparHtml(nombre);
@@ -1341,8 +1346,11 @@ const generarPreviewProducto = async (
   const imagenSegura =
     escaparHtml(imagen);
 
-  const urlSegura =
-    escaparHtml(urlProducto);
+  const urlCompartirSegura =
+  escaparHtml(urlCompartir);
+
+const urlProductoSeguro =
+  escaparHtml(urlProducto);
 
   res.setHeader(
     "Content-Type",
@@ -1367,9 +1375,9 @@ const generarPreviewProducto = async (
   >
 
   <link
-    rel="canonical"
-    href="${urlSegura}"
-  >
+  rel="canonical"
+  href="${urlCompartirSegura}"
+>
 
   <meta
     property="og:title"
@@ -1392,9 +1400,9 @@ const generarPreviewProducto = async (
   >
 
   <meta
-    property="og:url"
-    content="${urlSegura}"
-  >
+  property="og:url"
+  content="${urlCompartirSegura}"
+>
 
   <meta
     property="og:type"
@@ -1438,7 +1446,7 @@ const generarPreviewProducto = async (
   </script>
 
   <noscript>
-    <a href="${urlSegura}">
+    <a href="${urlProductoSeguro}">
       Ver producto
     </a>
   </noscript>
