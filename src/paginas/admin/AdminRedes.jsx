@@ -1206,7 +1206,7 @@ const aprobarContenido = async (
   item?.productoId || "";
 
 const urlProducto = productoId
-  ? `https://andreshousesitter.com/tienda/${encodeURIComponent(
+  ? `https://andreshousesitter.com/compartir/${encodeURIComponent(
       productoId
     )}`
   : "";
@@ -1266,10 +1266,10 @@ const urlProducto = productoId
     const productoId = item?.productoId || "";
 
     const urlProducto = productoId
-      ? `https://andreshousesitter.com/tienda/${encodeURIComponent(
-          productoId
-        )}`
-      : "";
+  ? `https://andreshousesitter.com/compartir/${encodeURIComponent(
+      productoId
+    )}`
+  : "";
 
     // Eliminar hashtags del copy.
     const lineasSinHashtags = textoBase
