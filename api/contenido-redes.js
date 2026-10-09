@@ -2,9 +2,23 @@ import crypto from "crypto";
 import OpenAI from "openai";
 import { conectarMongoDB } from "../lib/mongodb.js";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openai = null;
+
+function obtenerOpenAI() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error(
+      "Falta configurar OPENAI_API_KEY"
+    );
+  }
+
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  return openai;
+}
 
 const THREADS_APP_ID =
   process.env.THREADS_APP_ID;
@@ -2783,8 +2797,11 @@ async function generarContenido(req, res) {
       });
     }
 
-    const respuesta =
-      await openai.responses.create({
+    const clienteOpenAI =
+  obtenerOpenAI();
+
+const respuesta =
+  await clienteOpenAI.responses.create({
         model: "gpt-5.6-luna",
         input: prompt,
       });
