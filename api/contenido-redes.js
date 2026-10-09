@@ -1392,6 +1392,8 @@ async function listarAprobados(
 // CALENDARIO DE REDES
 // =========================================================
 
+const MAX_INTENTOS_PUBLICACION = 3;
+
 const ZONA_HORARIA_RED =
   "America/Argentina/Buenos_Aires";
 
@@ -2278,6 +2280,10 @@ async function publicarProgramado(
     });
   } catch (errorPublicacion) {
     const ahoraError = new Date();
+    const intentosActuales =
+      (Number(pieza.intentosPublicacion) || 0) + 1;
+    const alcanzoMaximoIntentos =
+      intentosActuales >= MAX_INTENTOS_PUBLICACION;
 
     await db
       .collection("contenido_redes")
@@ -2290,7 +2296,7 @@ async function publicarProgramado(
         {
           $set: {
             [`calendario.${posicion}.estado`]:
-              "programado",
+              alcanzoMaximoIntentos ? "error" : "programado",
             [`calendario.${posicion}.ultimoError`]:
               errorPublicacion?.message ||
               "Error publicando contenido.",
@@ -2391,6 +2397,13 @@ async function ejecutarPublicacionesPendientes(
     documento.calendario.forEach(
       (pieza) => {
         if (pieza?.estado !== "programado") {
+          return;
+        }
+
+        if (
+          (Number(pieza.intentosPublicacion) || 0) >=
+          MAX_INTENTOS_PUBLICACION
+        ) {
           return;
         }
 

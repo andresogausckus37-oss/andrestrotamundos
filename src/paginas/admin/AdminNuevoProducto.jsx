@@ -1709,7 +1709,8 @@ if (videoReel) {
             idGenerado,
         }),
 
-      multipart: true,
+      // Para archivos pequeños evitamos multipart; se reserva para reels de 20 MB o más.
+      multipart: videoReel.size >= 20 * 1024 * 1024,
     }
   );
 }
@@ -1738,7 +1739,8 @@ if (videoReel) {
                     idGenerado,
                 }),
 
-              multipart: true,
+              // Para archivos pequeños evitamos multipart; se reserva para PDFs de 20 MB o más.
+              multipart: archivoPDF.size >= 20 * 1024 * 1024,
             }
           );
 

@@ -496,6 +496,11 @@
           );
 
           const [
+            imagenFacebook,
+            setImagenFacebook,
+          ] = useState(null);
+
+          const [
             archivoPDF,
             setArchivoPDF,
           ] = useState(null);
@@ -646,6 +651,12 @@
               producto.imagenes?.redes?.vertical?.beneficios || "",
               producto.imagenes?.redes?.vertical?.comoFunciona || "",
             ].map(prepararImagenDesdeUrl);
+
+          const prepararImagenFacebookExistente =
+            (producto) =>
+              prepararImagenDesdeUrl(
+                producto.imagenes?.portadaFacebook || ""
+              );
 
           /* =======================================================
              CARGAR PRODUCTO
@@ -830,6 +841,12 @@
                     producto
                   )
                 );
+
+                setImagenFacebook(
+                  prepararImagenFacebookExistente(
+                    producto
+                  )
+                );
               } catch (
                 errorCarga
               ) {
@@ -868,6 +885,7 @@
               [
                 ...imagenes,
                 ...imagenesVertical,
+                imagenFacebook,
               ].forEach((imagen) => {
                 if (
                   imagen?.esNueva &&
@@ -1084,6 +1102,67 @@
                 return nuevas;
               });
             };
+
+          /* =======================================================
+             SELECCIONAR / RESTAURAR PORTADA FACEBOOK
+          ======================================================= */
+
+          const seleccionarImagenFacebook =
+            async (archivo) => {
+              if (!archivo) return;
+
+              if (!archivo.type.startsWith("image/")) {
+                alert("Seleccioná un archivo de imagen válido.");
+                return;
+              }
+
+              try {
+                setProcesandoImagen(true);
+
+                const procesada =
+                  await procesarImagen(archivo, 900);
+
+                setImagenFacebook((anterior) => {
+                  if (
+                    anterior?.esNueva &&
+                    anterior?.urlOptimizada?.startsWith("blob:")
+                  ) {
+                    URL.revokeObjectURL(anterior.urlOptimizada);
+                  }
+
+                  return procesada;
+                });
+              } catch (errorImagen) {
+                console.error(
+                  "Error procesando portada Facebook:",
+                  errorImagen
+                );
+
+                alert(
+                  errorImagen.message ||
+                    "No se pudo procesar la portada de Facebook."
+                );
+              } finally {
+                setProcesandoImagen(false);
+              }
+            };
+
+          const restaurarImagenFacebook = () => {
+            if (!productoOriginal) return;
+
+            setImagenFacebook((actual) => {
+              if (
+                actual?.esNueva &&
+                actual?.urlOptimizada?.startsWith("blob:")
+              ) {
+                URL.revokeObjectURL(actual.urlOptimizada);
+              }
+
+              return prepararImagenFacebookExistente(
+                productoOriginal
+              );
+            });
+          };
 
           /* =======================================================
              SUBIR IMAGEN NUEVA
@@ -1599,6 +1678,19 @@
                 }
 
                 /*
+                 * PORTADA ESPECÍFICA PARA FACEBOOK.
+                 * Solo se sube si fue reemplazada.
+                 */
+
+                const urlFacebook =
+                  imagenFacebook
+                    ? await subirImagen(
+                        imagenFacebook,
+                        "facebook"
+                      )
+                    : productoOriginal?.imagenes?.portadaFacebook || "";
+
+                /*
                  * CONSERVAR PDF ACTUAL
                  * O REEMPLAZARLO.
                  */
@@ -1653,6 +1745,9 @@
                         urls[2],
                         urls[3],
                       ],
+
+                      portadaFacebook:
+                        urlFacebook,
 
                       redes: {
                         feed: {
@@ -1757,6 +1852,12 @@
 
                 setImagenesVertical(
                   convertirUrlsAImagenes(urlsVertical)
+                );
+
+                setImagenFacebook(
+                  urlFacebook
+                    ? prepararImagenDesdeUrl(urlFacebook)
+                    : null
                 );
 
                 await cargarProductos();
@@ -2417,6 +2518,26 @@
                     </div>
                   </div>
 
+                  <div className="mt-6 border-t border-slate-200 pt-5">
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Vista previa para Facebook — 900 × 630
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Imagen independiente usada al compartir el producto en Facebook. Si no la reemplazás, se conserva la actual y no se realiza una nueva subida a Blob.
+                    </p>
+
+                    <div className="mt-3 max-w-sm">
+                      <ImagenProducto
+                        titulo="Portada Facebook"
+                        imagen={imagenFacebook}
+                        formato="facebook"
+                        deshabilitado={procesandoImagen || guardando}
+                        onSeleccionar={seleccionarImagenFacebook}
+                        onRestaurar={restaurarImagenFacebook}
+                      />
+                    </div>
+                  </div>
+
                   {procesandoImagen && (
                     <p className="text-xs font-semibold text-sky-600">
                       Optimizando imagen...
@@ -2657,14 +2778,18 @@
               ? "aspect-[4/5]"
               : formato === "vertical"
                 ? "aspect-[9/16]"
-                : "aspect-square";
+                : formato === "facebook"
+                  ? "aspect-[10/7]"
+                  : "aspect-square";
 
           const anchoPreview =
             formato === "vertical"
               ? "max-w-[82px]"
               : formato === "feed"
                 ? "max-w-[104px]"
-                : "max-w-[112px]";
+                : formato === "facebook"
+                  ? "max-w-[160px]"
+                  : "max-w-[112px]";
 
           return (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
