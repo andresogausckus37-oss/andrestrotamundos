@@ -1679,11 +1679,10 @@ export default function AdminNuevoProducto() {
           urlsVertical.push(url);
         }
 
-        const urlFacebook =
-          await subirImagen(
-            imagenFacebook,
-            9
-          );
+        const urlFacebook = await subirImagen(
+  imagenFacebook,
+  "facebook"
+);
 
         /*
  * VIDEO REEL PÚBLICO

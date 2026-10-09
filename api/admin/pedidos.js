@@ -539,18 +539,26 @@ const subirImagenProducto = async (req, res) => {
     });
   }
 
-  const numero = Number(numeroImagen);
+  const esImagenFacebook =
+  numeroImagen === "facebook";
 
-  if (
+const numero = esImagenFacebook
+  ? "facebook"
+  : Number(numeroImagen);
+
+if (
+  !esImagenFacebook &&
+  (
     !Number.isInteger(numero) ||
     numero < 1 ||
     numero > 12
-  ) {
-    return res.status(400).json({
-      error:
-        "El número de imagen debe estar entre 1 y 12.",
-    });
-  }
+  )
+) {
+  return res.status(400).json({
+    error:
+      "El número de imagen debe estar entre 1 y 12 o ser facebook.",
+  });
+}
 
   if (!imagenBase64) {
     return res.status(400).json({
