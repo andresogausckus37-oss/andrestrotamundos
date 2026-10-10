@@ -5,6 +5,13 @@
   "compatibility_date": "2026-10-09",
   "compatibility_flags": ["nodejs_compat"],
 
+  "r2_buckets": [
+  {
+    "binding": "PRODUCTOS_R2",
+    "bucket_name": "andrestrotamundos-productos"
+  }
+],
+
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
