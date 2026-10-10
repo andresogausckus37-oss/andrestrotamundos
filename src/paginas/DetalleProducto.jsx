@@ -1,136 +1,95 @@
-import CalificacionProducto from "../componentes/CalificacionProducto";
-import { resenasProductos } from "../datos/resenasProductos";
-import ProteccionComercial from "../generador/componentes/ProteccionComercial";
-
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
-  BadgePercent,
   Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
   CreditCard,
-  Download,
-  Landmark,
+  Package,
+  Ruler,
+  ShieldCheck,
   ShoppingBag,
+  Tag,
+  Truck,
 } from "lucide-react";
 
-import { useEffect, useState } from "react";
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import CalificacionProducto from "../componentes/CalificacionProducto";
 
-import {
-  MERCADO_ARGENTINA,
-  MERCADO_INTERNACIONAL,
-  obtenerPrecioMercado,
-  formatearPrecioMercado,
-} from "../utilidades/mercado";
-
-/* =========================================================
-   CONFIGURACIÓN COMERCIAL
-========================================================= */
-
-const DESCUENTO_TRANSFERENCIA = 5;
 const CUOTAS_SIN_INTERES = 3;
-const DURACION_NUEVO_PRODUCTO_MS = 72 * 60 * 60 * 1000;
-
-const obtenerFechaOferta = (producto, mercado) => {
-  const fecha =
-    producto?.ofertaLanzamiento?.finalizaEn ||
-    (mercado === MERCADO_ARGENTINA
-      ? producto?.oferta?.finalizaEn
-      : producto?.ofertaUSD?.finalizaEn) ||
-    null;
-
-  if (!fecha) return null;
-
-  const tiempo = new Date(fecha).getTime();
-  return Number.isFinite(tiempo) ? tiempo : null;
-};
-
-const formatearTiempoRestante = (milisegundos) => {
-  const totalSegundos = Math.max(0, Math.floor(milisegundos / 1000));
-  const dias = Math.floor(totalSegundos / 86400);
-  const horas = Math.floor((totalSegundos % 86400) / 3600);
-  const minutos = Math.floor((totalSegundos % 3600) / 60);
-  const segundos = totalSegundos % 60;
-
-  return `${dias}d ${String(horas).padStart(2, "0")}h ${String(minutos).padStart(2, "0")}m ${String(segundos).padStart(2, "0")}s`;
-};
 
 const DetalleProducto = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [imagenActiva, setImagenActiva] =
-    useState(0);
-
-  const [mercado, setMercado] =
-    useState(MERCADO_ARGENTINA);
-
-  const [cargandoMercado, setCargandoMercado] =
-    useState(true);
-
-  const [producto, setProducto] =
-    useState(null);
-
-  const [cargandoProducto, setCargandoProducto] =
-    useState(true);
-
-  const [ahora, setAhora] = useState(() => Date.now());
-
-  useEffect(() => {
-    const intervalo = window.setInterval(() => {
-      setAhora(Date.now());
-    }, 1000);
-
-    return () => window.clearInterval(intervalo);
-  }, []);
-
-  /* =========================================================
-     CARGAR PRODUCTO DESDE MONGODB
-  ========================================================= */
+  const [producto, setProducto] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [imagenActiva, setImagenActiva] = useState(0);
+  const [varianteSeleccionada, setVarianteSeleccionada] =
+    useState("");
 
   useEffect(() => {
     let cancelado = false;
 
     const cargarProducto = async () => {
       try {
-        setCargandoProducto(true);
+        setCargando(true);
+        setError("");
 
         const respuesta = await fetch(
           "/api/admin/pedidos?accion=productos-publicos"
         );
 
+        const datos = await respuesta.json();
+
         if (!respuesta.ok) {
           throw new Error(
-            "No se pudo cargar el producto."
+            datos.error || "No se pudo cargar el producto."
           );
         }
 
-        const datos = await respuesta.json();
+        const productos = Array.isArray(datos.productos)
+          ? datos.productos
+          : [];
 
-        const encontrado =
-          Array.isArray(datos.productos)
-            ? datos.productos.find(
-                (item) => item.id === id
-              )
-            : null;
+        const encontrado = productos.find(
+          (item) => String(item.id) === String(id)
+        );
+
+        if (!encontrado) {
+          throw new Error("Producto no encontrado.");
+        }
 
         if (!cancelado) {
-          setProducto(encontrado || null);
+          setProducto(encontrado);
+
+          const variantes = Array.isArray(
+            encontrado.detalles?.variantes
+          )
+            ? encontrado.detalles.variantes.filter(Boolean)
+            : [];
+
+          if (variantes.length === 1) {
+            setVarianteSeleccionada(variantes[0]);
+          }
         }
-      } catch (error) {
+      } catch (errorProducto) {
         console.error(
-          "Error cargando producto desde MongoDB:",
-          error
+          "Error cargando detalle del producto:",
+          errorProducto
         );
 
         if (!cancelado) {
-          setProducto(null);
+          setError(
+            errorProducto.message ||
+              "No se pudo cargar el producto."
+          );
         }
       } finally {
         if (!cancelado) {
-          setCargandoProducto(false);
+          setCargando(false);
         }
       }
     };
@@ -142,408 +101,183 @@ const DetalleProducto = () => {
     };
   }, [id]);
 
-  const textoEs = (valor) => {
-    if (typeof valor === "string") {
-      return valor;
-    }
+  const imagenes = useMemo(() => {
+    if (!producto) return [];
 
-    return valor?.es || "";
-  };
+    const posibles = [
+      producto.imagenes?.portada,
+      producto.imagenes?.portadaFacebook,
+      producto.imagenes?.preview,
+      ...(Array.isArray(producto.imagenes?.previewsIndividuales)
+        ? producto.imagenes.previewsIndividuales
+        : []),
+      producto.imagenes?.redes?.feed?.presentacion,
+      producto.imagenes?.redes?.feed?.incluye,
+      producto.imagenes?.redes?.feed?.beneficios,
+      producto.imagenes?.redes?.feed?.comoFunciona,
+      producto.imagenes?.redes?.vertical?.presentacion,
+      producto.imagenes?.redes?.vertical?.incluye,
+      producto.imagenes?.redes?.vertical?.beneficios,
+      producto.imagenes?.redes?.vertical?.comoFunciona,
+    ].filter(Boolean);
 
-  const listaEs = (valor) => {
-    if (Array.isArray(valor)) {
-      return valor;
-    }
+    return [...new Set(posibles)].slice(0, 8);
+  }, [producto]);
 
-    return valor?.es || [];
-  };
+  const variantes = useMemo(() => {
+    if (!producto) return [];
 
-  /* =========================================================
-     DETECTAR MERCADO
-  ========================================================= */
+    return Array.isArray(producto.detalles?.variantes)
+      ? producto.detalles.variantes.filter(Boolean)
+      : [];
+  }, [producto]);
 
-  useEffect(() => {
-    let cancelado = false;
+  const colores = useMemo(() => {
+    if (!producto) return [];
 
-    const detectarMercado = async () => {
-      try {
-        const parametros =
-          new URLSearchParams(
-            window.location.search
-          );
+    return Array.isArray(producto.detalles?.colores)
+      ? producto.detalles.colores.filter(Boolean)
+      : [];
+  }, [producto]);
 
-        const mercadoPrueba =
-          parametros
-            .get("mercado")
-            ?.toLowerCase();
+  const caracteristicas = useMemo(() => {
+    if (!producto) return [];
 
-        if (
-          mercadoPrueba ===
-          "internacional"
-        ) {
-          if (!cancelado) {
-            setMercado(
-              MERCADO_INTERNACIONAL
-            );
+    return Array.isArray(producto.detalles?.caracteristicas)
+      ? producto.detalles.caracteristicas.filter(Boolean)
+      : [];
+  }, [producto]);
 
-            setCargandoMercado(false);
-          }
+  const contenidoPaquete = useMemo(() => {
+    if (!producto) return [];
 
-          return;
-        }
+    return Array.isArray(producto.detalles?.contenidoPaquete)
+      ? producto.detalles.contenidoPaquete.filter(Boolean)
+      : [];
+  }, [producto]);
 
-        if (
-          mercadoPrueba ===
-          "argentina"
-        ) {
-          if (!cancelado) {
-            setMercado(
-              MERCADO_ARGENTINA
-            );
+  const ofertaActiva = useMemo(() => {
+    if (!producto?.oferta?.activa) return false;
 
-            setCargandoMercado(false);
-          }
+    const precioOferta =
+      Number(producto.oferta?.precioARS) || 0;
 
-          return;
-        }
+    if (precioOferta <= 0) return false;
 
-        const respuesta = await fetch(
-          "/api/visitas?accion=mercado"
-        );
+    const finalizaEn =
+      producto.ofertaLanzamiento?.finalizaEn;
 
-        if (!respuesta.ok) {
-          throw new Error(
-            "No se pudo detectar el mercado."
-          );
-        }
+    if (!finalizaEn) return true;
 
-        const datos =
-          await respuesta.json();
+    return new Date(finalizaEn).getTime() > Date.now();
+  }, [producto]);
 
-        if (cancelado) {
-          return;
-        }
+  const precioNormal = Number(producto?.precioARS) || 0;
 
-        setMercado(
-          datos.mercado ===
-            MERCADO_INTERNACIONAL
-            ? MERCADO_INTERNACIONAL
-            : MERCADO_ARGENTINA
-        );
-      } catch (error) {
-        console.error(
-          "Error detectando mercado:",
-          error
-        );
+  const precioFinal = ofertaActiva
+    ? Number(producto?.oferta?.precioARS) || precioNormal
+    : precioNormal;
 
-        if (!cancelado) {
-          setMercado(
-            MERCADO_ARGENTINA
-          );
-        }
-      } finally {
-        if (!cancelado) {
-          setCargandoMercado(false);
-        }
-      }
-    };
+  const ahorro = ofertaActiva
+    ? Math.max(0, precioNormal - precioFinal)
+    : 0;
 
-    detectarMercado();
+  const porcentajeDescuento =
+    ofertaActiva && precioNormal > 0
+      ? Math.round((ahorro / precioNormal) * 100)
+      : 0;
 
-    return () => {
-      cancelado = true;
-    };
-  }, []);
+  const valorCuota =
+    precioFinal > 0
+      ? precioFinal / CUOTAS_SIN_INTERES
+      : 0;
 
-  /* =========================================================
-     PRECIO SEGÚN MERCADO
-  ========================================================= */
+  const stock = Number(producto?.stock);
 
-  const formatearPrecio = (precio) => {
-    if (
-      precio === null ||
-      precio === undefined ||
-      Number(precio) <= 0
-    ) {
-      return "Precio a definir";
-    }
+  const sinStock =
+    producto?.disponibilidad === "sin-stock" ||
+    stock === 0;
 
-    return formatearPrecioMercado(
-      Number(precio),
-      mercado
+  const proximamente =
+    producto?.disponibilidad === "proximamente";
+
+  const pausado =
+    producto?.disponibilidad === "pausado";
+
+  const disponible =
+    !sinStock && !proximamente && !pausado;
+
+  const formatearPrecio = (valor) =>
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0,
+    }).format(Number(valor) || 0);
+
+  const irImagenAnterior = () => {
+    if (imagenes.length <= 1) return;
+
+    setImagenActiva((actual) =>
+      actual === 0 ? imagenes.length - 1 : actual - 1
     );
   };
 
-  /* =========================================================
-     SEO DEL PRODUCTO
-  ========================================================= */
+  const irImagenSiguiente = () => {
+    if (imagenes.length <= 1) return;
 
-  useEffect(() => {
-    if (!producto || cargandoMercado) {
-      return;
+    setImagenActiva((actual) =>
+      actual === imagenes.length - 1 ? 0 : actual + 1
+    );
+  };
+
+  const comprar = () => {
+    if (!disponible) return;
+
+    const parametros = new URLSearchParams();
+
+    if (varianteSeleccionada) {
+      parametros.set("variante", varianteSeleccionada);
     }
 
-    const nombre =
-      textoEs(producto.nombre);
+    const query = parametros.toString();
 
-    const descripcion =
-      textoEs(producto.descripcion);
-
-    const url =
-      `https://andreshousesitter.com/tienda/${producto.id}`;
-
-    const imagen =
-      producto.imagenes?.portada || "";
-
-    document.title =
-      `${nombre} | Andrés Imprimibles`;
-
-    const actualizarMeta = (
-      selector,
-      atributo,
-      contenido
-    ) => {
-      let elemento =
-        document.querySelector(
-          selector
-        );
-
-      if (!elemento) {
-        elemento =
-          document.createElement(
-            "meta"
-          );
-
-        const nombreMeta =
-          selector.match(
-            /(?:name|property)="([^"]+)"/
-          )?.[1];
-
-        elemento.setAttribute(
-          atributo,
-          nombreMeta
-        );
-
-        document.head.appendChild(
-          elemento
-        );
-      }
-
-      elemento.setAttribute(
-        "content",
-        contenido
-      );
-    };
-
-    actualizarMeta(
-      'meta[name="description"]',
-      "name",
-      descripcion
+    navigate(
+      `/checkout/${producto.id}${query ? `?${query}` : ""}`
     );
+  };
 
-    actualizarMeta(
-      'meta[property="og:title"]',
-      "property",
-      nombre
+  if (cargando) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#FCFDFC] px-5">
+        <p className="text-sm text-slate-500">
+          Cargando producto...
+        </p>
+      </main>
     );
-
-    actualizarMeta(
-      'meta[property="og:description"]',
-      "property",
-      descripcion
-    );
-
-    actualizarMeta(
-      'meta[property="og:url"]',
-      "property",
-      url
-    );
-
-    actualizarMeta(
-      'meta[property="og:type"]',
-      "property",
-      "product"
-    );
-
-    if (imagen) {
-      actualizarMeta(
-        'meta[property="og:image"]',
-        "property",
-        imagen
-      );
-
-      actualizarMeta(
-        'meta[name="twitter:image"]',
-        "name",
-        imagen
-      );
-    }
-
-    actualizarMeta(
-      'meta[name="twitter:title"]',
-      "name",
-      nombre
-    );
-
-    actualizarMeta(
-      'meta[name="twitter:description"]',
-      "name",
-      descripcion
-    );
-
-    let canonical =
-      document.querySelector(
-        'link[rel="canonical"]'
-      );
-
-    if (!canonical) {
-      canonical =
-        document.createElement(
-          "link"
-        );
-
-      canonical.setAttribute(
-        "rel",
-        "canonical"
-      );
-
-      document.head.appendChild(
-        canonical
-      );
-    }
-
-    canonical.setAttribute(
-      "href",
-      url
-    );
-
-    /* =====================================================
-       DATOS ESTRUCTURADOS DEL PRODUCTO
-    ===================================================== */
-
-    const precio =
-      obtenerPrecioMercado(
-        producto,
-        mercado
-      );
-
-    const moneda =
-      mercado ===
-      MERCADO_ARGENTINA
-        ? "ARS"
-        : "USD";
-
-    const schemaProducto = {
-      "@context":
-        "https://schema.org",
-
-      "@type": "Product",
-
-      name: nombre,
-      description: descripcion,
-
-      image: imagen
-        ? [imagen]
-        : undefined,
-
-      sku: producto.id,
-
-      offers: {
-        "@type": "Offer",
-        url,
-        priceCurrency: moneda,
-        price: precio,
-        availability:
-          "https://schema.org/InStock",
-        itemCondition:
-          "https://schema.org/NewCondition",
-      },
-    };
-
-    let scriptSchema =
-      document.getElementById(
-        "schema-producto"
-      );
-
-    if (!scriptSchema) {
-      scriptSchema =
-        document.createElement(
-          "script"
-        );
-
-      scriptSchema.type =
-        "application/ld+json";
-
-      scriptSchema.id =
-        "schema-producto";
-
-      document.head.appendChild(
-        scriptSchema
-      );
-    }
-
-    scriptSchema.textContent =
-      JSON.stringify(
-        schemaProducto
-      );
-
-    return () => {
-      document.title =
-        "Cuidado de Casas y Mascotas | Andres House Sitter";
-
-      document
-        .getElementById(
-          "schema-producto"
-        )
-        ?.remove();
-
-      document
-        .querySelector(
-          'link[rel="canonical"]'
-        )
-        ?.setAttribute(
-          "href",
-          "https://andreshousesitter.com/"
-        );
-    };
-  }, [
-    producto,
-    mercado,
-    cargandoMercado,
-  ]);
-
-  /* =========================================================
-     PRODUCTO NO ENCONTRADO
-  ========================================================= */
-
-  if (cargandoProducto) {
-  return (
-    <main className="flex min-h-[70vh] items-center justify-center bg-[#FCFDFC] px-4">
-      <p className="text-sm text-[#687477]">
-        Cargando producto...
-      </p>
-    </main>
-  );
   }
 
-  if (!producto) {
+  if (error || !producto) {
     return (
-      <main className="flex min-h-[70vh] items-center justify-center bg-[#FCFDFC] px-4">
-        <div className="max-w-sm text-center">
-          <h1 className="text-xl font-medium text-[#263238]">
-            Producto no encontrado
+      <main className="flex min-h-screen items-center justify-center bg-[#FCFDFC] px-5">
+        <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 text-center">
+          <Package
+            size={34}
+            strokeWidth={1.6}
+            className="mx-auto text-slate-400"
+          />
+
+          <h1 className="mt-3 text-xl font-semibold text-slate-900">
+            Producto no disponible
           </h1>
 
-          <p className="mt-2 text-sm font-normal leading-6 text-[#687477]">
-            El producto que buscas no está disponible.
+          <p className="mt-2 text-sm text-slate-500">
+            {error || "No se encontró el producto."}
           </p>
 
           <button
             type="button"
-            onClick={() =>
-              navigate("/tienda/digitales")
-            }
-            className="mt-5 rounded-md bg-[#285861] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#204850]"
+            onClick={() => navigate("/tienda")}
+            className="mt-5 rounded-md bg-[#285861] px-5 py-2.5 text-sm font-medium text-white"
           >
             Volver a la tienda
           </button>
@@ -552,667 +286,457 @@ const DetalleProducto = () => {
     );
   }
 
-  /* =========================================================
-     PRECIO
-  ========================================================= */
+  const nombre =
+    typeof producto.nombre === "string"
+      ? producto.nombre
+      : producto.nombre?.es || "Producto";
 
-  const precioNormal =
-    mercado === MERCADO_ARGENTINA
-      ? Number(producto.precioARS)
-      : Number(producto.precioUSD);
+  const descripcion =
+    typeof producto.descripcion === "string"
+      ? producto.descripcion
+      : producto.descripcion?.es || "";
 
-  const fechaFinOferta = obtenerFechaOferta(
-    producto,
-    mercado
-  );
+  const descripcionLarga =
+    typeof producto.descripcionLarga === "string"
+      ? producto.descripcionLarga
+      : producto.descripcionLarga?.es || descripcion;
 
-  const ofertaNoVencida =
-    !fechaFinOferta || ahora < fechaFinOferta;
-
-  const tieneOfertaConfigurada =
-    mercado === MERCADO_ARGENTINA
-      ? producto.oferta?.activa === true &&
-        Number(producto.oferta?.precioARS) > 0
-      : producto.ofertaUSD?.activa === true &&
-        Number(producto.ofertaUSD?.precioUSD) > 0;
-
-  const tieneOferta =
-    tieneOfertaConfigurada && ofertaNoVencida;
-
-  const precioOferta =
-    mercado === MERCADO_ARGENTINA
-      ? Number(producto.oferta?.precioARS)
-      : Number(producto.ofertaUSD?.precioUSD);
-
-  const precioFinal = tieneOferta
-    ? precioOferta
-    : precioNormal;
-
-  const tiempoRestanteOferta =
-    tieneOferta && fechaFinOferta
-      ? Math.max(0, fechaFinOferta - ahora)
-      : 0;
-
-  const fechaCreacion = producto.creadoEn
-    ? new Date(producto.creadoEn).getTime()
-    : null;
-
-  const esNuevoProducto =
-    Number.isFinite(fechaCreacion) &&
-    ahora >= fechaCreacion &&
-    ahora - fechaCreacion < DURACION_NUEVO_PRODUCTO_MS;
-
-  const ahorro =
-    tieneOferta &&
-    precioNormal > precioFinal
-      ? precioNormal - precioFinal
-      : 0;
-
-  const descuento =
-        tieneOferta &&
-    precioNormal > 0
-      ? Math.round(
-          (ahorro / precioNormal) * 100
-        )
-      : 0;
-
-  const etiquetaOferta =
-    mercado === MERCADO_ARGENTINA
-      ? producto.oferta?.etiqueta
-      : producto.ofertaUSD?.etiqueta;
-
-  const precioTransferencia =
-    mercado === MERCADO_ARGENTINA
-      ? precioFinal *
-        (1 -
-          DESCUENTO_TRANSFERENCIA /
-            100)
-      : 0;
-
-  const precioCuota =
-    mercado === MERCADO_ARGENTINA
-      ? precioFinal /
-        CUOTAS_SIN_INTERES
-      : 0;
-
-  /* =========================================================
-     RESEÑAS
-  ========================================================= */
-
-  const resenasDelProducto =
-    resenasProductos.filter(
-      (resena) =>
-        resena.productoId ===
-        producto.id
-    );
-
-  /* =========================================================
-     IMÁGENES
-  ========================================================= */
-
-  const imagenes = [
-    producto.imagenes?.portada,
-    producto.imagenes?.preview,
-    producto.imagenes
-      ?.previewIndividual,
-    ...(producto.imagenes
-      ?.previewsIndividuales ||
-      []),
-  ].filter(Boolean);
-
-  const imagenActual =
-    imagenes[imagenActiva];
-
-  /* =========================================================
-     COMPRAR
-  ========================================================= */
-
-  const irAlCheckout = () => {
-    const parametros =
-      new URLSearchParams(
-        window.location.search
-      );
-
-    const mercadoPrueba =
-      parametros.get("mercado");
-
-    const ruta =
-      mercadoPrueba
-        ? `/checkout/${producto.id}?mercado=${encodeURIComponent(
-            mercadoPrueba
-          )}`
-        : `/checkout/${producto.id}`;
-
-    navigate(ruta);
-  };
+  const marca = producto.detalles?.marca || "";
+  const modelo = producto.detalles?.modelo || "";
+  const material = producto.detalles?.material || "";
+  const dimensiones = producto.detalles?.dimensiones || "";
+  const peso = producto.detalles?.peso || "";
 
   return (
-    <>
-      <main className="min-h-screen bg-[#FCFDFC] px-4 pb-12 pt-4 sm:px-5 sm:pt-6">
-        <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-[#FCFDFC] px-4 pb-20 pt-4 sm:px-5 sm:pt-7">
+      <div className="mx-auto max-w-7xl">
+        <button
+          type="button"
+          onClick={() => navigate("/tienda")}
+          className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-[#285861]"
+        >
+          <ArrowLeft size={17} strokeWidth={1.8} />
+          Volver a la tienda
+        </button>
 
-          {/* VOLVER */}
-
-          <button
-            type="button"
-            onClick={() =>
-              navigate(-1)
-            }
-            className="mb-5 inline-flex items-center gap-2 text-sm font-normal text-[#687477] transition-colors hover:text-[#285861]"
-          >
-            <ArrowLeft
-              size={17}
-              strokeWidth={1.8}
-            />
-
-            Volver
-          </button>
-
-          {/* =====================================================
-              CONTENIDO PRINCIPAL
-          ====================================================== */}
-
-          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
-
-            {/* =====================================================
-                GALERÍA
-            ====================================================== */}
-
-            <section>
-
-              {/* IMAGEN PRINCIPAL */}
-
-              <div className="relative mx-auto w-full max-w-[510px] overflow-hidden rounded-md border border-[#DCE5E4] bg-white">
-  <div className="aspect-[4/5] w-full overflow-hidden bg-white">
-                  {imagenActual &&
-                    (imagenActiva === 0 ? (
-                      <img
-                        src={imagenActual}
-                        alt={textoEs(
-                          producto.nombre
-                        )}
-                        className="h-full w-full object-contain"
-                      />
-                    ) : (
-                      <ProteccionComercial>
-                        <img
-                          src={imagenActual}
-                          alt={`Vista ${
-                            imagenActiva + 1
-                          } de ${textoEs(
-                            producto.nombre
-                          )}`}
-                          className="h-full w-full object-contain"
-                        />
-                      </ProteccionComercial>
-                    ))}
-                </div>
-              </div>
-
-              {/* MINIATURAS */}
-
-              {imagenes.length > 1 && (
-                <div className="mx-auto mt-3 flex max-w-[420px] gap-2 overflow-x-auto pb-1">
-                  {imagenes.map(
-                    (
-                      imagen,
-                      index
-                    ) => (
-                      <button
-                        key={`${imagen}-${index}`}
-                        type="button"
-                        onClick={() =>
-                          setImagenActiva(
-                            index
-                          )
-                        }
-                        className={`aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-md border bg-white p-1 transition-colors ${
-                          imagenActiva ===
-                          index
-                            ? "border-[#285861]"
-                            : "border-[#DCE5E4] hover:border-[#8EAAAC]"
-                        }`}
-                        aria-label={`Ver imagen ${
-                          index + 1
-                        }`}
-                      >
-                        <img
-                          src={imagen}
-                          alt={`Vista ${
-                            index + 1
-                          }`}
-                          className="h-full w-full object-contain"
-                        />
-                      </button>
-                    )
-                  )}
-                </div>
-              )}
-
-              {/* CALIDAD */}
-
-              <div className="mx-auto ---mt-1 flex max-w-[420px] items-center gap-2.5 border-t border-[#DCE5E4] -pt-2">
-              </div>
-            </section>
-
-            {/* =====================================================
-                INFORMACIÓN
-            ====================================================== */}
-
-            <section className="lg:pt-1">
-
-              {/* TÍTULO */}
-
-              <h1 className="max-w-2xl text-2xl font-medium -mb-0 leading-tight tracking-tight text-[#263238] sm:text-3xl">
-                {textoEs(
-                  producto.nombre
-                )}
-              </h1>
-
-              {/* CALIFICACIÓN */}
-
-              <div className="mt-2">
-                <CalificacionProducto
-                  productoId={
-                    producto.id
-                  }
-                />
-              </div>
-
-              {/* =================================================
-                  PRECIO
-              ================================================== */}
-
-              <div className="mt-5 border-y border-[#DCE5E4] py-4">
-                {cargandoMercado ? (
-                  <p className="text-sm text-[#687477]">
-                    Cargando precio...
-                  </p>
-                ) : tieneOferta ? (
-                  <>
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="text-3xl font-medium tracking-tight text-[#263238]">
-                        {formatearPrecio(
-                          precioFinal
-                        )}
-                      </span>
-
-                      <span className="text-sm font-normal text-slate-400 line-through">
-                        {formatearPrecio(
-                          precioNormal
-                        )}
-                      </span>
-
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700">
-                        <BadgePercent
-                          size={14}
-                          strokeWidth={
-                            1.8
-                          }
-                        />
-
-                        {descuento}% OFF
-                      </span>
-                    </div>
-
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <p className="text-xs font-normal text-[#687477]">
-                        Ahorro{" "}
-                        <span className="font-medium text-[#263238]">
-                          {formatearPrecio(
-                            ahorro
-                          )}
-                        </span>
-                      </p>
-
-                      {textoEs(
-                        etiquetaOferta
-                      ) && (
-                        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-orange-700">
-                          {textoEs(
-                            etiquetaOferta
-                          )}
-                        </span>
-                      )}
-                    </div>
-
-                    {fechaFinOferta && (
-                      <div className="mt-3 inline-flex rounded-md border border-black px-3 py-2">
-                        <p className="text-sm font-medium text-black sm:text-base">
-                          Finaliza en {formatearTiempoRestante(tiempoRestanteOferta)}
-                        </p>
-                      </div>
-                    )}
-                  </>
+        <div className="grid gap-7 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+          <section>
+            <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <div className="aspect-square w-full">
+                {imagenes.length > 0 ? (
+                  <img
+                    src={imagenes[imagenActiva]}
+                    alt={`${nombre} - imagen ${imagenActiva + 1}`}
+                    className="h-full w-full object-contain p-2"
+                  />
                 ) : (
-                  <span className="text-3xl font-medium tracking-tight text-[#263238]">
-                    {formatearPrecio(
-                      precioFinal
-                    )}
-                  </span>
-                )}
-
-                {/* OPCIONES DE PAGO */}
-
-                {!cargandoMercado &&
-                  mercado ===
-                    MERCADO_ARGENTINA && (
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2.5">
-                        <Landmark
-                          size={15}
-                          strokeWidth={
-                            1.7
-                          }
-                          className="shrink-0 text-[#285861]"
-                        />
-
-                        <p className="text-xs font-normal text-[#687477] sm:text-sm">
-                          <span className="font-medium text-[#285861]">
-                            {
-                              DESCUENTO_TRANSFERENCIA
-                            }
-                            % OFF
-                          </span>{" "}
-                          con transferencia
-                          ·{" "}
-                          <span className="font-medium text-[#263238]">
-                            {formatearPrecio(
-                              precioTransferencia
-                            )}
-                          </span>
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <CreditCard
-                          size={15}
-                          strokeWidth={
-                            1.7
-                          }
-                          className="shrink-0 text-[#B59672]"
-                        />
-
-                        <p className="text-xs font-normal text-[#687477] sm:text-sm">
-                          <span className="font-medium text-[#263238]">
-                            {
-                              CUOTAS_SIN_INTERES
-                            }{" "}
-                            x{" "}
-                            {formatearPrecio(
-                              precioCuota
-                            )}
-                          </span>{" "}
-                          sin interés
-                        </p>
-                      </div>
-                    </div>
-                  )}
-              </div>
-
-                            {/* =================================================
-                  SOBRE ESTE PRODUCTO
-              ================================================== */}
-
-              <div className="mt-6">
-                <h2 className="text-base font-medium text-[#263238]">
-                  Sobre este producto
-                </h2>
-
-                <p className="mt-2 max-w-2xl text-sm font-normal leading-6 text-[#687477]">
-                  {textoEs(
-                    producto.descripcionLarga
-                  ) ||
-                    textoEs(
-                      producto.descripcion
-                    )}
-                </p>
-              </div>
-
-              {/* =================================================
-                  QUÉ INCLUYE
-              ================================================== */}
-
-              {listaEs(producto.incluye).length >
-                0 && (
-                <div className="mt-6">
-                  <h2 className="text-base font-medium text-[#285861]">
-                    Qué incluye
-                  </h2>
-
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    {listaEs(
-                      producto.incluye
-                    ).map(
-                      (item, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2.5 rounded-lg border border-[#285861]/15 bg-[#285861]/[0.06] px-3 py-1"
-                        >
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white">
-                            <Check
-                              size={15}
-                              strokeWidth={2}
-                              className="text-[#285861]"
-                            />
-                          </div>
-
-                          <p className="text-xs font-normal leading-4 text-[#46585C]">
-                            {item}
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* =================================================
-                  BENEFICIOS
-              ================================================== */}
-
-              {listaEs(
-                producto.beneficios
-              ).length > 0 && (
-                <div className="mt-5">
-                  <h2 className="text-base font-medium text-[#756451]">
-                    Beneficios
-                  </h2>
-
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    {listaEs(
-                      producto.beneficios
-                    ).map(
-                      (item, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2.5 rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1"
-                        >
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white">
-                            <Check
-                              size={15}
-                              strokeWidth={2}
-                              className="text-[#8B684D]"
-                            />
-                          </div>
-
-                          <p className="text-xs font-normal leading-4 text-[#68584D]">
-                            {item}
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* =================================================
-                  INFORMACIÓN ADICIONAL
-              ================================================== */}
-
-              {(producto.edadRecomendada ||
-                producto.nivel) && (
-                <div className="mt-4 grid grid-cols-2 gap-3">
-
-                  {/* EDAD RECOMENDADA */}
-
-                  {producto.edadRecomendada && (
-                    <div className="rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8B684D]">
-                        Edad recomendada
-                      </p>
-
-                      <p className="mt-1 text-xs font-normal text-[#68584D]">
-                        {
-                          producto.edadRecomendada
-                        }
-                      </p>
-                    </div>
-                  )}
-
-                  {/* NIVEL */}
-
-                  {producto.nivel && (
-                    <div className="rounded-lg border border-[#8B684D]/15 bg-[#8B684D]/[0.08] px-3 py-1">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#8B684D]">
-                        Nivel
-                      </p>
-
-                      <p className="mt-1 text-xs font-normal text-[#68584D]">
-                        {producto.nivel}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* =====================================================
-                  COMPRA
-              ====================================================== */}
-
-              <div className="mt-6 rounded-md border border-[#D9E6E7] bg-[#F7FAFA] p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#EEF5F5] text-[#285861]">
-                    <Download
-                      size={16}
-                      strokeWidth={1.8}
+                  <div className="flex h-full items-center justify-center bg-slate-50">
+                    <Package
+                      size={48}
+                      strokeWidth={1.4}
+                      className="text-slate-300"
                     />
                   </div>
-
-                  <div>
-                    
-
-                    <p className="mt-1 text-xs font-normal leading-5 text-[#687477]">
-                      Descarga automática luego de
-                      confirmar el pago.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={irAlCheckout}
-                  disabled={cargandoMercado}
-                  className={`mt-4 flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-medium text-white transition-colors ${
-                    cargandoMercado
-                      ? "cursor-not-allowed bg-[#789397]"
-                      : "bg-[#285861] hover:bg-[#204850]"
-                  }`}
-                >
-                  <ShoppingBag
-                    size={16}
-                    strokeWidth={1.8}
-                  />
-
-                  {cargandoMercado
-                    ? "Cargando..."
-                    : "Comprar ahora"}
-                </button>
+                )}
               </div>
 
-              {/* =====================================================
-                  RESEÑAS
-              ====================================================== */}
+              {imagenes.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={irImagenAnterior}
+                    className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:bg-white"
+                    aria-label="Imagen anterior"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
 
-              {resenasDelProducto.length >
-                0 && (
-                <div className="mb-20 mt-8 border-t border-[#DCE5E4] pt-6">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <h2 className="text-base font-medium text-[#263238]">
-                      Reseñas
-                    </h2>
+                  <button
+                    type="button"
+                    onClick={irImagenSiguiente}
+                    className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:bg-white"
+                    aria-label="Imagen siguiente"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
 
-                    <span className="text-xs font-normal text-[#687477]">
-                      {
-                        resenasDelProducto.length
-                      }{" "}
-                      {resenasDelProducto.length ===
-                      1
-                        ? "reseña"
-                        : "reseñas"}
+                  <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/70 px-2.5 py-1 text-[11px] font-medium text-white">
+                    {imagenActiva + 1} / {imagenes.length}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {imagenes.length > 1 && (
+              <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                {imagenes.map((imagen, indice) => (
+                  <button
+                    key={`${imagen}-${indice}`}
+                    type="button"
+                    onClick={() => setImagenActiva(indice)}
+                    className={`aspect-square overflow-hidden rounded-lg border bg-white p-1 transition ${
+                      imagenActiva === indice
+                        ? "border-[#285861] ring-1 ring-[#285861]"
+                        : "border-slate-200 hover:border-slate-400"
+                    }`}
+                    aria-label={`Ver imagen ${indice + 1}`}
+                  >
+                    <img
+                      src={imagen}
+                      alt=""
+                      className="h-full w-full object-cover rounded-md"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="lg:pt-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {producto.categoria && (
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                  {producto.categoria}
+                </span>
+              )}
+
+              {ofertaActiva && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-orange-700">
+                  <Tag size={12} />
+                  {producto.oferta?.etiqueta || "Oferta"}
+                </span>
+              )}
+            </div>
+
+            <h1 className="mt-3 text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
+              {nombre}
+            </h1>
+
+            <div className="mt-2">
+              <CalificacionProducto productoId={producto.id} />
+            </div>
+
+            {descripcion && (
+              <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-[15px]">
+                {descripcion}
+              </p>
+            )}
+
+            <div className="mt-5 border-y border-slate-200 py-5">
+              {ofertaActiva ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="text-3xl font-semibold tracking-tight text-slate-950">
+                      {formatearPrecio(precioFinal)}
                     </span>
-                  </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {resenasDelProducto.map(
-                      (resena) => (
-                        <article
-                          key={resena.id}
-                          className="rounded-md border border-[#DCE5E4] bg-white p-4"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-
-                            {/* ESTRELLAS */}
-
-                             <div className="flex text-[13px] leading-none text-amber-500">
-                              {[
-                                1,
-                                2,
-                                3,
-                                4,
-                                5,
-                              ].map(
-                                (
-                                  estrella
-                                ) => (
-                                  <span
-                                    key={
-                                      estrella
-                                    }
-                                  >
-                                    {estrella <=
-                                    resena.estrellas
-                                      ? "★"
-                                      : "☆"}
-                                  </span>
-                                )
-                              )}
-                            </div>
-
-                            {/* COMPRA VERIFICADA */}
-
-                            {resena.compraVerificada && (
-                              <span className="rounded-md border border-[#D9E6E7] bg-[#EEF5F5] px-2 py-1 text-[9px] font-medium uppercase tracking-[0.06em] text-[#285861]">
-                                Compra verificada
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="mt-3 text-xs font-normal leading-5 text-[#687477]">
-                            “{resena.texto}”
-                          </p>
-                        </article>
-                      )
+                    {porcentajeDescuento > 0 && (
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        -{porcentajeDescuento}%
+                      </span>
                     )}
                   </div>
+
+                  <div className="mt-1.5 flex flex-wrap items-center gap-3">
+                    <span className="text-sm text-slate-400 line-through">
+                      {formatearPrecio(precioNormal)}
+                    </span>
+
+                    {ahorro > 0 && (
+                      <span className="text-xs font-medium text-emerald-700">
+                        Ahorrás {formatearPrecio(ahorro)}
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <span className="text-3xl font-semibold tracking-tight text-slate-950">
+                  {formatearPrecio(precioFinal)}
+                </span>
+              )}
+
+              {valorCuota > 0 && (
+                <div className="mt-3 flex items-start gap-2">
+                  <CreditCard
+                    size={17}
+                    strokeWidth={1.8}
+                    className="mt-0.5 shrink-0 text-[#285861]"
+                  />
+
+                  <p className="text-sm leading-5 text-slate-600">
+                    Hasta{" "}
+                    <strong className="font-semibold text-slate-800">
+                      {CUOTAS_SIN_INTERES} cuotas sin interés
+                    </strong>{" "}
+                    de {formatearPrecio(valorCuota)}.
+                  </p>
                 </div>
               )}
-            </section>
-          </div>
+            </div>
+
+            <div className="mt-4">
+              {sinStock ? (
+                <EstadoProducto texto="Sin stock" />
+              ) : proximamente ? (
+                <EstadoProducto texto="Próximamente" />
+              ) : pausado ? (
+                <EstadoProducto texto="Producto temporalmente no disponible" />
+              ) : (
+                <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+                  <Check size={17} strokeWidth={2} />
+                  Disponible
+                  {Number.isFinite(stock) && stock > 0 && (
+                    <span className="font-normal text-slate-500">
+                      · {stock} en stock
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {variantes.length > 0 && (
+              <div className="mt-5">
+                <div className="flex items-center gap-2">
+                  <Ruler
+                    size={17}
+                    strokeWidth={1.8}
+                    className="text-slate-500"
+                  />
+
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Talle / variante
+                  </h2>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {variantes.map((variante) => (
+                    <button
+                      key={variante}
+                      type="button"
+                      onClick={() =>
+                        setVarianteSeleccionada(variante)
+                      }
+                      className={`rounded-md border px-3.5 py-2 text-sm font-medium transition ${
+                        varianteSeleccionada === variante
+                          ? "border-[#285861] bg-[#285861] text-white"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-[#7FA0A3]"
+                      }`}
+                    >
+                      {variante}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {colores.length > 0 && (
+              <div className="mt-5">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Colores disponibles
+                </h2>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {colores.map((color) => (
+                    <span
+                      key={color}
+                      className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
+                    >
+                      {color}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={comprar}
+              disabled={!disponible}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-5 py-3.5 text-sm font-medium text-white transition hover:bg-[#204850] disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <ShoppingBag size={18} strokeWidth={1.8} />
+              {disponible
+                ? "Comprar ahora"
+                : sinStock
+                  ? "Sin stock"
+                  : "No disponible"}
+            </button>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Beneficio
+                icono={Truck}
+                titulo="Producto físico"
+                texto="Coordinamos el envío al completar tu pedido."
+              />
+
+              <Beneficio
+                icono={ShieldCheck}
+                titulo="Compra segura"
+                texto="El pago se coordina mediante Mercado Pago."
+              />
+            </div>
+          </section>
         </div>
-      </main>
-    </>
+
+        <div className="mt-8 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+          <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Descripción
+            </h2>
+
+            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
+              {descripcionLarga ||
+                "Consulta los detalles de este producto antes de realizar tu pedido."}
+            </p>
+          </section>
+
+          {(marca ||
+            modelo ||
+            material ||
+            dimensiones ||
+            peso) && (
+            <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Datos del producto
+              </h2>
+
+              <div className="mt-4 divide-y divide-slate-100">
+                {marca && (
+                  <Dato etiqueta="Marca" valor={marca} />
+                )}
+
+                {modelo && (
+                  <Dato etiqueta="Modelo" valor={modelo} />
+                )}
+
+                {material && (
+                  <Dato etiqueta="Material" valor={material} />
+                )}
+
+                {dimensiones && (
+                  <Dato
+                    etiqueta="Dimensiones"
+                    valor={dimensiones}
+                  />
+                )}
+
+                {peso && (
+                  <Dato etiqueta="Peso" valor={peso} />
+                )}
+              </div>
+            </section>
+          )}
+        </div>
+
+        {(caracteristicas.length > 0 ||
+          contenidoPaquete.length > 0) && (
+          <div className="mt-5 grid gap-5 md:grid-cols-2">
+            {caracteristicas.length > 0 && (
+              <ListaDetalles
+                titulo="Características"
+                elementos={caracteristicas}
+              />
+            )}
+
+            {contenidoPaquete.length > 0 && (
+              <ListaDetalles
+                titulo="Contenido del paquete"
+                elementos={contenidoPaquete}
+              />
+            )}
+          </div>
+        )}
+
+        <section className="mt-5 rounded-xl border border-slate-200 bg-white p-5">
+          <div className="flex items-start gap-3">
+            <Clock3
+              size={19}
+              strokeWidth={1.8}
+              className="mt-0.5 shrink-0 text-[#285861]"
+            />
+
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">
+                ¿Cómo continúa la compra?
+              </h2>
+
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Al tocar “Comprar ahora” completarás tus datos,
+                dirección de envío, cantidad y variante. Después
+                continuarás por WhatsApp para recibir el link de pago
+                de Mercado Pago.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 };
+
+const EstadoProducto = ({ texto }) => (
+  <div className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+    <Package size={16} strokeWidth={1.8} />
+    {texto}
+  </div>
+);
+
+const Beneficio = ({ icono: Icono, titulo, texto }) => (
+  <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="flex items-start gap-2.5">
+      <Icono
+        size={17}
+        strokeWidth={1.8}
+        className="mt-0.5 shrink-0 text-[#285861]"
+      />
+
+      <div>
+        <p className="text-xs font-semibold text-slate-800">
+          {titulo}
+        </p>
+
+        <p className="mt-0.5 text-[11px] leading-5 text-slate-500">
+          {texto}
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const Dato = ({ etiqueta, valor }) => (
+  <div className="flex items-start justify-between gap-4 py-2.5 text-sm">
+    <span className="text-slate-500">{etiqueta}</span>
+    <span className="max-w-[65%] text-right font-medium text-slate-800">
+      {valor}
+    </span>
+  </div>
+);
+
+const ListaDetalles = ({ titulo, elementos }) => (
+  <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+    <h2 className="text-lg font-semibold text-slate-900">
+      {titulo}
+    </h2>
+
+    <div className="mt-4 space-y-2.5">
+      {elementos.map((elemento, indice) => (
+        <div
+          key={`${elemento}-${indice}`}
+          className="flex items-start gap-2.5"
+        >
+          <Check
+            size={15}
+            strokeWidth={2}
+            className="mt-0.5 shrink-0 text-[#285861]"
+          />
+
+          <p className="text-sm leading-6 text-slate-600">
+            {elemento}
+          </p>
+        </div>
+      ))}
+    </div>
+  </section>
+);
 
 export default DetalleProducto;

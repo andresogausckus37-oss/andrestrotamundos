@@ -1,525 +1,101 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Check,
-  Download,
-  LoaderCircle,
-  ShieldCheck,
+  Mail,
+  PackageCheck,
+  ShoppingBag,
 } from "lucide-react";
 
 export default function PagoExitoso() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [estado, setEstado] =
-    useState("verificando");
-
-  const [productos, setProductos] =
-    useState([]);
-
-  const [descargando, setDescargando] =
-    useState(null);
-
-  const [descargados, setDescargados] =
-    useState([]);
-
-  const [errorDescarga, setErrorDescarga] =
-    useState("");
-
-  const metodo =
-    searchParams.get("metodo");
-
   const pedidoId =
-    metodo === "paypal"
-      ? searchParams.get("pedidoId")
-      : searchParams.get(
-          "external_reference"
-        );
-
-  const paypalOrderId =
-    searchParams.get("token");
-
-  const esPayPal =
-    metodo === "paypal";
-
-    useEffect(() => {
-    if (!pedidoId) {
-      setEstado("error");
-      return;
-    }
-
-    let intentos = 0;
-    let timeoutId;
-    let cancelado = false;
-
-    const maxIntentos = 10;
-    const demoraReintento = 1000;
-
-    const programarReintento = () => {
-      intentos++;
-
-      if (intentos < maxIntentos) {
-        timeoutId = setTimeout(
-          verificarPago,
-          demoraReintento
-        );
-      } else if (!cancelado) {
-        setEstado("pendiente");
-      }
-    };
-
-    const verificarPago = async () => {
-      try {
-        let respuesta;
-
-        if (esPayPal) {
-          if (!paypalOrderId) {
-            throw new Error(
-              "Falta la orden de PayPal."
-            );
-          }
-
-          respuesta = await fetch(
-            "/api/paypal/pago?accion=capturar",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify({
-                pedidoId,
-                paypalOrderId,
-              }),
-            }
-          );
-        } else {
-          respuesta = await fetch(
-            `/api/mercadopago/verificar-pago?pedidoId=${encodeURIComponent(
-              pedidoId
-            )}`
-          );
-        }
-
-        const datos =
-          await respuesta
-            .json()
-            .catch(() => ({}));
-
-        if (cancelado) return;
-
-        /*
-         * Si la consulta falla temporalmente,
-         * esperamos y volvemos a intentar.
-         */
-
-        if (!respuesta.ok) {
-          console.warn(
-            "Verificación todavía no disponible:",
-            datos?.error ||
-              respuesta.status
-          );
-
-          programarReintento();
-          return;
-        }
-
-        /*
-         * PAGO APROBADO
-         */
-
-        if (datos.aprobado) {
-          setProductos(
-            Array.isArray(datos.productos)
-              ? datos.productos
-              : []
-          );
-
-          setEstado("aprobado");
-          return;
-        }
-
-        /*
-         * Todavía no aparece aprobado.
-         * Reintentamos tanto para PayPal
-         * como para Mercado Pago.
-         */
-
-        programarReintento();
-      } catch (error) {
-        console.error(
-          "Error verificando pago:",
-          error
-        );
-
-        if (cancelado) return;
-
-        /*
-         * Un error temporal de red o de
-         * sincronización no muestra error
-         * inmediatamente al comprador.
-         */
-
-        programarReintento();
-      }
-    };
-
-    verificarPago();
-
-    return () => {
-      cancelado = true;
-
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [
-    pedidoId,
-    esPayPal,
-    paypalOrderId,
-  ]);    
-
-  /* =====================================================
-     DESCARGAR SIN SALIR DE LA PÁGINA
-  ===================================================== */
-
-  const descargarProducto = async (
-    producto
-  ) => {
-    if (
-      descargando ||
-      descargados.includes(
-        producto.productoId
-      )
-    ) {
-      return;
-    }
-
-    setDescargando(
-      producto.productoId
-    );
-
-    setErrorDescarga("");
-
-    try {
-      const respuesta = await fetch(
-        `/api/descargas/${encodeURIComponent(
-          pedidoId
-        )}?productoId=${encodeURIComponent(
-          producto.productoId
-        )}`
-      );
-
-      if (!respuesta.ok) {
-        const datos =
-          await respuesta
-            .json()
-            .catch(() => null);
-
-        throw new Error(
-          datos?.error ||
-            "No se pudo descargar el archivo"
-        );
-      }
-
-      const blob =
-        await respuesta.blob();
-
-      const url =
-        window.URL.createObjectURL(
-          blob
-        );
-
-      const enlace =
-        document.createElement("a");
-
-      enlace.href = url;
-
-      const contentDisposition =
-        respuesta.headers.get(
-          "Content-Disposition"
-        );
-
-      let nombreArchivo =
-        `${producto.productoId}.pdf`;
-
-      if (contentDisposition) {
-        const coincidencia =
-          contentDisposition.match(
-            /filename="([^"]+)"/
-          );
-
-        if (coincidencia?.[1]) {
-          nombreArchivo =
-            coincidencia[1];
-        }
-      }
-
-      enlace.download =
-        nombreArchivo;
-
-      document.body.appendChild(
-        enlace
-      );
-
-      enlace.click();
-
-      enlace.remove();
-
-      window.URL.revokeObjectURL(
-        url
-      );
-
-      setDescargados(
-        (anteriores) => [
-          ...anteriores,
-          producto.productoId,
-        ]
-      );
-    } catch (error) {
-      console.error(
-        "Error descargando:",
-        error
-      );
-
-      setErrorDescarga(
-        error.message ||
-          "No se pudo descargar el archivo."
-      );
-    } finally {
-      setDescargando(null);
-    }
-  };
+    searchParams.get("pedidoId") ||
+    searchParams.get("external_reference") ||
+    "";
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 pb-20 pt-10 sm:pt-14">
-      <div className="mx-auto max-w-3xl">
-
-        {/* ENCABEZADO */}
-
-        <div className="mb-8">
-          <h1 className="text-2xl font-medium text-slate-900 sm:text-3xl">
-            ¡Gracias por tu compra!
-          </h1>
-
-          {!esPayPal &&
-            estado === "verificando" && (
-              <p className="mt-3 text-sm font-normal leading-6 text-slate-500 sm:text-base">
-                Estamos procesando tu pedido y
-                verificando el estado del pago.
-              </p>
-            )}
-        </div>
-
-        {/* VERIFICANDO */}
-
-        {estado === "verificando" && (
-          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-600">
-                <LoaderCircle
-                  size={20}
-                  className="animate-spin"
-                />
-              </div>
-
-              <div>
-                <h2 className="text-base font-medium text-slate-900 sm:text-lg">
-                  Verificando tu pago
-                </h2>
-
-                {!esPayPal && (
-                  <p className="mt-2 text-sm font-normal leading-6 text-slate-500">
-                    Estamos esperando la
-                    confirmación de Mercado Pago.
-                    Esto normalmente demora solo
-                    unos segundos.
-                  </p>
-                )}
-              </div>
+      <div className="mx-auto max-w-2xl">
+        <section className="rounded-xl border border-emerald-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <Check size={22} strokeWidth={2} />
             </div>
-          </section>
-        )}
 
-        {/* APROBADO */}
+            <div>
+              <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
+                Pago confirmado
+              </h1>
 
-        {estado === "aprobado" && (
-          <>
-            <section className="rounded-xl border border-emerald-200 bg-white p-6 shadow-sm sm:p-7">
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                  <Check size={20} />
-                </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+                Recibimos correctamente la confirmación de tu pago.
+                Ahora comenzaremos a preparar tu pedido.
+              </p>
 
-                <div>
-                  <h2 className="text-base font-medium text-slate-900 sm:text-lg">
-                    Pago confirmado
-                  </h2>
-
-                  <p className="mt-2 text-sm font-normal leading-6 text-slate-500 sm:text-base">
-                    Tu pago fue acreditado
-                    correctamente. Tu compra ya
-                    está disponible para
-                    descargar.
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* DESCARGAS */}
-
-            <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <div className="mb-5">
-                <h2 className="text-base font-medium text-slate-900 sm:text-lg">
-                  Tus descargas
-                </h2>
-
-                <p className="mt-2 text-sm font-normal leading-6 text-slate-500">
-                  Descarga los archivos incluidos
-                  en tu compra.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {productos.map(
-                  (producto) => {
-                    const estaDescargando =
-                      descargando ===
-                      producto.productoId;
-
-                    const estaDescargado =
-                      descargados.includes(
-                        producto.productoId
-                      );
-
-                    return (
-                      <div
-                        key={
-                          producto.productoId
-                        }
-                        className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 p-4"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium leading-5 text-slate-800 sm:text-base">
-                            {producto.nombre ||
-                              "Producto digital"}
-                          </p>
-
-                          <p className="mt-1 text-xs font-normal text-slate-400 sm:text-sm">
-                            Archivo PDF
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          disabled={
-                            estaDescargando ||
-                            estaDescargado
-                          }
-                          onClick={() =>
-                            descargarProducto(
-                              producto
-                            )
-                          }
-                          className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-                            estaDescargado
-                              ? "cursor-default bg-emerald-100 text-emerald-700"
-                              : estaDescargando
-                                ? "cursor-wait bg-slate-200 text-slate-500"
-                                : "bg-[#285861] text-white hover:bg-[#204850]"
-                          }`}
-                        >
-                          {estaDescargando ? (
-                            <>
-                              <LoaderCircle
-                                size={15}
-                                className="animate-spin"
-                              />
-                              Descargando
-                            </>
-                          ) : estaDescargado ? (
-                            <>
-                              <Check
-                                size={15}
-                              />
-                              Descargado
-                            </>
-                          ) : (
-                            <>
-                              <Download
-                                size={15}
-                              />
-                              Descargar
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  }
-                )}
-              </div>
-
-              {errorDescarga && (
-                <p className="mt-4 text-sm font-normal text-red-600">
-                  {errorDescarga}
+              {pedidoId && (
+                <p className="mt-3 text-xs text-slate-400 sm:text-sm">
+                  Pedido:{" "}
+                  <span className="font-medium text-slate-600">
+                    {pedidoId}
+                  </span>
                 </p>
               )}
-
-              <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs font-normal text-slate-400 sm:text-sm">
-                <ShieldCheck
-                  size={15}
-                  className="shrink-0 text-emerald-600"
-                />
-
-                Descarga protegida vinculada a
-                tu compra.
-              </div>
-            </section>
-          </>
-        )}
-
-        {/* PENDIENTE */}
-
-        {estado === "pendiente" && (
-          <section className="rounded-xl border border-amber-200 bg-white p-6 shadow-sm sm:p-7">
-            <h2 className="text-base font-medium text-slate-900 sm:text-lg">
-              Pago pendiente
-            </h2>
-
-            <p className="mt-2 text-sm font-normal leading-6 text-slate-500 sm:text-base">
-              Tu pago fue recibido, pero todavía
-              estamos esperando la confirmación.
-              Cuando se acredite podremos
-              habilitar tu descarga.
-            </p>
-          </section>
-        )}
-
-        {/* ERROR */}
-
-        {estado === "error" && (
-          <section className="rounded-xl border border-red-200 bg-white p-6 shadow-sm sm:p-7">
-            <h2 className="text-base font-medium text-slate-900 sm:text-lg">
-              No pudimos verificar tu compra
-            </h2>
-
-            <p className="mt-2 text-sm font-normal leading-6 text-slate-500 sm:text-base">
-              No pudimos consultar el estado del
-              pedido en este momento.
-            </p>
-          </section>
-        )}
-
-        {/* ESPACIO PARA PRODUCTOS RECOMENDADOS */}
-
-        <section className="mt-12 min-h-[220px] border-t border-slate-200 pt-8">
-          {/*
-            Aquí agregaremos posteriormente
-            los productos recomendados.
-          */}
+            </div>
+          </div>
         </section>
+
+        <section className="mt-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+          <div className="flex items-start gap-3">
+            <PackageCheck
+              size={20}
+              strokeWidth={1.8}
+              className="mt-0.5 shrink-0 text-[#285861]"
+            />
+
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">
+                Preparación del pedido
+              </h2>
+
+              <p className="mt-1.5 text-sm leading-6 text-slate-500">
+                Te informaremos los próximos avances del pedido
+                mientras preparamos el producto para su envío.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-start gap-3 border-t border-slate-100 pt-5">
+            <Mail
+              size={19}
+              strokeWidth={1.8}
+              className="mt-0.5 shrink-0 text-[#285861]"
+            />
+
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Seguimiento por email
+              </h2>
+
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                Las novedades importantes de tu compra serán
+                enviadas al correo informado al realizar el pedido.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => navigate("/tienda")}
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#204850]"
+          >
+            <ShoppingBag size={17} strokeWidth={1.8} />
+            Volver a la tienda
+          </button>
+        </div>
       </div>
     </main>
   );

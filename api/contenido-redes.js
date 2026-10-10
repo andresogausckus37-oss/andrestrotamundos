@@ -27,7 +27,7 @@ const THREADS_APP_SECRET =
   process.env.THREADS_APP_SECRET;
 
 const URL_BASE =
-  "https://andreshousesitter.com";
+  "https://andrestrotamundos.andresogausckus37.workers.dev";
 
 const THREADS_REDIRECT_URI =
   `${URL_BASE}/api/contenido-redes?accion=threads-callback`;
@@ -2459,7 +2459,7 @@ async function ejecutarPublicacionesPendientes(
   });
 
   // Procesamos pocas piezas por invocación para no agotar
-  // el tiempo máximo de una función de Vercel.
+  // el tiempo máximo disponible durante la ejecución.
   const lote = pendientes.slice(0, 3);
   const resultados = [];
 

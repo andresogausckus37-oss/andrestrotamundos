@@ -1,427 +1,299 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
-
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
-  BadgePercent,
-  Building2,
   Check,
+  ChevronDown,
+  ChevronUp,
   CreditCard,
-  LockKeyhole,
   Mail,
-  ShieldCheck,
+  MapPin,
+  MessageCircle,
+  Minus,
+  Package,
+  Phone,
+  Plus,
+  ShoppingBag,
   User,
 } from "lucide-react";
 
-import { resenasProductos } from "../datos/resenasProductos";
+const WHATSAPP = "5493548619293";
+const CUOTAS_SIN_INTERES = 3;
 
-import {
-  MERCADO_ARGENTINA,
-  MERCADO_INTERNACIONAL,
-  obtenerPrecioMercado,
-  formatearPrecioMercado,
-} from "../utilidades/mercado";
-
-const DESCUENTO_TRANSFERENCIA = 5;
-
-const LOGO_PAYPAL =
-  "https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logo%20paypal%20";
-
-export default function Checkout() {
+const Checkout = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [productosMongo, setProductosMongo] =
-  useState([]);
 
-const [cargandoProductos, setCargandoProductos] =
-  useState(true);
+  const [producto, setProducto] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+  const [error, setError] = useState("");
 
-  /* =========================================================
-     RELOJ GLOBAL — OFERTA DE VENTA CRUZADA
-  ========================================================= */
-
-  const [ahora, setAhora] = useState(() => Date.now());
-
-  useEffect(() => {
-    const intervalo = window.setInterval(() => {
-      setAhora(Date.now());
-    }, 1000);
-
-    return () => {
-      window.clearInterval(intervalo);
-    };
-  }, []);
-
-  const obtenerTiempoRestante = (finalizaEn) => {
-    const final = new Date(finalizaEn).getTime();
-
-    if (!Number.isFinite(final)) {
-      return null;
-    }
-
-    const diferencia = final - ahora;
-
-    if (diferencia <= 0) {
-      return null;
-    }
-
-    const totalSegundos = Math.floor(
-      diferencia / 1000
-    );
-
-    return {
-      dias: Math.floor(totalSegundos / 86400),
-      horas: Math.floor(
-        (totalSegundos % 86400) / 3600
-      ),
-      minutos: Math.floor(
-        (totalSegundos % 3600) / 60
-      ),
-      segundos: totalSegundos % 60,
-    };
-  };
-
-  /* =========================================================
-     MERCADO
-  ========================================================= */
-
-  const [mercado, setMercado] =
-    useState(null);
-
-  const [, setPais] =
-    useState(null);
-
-  const [
-    cargandoMercado,
-    setCargandoMercado,
-  ] = useState(true);
-
-  /* =========================================================
-   CARGAR PRODUCTOS MONGODB
-========================================================= */
-
-useEffect(() => {
-  let cancelado = false;
-
-  const cargarProductos = async () => {
-    try {
-      const respuesta = await fetch(
-        "/api/admin/pedidos?accion=productos-publicos"
-      );
-
-      if (!respuesta.ok) {
-        throw new Error(
-          "No se pudieron cargar los productos."
-        );
-      }
-
-      const datos = await respuesta.json();
-
-      if (!cancelado) {
-        setProductosMongo(
-          Array.isArray(datos.productos)
-            ? datos.productos
-            : []
-        );
-      }
-    } catch (error) {
-      console.error(
-        "Error cargando productos desde MongoDB:",
-        error
-      );
-
-      if (!cancelado) {
-        setProductosMongo([]);
-      }
-    } finally {
-      if (!cancelado) {
-        setCargandoProductos(false);
-      }
-    }
-  };
-
-  cargarProductos();
-
-  return () => {
-    cancelado = true;
-  };
-}, []);
-
- /* =========================================================
-   PRODUCTOS
-========================================================= */
-
-  const productosDisponibles = productosMongo;
-
-const producto =
-  productosDisponibles.find(
-    (item) => item.id === id
-  );
-
-const productoVentaCruzada =
-  producto?.ventaCruzadaId
-    ? productosDisponibles.find(
-        (item) =>
-          item.id ===
-          producto.ventaCruzadaId
-      )
-    : null;
-
-const precioVentaCruzadaCalculado =
-  obtenerPrecioMercado(
-    productoVentaCruzada,
-    mercado || MERCADO_ARGENTINA
-  );
-
-const finalizaOfertaVentaCruzada =
-  productoVentaCruzada
-    ?.ofertaLanzamiento?.finalizaEn;
-
-const ofertaVentaCruzadaVigente =
-  finalizaOfertaVentaCruzada
-    ? new Date(
-        finalizaOfertaVentaCruzada
-      ).getTime() > ahora
-    : true;
-
-const precioNormalVentaCruzada =
-  mercado === MERCADO_INTERNACIONAL
-    ? Number(
-        productoVentaCruzada?.precioUSD
-      )
-    : Number(
-        productoVentaCruzada?.precioARS
-      );
-
-const precioVentaCruzada =
-  ofertaVentaCruzadaVigente
-    ? precioVentaCruzadaCalculado
-    : precioNormalVentaCruzada;
-
-const tiempoRestanteVentaCruzada =
-  ofertaVentaCruzadaVigente &&
-  finalizaOfertaVentaCruzada
-    ? obtenerTiempoRestante(
-        finalizaOfertaVentaCruzada
-      )
-    : null;
-
-const resenasVentaCruzada =
-  productoVentaCruzada
-    ? resenasProductos.filter(
-        (resena) =>
-          resena.productoId ===
-          productoVentaCruzada.id
-      )
-    : [];
-
-const promedioVentaCruzada =
-  resenasVentaCruzada.length > 0
-    ? resenasVentaCruzada.reduce(
-        (total, resena) =>
-          total + resena.estrellas,
-        0
-      ) /
-      resenasVentaCruzada.length
-    : 0;
-
-  /* =========================================================
-     ESTADOS
-  ========================================================= */
-
-  const [
-    ventaCruzadaAgregada,
-    setVentaCruzadaAgregada,
-  ] = useState(false);
-
-  const [nombre, setNombre] =
-    useState("");
-
-  const [email, setEmail] =
-    useState("");
-
-  const [metodoPago, setMetodoPago] =
-    useState("mercadopago");
-
-  const [procesando, setProcesando] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  /* =========================================================
-     DETECTAR MERCADO
-  ========================================================= */
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [localidad, setLocalidad] = useState("");
+  const [provincia, setProvincia] = useState("");
+  const [codigoPostal, setCodigoPostal] = useState("");
+  const [cantidad, setCantidad] = useState(1);
+  const [variante, setVariante] = useState("");
+  const [mostrarResumen, setMostrarResumen] = useState(true);
 
   useEffect(() => {
-    const detectarMercado = async () => {
+    let cancelado = false;
+
+    const cargarProducto = async () => {
       try {
-        /* ===============================================
-           MODO DE PRUEBA
-           ?mercado=internacional fuerza USD + PayPal
-        =============================================== */
-
-        const parametros =
-          new URLSearchParams(
-            window.location.search
-          );
-
-        const mercadoPrueba =
-          parametros
-            .get("mercado")
-            ?.toLowerCase();
-
-        if (
-          mercadoPrueba ===
-          "internacional"
-        ) {
-          setPais("TEST");
-
-          setMercado(
-            MERCADO_INTERNACIONAL
-          );
-
-          setCargandoMercado(false);
-
-          return;
-        }
-
-        /* ===============================================
-           DETECCIÓN AUTOMÁTICA
-        =============================================== */
+        setCargando(true);
+        setErrorCarga("");
 
         const respuesta = await fetch(
-          "/api/visitas?accion=mercado"
+          "/api/admin/pedidos?accion=productos-publicos"
         );
+
+        const datos = await respuesta.json();
 
         if (!respuesta.ok) {
           throw new Error(
-            "No se pudo detectar el mercado."
+            datos.error || "No se pudo cargar el producto."
           );
         }
 
-        const datos =
-          await respuesta.json();
+        const lista = Array.isArray(datos.productos)
+          ? datos.productos
+          : [];
 
-        setPais(datos.pais || null);
-
-        setMercado(
-          datos.mercado ===
-            MERCADO_ARGENTINA
-            ? MERCADO_ARGENTINA
-            : MERCADO_INTERNACIONAL
+        const encontrado = lista.find(
+          (item) => String(item.id) === String(id)
         );
-      } catch (error) {
+
+        if (!encontrado) {
+          throw new Error("Producto no encontrado.");
+        }
+
+        if (!cancelado) {
+          setProducto(encontrado);
+
+          const variantes = Array.isArray(
+            encontrado.detalles?.variantes
+          )
+            ? encontrado.detalles.variantes
+            : [];
+
+          if (variantes.length === 1) {
+            setVariante(variantes[0]);
+          }
+        }
+      } catch (errorProducto) {
         console.error(
-          "Error detectando mercado:",
-          error
+          "Error cargando producto para checkout:",
+          errorProducto
         );
 
-        setPais("AR");
-
-        setMercado(
-          MERCADO_ARGENTINA
-        );
+        if (!cancelado) {
+          setErrorCarga(
+            errorProducto.message ||
+              "No se pudo cargar el producto."
+          );
+        }
       } finally {
-        setCargandoMercado(false);
+        if (!cancelado) {
+          setCargando(false);
+        }
       }
     };
 
-    detectarMercado();
-  }, []);
+    cargarProducto();
 
-  /* =========================================================
-     MÉTODO DE PAGO SEGÚN MERCADO
-  ========================================================= */
+    return () => {
+      cancelado = true;
+    };
+  }, [id]);
 
-  useEffect(() => {
-    if (!mercado) return;
+  const variantes = useMemo(() => {
+    if (!producto) return [];
+
+    return Array.isArray(producto.detalles?.variantes)
+      ? producto.detalles.variantes.filter(Boolean)
+      : [];
+  }, [producto]);
+
+  const precioUnitario = useMemo(() => {
+    if (!producto) return 0;
+
+    const precioNormal = Number(producto.precioARS) || 0;
+    const precioOferta = Number(
+      producto.oferta?.precioARS
+    ) || 0;
+
+    const finalizaEn =
+      producto.ofertaLanzamiento?.finalizaEn;
+
+    const ofertaVigente = finalizaEn
+      ? new Date(finalizaEn).getTime() > Date.now()
+      : true;
 
     if (
-      mercado === MERCADO_INTERNACIONAL
+      producto.oferta?.activa === true &&
+      precioOferta > 0 &&
+      ofertaVigente
     ) {
-      setMetodoPago("paypal");
-    } else {
-      setMetodoPago("mercadopago");
+      return precioOferta;
     }
-  }, [mercado]);
 
-  /* =========================================================
-     PRECIOS
-  ========================================================= */
+    return precioNormal;
+  }, [producto]);
 
-  const formatearPrecio = (precio) =>
-    formatearPrecioMercado(
-      precio,
-      mercado || MERCADO_ARGENTINA
+  const total = precioUnitario * cantidad;
+  const valorCuota =
+    total > 0 ? total / CUOTAS_SIN_INTERES : 0;
+
+  const formatearPrecio = (valor) =>
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0,
+    }).format(Number(valor) || 0);
+
+  const cambiarCantidad = (nuevaCantidad) => {
+    const stock = Number(producto?.stock);
+
+    let siguiente = Math.max(
+      1,
+      Number(nuevaCantidad) || 1
     );
 
-  const precioProducto =
-    useMemo(() => {
-      return obtenerPrecioMercado(
-        producto,
-        mercado ||
-          MERCADO_ARGENTINA
-      );
-    }, [producto, mercado]);
+    if (
+      Number.isFinite(stock) &&
+      stock > 0
+    ) {
+      siguiente = Math.min(siguiente, stock);
+    }
 
-  const subtotal =
-    precioProducto +
-    (ventaCruzadaAgregada
-      ? precioVentaCruzada
-      : 0);
+    setCantidad(siguiente);
+  };
 
-  const descuentoTransferencia =
-    metodoPago === "transferencia"
-      ? Math.round(
-          subtotal *
-            (DESCUENTO_TRANSFERENCIA /
-              100)
-        )
-      : 0;
+  const validar = () => {
+    const nombreLimpio = nombre.trim();
+    const emailLimpio = email.trim();
+    const telefonoLimpio = telefono.trim();
+    const direccionLimpia = direccion.trim();
+    const localidadLimpia = localidad.trim();
+    const provinciaLimpia = provincia.trim();
+    const codigoPostalLimpio = codigoPostal.trim();
 
-  const total =
-    subtotal -
-    descuentoTransferencia;
+    if (
+      !nombreLimpio ||
+      !emailLimpio ||
+      !telefonoLimpio ||
+      !direccionLimpia ||
+      !localidadLimpia ||
+      !provinciaLimpia ||
+      !codigoPostalLimpio
+    ) {
+      setError("Completa todos los datos para continuar.");
+      return false;
+    }
 
-  /* =========================================================
-     PRODUCTO NO ENCONTRADO
-  ========================================================= */
+    const emailValido =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (cargandoProductos) {
-  return (
-    <main className="flex min-h-[70vh] items-center justify-center bg-white px-4">
-      <p className="text-sm text-slate-500">
-        Cargando producto...
-      </p>
-    </main>
-  );
+    if (!emailValido.test(emailLimpio)) {
+      setError("Ingresa un correo electrónico válido.");
+      return false;
+    }
+
+    if (variantes.length > 0 && !variante) {
+      setError("Selecciona una variante del producto.");
+      return false;
+    }
+
+    if (
+      producto?.disponibilidad === "sin-stock" ||
+      Number(producto?.stock) === 0
+    ) {
+      setError("Este producto no tiene stock disponible.");
+      return false;
+    }
+
+    if (producto?.disponibilidad === "proximamente") {
+      setError("Este producto todavía no está disponible para comprar.");
+      return false;
+    }
+
+    setError("");
+    return true;
+  };
+
+  const continuarPorWhatsApp = () => {
+    if (!producto || !validar()) return;
+
+    const nombreProducto =
+      typeof producto.nombre === "string"
+        ? producto.nombre
+        : producto.nombre?.es || "Producto";
+
+    const mensaje = `Hola, quiero realizar este pedido:
+
+*Producto:* ${nombreProducto}
+${variante ? `*Variante:* ${variante}\n` : ""}*Cantidad:* ${cantidad}
+*Precio unitario:* ${formatearPrecio(precioUnitario)}
+*Total:* ${formatearPrecio(total)}
+
+*Pago:* hasta ${CUOTAS_SIN_INTERES} cuotas sin interés con Mercado Pago.
+Quedo a la espera del link de pago.
+
+*Datos del comprador*
+Nombre: ${nombre.trim()}
+Email: ${email.trim()}
+Teléfono: ${telefono.trim()}
+
+*Dirección de envío*
+Dirección: ${direccion.trim()}
+Localidad: ${localidad.trim()}
+Provincia: ${provincia.trim()}
+Código postal: ${codigoPostal.trim()}`;
+
+    const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
+      mensaje
+    )}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  if (cargando) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#FCFDFC] px-5">
+        <p className="text-sm text-slate-500">
+          Cargando pedido...
+        </p>
+      </main>
+    );
   }
 
-  if (!producto) {
+  if (errorCarga || !producto) {
     return (
-      <main className="flex min-h-[70vh] items-center justify-center bg-white px-4">
-        <div className="text-center">
-          <h1 className="text-xl font-medium text-slate-900">
-            Producto no encontrado
+      <main className="flex min-h-screen items-center justify-center bg-[#FCFDFC] px-5">
+        <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 text-center">
+          <Package
+            size={32}
+            strokeWidth={1.6}
+            className="mx-auto text-slate-400"
+          />
+
+          <h1 className="mt-3 text-xl font-semibold text-slate-900">
+            Producto no disponible
           </h1>
+
+          <p className="mt-2 text-sm text-slate-500">
+            {errorCarga || "No se encontró el producto."}
+          </p>
 
           <button
             type="button"
-            onClick={() =>
-              navigate(
-                "/tienda/digitales"
-              )
-            }
-            className="mt-4 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+            onClick={() => navigate("/tienda")}
+            className="mt-5 rounded-md bg-[#285861] px-5 py-2.5 text-sm font-medium text-white"
           >
             Volver a la tienda
           </button>
@@ -430,955 +302,388 @@ const promedioVentaCruzada =
     );
   }
 
-  /* =========================================================
-     VALIDACIÓN
-  ========================================================= */
+  const nombreProducto =
+    typeof producto.nombre === "string"
+      ? producto.nombre
+      : producto.nombre?.es || "Producto";
 
-  const validarDatos = () => {
-    const nombreLimpio =
-      nombre.trim();
+  const imagen =
+    producto.imagenes?.portada ||
+    producto.imagenes?.redes?.feed?.presentacion ||
+    "";
 
-    const emailLimpio =
-      email.trim();
+  const sinStock =
+    producto.disponibilidad === "sin-stock" ||
+    Number(producto.stock) === 0;
 
-    if (
-      !nombreLimpio ||
-      !emailLimpio
-    ) {
-      setError(
-        "Ingresa tu nombre y correo electrónico."
-      );
+  const noDisponible =
+    sinStock ||
+    producto.disponibilidad === "proximamente";
 
-      return false;
-    }
-
-    const emailValido =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (
-      !emailValido.test(
-        emailLimpio
-      )
-    ) {
-            setError(
-        "Ingresa un correo electrónico válido."
-      );
-
-      return false;
-    }
-
-    setError("");
-
-    return true;
-  };
-
-  /* =========================================================
-     MERCADO PAGO
-  ========================================================= */
-
-  const pagarMercadoPago =
-    async () => {
-      if (!validarDatos()) return;
-
-      try {
-        setProcesando(true);
-        setError("");
-
-        const respuesta =
-          await fetch(
-            "/api/mercadopago/crear-pago",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify({
-                productoId:
-                  producto.id,
-
-                nombre:
-                  nombre.trim(),
-
-                email:
-                  email.trim(),
-
-                ventaCruzadaId:
-                  ventaCruzadaAgregada &&
-                  productoVentaCruzada
-                    ? productoVentaCruzada.id
-                    : null,
-              }),
-            }
-          );
-
-        const datos =
-          await respuesta.json();
-
-        if (
-          !respuesta.ok ||
-          !datos.checkoutUrl
-        ) {
-          throw new Error(
-            "No se pudo iniciar el pago."
-          );
-        }
-
-        window.location.href =
-          datos.checkoutUrl;
-      } catch (error) {
-        console.error(
-          "Error iniciando Mercado Pago:",
-          error
-        );
-
-        setError(
-          "No se pudo iniciar el pago. Intenta nuevamente."
-        );
-
-        setProcesando(false);
-      }
-    };
-
-  /* =========================================================
-     TRANSFERENCIA
-  ========================================================= */
-
-  const crearPedidoTransferencia =
-    async () => {
-      if (!validarDatos()) return;
-
-      try {
-        setProcesando(true);
-        setError("");
-
-        const respuesta =
-          await fetch(
-            "/api/transferencia/crear-pedido",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify({
-                productoId:
-                  producto.id,
-
-                ventaCruzadaId:
-                  ventaCruzadaAgregada &&
-                  productoVentaCruzada
-                    ? productoVentaCruzada.id
-                    : null,
-
-                nombre:
-                  nombre.trim(),
-
-                email:
-                  email.trim(),
-              }),
-            }
-          );
-
-        const datos =
-          await respuesta.json();
-
-        if (
-          !respuesta.ok ||
-          !datos.pedidoId
-        ) {
-          throw new Error(
-            datos.error ||
-              "No se pudo crear el pedido."
-          );
-        }
-
-        navigate(
-          `/pago/transferencia?pedidoId=${encodeURIComponent(
-            datos.pedidoId
-          )}`
-        );
-      } catch (error) {
-        console.error(
-          "Error creando pedido por transferencia:",
-          error
-        );
-
-        setError(
-          error.message ||
-            "No se pudo crear el pedido."
-        );
-
-        setProcesando(false);
-      }
-    };
-
-  /* =========================================================
-     PAYPAL
-  ========================================================= */
-
-  const pagarPayPal = async () => {
-    if (!validarDatos()) return;
-
-    try {
-      setProcesando(true);
-      setError("");
-
-      const respuesta = await fetch(
-        "/api/paypal/pago?accion=crear",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            productoId:
-              producto.id,
-
-            email:
-              email.trim(),
-
-            ventaCruzadaId:
-              ventaCruzadaAgregada &&
-              productoVentaCruzada
-                ? productoVentaCruzada.id
-                : null,
-          }),
-        }
-      );
-
-      const datos =
-        await respuesta.json();
-
-      if (
-        !respuesta.ok ||
-        !datos.approveUrl
-      ) {
-        throw new Error(
-          datos.error ||
-            "No se pudo iniciar el pago con PayPal."
-        );
-      }
-
-      window.location.href =
-        datos.approveUrl;
-    } catch (error) {
-      console.error(
-        "Error iniciando PayPal:",
-        error
-      );
-
-      setError(
-        error.message ||
-          "No se pudo iniciar el pago con PayPal."
-      );
-
-      setProcesando(false);
-    }
-  };
-
-  /* =========================================================
-     CONTINUAR PAGO
-  ========================================================= */
-
-  const continuarPago = () => {
-    if (
-      mercado ===
-      MERCADO_INTERNACIONAL
-    ) {
-      pagarPayPal();
-      return;
-    }
-
-    if (
-      metodoPago ===
-      "transferencia"
-    ) {
-      crearPedidoTransferencia();
-      return;
-    }
-
-    pagarMercadoPago();
-  };
-    return (
-    <main className="min-h-screen bg-slate-50 px-4 pb-10 pt-4 sm:px-5 sm:pt-6">
-      <div className="mx-auto max-w-3xl">
-
-        {/* VOLVER */}
-
+  return (
+    <main className="min-h-screen bg-[#FCFDFC] px-4 pb-20 pt-4 sm:px-5 sm:pt-7">
+      <div className="mx-auto max-w-5xl">
         <button
           type="button"
-          onClick={() =>
-            navigate(
-              `/tienda/${producto.id}`
-            )
-          }
-          className="mb-4 flex items-center gap-2 text-xs font-normal text-slate-600 transition-colors hover:text-slate-900"
+          onClick={() => navigate(-1)}
+          className="mb-5 inline-flex items-center gap-2 text-sm text-slate-500 transition hover:text-[#285861]"
         >
-          <ArrowLeft
-            size={15}
-            strokeWidth={1.8}
-          />
-
-          Volver al producto
+          <ArrowLeft size={17} strokeWidth={1.8} />
+          Volver
         </button>
 
-        {/* ENCABEZADO */}
+        <div className="grid gap-5 lg:grid-cols-[1fr_0.85fr]">
+          <div className="space-y-5">
+            <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+              <div className="mb-4">
+                <h1 className="text-xl font-semibold text-slate-900">
+                  Finalizar pedido
+                </h1>
 
-        <div className="mb-5">
-          <h1 className="mt-1 text-xl font-medium tracking-tight text-slate-900 sm:text-2xl">
-            Finalizar compra
-          </h1>
-        </div>
-
-        {/* =====================================================
-            RESUMEN DEL PEDIDO
-        ====================================================== */}
-
-        <section className="mb-3 rounded-md border border-slate-200 bg-white p-4">
-          <div className="flex items-center gap-3">
-            {producto.imagenes
-              ?.portada && (
-              <img
-                src={
-                  producto.imagenes
-                    .portada
-                }
-                alt={producto.nombre}
-                className="aspect-[4/5] w-24 shrink-0 rounded-md border border-slate-200 bg-white object-contain sm:w-28"
-              />
-            )}
-
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-medium leading-5 text-slate-900">
-                {producto.nombre}
-              </h2>
-
-              <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                <span className="text-lg font-medium text-slate-950">
-                  {formatearPrecio(
-                    precioProducto
-                  )}
-                </span>
-
-                {mercado ===
-                  MERCADO_ARGENTINA &&
-                  producto.oferta
-                    ?.activa &&
-                  Number(
-                    producto.precioARS
-                  ) >
-                    precioProducto && (
-                    <span className="text-[11px] font-normal text-slate-400 line-through">
-                      {formatearPrecio(
-                        producto.precioARS
-                      )}
-                    </span>
-                  )}
-
-                {mercado ===
-                  MERCADO_INTERNACIONAL &&
-                  producto.ofertaUSD
-                    ?.activa &&
-                  Number(
-                    producto.precioUSD
-                  ) >
-                    precioProducto && (
-                    <span className="text-[11px] font-normal text-slate-400 line-through">
-                      {formatearPrecio(
-                        producto.precioUSD
-                      )}
-                    </span>
-                  )}
-              </div>
-            </div>
-          </div>
-        </section>
-        {/* =====================================================
-            PRODUCTO ADICIONAL
-        ====================================================== */}
-
-        {productoVentaCruzada && (() => {
-          const precioOriginalVentaCruzada =
-            mercado === MERCADO_INTERNACIONAL
-              ? Number(productoVentaCruzada.precioUSD)
-              : Number(productoVentaCruzada.precioARS);
-
-          const porcentajeDescuentoVentaCruzada =
-            Number.isFinite(precioOriginalVentaCruzada) &&
-            precioOriginalVentaCruzada > precioVentaCruzada &&
-            precioOriginalVentaCruzada > 0
-              ? Math.round(
-                  ((precioOriginalVentaCruzada - precioVentaCruzada) /
-                    precioOriginalVentaCruzada) *
-                    100
-                )
-              : 0;
-
-          return (
-            <section className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-4">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-orange-700">
-                También te recomendamos
-              </p>
-
-              <div className="flex items-start gap-3 sm:gap-4">
-                {productoVentaCruzada.imagenes?.portada && (
-                  <img
-                    src={productoVentaCruzada.imagenes.portada}
-                    alt={productoVentaCruzada.nombre}
-                    className="aspect-[4/5] w-28 shrink-0 rounded-md border border-orange-200 bg-white object-contain sm:w-32"
-                  />
-                )}
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium leading-5 text-slate-900">
-                    {productoVentaCruzada.nombre}
-                  </p>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-lg font-medium text-slate-950">
-                      {formatearPrecio(precioVentaCruzada)}
-                    </span>
-
-                    {porcentajeDescuentoVentaCruzada > 0 && (
-                      <>
-                        <span className="text-xs font-normal text-slate-400 line-through">
-                          {formatearPrecio(precioOriginalVentaCruzada)}
-                        </span>
-
-                        <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[11px] font-semibold text-orange-700">
-                          -{porcentajeDescuentoVentaCruzada}%
-                        </span>
-                      </>
-                    )}
-                  </div>
-
-                  {resenasVentaCruzada.length > 0 && (
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <div className="flex text-[15px] leading-none text-amber-500">
-                        {[1, 2, 3, 4, 5].map((estrella) => (
-                          <span key={estrella}>
-                            {estrella <= Math.round(promedioVentaCruzada)
-                              ? "★"
-                              : "☆"}
-                          </span>
-                        ))}
-                      </div>
-
-                      <span className="text-xs font-normal text-slate-500">
-                        ({resenasVentaCruzada.length})
-                      </span>
-                    </div>
-                  )}
-
-                  {tiempoRestanteVentaCruzada && (
-                    <div className="mt-2.5 rounded-md border border-orange-300 bg-white px-2.5 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-orange-700">
-                        ¡Oferta limitada!
-                      </p>
-
-                      <p className="mt-0.5 text-[11px] font-semibold leading-5 text-orange-900">
-                        Finaliza en{" "}
-                        {tiempoRestanteVentaCruzada.dias > 0 &&
-                          `${tiempoRestanteVentaCruzada.dias}d `}
-                        {String(tiempoRestanteVentaCruzada.horas).padStart(2, "0")}h{" "}
-                        {String(tiempoRestanteVentaCruzada.minutos).padStart(2, "0")}m{" "}
-                        {String(tiempoRestanteVentaCruzada.segundos).padStart(2, "0")}s
-                      </p>
-
-                      <p className="mt-0.5 text-[9px] font-medium leading-4 text-orange-700">
-                        Agrégalo ahora antes de que finalice la oferta.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-2.5">
-                <a
-                  href={`/tienda/${productoVentaCruzada.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center rounded-md border border-orange-300 bg-white px-3 py-2.5 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-100"
-                >
-                  Ver producto
-                </a>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setVentaCruzadaAgregada(!ventaCruzadaAgregada)
-                  }
-                  className={`rounded-md border px-3 py-2.5 text-xs font-medium transition-colors ${
-                    ventaCruzadaAgregada
-                      ? "border-orange-300 bg-white text-orange-700"
-                      : "border-orange-700 bg-orange-700 text-white hover:bg-orange-800"
-                  }`}
-                                  >
-                  {ventaCruzadaAgregada ? "Agregado ✓" : "Agregar +"}
-                </button>
-              </div>
-            </section>
-          );
-        })()}
-
-        {/* =====================================================
-            DATOS
-        ====================================================== */}
-
-        <section className="rounded-md border border-slate-200 bg-white p-4">
-          <div className="mb-4 flex items-center gap-2.5">
-            <div>
-              <h2 className="text-md font-medium text-slate-900">
-                Tus datos
-              </h2>
-
-              <p className="mt-0.5 text-[13px] font-normal text-slate-500">
-                Usaremos tu correo para
-                identificar la compra.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="min-w-0">
-              <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
-                Nombre
-              </span>
-
-              <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 transition-colors focus-within:border-slate-500">
-                <User
-                  size={15}
-                  strokeWidth={1.8}
-                  className="shrink-0 text-slate-400"
-                />
-
-                <input
-                  type="text"
-                  value={nombre}
-                  onChange={(e) =>
-                    setNombre(
-                      e.target.value
-                    )
-                  }
-                  placeholder="Tu nombre"
-                  className="min-w-0 w-full bg-transparent py-2.5 text-xs font-normal text-slate-900 outline-none placeholder:text-slate-400"
-                />
-              </div>
-            </label>
-
-            <label className="min-w-0">
-              <span className="mb-1.5 block text-[13px] font-medium text-slate-700">
-                Correo electrónico
-              </span>
-
-              <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 transition-colors focus-within:border-slate-500">
-                <Mail
-                  size={15}
-                  strokeWidth={1.8}
-                  className="shrink-0 text-slate-400"
-                />
-
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) =>
-                    setEmail(
-                      e.target.value
-                    )
-                  }
-                  placeholder="tu@email.com"
-                  className="min-w-0 w-full bg-transparent py-2.5 text-xs font-normal text-slate-900 outline-none placeholder:text-slate-400"
-                />
-              </div>
-            </label>
-          </div>
-        </section>
-
-        {/* =====================================================
-            MÉTODOS DE PAGO — SOLO ARGENTINA
-        ====================================================== */}
-
-        {mercado ===
-          MERCADO_ARGENTINA && (
-          <section className="mt-5">
-            <div className="mb-3 flex items-center gap-2.5 px-1">
-              <div>
-                <h2 className="text-md font-medium text-slate-900">
-                  Método de pago
-                </h2>
-
-                <p className="mt-0.5 text-[13px] font-normal text-slate-500">
-                  Selecciona cómo abonarás tu
-                  compra.
+                <p className="mt-1 text-sm leading-5 text-slate-500">
+                  Completa tus datos. El pedido continuará por WhatsApp,
+                  donde recibirás el link de pago de Mercado Pago.
                 </p>
               </div>
-            </div>
 
-            <div className="space-y-3">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Campo
+                  etiqueta="Nombre y apellido"
+                  icono={User}
+                  value={nombre}
+                  onChange={setNombre}
+                  placeholder="Tu nombre completo"
+                  autoComplete="name"
+                />
 
-              {/* MERCADO PAGO */}
+                <Campo
+                  etiqueta="Correo electrónico"
+                  icono={Mail}
+                  type="email"
+                  value={email}
+                  onChange={setEmail}
+                  placeholder="tu@email.com"
+                  autoComplete="email"
+                />
 
-              <button
-                type="button"
-                onClick={() => {
-                  setMetodoPago(
-                    "mercadopago"
-                  );
-                  setError("");
-                }}
-                className={`w-full rounded-md border bg-white p-4 text-left transition-colors ${
-                  metodoPago ===
-                  "mercadopago"
-                    ? "border-slate-900"
-                    : "border-slate-200 hover:border-slate-400"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                      metodoPago ===
-                      "mercadopago"
-                        ? "border-slate-900"
-                        : "border-slate-300"
-                    }`}
-                  >
-                    {metodoPago ===
-                      "mercadopago" && (
-                      <div className="h-2 w-2 rounded-full bg-slate-900" />
+                <Campo
+                  etiqueta="Teléfono"
+                  icono={Phone}
+                  type="tel"
+                  value={telefono}
+                  onChange={setTelefono}
+                  placeholder="Ej. 351 123 4567"
+                  autoComplete="tel"
+                />
+
+                <Campo
+                  etiqueta="Dirección"
+                  icono={MapPin}
+                  value={direccion}
+                  onChange={setDireccion}
+                  placeholder="Calle y número"
+                  autoComplete="street-address"
+                />
+
+                <Campo
+                  etiqueta="Localidad"
+                  icono={MapPin}
+                  value={localidad}
+                  onChange={setLocalidad}
+                  placeholder="Ciudad o localidad"
+                  autoComplete="address-level2"
+                />
+
+                <Campo
+                  etiqueta="Provincia"
+                  icono={MapPin}
+                  value={provincia}
+                  onChange={setProvincia}
+                  placeholder="Provincia"
+                  autoComplete="address-level1"
+                />
+
+                <Campo
+                  etiqueta="Código postal"
+                  icono={MapPin}
+                  value={codigoPostal}
+                  onChange={setCodigoPostal}
+                  placeholder="Código postal"
+                  autoComplete="postal-code"
+                />
+              </div>
+            </section>
+
+            {variantes.length > 0 && (
+              <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Variante
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Selecciona la opción que deseas.
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {variantes.map((opcion) => (
+                    <button
+                      key={opcion}
+                      type="button"
+                      onClick={() => {
+                        setVariante(opcion);
+                        setError("");
+                      }}
+                      className={`rounded-md border px-3 py-2 text-xs font-medium transition ${
+                        variante === opcion
+                          ? "border-[#285861] bg-[#285861] text-white"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-[#7FA0A3]"
+                      }`}
+                    >
+                      {opcion}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                <CreditCard
+                  size={18}
+                  strokeWidth={1.8}
+                  className="text-[#285861]"
+                />
+
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Pago
+                </h2>
+              </div>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Te enviaremos por WhatsApp un link de Mercado Pago para
+                completar el pago. Puedes abonar en hasta{" "}
+                <strong>{CUOTAS_SIN_INTERES} cuotas sin interés</strong>.
+              </p>
+            </section>
+          </div>
+
+          <aside className="h-fit rounded-xl border border-slate-200 bg-white p-4 sm:p-5 lg:sticky lg:top-5">
+            <button
+              type="button"
+              onClick={() => setMostrarResumen((actual) => !actual)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingBag
+                  size={18}
+                  strokeWidth={1.8}
+                  className="text-[#285861]"
+                />
+
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Resumen del pedido
+                </h2>
+              </div>
+
+              {mostrarResumen ? (
+                <ChevronUp size={17} />
+              ) : (
+                <ChevronDown size={17} />
+              )}
+            </button>
+
+            {mostrarResumen && (
+              <div className="mt-4">
+                <div className="flex gap-3 border-b border-slate-200 pb-4">
+                  <div className="flex h-24 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-50">
+                    {imagen ? (
+                      <img
+                        src={imagen}
+                        alt={nombreProducto}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <Package
+                        size={27}
+                        strokeWidth={1.5}
+                        className="text-slate-400"
+                      />
                     )}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <CreditCard
-                          size={17}
-                          strokeWidth={1.8}
-                          className="shrink-0 text-slate-600"
-                        />
+                    <h3 className="text-sm font-medium leading-5 text-slate-900">
+                      {nombreProducto}
+                    </h3>
 
-                        <span className="text-sm font-medium text-slate-900">
-                          Mercado Pago
-                        </span>
-                      </div>
-
-                      <img
-                        src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/logo%20mp%20%C3%BAltima%20"
-                        alt="Mercado Pago"
-                        className="relative -top-4 h-auto w-[115px] shrink-0 object-contain sm:w-[105px]"
-                      />
-                    </div>
-
-                    <p className="-mt-7 max-w-xl text-[12px] font-normal leading-5 text-slate-600 sm:text-xs">
-                      Tarjetas de crédito,
-                      débito, dinero disponible
-                      y otros medios habilitados
-                      por Mercado Pago.
-                    </p>
-
-                    <div className="mt-3 border-t border-slate-200 pt-3">
-                      <p className="text-[11px] font-normal text-slate-500">
-                        Hasta 3 cuotas sin
-                        interés con medios
-                        seleccionados.
+                    {variante && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Variante: {variante}
                       </p>
+                    )}
 
-                      <div className="mt-2 flex flex-wrap items-center gap-1">
-                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
-                          <img
-                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/visa%20"
-                            alt="Visa"
-                            className="h-14 w-auto max-w-[48px] object-contain"
-                          />
-                        </div>
-
-                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
-                          <img
-                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/mastercard"
-                            alt="Mastercard"
-                            className="h-12 w-auto max-w-[48px] object-cover"
-                          />
-                        </div>
-
-                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
-                          <img
-                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/ae"
-                            alt="American Express"
-                            className="h-8 w-auto max-w-[48px] object-contain"
-                          />
-                        </div>
-
-                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
-                          <img
-                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/nx"
-                            alt="Naranja X"
-                            className="h-8 w-auto max-w-[48px] object-contain"
-                          />
-                        </div>
-
-                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
-                          <img
-                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/maestro"
-                            alt="Maestro"
-                            className="h-8 w-auto max-w-[40px] object-contain"
-                          />
-                        </div>
-
-                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
-                          <img
-                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/nativa"
-                            alt="Nativa"
-                            className="h-10 w-auto max-w-[48px] rounded-sm object-contain"
-                          />
-                        </div>
-
-                        <div className="flex h-8 min-w-[52px] items-center justify-center rounded-md border border-slate-200 bg-white px-2">
-                          <img
-                            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/shopping%20"
-                            alt="Shopping"
-                            className="h-8 w-auto max-w-[40px] rounded-sm object-contain"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    <p className="mt-2 text-base font-semibold text-slate-900">
+                      {formatearPrecio(precioUnitario)}
+                    </p>
                   </div>
                 </div>
+
+                <div className="flex items-center justify-between border-b border-slate-200 py-4">
+                  <span className="text-sm text-slate-600">
+                    Cantidad
+                  </span>
+
+                  <div className="flex items-center rounded-md border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        cambiarCantidad(cantidad - 1)
+                      }
+                      className="flex h-9 w-9 items-center justify-center text-slate-600 hover:bg-slate-50"
+                      aria-label="Restar cantidad"
+                    >
+                      <Minus size={15} />
+                    </button>
+
+                    <span className="min-w-9 text-center text-sm font-medium text-slate-900">
+                      {cantidad}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        cambiarCantidad(cantidad + 1)
+                      }
+                      className="flex h-9 w-9 items-center justify-center text-slate-600 hover:bg-slate-50"
+                      aria-label="Sumar cantidad"
+                    >
+                      <Plus size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-500">
+                      Subtotal
+                    </span>
+
+                    <span className="text-sm font-medium text-slate-900">
+                      {formatearPrecio(total)}
+                    </span>
+                  </div>
+
+                  {valorCuota > 0 && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-slate-500">
+                        {CUOTAS_SIN_INTERES} cuotas
+                      </span>
+
+                      <span className="text-xs font-medium text-[#285861]">
+                        {CUOTAS_SIN_INTERES} x{" "}
+                        {formatearPrecio(valorCuota)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
+                    <span className="text-sm font-medium text-slate-700">
+                      Total
+                    </span>
+
+                    <span className="text-xl font-semibold text-slate-950">
+                      {formatearPrecio(total)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-medium text-red-700">
+                {error}
+              </div>
+            )}
+
+            {noDisponible ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-800">
+                {sinStock
+                  ? "Producto sin stock."
+                  : "Producto disponible próximamente."}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={continuarPorWhatsApp}
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#204850]"
+              >
+                <MessageCircle
+                  size={18}
+                  strokeWidth={1.8}
+                />
+                Continuar por WhatsApp
               </button>
+            )}
 
-                        {/* TRANSFERENCIA */}
+            <div className="mt-4 space-y-2 border-t border-slate-200 pt-4">
+              <div className="flex items-start gap-2 text-xs leading-5 text-slate-500">
+                <Check
+                  size={14}
+                  strokeWidth={1.8}
+                  className="mt-0.5 shrink-0 text-[#285861]"
+                />
+                Pedido de producto físico.
+              </div>
 
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setMetodoPago(
-                                            "transferencia"
-                                          );
-                                          setError("");
-                                        }}
-                                        className={`w-full rounded-md border bg-white p-4 text-left transition-colors ${
-                                          metodoPago ===
-                                          "transferencia"
-                                            ? "border-slate-900"
-                                            : "border-slate-200 hover:border-slate-400"
-                                        }`}
-                                      >
-                                        <div className="flex items-start gap-3">
-                                          <div
-                                            className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                                              metodoPago ===
-                                              "transferencia"
-                                                ? "border-slate-900"
-                                                : "border-slate-300"
-                                            }`}
-                                          >
-                                            {metodoPago ===
-                                              "transferencia" && (
-                                              <div className="h-2 w-2 rounded-full bg-slate-900" />
-                                            )}
-                                          </div>
+              <div className="flex items-start gap-2 text-xs leading-5 text-slate-500">
+                <Check
+                  size={14}
+                  strokeWidth={1.8}
+                  className="mt-0.5 shrink-0 text-[#285861]"
+                />
+                Recibirás las novedades del pedido por correo electrónico.
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </main>
+  );
+};
 
-                                          <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                              <div className="flex items-center gap-2">
-                                                <Building2
-                                                  size={17}
-                                                  strokeWidth={1.8}
-                                                  className="text-slate-600"
-                                                />
+const Campo = ({
+  etiqueta,
+  icono: Icono,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+}) => (
+  <label className="block min-w-0">
+    <span className="mb-1.5 block text-xs font-medium text-slate-700">
+      {etiqueta}
+    </span>
 
-                                                <span className="text-sm font-medium text-slate-900">
-                                                  Transferencia bancaria
-                                                </span>
-                                              </div>
+    <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 transition focus-within:border-[#285861]">
+      <Icono
+        size={15}
+        strokeWidth={1.8}
+        className="shrink-0 text-slate-400"
+      />
 
-                                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-700">
-                                                <BadgePercent
-                                                  size={12}
-                                                  strokeWidth={1.8}
-                                                />
+      <input
+        type={type}
+        value={value}
+        onChange={(evento) =>
+          onChange(evento.target.value)
+        }
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        className="min-w-0 w-full bg-transparent py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+      />
+    </div>
+  </label>
+);
 
-                                                {
-                                                  DESCUENTO_TRANSFERENCIA
-                                                }
-                                                % OFF
-                                              </span>
-                                            </div>
-
-                                            <p className="mt-2 text-[12px] font-normal leading-5 text-slate-600 sm:text-xs">
-                                              Paga mediante
-                                              transferencia y ahorra{" "}
-                                              {
-                                                DESCUENTO_TRANSFERENCIA
-                                              }
-                                              % adicional
-                                            </p>
-
-                                            <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
-                                              <span className="text-[11px] font-normal text-slate-600">
-                                                Total por transferencia
-                                              </span>
-
-                                              <span className="text-base font-medium text-slate-900">
-                                                {formatearPrecio(
-                                                  total
-                                                )}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </button>
-                                    </div>
-                                  </section>
-                                )}
-
-                                        {/* =====================================================
-                                    ERROR
-                                ====================================================== */}
-
-                                {error && (
-                                  <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">
-                                    {error}
-                                  </div>
-                                )}
-
-                                {/* =====================================================
-                                    RESUMEN FINAL
-                                ====================================================== */}
-
-                                <section className="mt-5 rounded-md border border-slate-200 bg-white p-4">
-                                  {ventaCruzadaAgregada &&
-                                    productoVentaCruzada && (
-                                      <div className="mb-3 border-b border-slate-200 pb-3">
-                                        <div className="flex items-start justify-between gap-3 text-[11px]">
-                                          <span className="max-w-[70%] font-normal leading-4 text-slate-600">
-                                            {
-                                              productoVentaCruzada.nombre
-                                            }
-                                          </span>
-
-                                          <span className="shrink-0 font-medium text-slate-900">
-                                            {formatearPrecio(
-                                              precioVentaCruzada
-                                            )}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                  {metodoPago ===
-                                    "transferencia" &&
-                                    descuentoTransferencia >
-                                      0 && (
-                                      <div className="mb-3 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                                        <span className="text-[11px] font-normal text-slate-600">
-                                          Descuento por
-                                          transferencia
-                                        </span>
-
-                                        <span className="text-[11px] font-medium text-orange-700">
-                                          -
-                                          {formatearPrecio(
-                                            descuentoTransferencia
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                  <div className="mb-4 flex items-end justify-between gap-3">
-                                    <span className="text-sm font-normal text-slate-600">
-                                      Total a pagar
-                                    </span>
-
-                                    <span className="text-2xl font-medium tracking-tight text-slate-950">
-                                      {formatearPrecio(
-                                        total
-                                      )}
-                                    </span>
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={continuarPago}
-                                    disabled={
-                                      procesando ||
-                                      cargandoMercado
-                                    }
-                                    className={`flex w-full items-center justify-center rounded-md px-4 py-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                                      metodoPago === "paypal"
-                                        ? "bg-[#FFC439] text-[#111820] hover:bg-[#F2BA36]"
-                                        : "gap-2 bg-[#285861] text-white hover:bg-[#204850]"
-                                    }`}
-                                  >
-                                    {metodoPago ===
-                                    "paypal" ? (
-                                      procesando ||
-                                      cargandoMercado ? (
-                                        "Redirigiendo..."
-                                      ) : (
-                                            <span className="flex items-center justify-center gap-1">
-                                                              <span>
-                                                                Pay with
-                                                              </span>
-
-                                                              <img
-                                                                src={LOGO_PAYPAL}
-                                                                alt="PayPal"
-                                                                className="h-6 w-auto object-contain"
-                                                              />
-                                                            </span>
-                                                          )
-                                                        ) : (
-                                                          <>
-                                                            <LockKeyhole
-                                                              size={16}
-                                                              strokeWidth={1.8}
-                                                            />
-
-                                                            {cargandoMercado
-                                                              ? "Cargando..."
-                                                              : procesando
-                                                                ? "Redirigiendo..."
-                                                                : metodoPago ===
-                                                                    "mercadopago"
-                                                                  ? "Pagar con Mercado Pago"
-                                                                  : "Continuar con transferencia"}
-                                                          </>
-                                                        )}
-                                                      </button>
-
-                                                      {/* TEXTOS INFERIORES */}
-
-                                                      <div className="mb-20 mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2">
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
-                                                          <ShieldCheck
-                                                            size={13}
-                                                            strokeWidth={1.8}
-                                                            className="text-slate-500"
-                                                          />
-
-                                                          Compra segura
-                                                        </div>
-
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500">
-                                                          <Check
-                                                            size={13}
-                                                            strokeWidth={1.8}
-                                                            className="text-slate-500"
-                                                          />
-
-                                                          Descarga digital
-                                                        </div>
-                                                      </div>
-                                                    </section>
-                                                  </div>
-                                                </main>
-                                              );
-                                            }
+export default Checkout;

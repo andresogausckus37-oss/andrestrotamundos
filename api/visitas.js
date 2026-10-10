@@ -1,20 +1,47 @@
 const obtenerDispositivo = (userAgent = "") => {
-  if (
-    /android|iphone|ipad|ipod|mobile/i.test(
-      userAgent
-    )
-  ) {
+  if (/android|iphone|ipad|ipod|mobile/i.test(userAgent)) {
     return "Móvil";
   }
 
   return "Computadora";
 };
 
-const obtenerCodigoPais = (req) => {
-  return String(
-    req.headers["cf-ipcountry"] || ""
-  ).toUpperCase();
+const escaparHtml = (valor = "") =>
+  String(valor)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+const obtenerCodigoPais = (req) =>
+  String(
+    req.headers?.["cf-ipcountry"] ||
+      req.headers?.["x-vercel-ip-country"] ||
+      ""
+  )
+    .trim()
+    .toUpperCase();
+
+const obtenerNombrePais = (codigoPais) => {
+  if (!codigoPais) return "Desconocido";
+
+  try {
+    const nombresPaises = new Intl.DisplayNames(["es"], {
+      type: "region",
+    });
+
+    return nombresPaises.of(codigoPais) || codigoPais;
+  } catch {
+    return codigoPais;
+  }
 };
+
+const obtenerHoraArgentina = () =>
+  new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
 
 export default async function handler(req, res) {
   /* =====================================================
@@ -25,18 +52,13 @@ export default async function handler(req, res) {
     req.method === "GET" &&
     req.query?.accion === "mercado"
   ) {
-    const codigoPais =
-      obtenerCodigoPais(req);
+    const codigoPais = obtenerCodigoPais(req);
 
     const mercado =
-      codigoPais === "AR"
-        ? "AR"
-        : "INTERNACIONAL";
+      codigoPais === "AR" ? "AR" : "INTERNACIONAL";
 
     const moneda =
-      mercado === "AR"
-        ? "ARS"
-        : "USD";
+      mercado === "AR" ? "ARS" : "USD";
 
     return res.status(200).json({
       pais: codigoPais || null,
@@ -51,6 +73,7 @@ export default async function handler(req, res) {
 
   if (req.method !== "POST") {
     return res.status(405).json({
+      ok: false,
       error: "Método no permitido",
     });
   }
@@ -63,98 +86,63 @@ export default async function handler(req, res) {
       process.env.TELEGRAM_VISITAS_CHAT_ID;
 
     if (!token || !chatId) {
-      throw new Error(
-        "Falta configuración de Telegram para visitas"
+      console.error(
+        "Faltan TELEGRAM_VISITAS_BOT_TOKEN o TELEGRAM_VISITAS_CHAT_ID."
       );
+
+      return res.status(503).json({
+        ok: false,
+        error:
+          "Las notificaciones de visitas no están configuradas.",
+      });
     }
 
-    const pagina =
-      req.body?.pagina || "Desconocida";
+    const pagina = String(
+      req.body?.pagina || "Desconocida"
+    ).slice(0, 200);
 
-    const ruta =
-      req.body?.ruta || "/";
+    const ruta = String(
+      req.body?.ruta || "/"
+    ).slice(0, 500);
 
-    /* DISPOSITIVO */
+    const userAgent =
+      req.headers?.["user-agent"] || "";
 
     const dispositivo =
-      obtenerDispositivo(
-        req.headers["user-agent"] || ""
-      );
-
-    /* PAÍS */
+      obtenerDispositivo(userAgent);
 
     const codigoPais =
       obtenerCodigoPais(req);
 
-    let pais =
-      codigoPais || "Desconocido";
-
-    try {
-      if (codigoPais) {
-        const nombresPaises =
-          new Intl.DisplayNames(
-            ["es"],
-            {
-              type: "region",
-            }
-          );
-
-        pais =
-          nombresPaises.of(
-            codigoPais
-          ) || codigoPais;
-      }
-    } catch {
-      pais =
-        codigoPais ||
-        "Desconocido";
-    }
-
-    /* HORA ARGENTINA */
+    const pais =
+      obtenerNombrePais(codigoPais);
 
     const hora =
-      new Intl.DateTimeFormat(
-        "es-AR",
-        {
-          timeZone:
-            "America/Argentina/Buenos_Aires",
-
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }
-      ).format(new Date());
-
-    /* TELEGRAM */
+      obtenerHoraArgentina();
 
     const texto =
       `👤 <b>Nueva visita a la web</b>\n\n` +
-      `<b>Página:</b> ${pagina}\n` +
-      `<b>Hora:</b> ${hora}\n` +
-      `<b>Dispositivo:</b> ${dispositivo}\n` +
-      `<b>País:</b> ${pais}\n\n` +
-      `<code>${ruta}</code>`;
+      `<b>Página:</b> ${escaparHtml(pagina)}\n` +
+      `<b>Hora:</b> ${escaparHtml(hora)}\n` +
+      `<b>Dispositivo:</b> ${escaparHtml(dispositivo)}\n` +
+      `<b>País:</b> ${escaparHtml(pais)}\n\n` +
+      `<code>${escaparHtml(ruta)}</code>`;
 
-    const respuestaTelegram =
-      await fetch(
-        `https://api.telegram.org/bot${token}/sendMessage`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: texto,
-            parse_mode: "HTML",
-            disable_web_page_preview:
-              true,
-          }),
-        }
-      );
+    const respuestaTelegram = await fetch(
+      `https://api.telegram.org/bot${token}/sendMessage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: texto,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+        }),
+      }
+    );
 
     if (!respuestaTelegram.ok) {
       const detalle =
@@ -162,15 +150,19 @@ export default async function handler(req, res) {
 
       console.error(
         "Error Telegram visitas:",
+        respuestaTelegram.status,
         detalle
       );
 
-      throw new Error(
-        "Telegram rechazó la notificación"
-      );
+      return res.status(502).json({
+        ok: false,
+        error:
+          "Telegram rechazó la notificación de visita.",
+      });
     }
 
     return res.status(200).json({
+      ok: true,
       enviado: true,
     });
   } catch (error) {
@@ -180,6 +172,7 @@ export default async function handler(req, res) {
     );
 
     return res.status(500).json({
+      ok: false,
       error:
         "No se pudo registrar la visita.",
     });

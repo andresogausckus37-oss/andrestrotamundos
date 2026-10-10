@@ -1,17 +1,26 @@
 import handlerContenidoRedes from "./api/contenido-redes.js";
 import handlerAdminLogin from "./api/admin/login.js";
 import handlerAdminPedidos from "./api/admin/pedidos.js";
+import handlerVisitas from "./api/visitas.js";
 
 const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
 
 function sincronizarEntorno(env) {
   const claves = [
-  "MONGODB_URI", "OPENAI_API_KEY", "ADMIN_PASSWORD", "CRON_SECRET",
-  "THREADS_APP_ID", "THREADS_APP_SECRET", "INSTAGRAM_ACCESS_TOKEN",
-  "FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_ACCESS_TOKEN",
-  "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID",
-  "TELEGRAM_VISITAS_BOT_TOKEN", "TELEGRAM_VISITAS_CHAT_ID"
-];
+    "MONGODB_URI",
+    "OPENAI_API_KEY",
+    "ADMIN_PASSWORD",
+    "CRON_SECRET",
+    "THREADS_APP_ID",
+    "THREADS_APP_SECRET",
+    "INSTAGRAM_ACCESS_TOKEN",
+    "FACEBOOK_PAGE_ID",
+    "FACEBOOK_PAGE_ACCESS_TOKEN",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_CHAT_ID",
+    "TELEGRAM_VISITAS_BOT_TOKEN",
+    "TELEGRAM_VISITAS_CHAT_ID",
+  ];
   for (const clave of claves) {
     if (env?.[clave] !== undefined && env?.[clave] !== null) {
       process.env[clave] = String(env[clave]);
@@ -87,7 +96,7 @@ function headersComoObjeto(request) {
   return headers;
 }
 
-function crearRespuestaVercel() {
+function crearRespuestaApi(origen) {
   let statusCode = 200;
   const headers = new Headers({ "Cache-Control": "no-store" });
   let final = null;
@@ -107,7 +116,7 @@ function crearRespuestaVercel() {
     redirect(codigoOUrl, urlOpcional) {
       let codigo = 302, url = codigoOUrl;
       if (typeof codigoOUrl === "number") { codigo = codigoOUrl; url = urlOpcional; }
-      final = Response.redirect(new URL(String(url), "https://andreshousesitter.com").toString(), codigo);
+      final = Response.redirect(new URL(String(url), origen).toString(), codigo);
       return final;
     },
     end() { final = new Response(null, { status: statusCode, headers }); return final; },
@@ -125,7 +134,7 @@ async function ejecutarHandlerContenidoRedes(request, env) {
     body: await leerBody(request),
     headers: headersComoObjeto(request)
   };
-  const res = crearRespuestaVercel();
+  const res = crearRespuestaApi(url.origin);
   const retorno = await handlerContenidoRedes(req, res);
   if (retorno instanceof Response) return retorno;
   return res.obtenerRespuesta() || Response.json({ ok:false, error:"La API no generó una respuesta." }, { status:500 });
@@ -152,7 +161,7 @@ async function ejecutarHandlerGenerico(request, env, handler) {
     },
   };
 
-  const res = crearRespuestaVercel();
+  const res = crearRespuestaApi(url.origin);
 
   const retorno = await handler(req, res);
 
@@ -267,7 +276,25 @@ if (url.pathname === "/api/admin/pedidos") {
   }
 }
 
-/* DEBAJO DE TODO ESTO queda contenido-redes */
+if (url.pathname === "/api/visitas") {
+  try {
+    return await ejecutarHandlerGenerico(
+      request,
+      env,
+      handlerVisitas
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        ok: false,
+        error: error?.message || "Error en API de visitas",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/* CONTENIDO DE REDES */
 if (url.pathname === RUTA_CONTENIDO_REDES) {
       
       try {
