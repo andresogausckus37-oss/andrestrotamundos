@@ -20,21 +20,20 @@ import WhatsAppFlotante from "./componentes/WhatsAppFlotante";
 import Tienda from "./paginas/Tienda";
 import DetalleProducto from "./paginas/DetalleProducto";
 import Recomendados from "./paginas/Recomendados";
-import GeneradorPdf from "./paginas/GeneradorPdf";
-import Digitales from "./paginas/Digitales";
-import GeneradorLaminas from "./paginas/GeneradorLaminas";
 import OptimizadorImagenes from "./paginas/OptimizadorImagenes";
+
 import PagoExitoso from "./paginas/PagoExitoso";
 import PagoPendiente from "./paginas/PagoPendiente";
 import PagoFallido from "./paginas/PagoFallido";
 import Checkout from "./paginas/Checkout";
-import PagoTransferencia from "./paginas/PagoTransferencia";
+
 import LoginAdmin from "./paginas/LoginAdmin";
 import Admin from "./paginas/Admin";
 import AdminRedes from "./paginas/admin/AdminRedes";
 import AdminNuevoProducto from "./paginas/admin/AdminNuevoProducto";
 import AdminProductos from "./paginas/admin/AdminProductos";
 import AdminEditarProducto from "./paginas/admin/AdminEditarProducto";
+
 import PoliticaPrivacidad from "./paginas/PoliticaPrivacidad";
 
 /* =========================
@@ -70,10 +69,6 @@ const RegistrarVisita = () => {
     } else if (ruta === "/tienda") {
       pagina = "Tienda";
     } else if (
-      ruta === "/tienda/digitales"
-    ) {
-      pagina = "Imprimibles digitales";
-    } else if (
       ruta.startsWith("/tienda/")
     ) {
       pagina = "Detalle de producto";
@@ -89,8 +84,11 @@ const RegistrarVisita = () => {
       ruta === "/recomendados"
     ) {
       pagina = "Recomendados";
+    } else if (
+      ruta === "/politica-de-privacidad"
+    ) {
+      pagina = "Política de privacidad";
     }
-    
 
     /* MARCAR ANTES DEL FETCH PARA
        EVITAR NOTIFICACIONES DUPLICADAS */
@@ -236,6 +234,16 @@ const ContenidoApp = () => {
           />
 
           <Route
+            path="/tienda/:id"
+            element={<DetalleProducto />}
+          />
+
+          <Route
+            path="/checkout/:id"
+            element={<Checkout />}
+          />
+
+          <Route
             path="/pago/exitoso"
             element={<PagoExitoso />}
           />
@@ -256,33 +264,8 @@ const ContenidoApp = () => {
           />
 
           <Route
-  path="/politica-de-privacidad"
-  element={<PoliticaPrivacidad />}
-/>
-
-          <Route
-            path="/generador-pdf"
-            element={<GeneradorPdf />}
-          />
-
-          <Route
-            path="/tienda/digitales"
-            element={<Digitales />}
-          />
-
-          <Route
-            path="/tienda/:id"
-            element={<DetalleProducto />}
-          />
-
-          <Route
-            path="/checkout/:id"
-            element={<Checkout />}
-          />
-
-          <Route
-            path="/pago/transferencia"
-            element={<PagoTransferencia />}
+            path="/politica-de-privacidad"
+            element={<PoliticaPrivacidad />}
           />
 
           <Route
@@ -296,28 +279,23 @@ const ContenidoApp = () => {
           />
 
           <Route
-  path="/admin/redes"
-  element={<AdminRedes />}
-/>
+            path="/admin/redes"
+            element={<AdminRedes />}
+          />
 
           <Route
-  path="/admin/productos/nuevo"
-  element={<AdminNuevoProducto />}
-            />
-
-            <Route
-  path="/admin/productos"
-  element={<AdminProductos />}
-/>
+            path="/admin/productos"
+            element={<AdminProductos />}
+          />
 
           <Route
-  path="/admin/productos/editar/:id"
-  element={<AdminEditarProducto />}
-/>
+            path="/admin/productos/nuevo"
+            element={<AdminNuevoProducto />}
+          />
 
           <Route
-            path="/generador-laminas"
-            element={<GeneradorLaminas />}
+            path="/admin/productos/editar/:id"
+            element={<AdminEditarProducto />}
           />
 
           <Route

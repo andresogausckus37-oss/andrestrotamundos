@@ -1,255 +1,111 @@
 import { useEffect, useMemo, useState } from "react";
-import CalificacionProducto from "../componentes/CalificacionProducto";
-
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   BadgePercent,
   ChevronDown,
   ChevronUp,
   CreditCard,
-  Download,
-  FileDown,
-  Gamepad2,
-  Home,
-  Landmark,
+  Package,
   ShoppingBag,
 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
-
+import CalificacionProducto from "../componentes/CalificacionProducto";
 import {
   MERCADO_ARGENTINA,
-  MERCADO_INTERNACIONAL,
   formatearPrecioMercado,
 } from "../utilidades/mercado";
 
-/* =========================================================
-   CONFIGURACIÓN COMERCIAL
-========================================================= */
-
-const DESCUENTO_TRANSFERENCIA = 5;
 const CUOTAS_SIN_INTERES = 3;
+const DURACION_NUEVO_PRODUCTO_MS = 72 * 60 * 60 * 1000;
 
-/* =========================================================
-   TIENDA
-========================================================= */
+const CATEGORIAS = [
+  { id: "todos", nombre: "Todos" },
+  { id: "tecnologia", nombre: "Tecnología" },
+  { id: "computacion", nombre: "Computación" },
+  { id: "audio", nombre: "Audio" },
+  { id: "pesca", nombre: "Pesca" },
+  { id: "jardin", nombre: "Jardín" },
+  { id: "hogar", nombre: "Hogar" },
+  { id: "ninos", nombre: "Niños" },
+  { id: "accesorios", nombre: "Accesorios" },
+  { id: "otros", nombre: "Otros" },
+];
 
 const Tienda = () => {
   const navigate = useNavigate();
 
-    /* =======================================================
-     PRODUCTOS MONGODB
-  ======================================================= */
-
-  const [productosMongo, setProductosMongo] =
-    useState([]);
+  const [productos, setProductos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [categoriaActiva, setCategoriaActiva] = useState("todos");
+  const [mostrarTodos, setMostrarTodos] = useState(false);
+  const [ahora, setAhora] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelado = false;
 
-    const cargarProductosMongo = async () => {
+    const cargarProductos = async () => {
       try {
+        setCargando(true);
+        setError("");
+
         const respuesta = await fetch(
           "/api/admin/pedidos?accion=productos-publicos"
         );
 
-        if (!respuesta.ok) {
-          throw new Error(
-            "No se pudieron cargar los productos."
-          );
-        }
-
         const datos = await respuesta.json();
 
-        if (!cancelado) {
-          setProductosMongo(
-            Array.isArray(datos.productos)
-              ? datos.productos
-              : []
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.error || "No se pudieron cargar los productos."
           );
         }
-      } catch (error) {
-        console.error(
-          "Error cargando productos de MongoDB:",
-          error
-        );
+
+        if (!cancelado) {
+          setProductos(
+            Array.isArray(datos.productos) ? datos.productos : []
+          );
+        }
+      } catch (errorCarga) {
+        console.error("Error cargando productos:", errorCarga);
+
+        if (!cancelado) {
+          setError(
+            errorCarga.message || "No se pudieron cargar los productos."
+          );
+        }
+      } finally {
+        if (!cancelado) {
+          setCargando(false);
+        }
       }
     };
 
-    cargarProductosMongo();
+    cargarProductos();
 
     return () => {
       cancelado = true;
     };
   }, []);
-
-  const productosTienda = productosMongo;
-
-  /* =======================================================
-     RELOJ GLOBAL — OFERTAS Y PRODUCTOS NUEVOS
-  ======================================================= */
-
-  const [ahora, setAhora] = useState(() => Date.now());
 
   useEffect(() => {
     const intervalo = window.setInterval(() => {
       setAhora(Date.now());
     }, 1000);
 
-    return () => {
-      window.clearInterval(intervalo);
-    };
-  }, []);
-
-  const DURACION_NUEVO_PRODUCTO_MS =
-    72 * 60 * 60 * 1000;
-
-  const obtenerTiempoRestante = (finalizaEn) => {
-    const final = new Date(finalizaEn).getTime();
-
-    if (!Number.isFinite(final)) {
-      return null;
-    }
-
-    const diferencia = final - ahora;
-
-    if (diferencia <= 0) {
-      return null;
-    }
-
-    const totalSegundos = Math.floor(
-      diferencia / 1000
-    );
-
-    const dias = Math.floor(
-      totalSegundos / 86400
-    );
-    const horas = Math.floor(
-      (totalSegundos % 86400) / 3600
-    );
-    const minutos = Math.floor(
-      (totalSegundos % 3600) / 60
-    );
-    const segundos = totalSegundos % 60;
-
-    return {
-      dias,
-      horas,
-      minutos,
-      segundos,
-    };
-  };
-
-  /* =======================================================
-     MERCADO
-  ======================================================= */
-
-  const [mercado, setMercado] =
-    useState(MERCADO_ARGENTINA);
-
-  const [cargandoMercado, setCargandoMercado] =
-    useState(true);
-
-  useEffect(() => {
-    let cancelado = false;
-
-    const detectarMercado = async () => {
-      try {
-        const parametros =
-          new URLSearchParams(
-            window.location.search
-          );
-
-        const mercadoPrueba =
-          parametros
-            .get("mercado")
-            ?.toLowerCase();
-
-        if (
-          mercadoPrueba ===
-          "internacional"
-        ) {
-          if (!cancelado) {
-            setMercado(
-              MERCADO_INTERNACIONAL
-            );
-            setCargandoMercado(false);
-          }
-
-          return;
-        }
-
-        if (
-          mercadoPrueba ===
-          "argentina"
-        ) {
-          if (!cancelado) {
-            setMercado(
-              MERCADO_ARGENTINA
-            );
-            setCargandoMercado(false);
-          }
-
-          return;
-        }
-
-        const respuesta = await fetch(
-          "/api/visitas?accion=mercado"
-        );
-
-        if (!respuesta.ok) {
-          throw new Error(
-            "No se pudo detectar el mercado."
-          );
-        }
-
-        const datos =
-          await respuesta.json();
-
-        if (cancelado) {
-          return;
-        }
-
-        setMercado(
-          datos.mercado ===
-            MERCADO_INTERNACIONAL
-            ? MERCADO_INTERNACIONAL
-            : MERCADO_ARGENTINA
-        );
-      } catch (error) {
-        console.error(
-          "Error detectando mercado:",
-          error
-        );
-
-        if (!cancelado) {
-          setMercado(
-            MERCADO_ARGENTINA
-          );
-        }
-      } finally {
-        if (!cancelado) {
-          setCargandoMercado(false);
-        }
-      }
-    };
-
-    detectarMercado();
-
-    return () => {
-      cancelado = true;
-    };
+    return () => window.clearInterval(intervalo);
   }, []);
 
   useEffect(() => {
-    document.title =
-      "Imprimibles y Juegos para Imprimir | Andrés Imprimibles";
+    const tituloAnterior = document.title;
+    const canonical = document.querySelector('link[rel="canonical"]');
+    const canonicalAnterior = canonical?.getAttribute("href") || "";
+
+    document.title = "Tienda de Productos | Andres House Sitter";
 
     const descripcion =
-      "Descubre juegos, actividades y productos digitales imprimibles. Laberintos, crucigramas, sopas de letras y recursos para el hogar y las mascotas.";
-
-    const url =
-      "https://andreshousesitter.com/tienda";
+      "Descubre productos seleccionados para el hogar, tecnología, audio, pesca, jardín, niños y más.";
 
     const actualizarMeta = (selector, atributo, contenido) => {
       let elemento = document.querySelector(selector);
@@ -257,17 +113,16 @@ const Tienda = () => {
       if (!elemento) {
         elemento = document.createElement("meta");
 
-        if (atributo === "name") {
-          elemento.setAttribute(
-            "name",
-            selector.match(/name="([^"]+)"/)?.[1] || ""
-          );
-        } else {
-          elemento.setAttribute(
-            "property",
-            selector.match(/property="([^"]+)"/)?.[1] || ""
-          );
-        }
+        const coincidencia = selector.match(
+          atributo === "name"
+            ? /name="([^"]+)"/
+            : /property="([^"]+)"/
+        );
+
+        elemento.setAttribute(
+          atributo,
+          coincidencia?.[1] || ""
+        );
 
         document.head.appendChild(elemento);
       }
@@ -284,7 +139,7 @@ const Tienda = () => {
     actualizarMeta(
       'meta[property="og:title"]',
       "property",
-      "Imprimibles y Juegos para Imprimir | Andrés Imprimibles"
+      "Tienda de Productos | Andres House Sitter"
     );
 
     actualizarMeta(
@@ -296,375 +151,113 @@ const Tienda = () => {
     actualizarMeta(
       'meta[property="og:url"]',
       "property",
-      url
+      `${window.location.origin}/tienda`
     );
 
-    let canonical =
-      document.querySelector('link[rel="canonical"]');
-
-    if (!canonical) {
-      canonical = document.createElement("link");
-      canonical.setAttribute("rel", "canonical");
-      document.head.appendChild(canonical);
+    if (canonical) {
+      canonical.setAttribute(
+        "href",
+        `${window.location.origin}/tienda`
+      );
     }
 
-    canonical.setAttribute("href", url);
-
     return () => {
-      document.title =
-        "Cuidado de Casas y Mascotas | Andres House Sitter";
+      document.title = tituloAnterior;
 
-      document
-        .querySelector('link[rel="canonical"]')
-        ?.setAttribute(
-          "href",
-          "https://andreshousesitter.com/"
-        );
+      if (canonical && canonicalAnterior) {
+        canonical.setAttribute("href", canonicalAnterior);
+      }
     };
   }, []);
 
-  const [filtroActivo, setFiltroActivo] =
-    useState("todos");
+  const categoriasVisibles = useMemo(() => {
+    const disponibles = new Set(
+      productos
+        .map((producto) => producto.categoria)
+        .filter(Boolean)
+    );
 
-  const [categoriaActiva, setCategoriaActiva] =
-    useState("todos");
+    return CATEGORIAS.filter(
+      (categoria) =>
+        categoria.id === "todos" ||
+        disponibles.has(categoria.id)
+    );
+  }, [productos]);
 
-  const [mostrarTodos, setMostrarTodos] =
-    useState(false);
-
-  /* =======================================================
-     TEXTOS
-  ======================================================= */
-
-  const t = {
-    coleccion: "Colección de imprimibles",
-
-    descripcion:
-      "Imprimibles digitales para jugar, aprender, organizar y disfrutar en casa.",
-
-    volver: "Volver",
-
-    todos: "Todos",
-    juegosActividades: "Juegos y actividades",
-    hogarMascotas: "Hogar y mascotas",
-
-    laberintos: "Laberintos",
-    sopaLetras: "Sopa de letras",
-    unirPuntos: "Unir los puntos",
-    encontrarDiferencias:
-      "Encontrar las diferencias",
-    colorear: "Colorear",
-    crucigramas: "Crucigramas",
-    rompecabezas: "Rompecabezas",
-
-    mascotas: "Mascotas",
-    organizacion: "Organización",
-    planificadores: "Planificadores",
-    registros: "Registros",
-    checklists: "Checklists",
-
-    explorarTipo: "Explorar por tipo",
-
-    imprimiblesDestacados:
-      "Imprimibles destacados",
-
-    descripcionDestacados:
-      "Una selección variada de imprimibles para jugar, aprender y disfrutar en casa.",
-
-    descripcionHogar:
-      "Imprimibles prácticos para organizar el hogar y acompañar el cuidado de tus mascotas.",
-
-    ver: "Ver",
-    pdf: "PDF",
-    descargaDigital: "Descarga digital",
-    hogar: "Hogar",
-    infantil: "Infantil",
-    ahorras: "Ahorras",
-    verProducto: "Ver producto",
-
-    proximamente:
-      "Próximamente agregaremos nuevos productos en esta categoría.",
-
-    verTodos: "Ver todos",
-    verMenos: "Ver menos",
-  };
-
-  /* =======================================================
-     TEXTO ESPAÑOL
-  ======================================================= */
-
-  const textoEs = (valor) => {
-    if (typeof valor === "string") {
-      return valor;
+  const productosFiltrados = useMemo(() => {
+    if (categoriaActiva === "todos") {
+      return productos;
     }
 
-    return valor?.es || "";
-  };
+    return productos.filter(
+      (producto) => producto.categoria === categoriaActiva
+    );
+  }, [productos, categoriaActiva]);
 
-  /* =======================================================
-     FORMATEAR PRECIO
-  ======================================================= */
+  const productosMostrados = mostrarTodos
+    ? productosFiltrados
+    : productosFiltrados.slice(0, 6);
 
   const formatearPrecio = (precio) => {
-    if (!precio) {
-      return "Precio a definir";
+    const numero = Number(precio);
+
+    if (!Number.isFinite(numero) || numero <= 0) {
+      return "Precio a consultar";
     }
 
     return formatearPrecioMercado(
-      Number(precio),
-      mercado
+      numero,
+      MERCADO_ARGENTINA
     );
   };
 
-  /* =======================================================
-     NAVEGAR A PRODUCTO
-  ======================================================= */
+  const obtenerTiempoRestante = (finalizaEn) => {
+    if (!finalizaEn) return null;
+
+    const final = new Date(finalizaEn).getTime();
+
+    if (!Number.isFinite(final)) {
+      return null;
+    }
+
+    const diferencia = final - ahora;
+
+    if (diferencia <= 0) {
+      return null;
+    }
+
+    const totalSegundos = Math.floor(diferencia / 1000);
+
+    return {
+      dias: Math.floor(totalSegundos / 86400),
+      horas: Math.floor((totalSegundos % 86400) / 3600),
+      minutos: Math.floor((totalSegundos % 3600) / 60),
+      segundos: totalSegundos % 60,
+    };
+  };
 
   const irAProducto = (productoId) => {
-    const parametros =
-      new URLSearchParams(
-        window.location.search
-      );
-
-    const mercadoPrueba =
-      parametros
-        .get("mercado")
-        ?.toLowerCase();
-
-    if (
-      mercadoPrueba === "internacional" ||
-      mercadoPrueba === "argentina"
-    ) {
-      navigate(
-        `/tienda/${productoId}?mercado=${mercadoPrueba}`
-      );
-
-      return;
-    }
-
-    navigate(
-      `/tienda/${productoId}`
-    );
-  };
-
-  /* =======================================================
-     FILTROS PRINCIPALES
-  ======================================================= */
-
-  const filtros = [
-    {
-      id: "todos",
-      nombre: t.todos,
-    },
-    {
-      id: "juegos",
-      nombre: t.juegosActividades,
-      icono: Gamepad2,
-    },
-    {
-      id: "hogar",
-      nombre: t.hogarMascotas,
-      icono: Home,
-    },
-  ];
-
-  /* =======================================================
-     CATEGORÍAS
-  ======================================================= */
-
-  const categorias = {
-    juegos: [
-      {
-  id: "laberintos",
-  nombre: t.laberintos,
-},
-{
-  id: "rompecabezas",
-  nombre: t.rompecabezas,
-},
-{
-  id: "sopa-de-letras",
-  nombre: t.sopaLetras,
-},
-
-      {
-        id: "unir-los-puntos",
-        nombre: t.unirPuntos,
-      },
-      {
-        id: "encontrar-diferencias",
-        nombre: t.encontrarDiferencias,
-      },
-      {
-        id: "colorear",
-        nombre: t.colorear,
-      },
-      {
-        id: "crucigramas",
-        nombre: t.crucigramas,
-      },
-    ],
-
-    hogar: [
-      {
-        id: "mascotas",
-        nombre: t.mascotas,
-      },
-      {
-        id: "organizacion",
-        nombre: t.organizacion,
-      },
-      {
-        id: "planificadores",
-        nombre: t.planificadores,
-      },
-      {
-        id: "registros",
-        nombre: t.registros,
-      },
-      {
-        id: "checklists",
-        nombre: t.checklists,
-      },
-    ],
-  };
-
-  /* =======================================================
-     CATEGORÍAS VISIBLES
-  ======================================================= */
-
-  const categoriasVisibles = useMemo(() => {
-    if (
-      filtroActivo === "todos" ||
-      !categorias[filtroActivo]
-    ) {
-      return [];
-    }
-
-    const disponibles =
-      categorias[filtroActivo].filter(
-        (categoria) => {
-          return productosTienda.some(
-            (producto) => {
-              const perteneceALinea =
-                filtroActivo === "juegos"
-                  ? !producto.linea ||
-                    producto.linea === "juegos"
-                  : producto.linea ===
-                    filtroActivo;
-
-              return (
-                perteneceALinea &&
-                producto.categoria ===
-                  categoria.id
-              );
-            }
-          );
-        }
-      );
-
-    if (disponibles.length === 0) {
-      return [];
-    }
-
-    return [
-      {
-        id: "todos",
-        nombre: t.todos,
-      },
-      ...disponibles,
-    ];
-  }, [filtroActivo, productosTienda]);
-
-  /* =======================================================
-     PRODUCTOS FILTRADOS
-  ======================================================= */
-
-  const productosFiltrados = useMemo(() => {
-  return productosTienda.filter(
-      (producto) => {
-        if (filtroActivo === "todos") {
-          return true;
-        }
-
-        const perteneceALinea =
-          filtroActivo === "juegos"
-            ? !producto.linea ||
-              producto.linea === "juegos"
-            : producto.linea === filtroActivo;
-
-        if (!perteneceALinea) {
-          return false;
-        }
-
-        if (categoriaActiva === "todos") {
-          return true;
-        }
-
-        return (
-          producto.categoria ===
-          categoriaActiva
-        );
-      }
-    );
-  }, [
-  filtroActivo,
-      categoriaActiva,
-  productosTienda,
-]);
-  /* =======================================================
-     PRODUCTOS VISIBLES
-  ======================================================= */
-
-  const productosMostrados =
-    mostrarTodos
-        ? productosFiltrados
-      : productosFiltrados.slice(0, 5);
-
-  /* =======================================================
-     CAMBIAR FILTRO PRINCIPAL
-  ======================================================= */
-
-  const cambiarFiltro = (id) => {
-    setFiltroActivo(id);
-    setCategoriaActiva("todos");
-    setMostrarTodos(false);
-  };
-
-  /* =======================================================
-     CAMBIAR CATEGORÍA
-  ======================================================= */
-
-  const cambiarCategoria = (id) => {
-    setCategoriaActiva(id);
-    setMostrarTodos(false);
+    navigate(`/tienda/${productoId}`);
   };
 
   return (
     <main className="min-h-screen bg-[#FCFDFC]">
-      {/* =====================================================
-          ENCABEZADO / LOGO ANCHO COMPLETO
-      ====================================================== */}
-
       <section className="border-b border-[#DCE5E4] bg-white">
-        <div className="w-full">
-          <img
-            src="https://wfcprfdtn1w76omy.public.blob.vercel-storage.com/logos/logo%20tienda%20"
-            alt="Andrés Imprimibles"
-            className="block h-auto w-full object-cover"
-          />
-        </div>
+        <div className="mx-auto max-w-6xl px-5 py-8 text-center sm:py-10">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#EEF5F5] text-[#285861]">
+            <ShoppingBag size={23} strokeWidth={1.7} />
+          </div>
 
-        <div className="mx-auto max-w-6xl px-5 py-5 text-center sm:py-7">
-          <p className="mx-auto max-w-2xl text-sm font-normal leading-6 text-[#687477] sm:text-base">
-            {t.descripcion}
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#263238] sm:text-3xl">
+            Tienda
+          </h1>
+
+          <p className="mx-auto mt-2 max-w-2xl text-sm font-normal leading-6 text-[#687477] sm:text-base">
+            Productos seleccionados para distintas necesidades, con compra simple
+            y atención personalizada.
           </p>
         </div>
       </section>
-
-      {/* =====================================================
-          VOLVER
-      ====================================================== */}
 
       <div className="mx-auto max-w-6xl px-5 pt-4">
         <button
@@ -672,517 +265,330 @@ const Tienda = () => {
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-sm font-normal text-[#687477] transition-colors hover:text-[#285861]"
         >
-          <ArrowLeft
-            size={17}
-            strokeWidth={1.8}
-          />
-
-          {t.volver}
+          <ArrowLeft size={17} strokeWidth={1.8} />
+          Volver
         </button>
       </div>
 
-      {/* =====================================================
-          FILTROS PRINCIPALES
-      ====================================================== */}
+      {categoriasVisibles.length > 1 && (
+        <section className="px-4 pt-6 sm:px-5 sm:pt-8">
+          <div className="mx-auto max-w-6xl">
+            <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A7966]">
+              Explorar por categoría
+            </p>
 
-      <section className="px-4 pt-4 sm:px-5 sm:pt-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-            {filtros.map((filtro) => {
-              const activo =
-                filtroActivo === filtro.id;
+            <div className="flex flex-wrap justify-center gap-2">
+              {categoriasVisibles.map((categoria) => {
+                const activa = categoriaActiva === categoria.id;
 
-              const Icono = filtro.icono;
+                return (
+                  <button
+                    key={categoria.id}
+                    type="button"
+                    onClick={() => {
+                      setCategoriaActiva(categoria.id);
+                      setMostrarTodos(false);
+                    }}
+                    className={`rounded-md border px-3 py-1.5 text-[10px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-xs ${
+                      activa
+                        ? "border-[#285861] bg-[#285861] text-white"
+                        : "border-[#DCE5E4] bg-white text-[#536468] hover:border-[#7FA0A3] hover:text-[#285861]"
+                    }`}
+                  >
+                    {categoria.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
-              return (
-                <button
-                  key={filtro.id}
-                  type="button"
-                  onClick={() =>
-                    cambiarFiltro(filtro.id)
-                  }
-                  className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-xs font-medium transition-colors sm:px-5 sm:text-sm ${
-                    activo
-                      ? "border-[#285861] bg-[#285861] text-white"
-                      : "border-[#DCE5E4] bg-white text-[#536468] hover:border-[#7FA0A3] hover:text-[#285861]"
-                  }`}
-                >
-                  {Icono && (
-                    <Icono
-                      size={15}
-                      strokeWidth={1.8}
-                      className="shrink-0"
-                    />
-                  )}
-
-                  {filtro.nombre}
-                </button>
-              );
-            })}
+      <section className="mb-20 px-4 py-8 sm:px-5 sm:py-10">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-5">
+            <h2 className="text-center text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
+              {categoriaActiva === "todos"
+                ? "Productos destacados"
+                : CATEGORIAS.find(
+                    (categoria) => categoria.id === categoriaActiva
+                  )?.nombre || "Productos"}
+            </h2>
           </div>
 
-          {/* =================================================
-              TIPOS DE PRODUCTO
-          ================================================== */}
-
-          {categoriasVisibles.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A7966]">
-                {t.explorarTipo}
+          {cargando ? (
+            <div className="py-12 text-center">
+              <p className="text-sm text-[#687477]">
+                Cargando productos...
               </p>
+            </div>
+          ) : error ? (
+            <div className="mx-auto max-w-xl rounded-md border border-red-200 bg-red-50 px-5 py-8 text-center">
+              <p className="text-sm text-red-700">
+                {error}
+              </p>
+            </div>
+          ) : productosMostrados.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {productosMostrados.map((producto) => {
+                const precioNormal = Number(producto.precioARS) || 0;
+                const precioOferta = Number(
+                  producto.oferta?.precioARS
+                ) || 0;
 
-              <div className="flex flex-wrap justify-center gap-2">
-                {categoriasVisibles.map(
-                  (categoria) => {
-                    const activa =
-                      categoriaActiva ===
-                      categoria.id;
+                const finalizaOferta =
+                  producto.ofertaLanzamiento?.finalizaEn;
 
-                    return (
-                      <button
-                        key={categoria.id}
-                        type="button"
-                        onClick={() =>
-                          cambiarCategoria(
-                            categoria.id
-                                                      )
-                        }
-                        className={`rounded-md border px-3 py-1.5 text-[10px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-xs ${
-                          activa
-                            ? "border-[#285861] bg-[#285861] text-white"
-                            : "border-[#E4DDD3] bg-[#F7F2EB] text-[#756451] hover:border-[#B59672] hover:text-[#5E4C39]"
-                        }`}
-                      >
-                        {categoria.nombre}
-                      </button>
-                    );
-                  }
+                const ofertaDentroDePlazo = finalizaOferta
+                  ? new Date(finalizaOferta).getTime() > ahora
+                  : true;
+
+                const tieneOferta =
+                  producto.oferta?.activa === true &&
+                  precioOferta > 0 &&
+                  ofertaDentroDePlazo;
+
+                const precioFinal = tieneOferta
+                  ? precioOferta
+                  : precioNormal;
+
+                const descuento =
+                  tieneOferta && precioNormal > 0
+                    ? Math.round(
+                        ((precioNormal - precioFinal) /
+                          precioNormal) *
+                          100
+                      )
+                    : 0;
+
+                const tiempoRestante =
+                  tieneOferta && finalizaOferta
+                    ? obtenerTiempoRestante(finalizaOferta)
+                    : null;
+
+                const fechaCreacion = new Date(
+                  producto.creadoEn
+                ).getTime();
+
+                const esNuevoProducto =
+                  Number.isFinite(fechaCreacion) &&
+                  ahora >= fechaCreacion &&
+                  ahora - fechaCreacion <
+                    DURACION_NUEVO_PRODUCTO_MS;
+
+                const precioCuota =
+                  precioFinal > 0
+                    ? precioFinal / CUOTAS_SIN_INTERES
+                    : 0;
+
+                const nombreProducto =
+                  typeof producto.nombre === "string"
+                    ? producto.nombre
+                    : producto.nombre?.es || "Producto";
+
+                const etiquetaOferta =
+                  typeof producto.oferta?.etiqueta === "string"
+                    ? producto.oferta.etiqueta
+                    : producto.oferta?.etiqueta?.es || "";
+
+                const imagenPortada =
+                  producto.imagenes?.portada ||
+                  producto.imagenes?.redes?.feed?.presentacion ||
+                  "";
+
+                return (
+                  <article
+                    key={producto.id}
+                    className="group flex flex-col overflow-hidden rounded-md border border-[#DCE5E4] bg-white transition-colors duration-200 hover:border-[#8EAAAC]"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => irAProducto(producto.id)}
+                      className="w-full bg-[#F7FAFA]"
+                      aria-label={`Ver ${nombreProducto}`}
+                    >
+                      <div className="flex aspect-[4/5] w-full items-center justify-center overflow-hidden bg-[#F7FAFA]">
+                        {imagenPortada ? (
+                          <img
+                            src={imagenPortada}
+                            alt={nombreProducto}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                          />
+                        ) : (
+                          <Package
+                            size={34}
+                            strokeWidth={1.5}
+                            className="text-[#8BA0A1]"
+                          />
+                        )}
+                      </div>
+                    </button>
+
+                    <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                        {esNuevoProducto && (
+                          <span className="inline-flex items-center rounded-md border border-[#D9E6E7] bg-[#EEF5F5] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-[#285861] sm:px-2 sm:py-1 sm:text-[10px]">
+                            Nuevo producto
+                          </span>
+                        )}
+
+                        {producto.disponibilidad === "sin-stock" && (
+                          <span className="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-red-700 sm:px-2 sm:py-1 sm:text-[10px]">
+                            Sin stock
+                          </span>
+                        )}
+
+                        {producto.disponibilidad === "proximamente" && (
+                          <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-amber-700 sm:px-2 sm:py-1 sm:text-[10px]">
+                            Próximamente
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="line-clamp-2 text-[14px] font-normal leading-5 text-[#263238] sm:text-[15px]">
+                        {nombreProducto}
+                      </h3>
+
+                      <div className="mt-1.5 min-h-[16px] origin-left scale-[0.9]">
+                        <CalificacionProducto productoId={producto.id} />
+                      </div>
+
+                      <div className="mt-auto pt-3">
+                        {tieneOferta ? (
+                          <>
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              <p className="text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
+                                {formatearPrecio(precioFinal)}
+                              </p>
+
+                              <p className="text-xs font-normal text-slate-400 line-through sm:text-sm">
+                                {formatearPrecio(precioNormal)}
+                              </p>
+
+                              {descuento > 0 && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-700 sm:text-xs">
+                                  <BadgePercent
+                                    size={13}
+                                    strokeWidth={1.8}
+                                  />
+                                  {descuento}% OFF
+                                </span>
+                              )}
+                            </div>
+
+                            {etiquetaOferta && (
+                              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-orange-700">
+                                {etiquetaOferta}
+                              </p>
+                            )}
+
+                            {tiempoRestante && (
+                              <div className="mt-2 inline-flex max-w-full items-center rounded-md border border-orange-200 bg-orange-50 px-2 py-1">
+                                <span className="text-[10px] font-medium leading-4 text-orange-800 sm:text-[11px]">
+                                  Finaliza en{" "}
+                                  {tiempoRestante.dias > 0 &&
+                                    `${tiempoRestante.dias}d `}
+                                  {String(
+                                    tiempoRestante.horas
+                                  ).padStart(2, "0")}
+                                  h{" "}
+                                  {String(
+                                    tiempoRestante.minutos
+                                  ).padStart(2, "0")}
+                                  m{" "}
+                                  {String(
+                                    tiempoRestante.segundos
+                                  ).padStart(2, "0")}
+                                  s
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
+                            {formatearPrecio(precioFinal)}
+                          </p>
+                        )}
+
+                        {precioCuota > 0 && (
+                          <div className="mt-3 border-t border-[#E3E8E7] pt-2.5">
+                            <div className="flex items-start gap-2">
+                              <CreditCard
+                                size={14}
+                                strokeWidth={1.7}
+                                className="mt-0.5 shrink-0 text-[#B59672]"
+                              />
+
+                              <p className="text-[11px] font-normal leading-4 text-[#687477] sm:text-xs">
+                                <span className="font-medium text-[#263238]">
+                                  {CUOTAS_SIN_INTERES} x{" "}
+                                  {formatearPrecio(precioCuota)}
+                                </span>{" "}
+                                sin interés
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => irAProducto(producto.id)}
+                          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-3 py-2.5 text-xs font-medium text-white transition-colors hover:bg-[#204850] sm:text-sm"
+                        >
+                          <ShoppingBag
+                            size={14}
+                            strokeWidth={1.8}
+                            className="shrink-0"
+                          />
+                          Ver producto
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mx-auto max-w-xl rounded-md border border-dashed border-[#D6DFDE] bg-[#F7FAFA] px-5 py-10 text-center">
+              <Package
+                size={30}
+                strokeWidth={1.7}
+                className="mx-auto text-[#8BA0A1]"
+              />
+
+              <p className="mt-3 text-sm font-normal leading-6 text-[#687477]">
+                Próximamente agregaremos nuevos productos en esta categoría.
+              </p>
+            </div>
+          )}
+
+          {productosFiltrados.length > 6 && (
+            <div className="mt-7 flex justify-center">
+              <button
+                type="button"
+                onClick={() =>
+                  setMostrarTodos((actual) => !actual)
+                }
+                className="inline-flex min-w-[160px] items-center justify-center gap-2 rounded-md border border-[#B9CCCD] bg-white px-5 py-2.5 text-xs font-medium text-[#285861] transition-colors hover:border-[#7FA0A3] hover:bg-[#EEF5F5] sm:text-sm"
+              >
+                {mostrarTodos ? (
+                  <>
+                    <ChevronUp size={16} strokeWidth={1.8} />
+                    Ver menos
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={16} strokeWidth={1.8} />
+                    Ver todos
+                  </>
                 )}
-              </div>
+              </button>
             </div>
           )}
         </div>
       </section>
+    </main>
+  );
+};
 
-            {/* =====================================================
-          PRODUCTOS
-      ====================================================== */}
-
-      <section className="mb-20 px-4 py-8 sm:px-5 sm:py-10">
-        <div className="mx-auto max-w-4xl">
-
-          {/* CABECERA */}
-
-          <div className="mb-5">
-            <h2 className="text-center text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
-              {filtroActivo === "hogar"
-                ? t.hogarMascotas
-                : t.imprimiblesDestacados}
-            </h2>
-          </div>
-
-          {/* PRODUCTOS */}
-
-          {productosMostrados.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3 sm:gap-4">
-              {productosMostrados.map(
-                (producto) => {
-                  const esArgentina =
-                    mercado ===
-                    MERCADO_ARGENTINA;
-
-                  const ofertaActual =
-                    esArgentina
-                      ? producto.oferta
-                      : producto.ofertaUSD;
-
-                  const precioNormal =
-                    esArgentina
-                      ? Number(
-                          producto.precioARS
-                        )
-                      : Number(
-                          producto.precioUSD
-                        );
-
-                  const precioOferta =
-                    esArgentina
-                      ? Number(
-                          producto.oferta
-                            ?.precioARS
-                        )
-                      : Number(
-                          producto.ofertaUSD
-                            ?.precioUSD
-                        );
-
-                  const finalizaOferta =
-                    producto.ofertaLanzamiento
-                      ?.finalizaEn;
-
-                  const ofertaDentroDePlazo =
-                    finalizaOferta
-                      ? new Date(
-                          finalizaOferta
-                        ).getTime() > ahora
-                      : true;
-
-                  const tieneOferta =
-                    ofertaActual?.activa ===
-                      true &&
-                    Number.isFinite(
-                      precioOferta
-                    ) &&
-                    precioOferta > 0 &&
-                    ofertaDentroDePlazo;
-
-                  const precioFinal =
-                    tieneOferta
-                      ? precioOferta
-                      : precioNormal;
-
-                  const tiempoRestante =
-                    tieneOferta &&
-                    finalizaOferta
-                      ? obtenerTiempoRestante(
-                          finalizaOferta
-                        )
-                      : null;
-
-                  const fechaCreacion =
-                    new Date(
-                      producto.creadoEn
-                    ).getTime();
-
-                  const esNuevoProducto =
-                    Number.isFinite(
-                      fechaCreacion
-                    ) &&
-                    ahora >= fechaCreacion &&
-                    ahora - fechaCreacion <
-                      DURACION_NUEVO_PRODUCTO_MS;
-
-                  const ahorro =
-                    tieneOferta
-                      ? precioNormal -
-                        precioFinal
-                      : 0;
-
-                  const descuento =
-                    tieneOferta &&
-                    precioNormal
-                      ? Math.round(
-                          (ahorro /
-                            precioNormal) *
-                            100
-                        )
-                      : 0;
-
-                  const precioTransferencia =
-                    esArgentina
-                      ? precioFinal *
-                        (1 -
-                          DESCUENTO_TRANSFERENCIA /
-                            100)
-                      : 0;
-
-                  const precioCuota =
-                    esArgentina
-                      ? precioFinal /
-                        CUOTAS_SIN_INTERES
-                      : 0;
-
-                  const nombreProducto =
-                    textoEs(
-                      producto.nombre
-                    );
-
-                  const etiquetaOferta =
-                    textoEs(
-                      ofertaActual
-                        ?.etiqueta
-                    );
-
-                  return (
-                    <article
-                      key={producto.id}
-                      className="group flex w-full overflow-hidden rounded-md border border-[#DCE5E4] bg-white transition-colors duration-200 hover:border-[#8EAAAC]"
-                    >
-                      {/* IMAGEN */}
-                      <button
-                        type="button"
-                        onClick={() => irAProducto(producto.id)}
-                        className="w-[42%] shrink-0 self-center sm:w-[200px]"
-                        aria-label={`${t.ver} ${nombreProducto}`}
-                      >
-                        <div className="aspect-[4/5] w-full overflow-hidden bg-white">
-                          <img
-                            src={producto.imagenes?.portada}
-                            alt={nombreProducto}
-                            className="h-full w-full object-contain object-center transition duration-300 group-hover:scale-[1.02]"
-                          />
-                        </div>
-                      </button>
-
-                      {/* INFORMACIÓN */}
-
-                      <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-3">
-
-                        {/* BADGES */}
-
-                        <div className="mb-1 flex flex-wrap items-center gap-1">                        
-                        </div>
-
-                        {/* TÍTULO */}
-
-                        <h3 className="line-clamp-2 text-[14px] font-normal leading-[1.15rem] text-[#263238] sm:text-[15px] sm:leading-5">
-                          {nombreProducto}
-                        </h3>
-
-                        {/* RESEÑAS */}
-
-                        <div className="mt-0.5 min-h-[14px] origin-left scale-[0.85]">
-                          <CalificacionProducto
-                            productoId={
-                              producto.id
-                            }
-                          />
-                        </div>
-
-                        {/* PRECIO */}
-
-                        <div className="flex flex-1 flex-col pt-1.5">
-                          {tieneOferta ? (
-                            <>
-                              {/* PRECIO + ANTERIOR + DESCUENTO */}
-
-                              <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                                <p className="text-base font-medium tracking-tight text-[#263238] sm:text-xl">
-                                  {formatearPrecio(
-                                    precioFinal
-                                  )}
-                                </p>
-
-                                <p className="text-xs font-normal text-slate-400 line-through sm:text-sm">
-                                  {formatearPrecio(
-                                    precioNormal
-                                  )}
-                                </p>
-
-                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-700 sm:text-xs">
-                                  <BadgePercent
-                                    size={13}
-                                    strokeWidth={
-                                      1.8
-                                    }
-                                  />
-
-                                  {descuento}%
-                                  OFF
-                                </span>
-                              </div>
-
-                              {etiquetaOferta && (
-                                <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.06em] text-orange-700">
-                                  {
-                                    etiquetaOferta
-                                  }
-                                </p>
-                              )}
-
-                              {tiempoRestante && (
-                                <div className="mt-1 inline-flex max-w-full items-center rounded-md border border-black bg-white px-1.5 py-0.5">
-  <span className="text-[10px] font-medium leading-4 text-black sm:text-[11px]">
-                                    Finaliza en{" "}
-                                    {tiempoRestante.dias >
-                                      0 &&
-                                      `${tiempoRestante.dias}d `}
-                                    {String(
-                                      tiempoRestante.horas
-                                    ).padStart(
-                                      2,
-                                      "0"
-                                    )}
-                                    h{" "}
-                                    {String(
-                                      tiempoRestante.minutos
-                                    ).padStart(
-                                      2,
-                                      "0"
-                                    )}
-                                    m{" "}
-                                    {String(
-                                      tiempoRestante.segundos
-                                    ).padStart(
-                                      2,
-                                      "0"
-                                    )}
-                                    s
-                                  </span>
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <p className="text-base font-medium tracking-tight text-[#263238] sm:text-xl">
-                              {formatearPrecio(
-                                precioFinal
-                              )}
-                            </p>
-                          )}
-
-                          <div className="mt-auto pt-1.5">
-                            {/* OPCIONES DE PAGO */}
-
-                            {esArgentina && (
-                            <div className="border-t border-[#E3E8E7] pt-1.5">
-
-                              {/* TRANSFERENCIA */}
-
-                              <div className="flex items-start gap-1.5">
-                                <Landmark
-                                  size={14}
-                                  strokeWidth={
-                                    1.7
-                                  }
-                                  className="mt-0.5 shrink-0 text-[#285861]"
-                                />
-
-                                <p className="text-[10px] font-normal leading-[0.9rem] text-[#687477] sm:text-[11px] sm:leading-4">
-                                  <span className="font-medium text-[#285861]">
-                                    {
-                                      DESCUENTO_TRANSFERENCIA
-                                    }
-                                    % OFF
-                                  </span>{" "}
-                                  con
-                                  transferencia
-                                  {" · "}
-                                  <span className="font-medium text-[#263238]">
-                                    {formatearPrecio(
-                                      precioTransferencia
-                                    )}
-                                  </span>
-                                </p>
-                              </div>
-
-                              {/* CUOTAS */}
-
-                              <div className="mt-1 flex items-start gap-1.5">
-                                <CreditCard
-                                  size={14}
-                                  strokeWidth={
-                                    1.7
-                                  }
-                                  className="mt-0.5 shrink-0 text-[#B59672]"
-                                />
-
-                                <p className="text-[10px] font-normal leading-[0.9rem] text-[#687477] sm:text-[11px] sm:leading-4">
-                                  <span className="font-medium text-[#263238]">
-                                    {
-                                      CUOTAS_SIN_INTERES
-                                    }{" "}
-                                    x{" "}
-                                    {formatearPrecio(
-                                      precioCuota
-                                    )}
-                                  </span>{" "}
-                                  sin interés
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                              {/* BOTÓN */}
-
-                                                        <button
-                                                          type="button"
-                                                          onClick={() =>
-                                                            irAProducto(
-                                                              producto.id
-                                                            )
-                                                          }
-                                                          className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-[#285861] px-2.5 py-1.5 text-[10px] font-medium text-white transition-colors hover:bg-[#204850] sm:px-3 sm:py-2 sm:text-xs"
-                                                        >
-                                                          <ShoppingBag
-                                                            size={14}
-                                                            strokeWidth={
-                                                              1.8
-                                                            }
-                                                            className="shrink-0"
-                                                          />
-
-                                                          {t.verProducto}
-                                                        </button>
-                                                        </div>
-                                                      </div>
-                                                    </div>
-                                                  </article>
-                                                );
-                                              }
-                                            )}
-                                          </div>
-                                        ) : (
-                                          /* SIN PRODUCTOS */
-
-                                          <div className="mx-auto max-w-xl rounded-md border border-dashed border-[#D6DFDE] bg-[#F7FAFA] px-5 py-10 text-center">
-                                            <Home
-                                              size={30}
-                                              strokeWidth={1.7}
-                                              className="mx-auto text-[#8BA0A1]"
-                                            />
-
-                                            <p className="mt-3 text-sm font-normal leading-6 text-[#687477]">
-                                              {t.proximamente}
-                                            </p>
-                                          </div>
-                                        )}
-
-                                        {/* VER TODOS / VER MENOS */}
-
-                                        {productosFiltrados.length >
-                                          3 && (
-                                          <div className="mt-7 flex justify-center">
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                setMostrarTodos(
-                                                  (actual) =>
-                                                    !actual
-                                                )
-                                              }
-                                              className="inline-flex min-w-[160px] items-center justify-center gap-2 rounded-md border border-[#B9CCCD] bg-white px-5 py-2.5 text-xs font-medium text-[#285861] transition-colors hover:border-[#7FA0A3] hover:bg-[#EEF5F5] sm:text-sm"
-                                            >
-                                              {mostrarTodos ? (
-                                                <>
-                                                  <ChevronUp
-                                                    size={16}
-                                                    strokeWidth={
-                                                      1.8
-                                                    }
-                                                  />
-
-                                                  {t.verMenos}
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <ChevronDown
-                                                    size={16}
-                                                    strokeWidth={
-                                                      1.8
-                                                    }
-                                                  />
-
-                                                  {t.verTodos}
-                                                </>
-                                              )}
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </section>
-                                  </main>
-                                );
-                              };
-
-                              export default Tienda;
-                         
+export default Tienda;
