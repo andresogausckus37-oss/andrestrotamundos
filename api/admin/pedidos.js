@@ -582,7 +582,7 @@ const subirImagenProducto = async (req, res) => {
     });
   }
 
-  const bucket = globalThis.PRODUCTOS_R2;
+  const bucket = req.env?.PRODUCTOS_R2;
 
   if (!bucket) {
     throw new Error(
@@ -606,7 +606,7 @@ const subirImagenProducto = async (req, res) => {
   );
 
   const url =
-    `${globalThis.PRODUCTOS_R2_URL}/${pathname}`;
+  `${req.env.PRODUCTOS_R2_URL}/${pathname}`;
 
   return res.status(201).json({
     ok: true,
