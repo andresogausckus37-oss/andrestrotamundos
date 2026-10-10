@@ -1,4 +1,6 @@
 import handlerContenidoRedes from "./api/contenido-redes.js";
+import handlerAdminLogin from "./api/admin/login.js";
+import handlerAdminPedidos from "./api/admin/pedidos.js";
 
 const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
 
@@ -84,6 +86,36 @@ async function ejecutarHandlerContenidoRedes(request, env) {
   return res.obtenerRespuesta() || Response.json({ ok:false, error:"La API no generó una respuesta." }, { status:500 });
 }
 
+async function ejecutarHandlerGenerico(request, env, handler) {
+  sincronizarEntorno(env);
+
+  const url = new URL(request.url);
+
+  const req = {
+    method: request.method,
+    url: request.url,
+    query: Object.fromEntries(url.searchParams.entries()),
+    body: await leerBody(request),
+    headers: headersComoObjeto(request)
+  };
+
+  const res = crearRespuestaVercel();
+
+  const retorno = await handler(req, res);
+
+  if (retorno instanceof Response) {
+    return retorno;
+  }
+
+  return (
+    res.obtenerRespuesta() ||
+    Response.json(
+      { ok: false, error: "La API no generó una respuesta." },
+      { status: 500 }
+    )
+  );
+}
+
 async function pruebaMongoDB(env) {
   sincronizarEntorno(env);
   if (!env.MONGODB_URI) return Response.json({ ok:false, error:"MONGODB_URI no está configurado" }, { status:500 });
@@ -150,10 +182,41 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/prueba-mongodb") return pruebaMongoDB(env);
+if (url.pathname === "/api/diagnostico-redes") return diagnosticoRedes(env);
 
-    if (url.pathname === "/api/diagnostico-redes") return diagnosticoRedes(env);
+if (url.pathname === "/api/admin/login") {
+  try {
+    return await ejecutarHandlerGenerico(
+      request,
+      env,
+      handlerAdminLogin
+    );
+  } catch (error) {
+    return Response.json(
+      { ok: false, error: error?.message || "Error en login admin" },
+      { status: 500 }
+    );
+  }
+}
 
-    if (url.pathname === RUTA_CONTENIDO_REDES) {
+if (url.pathname === "/api/admin/pedidos") {
+  try {
+    return await ejecutarHandlerGenerico(
+      request,
+      env,
+      handlerAdminPedidos
+    );
+  } catch (error) {
+    return Response.json(
+      { ok: false, error: error?.message || "Error en API admin" },
+      { status: 500 }
+    );
+  }
+}
+
+/* DEBAJO DE TODO ESTO queda contenido-redes */
+if (url.pathname === RUTA_CONTENIDO_REDES) {
+      
       try {
         return await ejecutarHandlerContenidoRedes(request, env);
       } catch (error) {
