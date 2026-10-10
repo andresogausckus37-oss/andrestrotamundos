@@ -1,0 +1,415 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  CreditCard,
+  Expand,
+  Package,
+  Pause,
+  Play,
+  ShoppingBag,
+} from "lucide-react";
+
+import CalificacionProducto from "../componentes/CalificacionProducto";
+import {
+  MERCADO_ARGENTINA,
+  formatearPrecioMercado,
+} from "../utilidades/mercado";
+
+const CUOTAS_SIN_INTERES = 3;
+const DURACION_NUEVO_PRODUCTO_MS = 72 * 60 * 60 * 1000;
+
+const CATEGORIAS = [
+  { id: "todos", nombre: "Todos" },
+  { id: "tecnologia", nombre: "Tecnología" },
+  { id: "computacion", nombre: "Computación" },
+  { id: "audio", nombre: "Audio" },
+  { id: "pesca", nombre: "Pesca" },
+  { id: "jardin", nombre: "Jardín" },
+  { id: "hogar", nombre: "Hogar" },
+  { id: "ninos", nombre: "Niños" },
+  { id: "accesorios", nombre: "Accesorios" },
+  { id: "otros", nombre: "Otros" },
+];
+
+const Tienda = () => {
+  const navigate = useNavigate();
+
+  const [productos, setProductos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [categoriaActiva, setCategoriaActiva] = useState("todos");
+  const [mostrarTodos, setMostrarTodos] = useState(false);
+  const [ahora, setAhora] = useState(() => Date.now());
+  const [sliderActivo, setSliderActivo] = useState(true);
+  const [sliderPausadoPorInteraccion, setSliderPausadoPorInteraccion] =
+    useState(false);
+  const [indiceReel, setIndiceReel] = useState(0);
+  const sliderRef = useRef(null);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    const cargarProductos = async () => {
+      try {
+        setCargando(true);
+        setError("");
+
+        const respuesta = await fetch(
+          "/api/admin/pedidos?accion=productos-publicos"
+        );
+
+        const datos = await respuesta.json();
+
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.error || "No se pudieron cargar los productos."
+          );
+        }
+
+        if (!cancelado) {
+          setProductos(
+            Array.isArray(datos.productos) ? datos.productos : []
+          );
+        }
+      } catch (errorCarga) {
+        console.error("Error cargando productos:", errorCarga);
+
+        if (!cancelado) {
+          setError(
+            errorCarga.message || "No se pudieron cargar los productos."
+          );
+        }
+      } finally {
+        if (!cancelado) {
+          setCargando(false);
+        }
+      }
+    };
+
+    cargarProductos();
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const intervalo = window.setInterval(() => {
+      setAhora(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalo);
+  }, []);
+
+  useEffect(() => {
+    const tituloAnterior = document.title;
+    const canonical = document.querySelector('link[rel="canonical"]');
+    const canonicalAnterior = canonical?.getAttribute("href") || "";
+
+    document.title = "Tienda de Productos | Andres House Sitter";
+
+    const descripcion =
+      "Descubre productos seleccionados para el hogar, tecnología, audio, pesca, jardín, niños y más.";
+
+    const actualizarMeta = (selector, atributo, contenido) => {
+      let elemento = document.querySelector(selector);
+
+      if (!elemento) {
+        elemento = document.createElement("meta");
+
+        const coincidencia = selector.match(
+          atributo === "name"
+            ? /name="([^"]+)"/
+            : /property="([^"]+)"/
+        );
+
+        elemento.setAttribute(
+          atributo,
+          coincidencia?.[1] || ""
+        );
+
+        document.head.appendChild(elemento);
+      }
+
+      elemento.setAttribute("content", contenido);
+    };
+
+    actualizarMeta(
+      'meta[name="description"]',
+      "name",
+      descripcion
+    );
+
+    actualizarMeta(
+      'meta[property="og:title"]',
+      "property",
+      "Tienda de Productos | Andres House Sitter"
+    );
+
+    actualizarMeta(
+      'meta[property="og:description"]',
+      "property",
+      descripcion
+    );
+
+    actualizarMeta(
+      'meta[property="og:url"]',
+      "property",
+      `${window.location.origin}/tienda`
+    );
+
+    if (canonical) {
+      canonical.setAttribute(
+        "href",
+        `${window.location.origin}/tienda`
+      );
+    }
+
+    return () => {
+      document.title = tituloAnterior;
+
+      if (canonical && canonicalAnterior) {
+        canonical.setAttribute("href", canonicalAnterior);
+      }
+    };
+  }, []);
+
+  const categoriasVisibles = useMemo(() => {
+    const disponibles = new Set(
+      productos
+        .map((producto) => producto.categoria)
+        .filter(Boolean)
+    );
+
+    return CATEGORIAS.filter(
+      (categoria) =>
+        categoria.id === "todos" ||
+        disponibles.has(categoria.id)
+    );
+  }, [productos]);
+
+  const productosFiltrados = useMemo(() => {
+    if (categoriaActiva === "todos") {
+      return productos;
+    }
+
+    return productos.filter(
+      (producto) => producto.categoria === categoriaActiva
+    );
+  }, [productos, categoriaActiva]);
+
+  const productosMostrados = mostrarTodos
+    ? productosFiltrados
+    : productosFiltrados.slice(0, 6);
+
+  const productosConReel = useMemo(() => {
+    return productos
+      .map((producto) => {
+        const reel = producto.videoReel;
+
+        const urlReel =
+          typeof reel === "string"
+            ? reel
+            : reel?.url || reel?.src || reel?.video || "";
+
+        return {
+          ...producto,
+          urlReel,
+        };
+      })
+      .filter((producto) => Boolean(producto.urlReel));
+  }, [productos]);
+
+  const moverSlider = (direccion) => {
+    if (productosConReel.length === 0) return;
+
+    setIndiceReel((indiceActual) => {
+      const siguiente =
+        (indiceActual + direccion + productosConReel.length) %
+        productosConReel.length;
+
+      return siguiente;
+    });
+  };
+
+  useEffect(() => {
+    if (
+      !sliderActivo ||
+      sliderPausadoPorInteraccion ||
+      productosConReel.length <= 1
+    ) {
+      return undefined;
+    }
+
+    const intervalo = window.setInterval(() => {
+      moverSlider(1);
+    }, 5000);
+
+    return () => window.clearInterval(intervalo);
+  }, [
+    sliderActivo,
+    sliderPausadoPorInteraccion,
+    productosConReel.length,
+  ]);
+
+  useEffect(() => {
+    const contenedor = sliderRef.current;
+
+    if (!contenedor || productosConReel.length === 0) return;
+
+    const tarjeta = contenedor.children[indiceReel];
+
+    if (tarjeta) {
+      tarjeta.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }, [indiceReel, productosConReel.length]);
+
+  const ponerReelEnPantallaCompleta = async (evento) => {
+    const video = evento.currentTarget
+      .closest("article")
+      ?.querySelector("video");
+
+    if (!video) return;
+
+    try {
+      if (video.requestFullscreen) {
+        await video.requestFullscreen();
+      } else if (video.webkitEnterFullscreen) {
+        video.webkitEnterFullscreen();
+      }
+    } catch (errorPantallaCompleta) {
+      console.error(
+        "No se pudo abrir el video en pantalla completa:",
+        errorPantallaCompleta
+      );
+    }
+  };
+
+  const formatearPrecio = (precio) => {
+    const numero = Number(precio);
+
+    if (!Number.isFinite(numero) || numero <= 0) {
+      return "Precio a consultar";
+    }
+
+    return formatearPrecioMercado(
+      numero,
+      MERCADO_ARGENTINA
+    );
+  };
+
+  const obtenerTiempoRestante = (finalizaEn) => {
+    if (!finalizaEn) return null;
+
+    const final = new Date(finalizaEn).getTime();
+
+    if (!Number.isFinite(final)) {
+      return null;
+    }
+
+    const diferencia = final - ahora;
+
+    if (diferencia <= 0) {
+      return null;
+    }
+
+    const totalSegundos = Math.floor(diferencia / 1000);
+
+    return {
+      dias: Math.floor(totalSegundos / 86400),
+      horas: Math.floor((totalSegundos % 86400) / 3600),
+      minutos: Math.floor((totalSegundos % 3600) / 60),
+      segundos: totalSegundos % 60,
+    };
+  };
+
+  const irAProducto = (productoId) => {
+    navigate(`/tienda/${productoId}`);
+  };
+
+  return (
+    <main className="min-h-screen bg-[#FCFDFC]">
+      <div className="overflow-hidden bg-black py-2 text-white">
+        <div className="flex w-max animate-[marquee_16s_linear_infinite] whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.16em] sm:text-xs">
+          {Array.from({ length: 8 }).map((_, indice) => (
+            <span key={indice} className="mx-8">
+              Envío gratis en compras mayores a $40.000
+            </span>
+          ))}
+        </div>
+
+        <style>{`
+          @keyframes marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+          }
+        `}</style>
+      </div>
+
+      {productosConReel.length > 0 && (
+        <section className="border-b border-[#DCE5E4] bg-white px-4 py-6 sm:px-5 sm:py-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#8A7966] sm:text-[11px]">
+                  Descubrí nuestros productos
+                </p>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight text-[#263238] sm:text-xl">
+                  Productos más buscados
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSliderActivo((actual) => !actual)}
+                className="inline-flex h-9 items-center gap-2 rounded-md border border-[#DCE5E4] bg-white px-3 text-xs font-medium text-[#285861] transition-colors hover:bg-[#EEF5F5]"
+                aria-label={sliderActivo ? "Detener slider" : "Reproducir slider"}
+              >
+                {sliderActivo ? (
+                  <>
+                    <Pause size={14} strokeWidth={1.8} />
+                    <span className="hidden sm:inline">Detener</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={14} strokeWidth={1.8} />
+                    <span className="hidden sm:inline">Reproducir</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div
+              className="relative"
+              onMouseEnter={() => setSliderPausadoPorInteraccion(true)}
+              onMouseLeave={() => setSliderPausadoPorInteraccion(false)}
+              onTouchStart={() => setSliderPausadoPorInteraccion(true)}
+              onTouchEnd={() => setSliderPausadoPorInteraccion(false)}
+              onPointerDown={() => setSliderPausadoPorInteraccion(true)}
+              onPointerUp={() => setSliderPausadoPorInteraccion(false)}
+            >
+              {productosConReel.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => moverSlider(-1)}
+                    className="absolute left-1 top-[42%] z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md bg-black/70 text-white shadow-md transition hover:bg-black sm:-left-4"
+                    aria-label="Producto anterior"
+                  >
+                    <ChevronLeft size={20} strokeWidth={2} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => moverSlider(1)}
+                    className="absolute right-1 top-[42%] z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md bg-black/70 text-white shadow-md transition hover:bg-black sm:-right-4"
+                    aria-label="Producto siguiente"
