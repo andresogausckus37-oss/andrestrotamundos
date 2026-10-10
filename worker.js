@@ -4,10 +4,12 @@ const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
 
 function sincronizarEntorno(env) {
   const claves = [
-    "MONGODB_URI", "OPENAI_API_KEY", "ADMIN_PASSWORD", "CRON_SECRET",
-    "THREADS_APP_ID", "THREADS_APP_SECRET", "INSTAGRAM_ACCESS_TOKEN",
-    "FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_ACCESS_TOKEN"
-  ];
+  "MONGODB_URI", "OPENAI_API_KEY", "ADMIN_PASSWORD", "CRON_SECRET",
+  "THREADS_APP_ID", "THREADS_APP_SECRET", "INSTAGRAM_ACCESS_TOKEN",
+  "FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_ACCESS_TOKEN",
+  "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID",
+  "TELEGRAM_VISITAS_BOT_TOKEN", "TELEGRAM_VISITAS_CHAT_ID"
+];
   for (const clave of claves) {
     if (env?.[clave] !== undefined && env?.[clave] !== null) {
       process.env[clave] = String(env[clave]);
@@ -96,6 +98,35 @@ async function pruebaMongoDB(env) {
     return Response.json({ ok:false, error:error?.message || "Error conectando con MongoDB" }, { status:500 });
   }
 }
+
+async function diagnosticoRedes(env) {
+  sincronizarEntorno(env);
+
+  try {
+    const { MongoClient } = await import("mongodb");
+    const cliente = new MongoClient(env.MONGODB_URI);
+
+    await cliente.connect();
+
+    const programados = await cliente
+      .db("andres_imprimibles")
+      .collection("contenido_redes")
+      .countDocuments({ estado: "programado" });
+
+    await cliente.close();
+
+    return Response.json({
+      ok: true,
+      programados
+    });
+  } catch (error) {
+    return Response.json(
+      { ok: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
 function autorizacionCron(env) {
   if (!env?.CRON_SECRET) throw new Error("Falta configurar CRON_SECRET en Cloudflare.");
   return `Bearer ${env.CRON_SECRET}`;
@@ -119,6 +150,8 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/prueba-mongodb") return pruebaMongoDB(env);
+
+    if (url.pathname === "/api/diagnostico-redes") return diagnosticoRedes(env);
 
     if (url.pathname === RUTA_CONTENIDO_REDES) {
       try {
