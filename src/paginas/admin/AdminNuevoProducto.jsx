@@ -119,6 +119,10 @@ export default function AdminNuevoProducto() {
     ventaCruzadaId: "",
     destacado: false,
 
+    categoria: "",
+    stock: "",
+    disponibilidad: "disponible",
+
     descripcion: "",
     descripcionLarga: "",
 
@@ -341,6 +345,13 @@ export default function AdminNuevoProducto() {
       ventaCruzadaId: formulario.ventaCruzadaId,
       destacado: formulario.destacado,
 
+      categoria: formulario.categoria,
+      stock:
+        formulario.stock === ""
+          ? null
+          : Math.max(0, Number(formulario.stock) || 0),
+      disponibilidad: formulario.disponibilidad,
+
       descripcion: formulario.descripcion.trim(),
       descripcionLarga: formulario.descripcionLarga.trim(),
 
@@ -423,6 +434,11 @@ export default function AdminNuevoProducto() {
 
     if (!formulario.precioARS || Number(formulario.precioARS) <= 0) {
       alert("Falta indicar un precio válido en ARS.");
+      return;
+    }
+
+    if (!formulario.categoria) {
+      alert("Falta seleccionar la categoría del producto.");
       return;
     }
 
@@ -639,6 +655,67 @@ export default function AdminNuevoProducto() {
             marcado={formulario.destacado}
             onChange={(v) => cambiar("destacado", v)}
           />
+        </Seccion>
+
+        <Seccion titulo="Categoría y disponibilidad">
+          <div className="grid gap-4 md:grid-cols-3">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-slate-700">
+                Categoría
+              </span>
+
+              <select
+                value={formulario.categoria}
+                onChange={(e) => cambiar("categoria", e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              >
+                <option value="">Seleccionar categoría</option>
+                <option value="tecnologia">Tecnología</option>
+                <option value="computacion">Computación</option>
+                <option value="audio">Audio</option>
+                <option value="pesca">Pesca</option>
+                <option value="jardin">Jardín</option>
+                <option value="hogar">Hogar</option>
+                <option value="ninos">Niños</option>
+                <option value="accesorios">Accesorios</option>
+                <option value="otros">Otros</option>
+              </select>
+
+              <span className="mt-1 block text-[10px] leading-4 text-slate-500">
+                Se usa para organizar y filtrar los productos de la tienda.
+              </span>
+            </label>
+
+            <Campo
+              titulo="Stock"
+              tipo="number"
+              valor={formulario.stock}
+              onChange={(v) => cambiar("stock", v)}
+              placeholder="Ej. 25"
+              ayuda="Opcional. Déjalo vacío si no quieres controlar unidades."
+            />
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-slate-700">
+                Disponibilidad
+              </span>
+
+              <select
+                value={formulario.disponibilidad}
+                onChange={(e) => cambiar("disponibilidad", e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              >
+                <option value="disponible">Disponible</option>
+                <option value="sin-stock">Sin stock</option>
+                <option value="proximamente">Próximamente</option>
+                <option value="pausado">Pausado</option>
+              </select>
+
+              <span className="mt-1 block text-[10px] leading-4 text-slate-500">
+                Indica si el producto puede mostrarse o venderse actualmente.
+              </span>
+            </label>
+          </div>
         </Seccion>
 
         <Seccion titulo="Contenido de la ficha">
