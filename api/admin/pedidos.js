@@ -539,26 +539,18 @@ const subirImagenProducto = async (req, res) => {
     });
   }
 
-  const esImagenFacebook =
-  numeroImagen === "facebook";
+  const numero = Number(numeroImagen);
 
-const numero = esImagenFacebook
-  ? "facebook"
-  : Number(numeroImagen);
-
-if (
-  !esImagenFacebook &&
-  (
+  if (
     !Number.isInteger(numero) ||
     numero < 1 ||
     numero > 12
-  )
-) {
-  return res.status(400).json({
-    error:
-      "El número de imagen debe estar entre 1 y 12 o ser facebook.",
-  });
-}
+  ) {
+    return res.status(400).json({
+      error:
+        "El número de imagen debe estar entre 1 y 12.",
+    });
+  }
 
   if (!imagenBase64) {
     return res.status(400).json({
@@ -566,10 +558,6 @@ if (
     });
   }
 
-  /*
-   * Recibimos el WebP ya optimizado desde
-   * AdminNuevoProducto.
-   */
   const base64 = imagenBase64.replace(
     /^data:image\/webp;base64,/,
     ""
@@ -586,10 +574,6 @@ if (
     });
   }
 
-  /*
-   * Evitamos recibir archivos excesivamente
-   * grandes por error.
-   */
   const MAX_BYTES = 5 * 1024 * 1024;
 
   if (buffer.length > MAX_BYTES) {
@@ -598,27 +582,37 @@ if (
     });
   }
 
+  const bucket = globalThis.PRODUCTOS_R2;
+
+  if (!bucket) {
+    throw new Error(
+      "PRODUCTOS_R2 no está conectado al Worker."
+    );
+  }
+
   const pathname =
     `productos/${productoId}/imagen-${numero}.webp`;
 
-  const blob = await put(
+  await bucket.put(
     pathname,
     buffer,
     {
-      access: "public",
-      contentType: "image/webp",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      token:
-        process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
+      httpMetadata: {
+        contentType: "image/webp",
+        cacheControl:
+          "public, max-age=31536000",
+      },
     }
   );
+
+  const url =
+    `${globalThis.PRODUCTOS_R2_URL}/${pathname}`;
 
   return res.status(201).json({
     ok: true,
     numeroImagen: numero,
-    url: blob.url,
-    pathname: blob.pathname,
+    url,
+    pathname,
   });
 };
 

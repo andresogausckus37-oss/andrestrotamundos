@@ -89,6 +89,10 @@ async function ejecutarHandlerContenidoRedes(request, env) {
 async function ejecutarHandlerGenerico(request, env, handler) {
   sincronizarEntorno(env);
 
+  globalThis.PRODUCTOS_R2 = env.PRODUCTOS_R2;
+globalThis.PRODUCTOS_R2_URL =
+  "https://pub-60d59fb304eb48d384739f40d6f48d4f.r2.dev";
+
   const url = new URL(request.url);
 
   const req = {
