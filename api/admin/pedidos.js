@@ -1,8 +1,5 @@
 import crypto from "crypto";
-import { del, get, put } from "@vercel/blob";
-import { handleUpload } from "@vercel/blob/client";
 import { conectarMongoDB } from "../../lib/mongodb.js";
-import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
 /* =========================
    AUTENTICACIÓN ADMIN
@@ -10,7 +7,7 @@ import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
 const obtenerCookies = (req) => {
   const cookies = {};
-  const header = req.headers.cookie || "";
+  const header = req.headers?.cookie || "";
 
   header.split(";").forEach((cookie) => {
     const [nombre, ...valor] = cookie.trim().split("=");
@@ -33,23 +30,81 @@ const adminAutorizado = (req) => {
     .update("andres-imprimibles-admin")
     .digest("hex");
 
-  const cookies = obtenerCookies(req);
-  const token = cookies.admin_token;
+  const token = obtenerCookies(req).admin_token;
 
   if (!token) return false;
 
   const a = Buffer.from(token);
   const b = Buffer.from(tokenEsperado);
 
-  if (a.length !== b.length) {
-    return false;
-  }
+  if (a.length !== b.length) return false;
 
   return crypto.timingSafeEqual(a, b);
 };
 
 /* =========================
-   LISTAR PEDIDOS PENDIENTES
+   UTILIDADES R2
+========================= */
+
+const obtenerBucketProductos = (req) => {
+  const bucket = req.env?.PRODUCTOS_R2;
+
+  if (!bucket) {
+    throw new Error(
+      "PRODUCTOS_R2 no está conectado al Worker."
+    );
+  }
+
+  return bucket;
+};
+
+const obtenerUrlPublicaR2 = (req) => {
+  const url = req.env?.PRODUCTOS_R2_URL;
+
+  if (!url) {
+    throw new Error(
+      "Falta PRODUCTOS_R2_URL en el Worker."
+    );
+  }
+
+  return String(url).replace(/\/+$/, "");
+};
+
+const productoIdValido = (productoId) =>
+  typeof productoId === "string" &&
+  /^[a-z0-9-]+$/.test(productoId);
+
+const eliminarCarpetaProductoR2 = async (
+  req,
+  productoId
+) => {
+  const bucket = obtenerBucketProductos(req);
+  const prefix = `productos/${productoId}/`;
+  let cursor;
+
+  do {
+    const resultado = await bucket.list({
+      prefix,
+      ...(cursor ? { cursor } : {}),
+    });
+
+    const claves = (resultado.objects || []).map(
+      (objeto) => objeto.key
+    );
+
+    if (claves.length > 0) {
+      await bucket.delete(claves);
+    }
+
+    cursor =
+      resultado.truncated && resultado.cursor
+        ? resultado.cursor
+        : null;
+  } while (cursor);
+};
+
+/* =========================
+   PEDIDOS POR TRANSFERENCIA
 ========================= */
 
 const listarPedidos = async (req, res) => {
@@ -59,35 +114,22 @@ const listarPedidos = async (req, res) => {
     .collection("pedidos")
     .find({
       metodoPago: "transferencia",
-      estado: {
-        $ne: "aprobado",
-      },
+      estado: { $ne: "aprobado" },
     })
-    .sort({
-      creadoEn: -1,
-    })
+    .sort({ creadoEn: -1 })
     .limit(100)
     .toArray();
 
   const resultado = pedidos.map((pedido) => ({
     pedidoId: pedido.pedidoId,
-
     nombreComprador: pedido.nombreComprador,
-
     emailComprador: pedido.emailComprador,
-
     productos: pedido.productos || [],
-
     subtotal: pedido.subtotal,
-
     descuento: pedido.descuento,
-
     precio: pedido.precio,
-
     estado: pedido.estado,
-
     creadoEn: pedido.creadoEn,
-
     comprobante: Boolean(pedido.comprobante),
   }));
 
@@ -96,10 +138,11 @@ const listarPedidos = async (req, res) => {
   });
 };
 
-/* =========================
-   OBTENER COMPROBANTE
-========================= */
-
+/*
+ * El almacenamiento anterior fue retirado.
+ * La API que SUBE comprobantes debe migrarse a R2 antes
+ * de volver a habilitar la visualización del archivo.
+ */
 const obtenerComprobante = async (req, res) => {
   const pedidoId = req.query?.pedidoId;
 
@@ -124,125 +167,17 @@ const obtenerComprobante = async (req, res) => {
     });
   }
 
-  if (!pedido.comprobante?.pathname) {
+  if (!pedido.comprobante) {
     return res.status(404).json({
       error: "Este pedido no tiene comprobante",
     });
   }
 
-  const resultado = await get(
-    pedido.comprobante.pathname,
-    {
-      access: "private",
-    }
-  );
-
-  if (!resultado?.stream) {
-    return res.status(404).json({
-      error: "Comprobante no encontrado",
-    });
-  }
-
-  const contentType =
-    pedido.comprobante.contentType ||
-    "application/octet-stream";
-
-  res.setHeader("Content-Type", contentType);
-
-  res.setHeader(
-    "Cache-Control",
-    "private, no-store"
-  );
-
-  res.setHeader(
-    "Content-Disposition",
-    'inline; filename="comprobante"'
-  );
-
-  const reader = resultado.stream.getReader();
-
-  while (true) {
-    const { done, value } = await reader.read();
-
-    if (done) break;
-
-    res.write(Buffer.from(value));
-  }
-
-  return res.end();
+  return res.status(501).json({
+    error:
+      "La visualización del comprobante está pendiente de migrar a Cloudflare R2.",
+  });
 };
-
-/* =========================
-   ENVIAR EMAIL DE COMPRA
-========================= */
-
-const enviarEmailPedido = async ({
-  pedidos,
-  pedido,
-}) => {
-  /*
-   * Si ya quedó registrado como enviado,
-   * no volvemos a enviarlo.
-   */
-  if (pedido.emailEnviado === true) {
-    return true;
-  }
-
-  if (!pedido.emailComprador) {
-    console.error(
-      `Pedido ${pedido.pedidoId}: falta emailComprador.`
-    );
-
-    return false;
-  }
-
-  if (
-    !Array.isArray(pedido.productos) ||
-    pedido.productos.length === 0
-  ) {
-    console.error(
-      `Pedido ${pedido.pedidoId}: no contiene productos para enviar por email.`
-    );
-
-    return false;
-  }
-
-  try {
-    await enviarEmailCompra({
-      pedidoId: pedido.pedidoId,
-      email: pedido.emailComprador,
-      productos: pedido.productos,
-    });
-
-    const fechaEmail = new Date();
-
-    await pedidos.updateOne(
-      {
-        pedidoId: pedido.pedidoId,
-        metodoPago: "transferencia",
-      },
-      {
-        $set: {
-          emailEnviado: true,
-          emailEnviadoEn: fechaEmail,
-        },
-      }
-    );
-
-    return true;
-  } catch (error) {
-    console.error(
-      `Error enviando email del pedido ${pedido.pedidoId}:`,
-      error
-    );
-
-    return false;
-  }
-};
-
-/* =========================
-   AVANZAR ESTADO
-========================= */
 
 const avanzarEstado = async (req, res) => {
   const pedidoId = req.body?.pedidoId;
@@ -276,10 +211,6 @@ const avanzarEstado = async (req, res) => {
 
   const fecha = new Date();
 
-  /* =========================
-     COMPROBANTE → VERIFICANDO
-  ========================= */
-
   if (pedido.estado === "comprobante_recibido") {
     await pedidos.updateOne(
       {
@@ -291,7 +222,6 @@ const avanzarEstado = async (req, res) => {
         $set: {
           estado: "verificando_pago",
         },
-
         $push: {
           historialEstados: {
             estado: "verificando_pago",
@@ -307,10 +237,6 @@ const avanzarEstado = async (req, res) => {
     });
   }
 
-  /* =========================
-     VERIFICANDO → APROBADO
-  ========================= */
-
   if (pedido.estado === "verificando_pago") {
     const resultado = await pedidos.updateOne(
       {
@@ -323,19 +249,10 @@ const avanzarEstado = async (req, res) => {
           estado: "aprobado",
           pagadoEn: fecha,
         },
-
         $push: {
           historialEstados: {
-            $each: [
-              {
-                estado: "pago_confirmado",
-                fecha,
-              },
-              {
-                estado: "descarga_habilitada",
-                fecha,
-              },
-            ],
+            estado: "pago_confirmado",
+            fecha,
           },
         },
       }
@@ -348,77 +265,39 @@ const avanzarEstado = async (req, res) => {
       });
     }
 
-    /*
-     * El pedido ya está aprobado.
-     * Ahora enviamos el email de descarga.
-     *
-     * Si Resend falla, NO revertimos el pago:
-     * el cliente conserva la descarga habilitada.
-     */
-    const emailEnviado = await enviarEmailPedido({
-      pedidos,
-      pedido: {
-        ...pedido,
-        estado: "aprobado",
-        pagadoEn: fecha,
-      },
-    });
-
     return res.status(200).json({
       actualizado: true,
       estado: "aprobado",
-      descargaHabilitada: true,
-      emailEnviado,
     });
   }
 
-  /* =========================
-     YA APROBADO
-  ========================= */
-
   if (pedido.estado === "aprobado") {
-    /*
-     * Si el pedido fue aprobado anteriormente
-     * pero el email no llegó a enviarse,
-     * hacemos un nuevo intento.
-     */
-    let emailEnviado =
-      pedido.emailEnviado === true;
-
-    if (!emailEnviado) {
-      emailEnviado = await enviarEmailPedido({
-        pedidos,
-        pedido,
-      });
-    }
-
     return res.status(200).json({
       actualizado: false,
       estado: "aprobado",
-      descargaHabilitada: true,
-      emailEnviado,
     });
   }
 
   return res.status(400).json({
-    error: `No se puede avanzar desde el estado "${pedido.estado}".`,
+    error:
+      `No se puede avanzar desde el estado "${pedido.estado}".`,
   });
 };
 
 /* =========================
-   CREAR PRODUCTO
+   CREAR PRODUCTO FÍSICO
 ========================= */
 
 const crearProducto = async (req, res) => {
   const producto = req.body;
 
-  if (!producto?.id) {
+  if (!productoIdValido(producto?.id)) {
     return res.status(400).json({
-      error: "Falta el ID del producto.",
+      error: "Falta el ID del producto o es inválido.",
     });
   }
 
-  if (!producto?.nombre) {
+  if (!producto?.nombre?.trim()) {
     return res.status(400).json({
       error: "Falta el nombre del producto.",
     });
@@ -430,13 +309,11 @@ const crearProducto = async (req, res) => {
     });
   }
 
-  /*
-   * A partir de ahora, los productos nuevos
-   * deben tener su PDF privado asociado.
-   */
-  if (!producto?.archivoPDF) {
+  const precioARS = Number(producto?.precioARS);
+
+  if (!Number.isFinite(precioARS) || precioARS <= 0) {
     return res.status(400).json({
-      error: "Falta el PDF privado del producto.",
+      error: "El precio ARS es inválido.",
     });
   }
 
@@ -454,13 +331,8 @@ const crearProducto = async (req, res) => {
   }
 
   const fecha = new Date();
-
-  /*
-   * La fecha de creación y el vencimiento de la oferta
-   * se calculan en el servidor. No confiamos en el reloj
-   * del navegador para definir estas fechas.
-   */
-  let ofertaLanzamiento = producto?.ofertaLanzamiento;
+  let ofertaLanzamiento =
+    producto?.ofertaLanzamiento;
 
   if (
     ofertaLanzamiento &&
@@ -475,25 +347,23 @@ const crearProducto = async (req, res) => {
     if (
       !Number.isInteger(duracionDias) ||
       duracionDias < 1 ||
-      duracionDias > 7
+      duracionDias > 30
     ) {
       return res.status(400).json({
         error:
-          "La duración de la oferta debe ser de 1 a 7 días.",
+          "La duración de la oferta debe ser de 1 a 30 días.",
       });
     }
-
-    const finalizaEn = new Date(
-  fecha.getTime() +
-    duracionDias * 24 * 60 * 60 * 1000
-);
 
     ofertaLanzamiento = {
       ...ofertaLanzamiento,
       activa: true,
       duracionDias,
       iniciaEn: fecha,
-      finalizaEn,
+      finalizaEn: new Date(
+        fecha.getTime() +
+          duracionDias * 24 * 60 * 60 * 1000
+      ),
     };
   } else if (ofertaLanzamiento) {
     ofertaLanzamiento = {
@@ -504,6 +374,8 @@ const crearProducto = async (req, res) => {
 
   const nuevoProducto = {
     ...producto,
+    tipo: "fisico",
+    precioARS,
     ...(ofertaLanzamiento
       ? { ofertaLanzamiento }
       : {}),
@@ -519,11 +391,11 @@ const crearProducto = async (req, res) => {
     ok: true,
     mensaje: "Producto guardado correctamente.",
     productoId: resultado.insertedId.toString(),
-      });
+  });
 };
 
 /* =========================
-   SUBIR IMAGEN DE PRODUCTO
+   SUBIR IMAGEN A R2
 ========================= */
 
 const subirImagenProducto = async (req, res) => {
@@ -533,9 +405,9 @@ const subirImagenProducto = async (req, res) => {
     imagenBase64,
   } = req.body || {};
 
-  if (!productoId) {
+  if (!productoIdValido(productoId)) {
     return res.status(400).json({
-      error: "Falta productoId.",
+      error: "productoId inválido.",
     });
   }
 
@@ -552,7 +424,10 @@ const subirImagenProducto = async (req, res) => {
     });
   }
 
-  if (!imagenBase64) {
+  if (
+    typeof imagenBase64 !== "string" ||
+    !imagenBase64
+  ) {
     return res.status(400).json({
       error: "Falta la imagen.",
     });
@@ -563,10 +438,7 @@ const subirImagenProducto = async (req, res) => {
     ""
   );
 
-  const buffer = Buffer.from(
-    base64,
-    "base64"
-  );
+  const buffer = Buffer.from(base64, "base64");
 
   if (!buffer.length) {
     return res.status(400).json({
@@ -582,31 +454,20 @@ const subirImagenProducto = async (req, res) => {
     });
   }
 
-  const bucket = req.env?.PRODUCTOS_R2;
-
-  if (!bucket) {
-    throw new Error(
-      "PRODUCTOS_R2 no está conectado al Worker."
-    );
-  }
-
+  const bucket = obtenerBucketProductos(req);
   const pathname =
     `productos/${productoId}/imagen-${numero}.webp`;
 
-  await bucket.put(
-    pathname,
-    buffer,
-    {
-      httpMetadata: {
-        contentType: "image/webp",
-        cacheControl:
-          "public, max-age=31536000",
-      },
-    }
-  );
+  await bucket.put(pathname, buffer, {
+    httpMetadata: {
+      contentType: "image/webp",
+      cacheControl:
+        "public, max-age=31536000",
+    },
+  });
 
   const url =
-  `${req.env.PRODUCTOS_R2_URL}/${pathname}`;
+    `${obtenerUrlPublicaR2(req)}/${pathname}`;
 
   return res.status(201).json({
     ok: true,
@@ -617,182 +478,14 @@ const subirImagenProducto = async (req, res) => {
 };
 
 /* =========================
-   SUBIR PDF PRIVADO
-========================= */
-
-const subirPdfProducto = async (req, res) => {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return res.status(500).json({
-      error:
-        "No está configurado BLOB_READ_WRITE_TOKEN.",
-    });
-  }
-
-  /*
-   * El navegador no envía el PDF a esta
-   * función.
-   *
-   * handleUpload genera un token temporal
-   * para que el navegador pueda subir el
-   * PDF directamente al Blob privado.
-   */
-  const resultado = await handleUpload({
-    body: req.body,
-    request: req,
-
-    token:
-      process.env.BLOB_READ_WRITE_TOKEN,
-
-    onBeforeGenerateToken: async (
-      pathname,
-      clientPayload
-    ) => {
-      /*
-       * La generación del token viene desde
-       * el navegador del administrador.
-       *
-       * Acá sí comprobamos la cookie admin.
-       */
-      if (!adminAutorizado(req)) {
-        throw new Error("No autorizado");
-      }
-
-      if (
-        !pathname ||
-        typeof pathname !== "string"
-      ) {
-        throw new Error(
-          "Ruta de PDF inválida."
-        );
-      }
-
-      let datos = {};
-
-      if (clientPayload) {
-        try {
-          datos =
-            JSON.parse(clientPayload);
-        } catch {
-          throw new Error(
-            "Datos de subida inválidos."
-          );
-        }
-      }
-
-      const productoId =
-        datos?.productoId;
-
-      if (
-        !productoId ||
-        typeof productoId !== "string"
-      ) {
-        throw new Error(
-          "Falta productoId."
-        );
-      }
-
-      /*
-       * Los IDs de nuestros productos utilizan
-       * únicamente letras minúsculas, números
-       * y guiones.
-       */
-      if (
-        !/^[a-z0-9-]+$/.test(
-          productoId
-        )
-      ) {
-        throw new Error(
-          "productoId inválido."
-        );
-      }
-
-      const pathnameEsperado =
-        `productos/${productoId}/${productoId}.pdf`;
-
-      /*
-       * Impedimos que desde el navegador se
-       * pueda elegir cualquier ruta del
-       * almacenamiento privado.
-       */
-      if (
-        pathname !==
-        pathnameEsperado
-      ) {
-        throw new Error(
-          "La ruta del PDF no coincide con el producto."
-        );
-      }
-
-      return {
-        allowedContentTypes: [
-          "application/pdf",
-        ],
-
-        /*
-         * Permitimos hasta 250 MB.
-         */
-        maximumSizeInBytes:
-          250 * 1024 * 1024,
-
-        addRandomSuffix: false,
-
-        allowOverwrite: true,
-
-        tokenPayload:
-          JSON.stringify({
-            productoId,
-          }),
-      };
-    },
-
-    /*
-     * Esta llamada la realiza Vercel una vez
-     * completada la subida.
-     *
-     * No necesitamos modificar MongoDB aquí,
-     * porque AdminNuevoProducto recibe el
-     * pathname y luego lo guarda dentro del
-     * producto.
-     */
-    onUploadCompleted: async ({
-      blob,
-      tokenPayload,
-    }) => {
-      console.log(
-        "PDF privado subido:",
-        blob.pathname,
-        tokenPayload
-      );
-    },
-  });
-
-  return res.status(200).json(
-    resultado
-  );
-};
-
-/* =========================
-   SUBIR VIDEO REEL PÚBLICO
+   SUBIR VIDEO REEL A R2
 ========================= */
 
 const subirVideoReel = async (req, res) => {
-  if (!adminAutorizado(req)) {
-    return res.status(401).json({
-      error: "No autorizado",
-    });
-  }
+  const productoId = req.body?.productoId;
+  const video = req.body?.video;
 
-  const productoId =
-    req.body?.productoId;
-
-  const video =
-    req.body?.video;
-
-  if (
-    !productoId ||
-    typeof productoId !== "string" ||
-    !/^[a-z0-9-]+$/.test(productoId)
-  ) {
+  if (!productoIdValido(productoId)) {
     return res.status(400).json({
       error: "productoId inválido.",
     });
@@ -804,32 +497,40 @@ const subirVideoReel = async (req, res) => {
     });
   }
 
-  const bucket =
-    req.env?.PRODUCTOS_R2;
-
-  if (!bucket) {
-    throw new Error(
-      "PRODUCTOS_R2 no está conectado al Worker."
-    );
+  if (
+    video.type &&
+    video.type !== "video/mp4"
+  ) {
+    return res.status(400).json({
+      error: "El Reel debe ser un archivo MP4.",
+    });
   }
 
+  const MAX_BYTES = 100 * 1024 * 1024;
+
+  if (
+    typeof video.size === "number" &&
+    video.size > MAX_BYTES
+  ) {
+    return res.status(413).json({
+      error: "El Reel supera los 100 MB.",
+    });
+  }
+
+  const bucket = obtenerBucketProductos(req);
   const pathname =
     `productos/${productoId}/reel.mp4`;
 
-  await bucket.put(
-    pathname,
-    video,
-    {
-      httpMetadata: {
-        contentType: "video/mp4",
-        cacheControl:
-          "public, max-age=31536000",
-      },
-    }
-  );
+  await bucket.put(pathname, video, {
+    httpMetadata: {
+      contentType: "video/mp4",
+      cacheControl:
+        "public, max-age=31536000",
+    },
+  });
 
   const url =
-    `${req.env.PRODUCTOS_R2_URL}/${pathname}`;
+    `${obtenerUrlPublicaR2(req)}/${pathname}`;
 
   return res.status(201).json({
     ok: true,
@@ -839,7 +540,7 @@ const subirVideoReel = async (req, res) => {
 };
 
 /* =========================
-   LISTAR PRODUCTOS PÚBLICOS
+   PRODUCTOS
 ========================= */
 
 const listarProductosPublicos = async (
@@ -850,25 +551,16 @@ const listarProductosPublicos = async (
 
   const productos = await db
     .collection("productos")
-    .find({})
-    .sort({
-      creadoEn: -1,
+    .find({
+      activo: { $ne: false },
+      disponibilidad: { $ne: "pausado" },
     })
+    .sort({ creadoEn: -1 })
     .toArray();
 
-  /*
-   * archivoPDF NO debe salir por esta API.
-   *
-   * El pathname pertenece al sistema privado
-   * de entrega de archivos.
-   */
   const resultado = productos.map(
-    ({
-      _id,
-      actualizadoEn,
-      archivoPDF,
-      ...producto
-    }) => producto
+    ({ _id, actualizadoEn, ...producto }) =>
+      producto
   );
 
   res.setHeader(
@@ -881,19 +573,13 @@ const listarProductosPublicos = async (
   });
 };
 
-/* =========================
-   LISTAR PRODUCTOS ADMIN
-========================= */
-
 const listarProductosAdmin = async (req, res) => {
   const db = await conectarMongoDB();
 
   const productos = await db
     .collection("productos")
     .find({})
-    .sort({
-      creadoEn: -1,
-    })
+    .sort({ creadoEn: -1 })
     .toArray();
 
   const resultado = productos.map(
@@ -908,10 +594,6 @@ const listarProductosAdmin = async (req, res) => {
   });
 };
 
-/* =========================
-   OBTENER PRODUCTO ADMIN
-========================= */
-
 const obtenerProductoAdmin = async (req, res) => {
   const productoId = req.query?.productoId;
 
@@ -922,11 +604,10 @@ const obtenerProductoAdmin = async (req, res) => {
   }
 
   const db = await conectarMongoDB();
-  const productos = db.collection("productos");
 
-  const producto = await productos.findOne({
-    id: productoId,
-  });
+  const producto = await db
+    .collection("productos")
+    .findOne({ id: productoId });
 
   if (!producto) {
     return res.status(404).json({
@@ -934,10 +615,8 @@ const obtenerProductoAdmin = async (req, res) => {
     });
   }
 
-  const {
-    _id,
-    ...productoSinObjectId
-  } = producto;
+  const { _id, ...productoSinObjectId } =
+    producto;
 
   return res.status(200).json({
     producto: {
@@ -946,10 +625,6 @@ const obtenerProductoAdmin = async (req, res) => {
     },
   });
 };
-
-/* =========================
-   EDITAR PRODUCTO
-========================= */
 
 const editarProducto = async (req, res) => {
   const productoId = req.body?.productoId;
@@ -974,26 +649,16 @@ const editarProducto = async (req, res) => {
   const db = await conectarMongoDB();
   const productos = db.collection("productos");
 
-  const productoActual = await productos.findOne({
-    id: productoId,
-  });
+  const productoActual =
+    await productos.findOne({
+      id: productoId,
+    });
 
   if (!productoActual) {
     return res.status(404).json({
       error: "Producto no encontrado.",
     });
   }
-
-  /*
-   * El ID no se modifica.
-   *
-   * Así mantenemos estables:
-   * - URL de la tienda
-   * - pedidos existentes
-   * - imágenes
-   * - PDF privado
-   * - sitemap
-   */
 
   const {
     _id,
@@ -1004,42 +669,29 @@ const editarProducto = async (req, res) => {
 
   const productoActualizado = {
     ...datosEditables,
-
     id: productoActual.id,
-
+    tipo: "fisico",
     creadoEn:
-      productoActual.creadoEn ||
-      new Date(),
+      productoActual.creadoEn || new Date(),
     actualizadoEn: new Date(),
   };
-
-  /*
-   * Si desde el formulario no llega
-   * un nuevo PDF, conservamos el actual.
-   */
-
-  if (!productoActualizado.archivoPDF) {
-    productoActualizado.archivoPDF =
-      productoActual.archivoPDF;
-  }
-
-  /*
-   * Si no llegan imágenes nuevas,
-   * conservamos las actuales.
-   */
 
   if (!productoActualizado.imagenes) {
     productoActualizado.imagenes =
       productoActual.imagenes;
   }
 
+  if (
+    productoActualizado.videoReel ===
+    undefined
+  ) {
+    productoActualizado.videoReel =
+      productoActual.videoReel || null;
+  }
+
   const resultado = await productos.updateOne(
-    {
-      id: productoId,
-    },
-        {
-      $set: productoActualizado,
-    }
+    { id: productoId },
+    { $set: productoActualizado }
   );
 
   if (resultado.matchedCount !== 1) {
@@ -1050,37 +702,28 @@ const editarProducto = async (req, res) => {
 
   return res.status(200).json({
     ok: true,
-
     actualizado:
       resultado.modifiedCount === 1,
-
     mensaje:
       "Producto actualizado correctamente.",
   });
 };
 
-/* =========================
-   ELIMINAR PRODUCTO
-========================= */
-
 const eliminarProducto = async (req, res) => {
-  const productoId =
-    req.body?.productoId;
+  const productoId = req.body?.productoId;
 
-  if (!productoId) {
+  if (!productoIdValido(productoId)) {
     return res.status(400).json({
-      error: "Falta productoId.",
+      error: "productoId inválido.",
     });
   }
 
   const db = await conectarMongoDB();
-  const productos =
-    db.collection("productos");
+  const productos = db.collection("productos");
 
-  const producto =
-    await productos.findOne({
-      id: productoId,
-    });
+  const producto = await productos.findOne({
+    id: productoId,
+  });
 
   if (!producto) {
     return res.status(404).json({
@@ -1089,71 +732,20 @@ const eliminarProducto = async (req, res) => {
   }
 
   /*
-   * 1. ELIMINAR IMÁGENES PÚBLICAS
-   */
-
-  const imagenes = [
-    producto.imagenes?.portada,
-    producto.imagenes?.preview,
-    ...(producto.imagenes
-      ?.previewsIndividuales || []),
-    producto.imagenes?.portadaPDF,
-    producto.imagenes?.paginaFinalPDF,
-
-    producto.imagenes?.redes?.feed?.presentacion,
-    producto.imagenes?.redes?.feed?.incluye,
-    producto.imagenes?.redes?.feed?.beneficios,
-    producto.imagenes?.redes?.feed?.comoFunciona,
-
-    producto.imagenes?.redes?.vertical?.presentacion,
-    producto.imagenes?.redes?.vertical?.incluye,
-    producto.imagenes?.redes?.vertical?.beneficios,
-    producto.imagenes?.redes?.vertical?.comoFunciona,
-  ].filter(Boolean);
-
-  if (imagenes.length > 0) {
-    await del(imagenes, {
-      token:
-        process.env
-          .BLOB_PUBLIC_READ_WRITE_TOKEN,
-    });
-  }
-
-  /*
- * 2. ELIMINAR VIDEO REEL PÚBLICO
- */
-
-if (producto.videoReel) {
-  await del(producto.videoReel, {
-    token:
-      process.env
-        .BLOB_PUBLIC_READ_WRITE_TOKEN,
-  });
-}
-
-  /*
-   * 2. ELIMINAR PDF PRIVADO
-   */
-
-  if (producto.archivoPDF) {
-    await del(producto.archivoPDF, {
-      token:
-        process.env.BLOB_READ_WRITE_TOKEN,
-    });
-  }
-
-  /*
-   * 3. ELIMINAR DE MONGODB
+   * Todo el material del producto vive bajo:
+   * productos/{productoId}/
    *
-   * Esto se hace al final para no perder
-   * las referencias a los archivos si
-   * fallara alguna eliminación anterior.
+   * Así eliminamos imágenes y Reel de R2 sin
+   * depender de las URLs guardadas en MongoDB.
    */
+  await eliminarCarpetaProductoR2(
+    req,
+    productoId
+  );
 
-  const resultado =
-    await productos.deleteOne({
-      id: productoId,
-    });
+  const resultado = await productos.deleteOne({
+    id: productoId,
+  });
 
   if (resultado.deletedCount !== 1) {
     return res.status(500).json({
@@ -1281,12 +873,12 @@ const generarPreviewProducto = async (
 
   const nombre =
     producto.nombre ||
-    "Producto digital";
+    "Producto";
 
   const descripcion =
     producto.descripcion ||
     producto.descripcionCorta ||
-    "Producto digital imprimible.";
+    "Producto disponible en nuestra tienda.";
 
   const imagen = usarImagenFacebook
   ? producto.imagenes?.portadaFacebook ||
@@ -1433,21 +1025,16 @@ const urlProductoSeguro =
 </html>`);
 };
 
+
 /* =========================
    ENDPOINT ÚNICO
 ========================= */
 
-export default async function handler(
-  req,
-  res
-) {
+export default async function handler(req, res) {
   try {
-    const accion =
-      req.query?.accion;
+    const accion = req.query?.accion;
 
-    /* =========================
-       SITEMAP PÚBLICO
-    ========================= */
+    /* PÚBLICO */
 
     if (accion === "sitemap") {
       if (req.method !== "GET") {
@@ -1456,24 +1043,13 @@ export default async function handler(
         });
       }
 
-      return await generarSitemap(
-        req,
-        res
-      );
+      return await generarSitemap(req, res);
     }
 
-    /* =========================
-       PRODUCTOS PÚBLICOS
-    ========================= */
-
-    if (
-      accion ===
-      "productos-publicos"
-    ) {
+    if (accion === "productos-publicos") {
       if (req.method !== "GET") {
         return res.status(405).json({
-          error:
-            "Método no permitido",
+          error: "Método no permitido",
         });
       }
 
@@ -1483,102 +1059,36 @@ export default async function handler(
       );
     }
 
-    /* =========================
-   PREVIEW PRODUCTO
-========================= */
-
-if (
-  accion ===
-  "preview-producto"
-) {
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      error:
-        "Método no permitido",
-    });
-  }
-
-  return await generarPreviewProducto(
-    req,
-    res
-  );
-}
-
-    if (
-  accion ===
-  "preview-producto-facebook"
-) {
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      error:
-        "Método no permitido",
-    });
-  }
-
-  return await generarPreviewProducto(
-    req,
-    res,
-    true
-  );
-    }
-
-    /* =========================
-       SUBIR PDF PRODUCTO
-
-       IMPORTANTE:
-       esta acción va ANTES de la
-       autenticación general.
-
-       handleUpload recibe tanto la
-       solicitud inicial del navegador
-       como la notificación posterior
-       de Vercel.
-
-       La autorización admin se realiza
-       dentro de onBeforeGenerateToken.
-    ========================= */
-
-    if (
-      accion ===
-      "subir-pdf-producto"
-    ) {
-      if (req.method !== "POST") {
+    if (accion === "preview-producto") {
+      if (req.method !== "GET") {
         return res.status(405).json({
-          error:
-            "Método no permitido",
+          error: "Método no permitido",
         });
       }
 
-      return await subirPdfProducto(
+      return await generarPreviewProducto(
         req,
         res
       );
     }
 
-    /* =========================
-   SUBIR VIDEO REEL
-========================= */
+    if (
+      accion === "preview-producto-facebook"
+    ) {
+      if (req.method !== "GET") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
 
-if (
-  accion ===
-  "subir-video-reel"
-) {
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      error:
-        "Método no permitido",
-    });
-  }
+      return await generarPreviewProducto(
+        req,
+        res,
+        true
+      );
+    }
 
-  return await subirVideoReel(
-    req,
-    res
-  );
-}
-
-    /* =========================
-       AUTENTICACIÓN ADMIN
-    ========================= */
+    /* ADMIN */
 
     if (!adminAutorizado(req)) {
       return res.status(401).json({
@@ -1586,35 +1096,20 @@ if (
       });
     }
 
-    /* =========================
-       LISTAR
-    ========================= */
-
     if (accion === "listar") {
       if (req.method !== "GET") {
         return res.status(405).json({
-          error:
-            "Método no permitido",
+          error: "Método no permitido",
         });
       }
 
-      return await listarPedidos(
-        req,
-        res
-      );
+      return await listarPedidos(req, res);
     }
 
-    /* =========================
-       COMPROBANTE
-    ========================= */
-
-    if (
-      accion === "comprobante"
-    ) {
+    if (accion === "comprobante") {
       if (req.method !== "GET") {
         return res.status(405).json({
-          error:
-            "Método no permitido",
+          error: "Método no permitido",
         });
       }
 
@@ -1624,57 +1119,32 @@ if (
       );
     }
 
-    /* =========================
-       AVANZAR
-    ========================= */
-
     if (accion === "avanzar") {
       if (req.method !== "POST") {
         return res.status(405).json({
-          error:
-            "Método no permitido",
+          error: "Método no permitido",
         });
       }
 
-      return await avanzarEstado(
-        req,
-        res
-      );
+      return await avanzarEstado(req, res);
     }
 
-    /* =========================
-       CREAR PRODUCTO
-    ========================= */
-
-    if (
-      accion ===
-      "crear-producto"
-    ) {
+    if (accion === "crear-producto") {
       if (req.method !== "POST") {
         return res.status(405).json({
-          error:
-            "Método no permitido",
+          error: "Método no permitido",
         });
       }
 
-      return await crearProducto(
-        req,
-        res
-      );
+      return await crearProducto(req, res);
     }
 
-    /* =========================
-       SUBIR IMAGEN PRODUCTO
-    ========================= */
-
     if (
-      accion ===
-      "subir-imagen-producto"
+      accion === "subir-imagen-producto"
     ) {
       if (req.method !== "POST") {
         return res.status(405).json({
-          error:
-            "Método no permitido",
+          error: "Método no permitido",
         });
       }
 
@@ -1684,9 +1154,15 @@ if (
       );
     }
 
-    /* =========================
-       LISTAR PRODUCTOS ADMIN
-    ========================= */
+    if (accion === "subir-video-reel") {
+      if (req.method !== "POST") {
+        return res.status(405).json({
+          error: "Método no permitido",
+        });
+      }
+
+      return await subirVideoReel(req, res);
+    }
 
     if (accion === "listar-productos") {
       if (req.method !== "GET") {
@@ -1701,10 +1177,6 @@ if (
       );
     }
 
-    /* =========================
-       OBTENER PRODUCTO ADMIN
-    ========================= */
-
     if (accion === "obtener-producto") {
       if (req.method !== "GET") {
         return res.status(405).json({
@@ -1718,10 +1190,6 @@ if (
       );
     }
 
-    /* =========================
-       EDITAR PRODUCTO
-    ========================= */
-
     if (accion === "editar-producto") {
       if (req.method !== "POST") {
         return res.status(405).json({
@@ -1729,15 +1197,8 @@ if (
         });
       }
 
-      return await editarProducto(
-        req,
-        res
-      );
+      return await editarProducto(req, res);
     }
-
-    /* =========================
-       ELIMINAR PRODUCTO
-    ========================= */
 
     if (accion === "eliminar-producto") {
       if (req.method !== "POST") {
@@ -1746,10 +1207,7 @@ if (
         });
       }
 
-      return await eliminarProducto(
-        req,
-        res
-      );
+      return await eliminarProducto(req, res);
     }
 
     return res.status(400).json({
@@ -1764,7 +1222,7 @@ if (
     return res.status(500).json({
       error:
         error?.message ||
-        "No se pudo procesar la solicitud.",
+        "Error interno del servidor",
     });
   }
 }
