@@ -285,6 +285,222 @@ const avanzarEstado = async (req, res) => {
 };
 
 /* =========================
+   CREAR PEDIDO FÍSICO
+========================= */
+
+const crearPedidoFisico = async (req, res) => {
+  const {
+    productoId,
+    variante = "",
+    cantidad = 1,
+    nombreComprador,
+    emailComprador,
+    telefonoComprador,
+    direccion,
+    localidad,
+    provincia,
+    codigoPostal,
+  } = req.body || {};
+
+  const cantidadFinal = Math.max(
+    1,
+    Number(cantidad) || 1
+  );
+
+  if (
+    !productoId ||
+    !nombreComprador?.trim() ||
+    !emailComprador?.trim() ||
+    !telefonoComprador?.trim() ||
+    !direccion?.trim() ||
+    !localidad?.trim() ||
+    !provincia?.trim() ||
+    !codigoPostal?.trim()
+  ) {
+    return res.status(400).json({
+      error:
+        "Faltan datos obligatorios para crear el pedido.",
+    });
+  }
+
+  const emailValido =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (
+    !emailValido.test(emailComprador.trim())
+  ) {
+    return res.status(400).json({
+      error: "Correo electrónico inválido.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+
+  const producto = await db
+    .collection("productos")
+    .findOne({
+      id: productoId,
+      activo: { $ne: false },
+      disponibilidad: { $ne: "pausado" },
+    });
+
+  if (!producto) {
+    return res.status(404).json({
+      error:
+        "El producto no está disponible.",
+    });
+  }
+
+  if (
+    producto.disponibilidad === "sin-stock" ||
+    producto.disponibilidad === "proximamente" ||
+    Number(producto.stock) === 0
+  ) {
+    return res.status(409).json({
+      error:
+        "El producto no está disponible para comprar.",
+    });
+  }
+
+  const stock = Number(producto.stock);
+
+  if (
+    Number.isFinite(stock) &&
+    stock >= 0 &&
+    cantidadFinal > stock
+  ) {
+    return res.status(409).json({
+      error:
+        "La cantidad solicitada supera el stock disponible.",
+    });
+  }
+
+  const variantes = Array.isArray(
+    producto.detalles?.variantes
+  )
+    ? producto.detalles.variantes.filter(Boolean)
+    : [];
+
+  if (
+    variantes.length > 0 &&
+    !variantes.includes(variante)
+  ) {
+    return res.status(400).json({
+      error:
+        "La variante seleccionada no es válida.",
+    });
+  }
+
+  const precioNormal =
+    Number(producto.precioARS) || 0;
+
+  const precioOferta =
+    Number(producto.oferta?.precioARS) || 0;
+
+  const finalizaEn =
+    producto.ofertaLanzamiento?.finalizaEn;
+
+  const ofertaVigente = finalizaEn
+    ? new Date(finalizaEn).getTime() >
+      Date.now()
+    : true;
+
+  const precioUnitario =
+    producto.oferta?.activa === true &&
+    precioOferta > 0 &&
+    ofertaVigente
+      ? precioOferta
+      : precioNormal;
+
+  if (precioUnitario <= 0) {
+    return res.status(400).json({
+      error:
+        "El producto no tiene un precio válido.",
+    });
+  }
+
+  const total =
+    precioUnitario * cantidadFinal;
+
+  const pedidoId =
+    `PED-${Date.now()}-${crypto
+      .randomBytes(3)
+      .toString("hex")
+      .toUpperCase()}`;
+
+  const fecha = new Date();
+
+  const nombreProducto =
+    typeof producto.nombre === "string"
+      ? producto.nombre
+      : producto.nombre?.es ||
+        "Producto";
+
+  const pedido = {
+    pedidoId,
+
+    nombreComprador:
+      nombreComprador.trim(),
+
+    emailComprador:
+      emailComprador.trim().toLowerCase(),
+
+    telefonoComprador:
+      telefonoComprador.trim(),
+
+    direccionEnvio: {
+      direccion: direccion.trim(),
+      localidad: localidad.trim(),
+      provincia: provincia.trim(),
+      codigoPostal: codigoPostal.trim(),
+    },
+
+    productos: [
+      {
+        productoId: producto.id,
+        nombre: nombreProducto,
+        variante: variante || "",
+        cantidad: cantidadFinal,
+        precioUnitario,
+        precioARS: precioUnitario,
+        subtotal: total,
+      },
+    ],
+
+    subtotal: total,
+    descuento: 0,
+    precio: total,
+    moneda: "ARS",
+
+    metodoPago: "mercadopago-link",
+    canalPedido: "whatsapp",
+
+    estado: "pedido_iniciado",
+
+    creadoEn: fecha,
+    actualizadoEn: fecha,
+    pagadoEn: null,
+
+    historialEstados: [
+      {
+        estado: "pedido_iniciado",
+        fecha,
+      },
+    ],
+  };
+
+  await db
+    .collection("pedidos")
+    .insertOne(pedido);
+
+  return res.status(201).json({
+    ok: true,
+    pedidoId,
+    estado: pedido.estado,
+  });
+};
+
+/* =========================
    CREAR PRODUCTO FÍSICO
 ========================= */
 
@@ -1044,6 +1260,19 @@ export default async function handler(req, res) {
       }
 
       return await generarSitemap(req, res);
+    }
+
+    if (accion === "crear-pedido") {
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Método no permitido",
+    });
+  }
+
+  return await crearPedidoFisico(
+    req,
+    res
+  );
     }
 
     if (accion === "productos-publicos") {

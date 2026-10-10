@@ -28,6 +28,8 @@ const Checkout = () => {
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
   const [error, setError] = useState("");
+  const [creandoPedido, setCreandoPedido] =
+  useState(false);
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -226,15 +228,82 @@ const Checkout = () => {
     return true;
   };
 
-  const continuarPorWhatsApp = () => {
-    if (!producto || !validar()) return;
+  const continuarPorWhatsApp = async () => {
+  if (
+    !producto ||
+    !validar() ||
+    creandoPedido
+  ) {
+    return;
+  }
+
+  try {
+    setCreandoPedido(true);
+    setError("");
+
+    const respuesta = await fetch(
+      "/api/admin/pedidos?accion=crear-pedido",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          productoId: producto.id,
+          variante,
+          cantidad,
+
+          nombreComprador:
+            nombre.trim(),
+
+          emailComprador:
+            email.trim(),
+
+          telefonoComprador:
+            telefono.trim(),
+
+          direccion:
+            direccion.trim(),
+
+          localidad:
+            localidad.trim(),
+
+          provincia:
+            provincia.trim(),
+
+          codigoPostal:
+            codigoPostal.trim(),
+        }),
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        datos.error ||
+          "No se pudo crear el pedido."
+      );
+    }
+
+    if (!datos.pedidoId) {
+      throw new Error(
+        "No se recibió el número de pedido."
+      );
+    }
 
     const nombreProducto =
       typeof producto.nombre === "string"
         ? producto.nombre
-        : producto.nombre?.es || "Producto";
+        : producto.nombre?.es ||
+          "Producto";
 
-    const mensaje = `Hola, quiero realizar este pedido:
+    const mensaje = `Hola, quiero continuar con este pedido:
+
+*Número de pedido:* ${datos.pedidoId}
 
 *Producto:* ${nombreProducto}
 ${variante ? `*Variante:* ${variante}\n` : ""}*Cantidad:* ${cantidad}
@@ -255,12 +324,30 @@ Localidad: ${localidad.trim()}
 Provincia: ${provincia.trim()}
 Código postal: ${codigoPostal.trim()}`;
 
-    const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-      mensaje
-    )}`;
+    const url =
+      `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
+        mensaje
+      )}`;
 
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+    window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  } catch (errorPedido) {
+    console.error(
+      "Error creando pedido:",
+      errorPedido
+    );
+
+    setError(
+      errorPedido.message ||
+        "No se pudo iniciar el pedido."
+    );
+  } finally {
+    setCreandoPedido(false);
+  }
+};
 
   if (cargando) {
     return (
@@ -615,13 +702,16 @@ Código postal: ${codigoPostal.trim()}`;
               <button
                 type="button"
                 onClick={continuarPorWhatsApp}
+                disabled={creandoPedido}
                 className="flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#204850]"
               >
                 <MessageCircle
                   size={18}
                   strokeWidth={1.8}
                 />
-                Continuar por WhatsApp
+                {creandoPedido
+  ? "Creando pedido..."
+  : "Continuar por WhatsApp"}
               </button>
             )}
 
