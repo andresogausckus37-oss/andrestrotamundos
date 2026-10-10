@@ -465,12 +465,13 @@ const Tienda = () => {
         <div className="mx-auto max-w-6xl px-5 py-8 text-center sm:py-10">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#EEF5F5] text-[#285861]">
             <ShoppingBag size={23} strokeWidth={1.7} />
-          </div>
+        </div>
 
-          <p className="mx-auto mt-2 max-w-2xl text-sm font-normal leading-6 text-[#687477] sm:text-base">
-            Productos seleccionados para distintas necesidades, con compra simple
-            y atención personalizada.
-          </p>
+        <p className="mx-auto mt-2 max-w-2xl text-sm font-normal leading-6 text-[#687477] sm:text-base">
+          ¡No sigas buscando! Encontrá productos seleccionados para vos,
+          comprá en minutos y recibí atención personalizada.
+          ¡Hacé tu pedido ahora!
+        </p>
         </div>
       </section>
 
