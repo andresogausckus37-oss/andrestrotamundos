@@ -2,7 +2,7 @@ import { conectarMongoDB } from "../../lib/mongodb.js";
 import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
 /* =====================================================
-   ENVIAR EMAIL DE COMPRA
+   ENVIAR EMAIL DEL PEDIDO
 ===================================================== */
 
 const enviarEmailPedido = async ({
@@ -34,19 +34,31 @@ const enviarEmailPedido = async ({
 
   try {
     await enviarEmailCompra({
-      pedidoId: pedido.pedidoId,
-      email: pedido.emailComprador,
-      productos: pedido.productos,
+      pedidoId:
+        pedido.pedidoId,
+
+      email:
+        pedido.emailComprador,
+
+      productos:
+        pedido.productos,
+
+      total:
+        pedido.precio ?? null,
     });
 
     await pedidos.updateOne(
       {
-        pedidoId: pedido.pedidoId,
+        pedidoId:
+          pedido.pedidoId,
       },
       {
         $set: {
-          emailEnviado: true,
-          emailEnviadoEn: new Date(),
+          emailEnviado:
+            true,
+
+          emailEnviadoEn:
+            new Date(),
         },
       }
     );
@@ -67,10 +79,6 @@ const enviarEmailPedido = async ({
 ===================================================== */
 
 export default async function handler(req, res) {
-  /* =====================================================
-     SOLO GET
-  ===================================================== */
-
   if (req.method !== "GET") {
     return res.status(405).json({
       error: "Método no permitido",
@@ -113,7 +121,8 @@ export default async function handler(req, res) {
 
     if (!pedido) {
       return res.status(404).json({
-        error: "Pedido no encontrado",
+        error:
+          "Pedido no encontrado",
       });
     }
 
@@ -132,16 +141,13 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       SI YA ESTÁ APROBADO
+       PEDIDO YA APROBADO
     ===================================================== */
 
-    if (pedido.estado === "aprobado") {
-      /*
-       * Si el webhook aprobó primero el pedido
-       * pero el email todavía no fue enviado,
-       * hacemos un intento desde aquí.
-       */
-
+    if (
+      pedido.estado ===
+      "aprobado"
+    ) {
       let emailEnviado =
         pedido.emailEnviado === true;
 
@@ -163,7 +169,8 @@ export default async function handler(req, res) {
         productos:
           pedido.productos || [],
 
-        aprobado: true,
+        aprobado:
+          true,
 
         estado:
           "aprobado",
@@ -173,7 +180,7 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       VALIDAR ORDER ID
+       VALIDAR ORDER
     ===================================================== */
 
     const orderId =
@@ -185,10 +192,6 @@ export default async function handler(req, res) {
           "El pedido no tiene una Order de Mercado Pago.",
       });
     }
-
-    /* =====================================================
-       CONSULTAR ORDER DIRECTAMENTE A MERCADO PAGO
-    ===================================================== */
 
     const respuesta =
       await fetch(
@@ -232,18 +235,13 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       VALIDAR QUE SEA LA ORDER DEL PEDIDO
+       VALIDAR IDENTIDAD DEL PEDIDO
     ===================================================== */
 
     if (
       String(order.id) !==
       String(orderId)
     ) {
-      console.error(
-        "Order ID incorrecta:",
-        order.id
-      );
-
       return res.status(400).json({
         error:
           "La Order no corresponde al pedido.",
@@ -253,13 +251,11 @@ export default async function handler(req, res) {
     if (
       String(
         order.external_reference
-      ) !== String(pedido.pedidoId)
+      ) !==
+      String(
+        pedido.pedidoId
+      )
     ) {
-      console.error(
-        "External reference incorrecta:",
-        order.external_reference
-      );
-
       return res.status(400).json({
         error:
           "La referencia del pago no corresponde al pedido.",
@@ -271,8 +267,12 @@ export default async function handler(req, res) {
     ===================================================== */
 
     if (
-      Number(order.total_amount) !==
-      Number(pedido.precio)
+      Number(
+        order.total_amount
+      ) !==
+      Number(
+        pedido.precio
+      )
     ) {
       console.error(
         "Monto incorrecto:",
@@ -292,7 +292,7 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       VALIDAR ESTADO DEL PAGO
+       VALIDAR ESTADO
     ===================================================== */
 
     const pago =
@@ -309,10 +309,6 @@ export default async function handler(req, res) {
       pago?.status_detail ===
         "accredited";
 
-    /* =====================================================
-       TODAVÍA NO ACREDITADO
-    ===================================================== */
-
     if (!pagoAprobado) {
       return res.status(200).json({
         pedidoId:
@@ -324,7 +320,8 @@ export default async function handler(req, res) {
         productos:
           pedido.productos || [],
 
-        aprobado: false,
+        aprobado:
+          false,
 
         estado:
           pedido.estado,
@@ -333,7 +330,8 @@ export default async function handler(req, res) {
           order.status || null,
 
         mercadoPagoDetalle:
-          order.status_detail || null,
+          order.status_detail ||
+          null,
       });
     }
 
@@ -364,6 +362,16 @@ export default async function handler(req, res) {
           mercadoPagoPaymentId:
             pago?.id || null,
         },
+
+        $push: {
+          historialEstados: {
+            estado:
+              "pago_confirmado",
+
+            fecha:
+              fechaPago,
+          },
+        },
       }
     );
 
@@ -392,7 +400,7 @@ export default async function handler(req, res) {
       });
 
     /* =====================================================
-       RESPUESTA A PAGOEXITOSO
+       RESPUESTA
     ===================================================== */
 
     return res.status(200).json({
@@ -405,7 +413,8 @@ export default async function handler(req, res) {
       productos:
         pedido.productos || [],
 
-      aprobado: true,
+      aprobado:
+        true,
 
       estado:
         "aprobado",

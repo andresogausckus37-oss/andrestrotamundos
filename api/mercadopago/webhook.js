@@ -6,6 +6,10 @@ import {
 import { conectarMongoDB } from "../../lib/mongodb.js";
 import { enviarEmailCompra } from "../../lib/emailCompra.js";
 
+/* =====================================================
+   HANDLER
+===================================================== */
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -20,14 +24,17 @@ export default async function handler(req, res) {
     const secret =
       process.env.MERCADOPAGO_WEBHOOK_SECRET;
 
-    if (!accessToken || !secret) {
+    if (
+      !accessToken ||
+      !secret
+    ) {
       throw new Error(
         "Faltan variables de Mercado Pago"
       );
     }
 
     /* =====================================================
-       VALIDAR FIRMA DEL WEBHOOK
+       VALIDAR FIRMA
     ===================================================== */
 
     const xSignature =
@@ -37,7 +44,7 @@ export default async function handler(req, res) {
       req.headers["x-request-id"];
 
     const dataId =
-      req.query["data.id"] ||
+      req.query?.["data.id"] ||
       req.body?.data?.id;
 
     if (
@@ -46,7 +53,8 @@ export default async function handler(req, res) {
       !dataId
     ) {
       return res.status(400).json({
-        error: "Notificación incompleta",
+        error:
+          "Notificación incompleta",
       });
     }
 
@@ -55,7 +63,8 @@ export default async function handler(req, res) {
         xSignature,
         xRequestId,
         dataId,
-        secret: secret.trim(),
+        secret:
+          secret.trim(),
       });
     } catch (error) {
       if (
@@ -63,7 +72,8 @@ export default async function handler(req, res) {
         InvalidWebhookSignatureError
       ) {
         return res.status(401).json({
-          error: "Firma inválida",
+          error:
+            "Firma inválida",
         });
       }
 
@@ -74,30 +84,36 @@ export default async function handler(req, res) {
        SOLO PROCESAR ORDERS
     ===================================================== */
 
-    if (req.body?.type !== "order") {
+    if (
+      req.body?.type !==
+      "order"
+    ) {
       return res.status(200).json({
         recibido: true,
       });
     }
 
     /* =====================================================
-       CONSULTAR ORDER EN MERCADO PAGO
+       CONSULTAR ORDER
     ===================================================== */
 
-    const respuesta = await fetch(
-      `https://api.mercadopago.com/v1/orders/${encodeURIComponent(
-        dataId
-      )}`,
-      {
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const respuesta =
+      await fetch(
+        `https://api.mercadopago.com/v1/orders/${encodeURIComponent(
+          dataId
+        )}`,
+        {
+          headers: {
+            Authorization:
+              `Bearer ${accessToken}`,
+          },
+        }
+      );
 
     const order =
-      await respuesta.json();
+      await respuesta
+        .json()
+        .catch(() => ({}));
 
     if (!respuesta.ok) {
       console.error(
@@ -116,7 +132,7 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       VALIDAR ESTADO DEL PAGO
+       VALIDAR PAGO
     ===================================================== */
 
     const pago =
@@ -124,17 +140,22 @@ export default async function handler(req, res) {
         ?.payments?.[0];
 
     const pagoAprobado =
-      order.status === "processed" &&
+      order.status ===
+        "processed" &&
       order.status_detail ===
         "accredited" &&
-      pago?.status === "processed" &&
+      pago?.status ===
+        "processed" &&
       pago?.status_detail ===
         "accredited";
 
     if (!pagoAprobado) {
       return res.status(200).json({
-        recibido: true,
-        aprobado: false,
+        recibido:
+          true,
+
+        aprobado:
+          false,
       });
     }
 
@@ -166,7 +187,7 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       VALIDAR MÉTODO DE PAGO
+       VALIDAR MÉTODO
     ===================================================== */
 
     if (
@@ -191,7 +212,10 @@ export default async function handler(req, res) {
       pedido.mercadoPagoOrderId &&
       String(
         pedido.mercadoPagoOrderId
-      ) !== String(order.id)
+      ) !==
+        String(
+          order.id
+        )
     ) {
       console.error(
         "Order incorrecta para el pedido:",
@@ -204,13 +228,16 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       VALIDAR TOTAL DEL PEDIDO
-       FUNCIONA CON UNO O VARIOS PRODUCTOS
+       VALIDAR TOTAL
     ===================================================== */
 
     if (
-      Number(order.total_amount) !==
-      Number(pedido.precio)
+      Number(
+        order.total_amount
+      ) !==
+      Number(
+        pedido.precio
+      )
     ) {
       console.error(
         "Monto incorrecto en Order:",
@@ -226,38 +253,58 @@ export default async function handler(req, res) {
        APROBAR PEDIDO
     ===================================================== */
 
-    const fechaPago = new Date();
+    const fechaPago =
+      new Date();
 
-    await pedidos.updateOne(
-      {
-        pedidoId:
-          order.external_reference,
-      },
-      {
-        $set: {
-          estado: "aprobado",
+    const yaAprobado =
+      pedido.estado ===
+      "aprobado";
 
-          pagadoEn:
-            pedido.pagadoEn ||
-            fechaPago,
+    if (!yaAprobado) {
+      await pedidos.updateOne(
+        {
+          pedidoId:
+            pedido.pedidoId,
 
-          mercadoPagoPaymentId:
-            pago.id,
+          estado: {
+            $ne: "aprobado",
+          },
         },
-      }
-    );
+        {
+          $set: {
+            estado:
+              "aprobado",
+
+            pagadoEn:
+              pedido.pagadoEn ||
+              fechaPago,
+
+            mercadoPagoPaymentId:
+              pago?.id || null,
+          },
+
+          $push: {
+            historialEstados: {
+              estado:
+                "pago_confirmado",
+
+              fecha:
+                fechaPago,
+            },
+          },
+        }
+      );
+    }
 
     /* =====================================================
-       ENVIAR EMAIL DE COMPRA
+       ENVIAR EMAIL
     ===================================================== */
 
     let emailEnviado =
       pedido.emailEnviado === true;
 
     if (!emailEnviado) {
-      if (
-        !pedido.emailComprador
-      ) {
+      if (!pedido.emailComprador) {
         console.error(
           `Pedido ${pedido.pedidoId}: falta emailComprador.`
         );
@@ -268,7 +315,7 @@ export default async function handler(req, res) {
         pedido.productos.length === 0
       ) {
         console.error(
-          `Pedido ${pedido.pedidoId}: no contiene productos para enviar por email.`
+          `Pedido ${pedido.pedidoId}: no contiene productos.`
         );
       } else {
         try {
@@ -281,6 +328,9 @@ export default async function handler(req, res) {
 
             productos:
               pedido.productos,
+
+            total:
+              pedido.precio ?? null,
           });
 
           const fechaEmail =
@@ -293,19 +343,21 @@ export default async function handler(req, res) {
             },
             {
               $set: {
-                emailEnviado: true,
+                emailEnviado:
+                  true,
+
                 emailEnviadoEn:
                   fechaEmail,
               },
             }
           );
 
-          emailEnviado = true;
+          emailEnviado =
+            true;
         } catch (error) {
           /*
-           * El pago ya fue confirmado.
-           * Un fallo de Resend NO debe
-           * revertir ni bloquear el pedido.
+           * Un fallo del email no modifica
+           * el estado del pago.
            */
           console.error(
             `Error enviando email del pedido ${pedido.pedidoId}:`,
@@ -320,8 +372,12 @@ export default async function handler(req, res) {
     ===================================================== */
 
     return res.status(200).json({
-      recibido: true,
-      aprobado: true,
+      recibido:
+        true,
+
+      aprobado:
+        true,
+
       emailEnviado,
     });
   } catch (error) {

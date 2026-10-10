@@ -6,11 +6,8 @@ import { conectarMongoDB } from "../../lib/mongodb.js";
 ===================================================== */
 
 const obtenerPrecioFinal = (producto) => {
-  const precioNormal =
-    Number(producto.precioARS);
-
-  const precioOferta =
-    Number(producto.oferta?.precioARS);
+  const precioNormal = Number(producto.precioARS);
+  const precioOferta = Number(producto.oferta?.precioARS);
 
   const finalizaEn =
     producto.ofertaLanzamiento?.finalizaEn;
@@ -21,14 +18,12 @@ const obtenerPrecioFinal = (producto) => {
     precioOferta > 0 &&
     (
       !finalizaEn ||
-      new Date(finalizaEn).getTime() >
-        Date.now()
+      new Date(finalizaEn).getTime() > Date.now()
     );
 
-  const precio =
-    ofertaVigente
-      ? precioOferta
-      : precioNormal;
+  const precio = ofertaVigente
+    ? precioOferta
+    : precioNormal;
 
   if (
     !Number.isFinite(precio) ||
@@ -46,10 +41,17 @@ const obtenerPrecioFinal = (producto) => {
    BUSCAR PRODUCTO
 ===================================================== */
 
-const buscarProducto = async (db, productoId) => {
-  return await db.collection("productos").findOne({
-    id: productoId,
-  });
+const buscarProducto = async (
+  db,
+  productoId
+) => {
+  return await db
+    .collection("productos")
+    .findOne({
+      id: productoId,
+      activo: { $ne: false },
+      disponibilidad: { $ne: "pausado" },
+    });
 };
 
 /* =====================================================
@@ -95,22 +97,23 @@ export default async function handler(req, res) {
       });
     }
 
-    const db = await conectarMongoDB();
+    const db =
+      await conectarMongoDB();
 
     /* =====================================================
        PRODUCTO PRINCIPAL
     ===================================================== */
 
     const producto =
-  await buscarProducto(
-    db,
-    productoId
-  );
+      await buscarProducto(
+        db,
+        productoId
+      );
 
     if (!producto) {
       return res.status(404).json({
         error:
-          "Producto no encontrado.",
+          "Producto no encontrado o no disponible.",
       });
     }
 
@@ -125,12 +128,6 @@ export default async function handler(req, res) {
     let precioVentaCruzada = 0;
 
     if (ventaCruzadaId) {
-      /*
-       * Seguridad:
-       * solamente permitimos agregar el producto
-       * configurado como venta cruzada del producto
-       * principal.
-       */
       if (
         producto.ventaCruzadaId !==
         ventaCruzadaId
@@ -142,15 +139,15 @@ export default async function handler(req, res) {
       }
 
       productoVentaCruzada =
-  await buscarProducto(
-    db,
-    ventaCruzadaId
-  );
+        await buscarProducto(
+          db,
+          ventaCruzadaId
+        );
 
       if (!productoVentaCruzada) {
         return res.status(404).json({
           error:
-            "Producto adicional no encontrado.",
+            "Producto adicional no encontrado o no disponible.",
         });
       }
 
@@ -171,7 +168,7 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       TOTAL REAL DEL PEDIDO
+       TOTAL DEL PEDIDO
     ===================================================== */
 
     const precioTotal =
@@ -182,14 +179,24 @@ export default async function handler(req, res) {
       precioTotal.toFixed(2);
 
     /* =====================================================
-       ITEMS DEL PEDIDO
+       PRODUCTOS DEL PEDIDO
     ===================================================== */
 
     const productosPedido = [
       {
-        productoId: producto.id,
-        nombre: producto.nombre,
-        precio: precioPrincipal,
+        productoId:
+          producto.id,
+
+        nombre:
+          producto.nombre,
+
+        cantidad: 1,
+
+        precio:
+          precioPrincipal,
+
+        precioARS:
+          precioPrincipal,
       },
     ];
 
@@ -201,7 +208,12 @@ export default async function handler(req, res) {
         nombre:
           productoVentaCruzada.nombre,
 
+        cantidad: 1,
+
         precio:
+          precioVentaCruzada,
+
+        precioARS:
           precioVentaCruzada,
       });
     }
@@ -210,14 +222,16 @@ export default async function handler(req, res) {
       productosPedido.map(
         (item) => ({
           title: item.nombre,
-          quantity: 1,
+          quantity: item.cantidad,
           unit_price:
-            item.precio.toFixed(2),
+            Number(
+              item.precio
+            ).toFixed(2),
         })
       );
 
     /* =====================================================
-       CREAR PEDIDO INTERNO
+       CREAR ID INTERNO
     ===================================================== */
 
     const pedidoId =
@@ -227,58 +241,65 @@ export default async function handler(req, res) {
        CREAR ORDER EN MERCADO PAGO
     ===================================================== */
 
-    const respuesta = await fetch(
-      "https://api.mercadopago.com/v1/orders",
-      {
-        method: "POST",
+    const respuesta =
+      await fetch(
+        "https://api.mercadopago.com/v1/orders",
+        {
+          method: "POST",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
+          headers: {
+            Authorization:
+              `Bearer ${accessToken}`,
 
-          "Content-Type":
-            "application/json",
+            "Content-Type":
+              "application/json",
 
-          "X-Idempotency-Key":
-            crypto.randomUUID(),
-        },
+            "X-Idempotency-Key":
+              crypto.randomUUID(),
+          },
 
-        body: JSON.stringify({
-          type: "online",
+          body: JSON.stringify({
+            type: "online",
 
-          processing_mode: "manual",
+            processing_mode:
+              "manual",
 
-          total_amount: monto,
+            total_amount:
+              monto,
 
-          external_reference:
-            pedidoId,
+            external_reference:
+              pedidoId,
 
-          config: {
-            online: {
-              success_url:
-                "https://andreshousesitter.com/pago/exitoso",
+            config: {
+              online: {
+                success_url:
+                  "https://andrestrotamundos.andresogausckus37.workers.dev/pago/exitoso",
 
-              failure_url:
-                "https://andreshousesitter.com/pago/fallido",
+                failure_url:
+                  "https://andrestrotamundos.andresogausckus37.workers.dev/pago/fallido",
 
-              pending_url:
-                "https://andreshousesitter.com/pago/pendiente",
+                pending_url:
+                  "https://andrestrotamundos.andresogausckus37.workers.dev/pago/pendiente",
 
-              auto_return: "all",
+                auto_return:
+                  "all",
+              },
             },
-          },
 
-          payer: {
-            email,
-          },
+            payer: {
+              email,
+            },
 
-          items: itemsMercadoPago,
-        }),
-      }
-    );
+            items:
+              itemsMercadoPago,
+          }),
+        }
+      );
 
     const datos =
-      await respuesta.json();
+      await respuesta
+        .json()
+        .catch(() => ({}));
 
     if (!respuesta.ok) {
       console.error(
@@ -299,22 +320,23 @@ export default async function handler(req, res) {
     }
 
     /* =====================================================
-       GUARDAR PEDIDO EN MONGODB
+       GUARDAR PEDIDO
     ===================================================== */
+
+    const fecha =
+      new Date();
 
     await db
       .collection("pedidos")
       .insertOne({
         pedidoId,
 
-        /* Compatibilidad con pedidos anteriores */
         productoId:
           producto.id,
 
         nombreProducto:
           producto.nombre,
 
-        /* Nueva estructura */
         productos:
           productosPedido,
 
@@ -328,9 +350,11 @@ export default async function handler(req, res) {
         precio:
           precioTotal,
 
-        moneda: "ARS",
+        moneda:
+          "ARS",
 
-        metodoPago: "mercadopago",
+        metodoPago:
+          "mercadopago",
 
         mercadoPagoOrderId:
           datos.id,
@@ -339,12 +363,24 @@ export default async function handler(req, res) {
           "pendiente",
 
         creadoEn:
-          new Date(),
+          fecha,
 
         pagadoEn:
           null,
 
-        descargas: 0,
+        emailEnviado:
+          false,
+
+        emailEnviadoEn:
+          null,
+
+        historialEstados: [
+          {
+            estado:
+              "pendiente",
+            fecha,
+          },
+        ],
       });
 
     /* =====================================================
