@@ -12,7 +12,7 @@ const obtenerDispositivo = (userAgent = "") => {
 
 const obtenerCodigoPais = (req) => {
   return String(
-    req.headers["x-vercel-ip-country"] || ""
+    req.headers["cf-ipcountry"] || ""
   ).toUpperCase();
 };
 
