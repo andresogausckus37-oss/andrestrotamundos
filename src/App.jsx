@@ -20,7 +20,6 @@ import WhatsAppFlotante from "./componentes/WhatsAppFlotante";
 import Tienda from "./paginas/Tienda";
 import DetalleProducto from "./paginas/DetalleProducto";
 import Recomendados from "./paginas/Recomendados";
-import OptimizadorImagenes from "./paginas/OptimizadorImagenes";
 
 import PagoExitoso from "./paginas/PagoExitoso";
 import PagoPendiente from "./paginas/PagoPendiente";
@@ -33,8 +32,6 @@ import AdminRedes from "./paginas/admin/AdminRedes";
 import AdminNuevoProducto from "./paginas/admin/AdminNuevoProducto";
 import AdminProductos from "./paginas/admin/AdminProductos";
 import AdminEditarProducto from "./paginas/admin/AdminEditarProducto";
-
-import PoliticaPrivacidad from "./paginas/PoliticaPrivacidad";
 
 /* =========================
    REGISTRAR NUEVA VISITA
@@ -84,10 +81,6 @@ const RegistrarVisita = () => {
       ruta === "/recomendados"
     ) {
       pagina = "Recomendados";
-    } else if (
-      ruta === "/politica-de-privacidad"
-    ) {
-      pagina = "Política de privacidad";
     }
 
     /* MARCAR ANTES DEL FETCH PARA
@@ -137,7 +130,7 @@ const ScrollToTop = () => {
       top: 0,
       behavior: "smooth",
     });
-  }, [location.pathname]);
+  }, [location.pathname, location.state]);
 
   return null;
 };
@@ -264,11 +257,6 @@ const ContenidoApp = () => {
           />
 
           <Route
-            path="/politica-de-privacidad"
-            element={<PoliticaPrivacidad />}
-          />
-
-          <Route
             path="/admin/login"
             element={<LoginAdmin />}
           />
@@ -296,13 +284,6 @@ const ContenidoApp = () => {
           <Route
             path="/admin/productos/editar/:id"
             element={<AdminEditarProducto />}
-          />
-
-          <Route
-            path="/optimizador-imagenes"
-            element={
-              <OptimizadorImagenes />
-            }
           />
         </Routes>
 

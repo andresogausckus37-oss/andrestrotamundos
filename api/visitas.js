@@ -14,9 +14,7 @@ const escaparHtml = (valor = "") =>
 
 const obtenerCodigoPais = (req) =>
   String(
-    req.headers?.["cf-ipcountry"] ||
-      req.headers?.["x-vercel-ip-country"] ||
-      ""
+    req.headers?.["cf-ipcountry"] || ""
   )
     .trim()
     .toUpperCase();
