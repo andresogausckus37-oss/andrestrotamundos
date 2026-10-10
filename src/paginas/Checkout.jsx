@@ -182,7 +182,16 @@ export default function Checkout({ productoInicial = null, varianteInicial = "",
             </div>}
             {!envioGratis && <div className="mt-3 rounded-xs border border-slate-200 bg-white p-4">
               <p className="text-sm font-medium">¡Sumá otro producto y aprovechá el envío gratis!</p>
+              
               <p className="mt-1 text-xs font-normal text-slate-600">Te faltan {precioARS(faltanteEnvioGratis)} para llegar a {precioARS(UMBRAL_ENVIO_GRATIS)} en productos y ahorrar {precioARS(TARIFA_ENVIO)} de envío.</p>
+
+<a
+  href="/tienda"
+  className="mt-3 inline-flex items-center justify-center rounded-xs bg-[#285861] px-4 py-2.5 text-sm font-normal text-white transition-colors hover:bg-[#1e454c]"
+>
+  Seguir comprando →
+</a>
+              
             </div>}
             <div className="mt-3 rounded-xs border border-slate-200 bg-white p-4">
               <div className="flex justify-between text-sm"><span>Productos</span><span>{precioARS(subtotal)}</span></div>
