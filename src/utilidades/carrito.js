@@ -30,7 +30,7 @@ export function agregarAlCarrito(producto, variante = "", cantidad = 1) {
   const variantes = (producto.detalles?.variantes || []).filter(Boolean);
   if (variantes.length && !variantes.includes(variante)) throw new Error("Seleccioná una variante válida.");
   if (["sin-stock", "proximamente", "pausado"].includes(producto.disponibilidad)) throw new Error("Producto no disponible.");
-  const stock = Number(producto.stock);
+    const stock = Number(producto.stock);
   const limite = Number.isFinite(stock) && stock >= 0 ? stock : 999;
   const items = obtener().slice();
   const clave = claveArticulo(producto.id, variante);
