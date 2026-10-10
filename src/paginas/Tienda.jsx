@@ -469,27 +469,13 @@ const Tienda = () => {
       )}
 
       <section className="border-b border-[#DCE5E4] bg-white">
-        <div className="mx-auto max-w-6xl px-5 py-8 text-center sm:py-10">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xs bg-[#EEF5F5] text-[#285861]">
-            <ShoppingBag size={23} strokeWidth={1.7} />
-        </div>
+        <div className="mx-auto max-w-6xl px-5 py-8 text-center sm:py-10">    
 
-        <p className="mx-auto mt-2 max-w-2xl text-sm font-normal leading-6 text-[#687477] sm:text-base">
+        <p className="mx-auto mt-2 max-w-2xl text-md font-normal leading-6 text-[#687477] sm:text-base">
           Encontrá productos seleccionados para vos, comprá en minutos y recibí atención personalizada.
         </p>
         </div>
-      </section>
-
-      <div className="mx-auto max-w-6xl px-5 pt-4">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm font-normal text-[#687477] transition-colors hover:text-[#285861]"
-        >
-          <ArrowLeft size={17} strokeWidth={1.8} />
-          Volver
-        </button>
-      </div>
+      </section>  
 
       {categoriasVisibles.length > 1 && (
         <section className="px-4 pt-6 sm:px-5 sm:pt-8">
