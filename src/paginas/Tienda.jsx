@@ -9,8 +9,6 @@ import {
   CreditCard,
   Expand,
   Package,
-  Pause,
-  Play,
   ShoppingBag,
 } from "lucide-react";
 
@@ -342,7 +340,7 @@ const Tienda = () => {
         <div className="flex w-max animate-[marquee_16s_linear_infinite] whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.16em] sm:text-xs">
           {Array.from({ length: 8 }).map((_, indice) => (
             <span key={indice} className="mx-8">
-              Envío gratis en compras mayores a $40.000
+              Envío gratis en compras mayores a $40.000 🔥
             </span>
           ))}
         </div>
@@ -363,29 +361,11 @@ const Tienda = () => {
                 <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#8A7966] sm:text-[11px]">
                   Descubrí nuestros productos
                 </p>
-                <h2 className="mt-1 text-lg font-semibold tracking-tight text-[#263238] sm:text-xl">
+                <h2 className="mt-1 text-lg font-medium tracking-tight text-[#263238] sm:text-xl">
                   Productos más buscados
                 </h2>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setSliderActivo((actual) => !actual)}
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-[#DCE5E4] bg-white px-3 text-xs font-medium text-[#285861] transition-colors hover:bg-[#EEF5F5]"
-                aria-label={sliderActivo ? "Detener slider" : "Reproducir slider"}
-              >
-                {sliderActivo ? (
-                  <>
-                    <Pause size={14} strokeWidth={1.8} />
-                    <span className="hidden sm:inline">Detener</span>
-                  </>
-                ) : (
-                  <>
-                    <Play size={14} strokeWidth={1.8} />
-                    <span className="hidden sm:inline">Reproducir</span>
-                  </>
-                )}
-              </button>
+          
             </div>
 
             <div
@@ -460,12 +440,16 @@ const Tienda = () => {
                           {nombreProducto}
                         </h3>
 
+                        <div className="mt-1">
+                          <CalificacionProducto productoId={producto.id} />
+                        </div>
+
                         <button
                           type="button"
                           onClick={() => irAProducto(producto.id)}
                           className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-[#285861] px-2.5 py-2 text-[10px] font-medium text-white transition-colors hover:bg-[#204850] sm:text-xs"
                         >
-                          Ver producto
+                          Comprar ahora
                         </button>
                       </div>
                     </article>
@@ -482,10 +466,6 @@ const Tienda = () => {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#EEF5F5] text-[#285861]">
             <ShoppingBag size={23} strokeWidth={1.7} />
           </div>
-
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#263238] sm:text-3xl">
-            Tienda
-          </h1>
 
           <p className="mx-auto mt-2 max-w-2xl text-sm font-normal leading-6 text-[#687477] sm:text-base">
             Productos seleccionados para distintas necesidades, con compra simple
