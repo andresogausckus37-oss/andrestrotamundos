@@ -21,16 +21,61 @@ function sincronizarEntorno(env) {
 }
 
 async function leerBody(request) {
-  if (request.method === "GET" || request.method === "HEAD") return {};
-  const tipo = request.headers.get("content-type") || "";
-  if (tipo.includes("application/json")) {
-    try { return await request.json(); } catch { return {}; }
+  if (
+    request.method === "GET" ||
+    request.method === "HEAD"
+  ) {
+    return {};
   }
-  if (tipo.includes("application/x-www-form-urlencoded")) {
+
+  const tipo =
+    request.headers.get("content-type") || "";
+
+  if (
+    tipo.includes(
+      "application/json"
+    )
+  ) {
     try {
-      return Object.fromEntries(new URLSearchParams(await request.text()));
-    } catch { return {}; }
+      return await request.json();
+    } catch {
+      return {};
+    }
   }
+
+  if (
+    tipo.includes(
+      "multipart/form-data"
+    )
+  ) {
+    try {
+      const formData =
+        await request.formData();
+
+      return Object.fromEntries(
+        formData.entries()
+      );
+    } catch {
+      return {};
+    }
+  }
+
+  if (
+    tipo.includes(
+      "application/x-www-form-urlencoded"
+    )
+  ) {
+    try {
+      return Object.fromEntries(
+        new URLSearchParams(
+          await request.text()
+        )
+      );
+    } catch {
+      return {};
+    }
+  }
+
   return {};
 }
 

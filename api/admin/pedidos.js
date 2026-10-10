@@ -776,96 +776,66 @@ const subirPdfProducto = async (req, res) => {
 ========================= */
 
 const subirVideoReel = async (req, res) => {
-  if (!process.env.BLOB_PUBLIC_READ_WRITE_TOKEN) {
-    return res.status(500).json({
-      error:
-        "No está configurado BLOB_PUBLIC_READ_WRITE_TOKEN.",
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      error: "No autorizado",
     });
   }
 
-  const resultado = await handleUpload({
-    body: req.body,
-    request: req,
+  const productoId =
+    req.body?.productoId;
 
-    token:
-      process.env.BLOB_PUBLIC_READ_WRITE_TOKEN,
+  const video =
+    req.body?.video;
 
-    onBeforeGenerateToken: async (
-      pathname,
-      clientPayload
-    ) => {
-      if (!adminAutorizado(req)) {
-        throw new Error("No autorizado");
-      }
+  if (
+    !productoId ||
+    typeof productoId !== "string" ||
+    !/^[a-z0-9-]+$/.test(productoId)
+  ) {
+    return res.status(400).json({
+      error: "productoId inválido.",
+    });
+  }
 
-      let datos = {};
+  if (!video) {
+    return res.status(400).json({
+      error: "Falta el video Reel.",
+    });
+  }
 
-      if (clientPayload) {
-        try {
-          datos = JSON.parse(clientPayload);
-        } catch {
-          throw new Error(
-            "Datos de subida inválidos."
-          );
-        }
-      }
+  const bucket =
+    req.env?.PRODUCTOS_R2;
 
-      const productoId =
-        datos?.productoId;
+  if (!bucket) {
+    throw new Error(
+      "PRODUCTOS_R2 no está conectado al Worker."
+    );
+  }
 
-      if (
-        !productoId ||
-        typeof productoId !== "string" ||
-        !/^[a-z0-9-]+$/.test(productoId)
-      ) {
-        throw new Error(
-          "productoId inválido."
-        );
-      }
+  const pathname =
+    `productos/${productoId}/reel.mp4`;
 
-      const pathnameEsperado =
-        `productos/${productoId}/reel.mp4`;
-
-      if (pathname !== pathnameEsperado) {
-        throw new Error(
-          "La ruta del Reel no coincide con el producto."
-        );
-      }
-
-      return {
-        allowedContentTypes: [
-          "video/mp4",
-        ],
-
-        maximumSizeInBytes:
-          100 * 1024 * 1024,
-
-        addRandomSuffix: false,
-
-        allowOverwrite: true,
-
-        tokenPayload:
-          JSON.stringify({
-            productoId,
-          }),
-      };
-    },
-
-    onUploadCompleted: async ({
-      blob,
-      tokenPayload,
-    }) => {
-      console.log(
-        "Reel público subido:",
-        blob.pathname,
-        tokenPayload
-      );
-    },
-  });
-
-  return res.status(200).json(
-    resultado
+  await bucket.put(
+    pathname,
+    video,
+    {
+      httpMetadata: {
+        contentType: "video/mp4",
+        cacheControl:
+          "public, max-age=31536000",
+      },
+    }
   );
+
+  const url =
+    `${req.env.PRODUCTOS_R2_URL}/${pathname}`;
+
+  return res.status(201).json({
+    ok: true,
+    url,
+    pathname,
+  });
 };
 
 /* =========================
