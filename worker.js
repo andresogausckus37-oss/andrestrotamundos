@@ -228,6 +228,16 @@ if (url.pathname === RUTA_CONTENIDO_REDES) {
       }
     }
 
+    if (url.pathname.startsWith("/api/")) {
+  return Response.json(
+    {
+      ok: false,
+      error: `API no migrada a Cloudflare: ${url.pathname}`
+    },
+    { status: 404 }
+  );
+    }
+
     return env.ASSETS.fetch(request);
   },
 
