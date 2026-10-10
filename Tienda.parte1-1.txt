@@ -11,9 +11,12 @@ import {
   Package,
   ShoppingBag,
   Truck,
+  ShoppingCart,
 } from "lucide-react";
 
 import CalificacionProducto from "../componentes/CalificacionProducto";
+import Checkout from "./Checkout";
+import { useCarrito, resumenCarrito } from "../utilidades/carrito";
 import {
   MERCADO_ARGENTINA,
   formatearPrecioMercado,
@@ -44,6 +47,9 @@ const CATEGORIAS = [
 
 const Tienda = () => {
   const navigate = useNavigate();
+  const articulosCarrito = useCarrito();
+  const cantidadCarrito = resumenCarrito(articulosCarrito).cantidad;
+  const [carritoAbierto, setCarritoAbierto] = useState(false);
 
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -401,8 +407,3 @@ const Tienda = () => {
                     className="absolute right-1 top-[42%] z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md bg-black/70 text-white shadow-md transition hover:bg-black sm:-right-4"
                     aria-label="Producto siguiente"
                   >
-                    <ChevronRight size={20} strokeWidth={2} />
-                  </button>
-                </>
-              )}
-

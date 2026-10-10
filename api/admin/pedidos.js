@@ -289,214 +289,138 @@ const avanzarEstado = async (req, res) => {
 ========================= */
 
 const crearPedidoFisico = async (req, res) => {
+  const cuerpo = req.body || {};
   const {
-    productoId,
-    variante = "",
-    cantidad = 1,
-    nombreComprador,
-    emailComprador,
-    telefonoComprador,
-    direccion,
-    localidad,
-    provincia,
-    codigoPostal,
-  } = req.body || {};
+    nombreComprador, emailComprador, telefonoComprador,
+    direccion, localidad, provincia, codigoPostal,
+  } = cuerpo;
 
-  const cantidadFinal = Math.max(
-    1,
-    Number(cantidad) || 1
-  );
-
-  if (
-    !productoId ||
-    !nombreComprador?.trim() ||
-    !emailComprador?.trim() ||
-    !telefonoComprador?.trim() ||
-    !direccion?.trim() ||
-    !localidad?.trim() ||
-    !provincia?.trim() ||
-    !codigoPostal?.trim()
-  ) {
-    return res.status(400).json({
-      error:
-        "Faltan datos obligatorios para crear el pedido.",
-    });
+  const campos = [nombreComprador, emailComprador, telefonoComprador,
+    direccion, localidad, provincia, codigoPostal];
+  if (campos.some((campo) => typeof campo !== "string" || !campo.trim())) {
+    return res.status(400).json({ error: "Faltan datos obligatorios para crear el pedido." });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailComprador.trim())) {
+    return res.status(400).json({ error: "Correo electrónico inválido." });
+  }
+  if (!/^\d{4}$/.test(codigoPostal.trim())) {
+    return res.status(400).json({ error: "Código postal inválido." });
   }
 
-  const emailValido =
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Compatibilidad con el checkout anterior de un solo producto.
+  const articulos = Array.isArray(cuerpo.productos)
+    ? cuerpo.productos
+    : [{ productoId: cuerpo.productoId, cantidad: cuerpo.cantidad ?? 1, variante: cuerpo.variante ?? "" }];
+  if (!articulos.length || articulos.length > 50) {
+    return res.status(400).json({ error: "El carrito debe contener entre 1 y 50 artículos." });
+  }
 
-  if (
-    !emailValido.test(emailComprador.trim())
-  ) {
-    return res.status(400).json({
-      error: "Correo electrónico inválido.",
-    });
+  const metodoSolicitado = cuerpo.metodoPago || cuerpo.medioPago;
+  const metodosPermitidos = ["transferencia", "mercado_pago_link", "mercadopago-link"];
+  if (!metodosPermitidos.includes(metodoSolicitado)) {
+    return res.status(400).json({ error: "Seleccioná transferencia bancaria o link de pago." });
+  }
+  const metodoPago = metodoSolicitado === "mercadopago-link"
+    ? "mercado_pago_link" : metodoSolicitado;
+
+  const carrito = new Map();
+  for (const articulo of articulos) {
+    const id = articulo?.productoId;
+    const variante = articulo?.variante ?? "";
+    const cantidad = Number(articulo?.cantidad);
+    if (!productoIdValido(id) || typeof variante !== "string" ||
+        !Number.isSafeInteger(cantidad) || cantidad < 1 || cantidad > 999) {
+      return res.status(400).json({ error: "Hay artículos inválidos en el carrito." });
+    }
+    const clave = JSON.stringify([id, variante]);
+    const anterior = carrito.get(clave);
+    const nuevaCantidad = (anterior?.cantidad || 0) + cantidad;
+    if (nuevaCantidad > 999) {
+      return res.status(400).json({ error: "Cantidad excesiva para un producto." });
+    }
+    carrito.set(clave, { productoId: id, variante, cantidad: nuevaCantidad });
   }
 
   const db = await conectarMongoDB();
+  const ids = [...new Set([...carrito.values()].map((item) => item.productoId))];
+  const encontrados = await db.collection("productos").find({
+    id: { $in: ids }, activo: { $ne: false },
+    disponibilidad: { $ne: "pausado" },
+  }).toArray();
+  const porId = new Map(encontrados.map((producto) => [producto.id, producto]));
+  const cantidadesPorProducto = new Map();
+  for (const item of carrito.values()) {
+    cantidadesPorProducto.set(item.productoId,
+      (cantidadesPorProducto.get(item.productoId) || 0) + item.cantidad);
+  }
 
-  const producto = await db
-    .collection("productos")
-    .findOne({
-      id: productoId,
-      activo: { $ne: false },
-      disponibilidad: { $ne: "pausado" },
-    });
-
-  if (!producto) {
-    return res.status(404).json({
-      error:
-        "El producto no está disponible.",
+  const productos = [];
+  let subtotal = 0;
+  for (const item of carrito.values()) {
+    const producto = porId.get(item.productoId);
+    if (!producto || ["sin-stock", "proximamente"].includes(producto.disponibilidad) ||
+        Number(producto.stock) === 0) {
+      return res.status(409).json({ error: `Producto no disponible: ${item.productoId}.` });
+    }
+    const stock = Number(producto.stock);
+    if (Number.isFinite(stock) && stock >= 0 &&
+        cantidadesPorProducto.get(item.productoId) > stock) {
+      return res.status(409).json({ error: `Stock insuficiente para ${item.productoId}.` });
+    }
+    const variantes = Array.isArray(producto.detalles?.variantes)
+      ? producto.detalles.variantes.filter(Boolean) : [];
+    if (variantes.length && !variantes.includes(item.variante)) {
+      return res.status(400).json({ error: `Variante inválida para ${item.productoId}.` });
+    }
+    const precioNormal = Number(producto.precioARS) || 0;
+    const precioOferta = Number(producto.oferta?.precioARS) || 0;
+    const finalizaEn = producto.ofertaLanzamiento?.finalizaEn;
+    const ofertaVigente = finalizaEn
+      ? new Date(finalizaEn).getTime() > Date.now() : true;
+    const precioUnitario = producto.oferta?.activa === true &&
+      precioOferta > 0 && ofertaVigente ? precioOferta : precioNormal;
+    if (!Number.isFinite(precioUnitario) || precioUnitario <= 0) {
+      return res.status(400).json({ error: `Precio inválido para ${item.productoId}.` });
+    }
+    const importe = Math.round(precioUnitario * item.cantidad * 100) / 100;
+    subtotal += importe;
+    productos.push({
+      productoId: producto.id,
+      nombre: typeof producto.nombre === "string" ? producto.nombre :
+        producto.nombre?.es || "Producto",
+      variante: item.variante, cantidad: item.cantidad,
+      precioUnitario, precioARS: precioUnitario, subtotal: importe,
     });
   }
 
-  if (
-    producto.disponibilidad === "sin-stock" ||
-    producto.disponibilidad === "proximamente" ||
-    Number(producto.stock) === 0
-  ) {
-    return res.status(409).json({
-      error:
-        "El producto no está disponible para comprar.",
-    });
-  }
-
-  const stock = Number(producto.stock);
-
-  if (
-    Number.isFinite(stock) &&
-    stock >= 0 &&
-    cantidadFinal > stock
-  ) {
-    return res.status(409).json({
-      error:
-        "La cantidad solicitada supera el stock disponible.",
-    });
-  }
-
-  const variantes = Array.isArray(
-    producto.detalles?.variantes
-  )
-    ? producto.detalles.variantes.filter(Boolean)
-    : [];
-
-  if (
-    variantes.length > 0 &&
-    !variantes.includes(variante)
-  ) {
-    return res.status(400).json({
-      error:
-        "La variante seleccionada no es válida.",
-    });
-  }
-
-  const precioNormal =
-    Number(producto.precioARS) || 0;
-
-  const precioOferta =
-    Number(producto.oferta?.precioARS) || 0;
-
-  const finalizaEn =
-    producto.ofertaLanzamiento?.finalizaEn;
-
-  const ofertaVigente = finalizaEn
-    ? new Date(finalizaEn).getTime() >
-      Date.now()
-    : true;
-
-  const precioUnitario =
-    producto.oferta?.activa === true &&
-    precioOferta > 0 &&
-    ofertaVigente
-      ? precioOferta
-      : precioNormal;
-
-  if (precioUnitario <= 0) {
-    return res.status(400).json({
-      error:
-        "El producto no tiene un precio válido.",
-    });
-  }
-
-  const total =
-    precioUnitario * cantidadFinal;
-
-  const pedidoId =
-    `PED-${Date.now()}-${crypto
-      .randomBytes(3)
-      .toString("hex")
-      .toUpperCase()}`;
-
+  subtotal = Math.round(subtotal * 100) / 100;
+  const costoEnvio = subtotal >= 40000 ? 0 : 8000;
+  const total = Math.round((subtotal + costoEnvio) * 100) / 100;
   const fecha = new Date();
-
-  const nombreProducto =
-    typeof producto.nombre === "string"
-      ? producto.nombre
-      : producto.nombre?.es ||
-        "Producto";
-
+  const pedidoId = `PED-${Date.now()}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
   const pedido = {
     pedidoId,
-
-    nombreComprador:
-      nombreComprador.trim(),
-
-    emailComprador:
-      emailComprador.trim().toLowerCase(),
-
-    telefonoComprador:
-      telefonoComprador.trim(),
-
+    nombreComprador: nombreComprador.trim(),
+    emailComprador: emailComprador.trim().toLowerCase(),
+    telefonoComprador: telefonoComprador.trim(),
     direccionEnvio: {
-      direccion: direccion.trim(),
-      localidad: localidad.trim(),
-      provincia: provincia.trim(),
-      codigoPostal: codigoPostal.trim(),
+      direccion: direccion.trim(), localidad: localidad.trim(),
+      provincia: provincia.trim(), codigoPostal: codigoPostal.trim(),
     },
-
-    productos: [
-      {
-        productoId: producto.id,
-        nombre: nombreProducto,
-        variante: variante || "",
-        cantidad: cantidadFinal,
-        precioUnitario,
-        precioARS: precioUnitario,
-        subtotal: total,
-      },
-    ],
-
-    subtotal: total,
-    descuento: 0,
-    precio: total,
-    moneda: "ARS",
-
-    metodoPago: "mercadopago-link",
-    canalPedido: "whatsapp",
-
-    estado: "pedido_iniciado",
-
-    creadoEn: fecha,
-    actualizadoEn: fecha,
-    pagadoEn: null,
-
-    historialEstados: [
-      {
-        estado: "pedido_iniciado",
-        fecha,
-      },
-    ],
+    productos, subtotal, descuento: 0,
+    costoEnvio, costoEnvioARS: costoEnvio,
+    envioGratis: costoEnvio === 0,
+    transportista: "Correo Argentino",
+    precio: total, total, moneda: "ARS",
+    metodoPago, canalPedido: "whatsapp",
+    estado: "pedido_iniciado", creadoEn: fecha,
+    actualizadoEn: fecha, pagadoEn: null,
+    historialEstados: [{ estado: "pedido_iniciado", fecha }],
   };
-
-  await db
-    .collection("pedidos")
-    .insertOne(pedido);
-
+  await db.collection("pedidos").insertOne(pedido);
   return res.status(201).json({
-    ok: true,
-    pedidoId,
-    estado: pedido.estado,
+    ok: true, pedidoId, estado: pedido.estado,
+    productos, subtotal, costoEnvio, total, metodoPago,
   });
 };
 
