@@ -951,8 +951,7 @@ export default async function handler(
 
                       quantity: "1",
 
-                      category:
-                        "DIGITAL_GOODS",
+                      category: "PHYSICAL_GOODS",
 
                       unit_amount: {
                         currency_code:
@@ -1066,8 +1065,6 @@ export default async function handler(
 
         pagadoEn:
           null,
-
-        descargas: 0,
 
         emailEnviado:
           false,

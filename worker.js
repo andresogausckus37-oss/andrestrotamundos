@@ -18,6 +18,7 @@ function sincronizarEntorno(env) {
     "FACEBOOK_PAGE_ACCESS_TOKEN",
     "TELEGRAM_VISITAS_BOT_TOKEN",
     "TELEGRAM_VISITAS_CHAT_ID",
+    "RESEND_API_KEY",
   ];
   for (const clave of claves) {
     if (env?.[clave] !== undefined && env?.[clave] !== null) {

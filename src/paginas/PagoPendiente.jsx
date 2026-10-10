@@ -7,8 +7,8 @@ export default function PagoPendiente() {
         </h1>
 
         <p className="mt-4 text-slate-600">
-          Tu pago todavía está siendo procesado. La descarga se habilitará cuando sea acreditado.
-        </p>
+  Tu pago todavía está siendo procesado. Te notificaremos cuando el pago sea acreditado.
+</p>
       </div>
     </main>
   );
