@@ -1,28 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
-  ArrowLeft,
   Check,
-  ChevronLeft,
-  ChevronRight,
-  Clock3,
   CreditCard,
   Package,
   Ruler,
-  ShieldCheck,
   ShoppingBag,
-  Tag,
-  Truck,
 } from "lucide-react";
 
 import CalificacionProducto from "../componentes/CalificacionProducto";
+import Checkout from "./Checkout";
 
 const CUOTAS_SIN_INTERES = 3;
 
 const DetalleProducto = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
 
+  const [modalAbierto, setModalAbierto] = useState(false);
   const [producto, setProducto] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -214,36 +208,13 @@ const DetalleProducto = () => {
       maximumFractionDigits: 0,
     }).format(Number(valor) || 0);
 
-  const irImagenAnterior = () => {
-    if (imagenes.length <= 1) return;
-
-    setImagenActiva((actual) =>
-      actual === 0 ? imagenes.length - 1 : actual - 1
-    );
-  };
-
-  const irImagenSiguiente = () => {
-    if (imagenes.length <= 1) return;
-
-    setImagenActiva((actual) =>
-      actual === imagenes.length - 1 ? 0 : actual + 1
-    );
-  };
-
   const comprar = () => {
     if (!disponible) return;
-
-    const parametros = new URLSearchParams();
-
-    if (varianteSeleccionada) {
-      parametros.set("variante", varianteSeleccionada);
+    if (variantes.length > 0 && !varianteSeleccionada) {
+      document.getElementById("selector-variantes")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
-
-    const query = parametros.toString();
-
-    navigate(
-      `/checkout/${producto.id}${query ? `?${query}` : ""}`
-    );
+    setModalAbierto(true);
   };
 
   if (cargando) {
@@ -259,14 +230,14 @@ const DetalleProducto = () => {
   if (error || !producto) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#FCFDFC] px-5">
-        <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 text-center">
+        <div className="w-full max-w-md rounded-xs border border-slate-200 bg-white p-6 text-center">
           <Package
             size={34}
             strokeWidth={1.6}
             className="mx-auto text-slate-400"
           />
 
-          <h1 className="mt-3 text-xl font-semibold text-slate-900">
+          <h1 className="mt-3 text-xl font-medium text-slate-900">
             Producto no disponible
           </h1>
 
@@ -274,13 +245,6 @@ const DetalleProducto = () => {
             {error || "No se encontró el producto."}
           </p>
 
-          <button
-            type="button"
-            onClick={() => navigate("/tienda")}
-            className="mt-5 rounded-md bg-[#285861] px-5 py-2.5 text-sm font-medium text-white"
-          >
-            Volver a la tienda
-          </button>
         </div>
       </main>
     );
@@ -310,18 +274,9 @@ const DetalleProducto = () => {
   return (
     <main className="min-h-screen bg-[#FCFDFC] px-4 pb-20 pt-4 sm:px-5 sm:pt-7">
       <div className="mx-auto max-w-7xl">
-        <button
-          type="button"
-          onClick={() => navigate("/tienda")}
-          className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-[#285861]"
-        >
-          <ArrowLeft size={17} strokeWidth={1.8} />
-          Volver a la tienda
-        </button>
-
         <div className="grid gap-7 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
           <section>
-            <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="relative overflow-hidden rounded-xs border border-slate-200 bg-white">
               <div className="aspect-square w-full">
                 {imagenes.length > 0 ? (
                   <img
@@ -340,31 +295,6 @@ const DetalleProducto = () => {
                 )}
               </div>
 
-              {imagenes.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={irImagenAnterior}
-                    className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:bg-white"
-                    aria-label="Imagen anterior"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={irImagenSiguiente}
-                    className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:bg-white"
-                    aria-label="Imagen siguiente"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-
-                  <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/70 px-2.5 py-1 text-[11px] font-medium text-white">
-                    {imagenActiva + 1} / {imagenes.length}
-                  </span>
-                </>
-              )}
             </div>
 
             {imagenes.length > 1 && (
@@ -374,7 +304,7 @@ const DetalleProducto = () => {
                     key={`${imagen}-${indice}`}
                     type="button"
                     onClick={() => setImagenActiva(indice)}
-                    className={`aspect-square overflow-hidden rounded-lg border bg-white p-1 transition ${
+                    className={`aspect-square overflow-hidden rounded-xs border bg-white p-1 transition ${
                       imagenActiva === indice
                         ? "border-[#285861] ring-1 ring-[#285861]"
                         : "border-slate-200 hover:border-slate-400"
@@ -384,31 +314,23 @@ const DetalleProducto = () => {
                     <img
                       src={imagen}
                       alt=""
-                      className="h-full w-full object-cover rounded-md"
+                      className="h-full w-full object-cover rounded-xs"
                     />
                   </button>
                 ))}
               </div>
             )}
+            <nav aria-label="Ruta de navegación" className="mt-3 text-xs font-normal text-slate-500">
+              <a href="/" className="hover:text-[#285861]">Inicio</a>
+              <span className="mx-1">/</span>
+              <a href="/tienda" className="hover:text-[#285861]">Tienda</a>
+              <span className="mx-1">/</span>
+              <span className="text-slate-800">{nombre}</span>
+            </nav>
           </section>
 
           <section className="lg:pt-1">
-            <div className="flex flex-wrap items-center gap-2">
-              {producto.categoria && (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                  {producto.categoria}
-                </span>
-              )}
-
-              {ofertaActiva && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-orange-700">
-                  <Tag size={12} />
-                  {producto.oferta?.etiqueta || "Oferta"}
-                </span>
-              )}
-            </div>
-
-            <h1 className="mt-3 text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
+            <h1 className="mt-3 text-2xl font-medium leading-tight text-slate-950 sm:text-3xl">
               {nombre}
             </h1>
 
@@ -416,22 +338,16 @@ const DetalleProducto = () => {
               <CalificacionProducto productoId={producto.id} />
             </div>
 
-            {descripcion && (
-              <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-[15px]">
-                {descripcion}
-              </p>
-            )}
-
             <div className="mt-5 border-y border-slate-200 py-5">
               {ofertaActiva ? (
                 <>
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="text-3xl font-semibold tracking-tight text-slate-950">
+                    <span className="text-3xl font-medium tracking-tight text-slate-950">
                       {formatearPrecio(precioFinal)}
                     </span>
 
                     {porcentajeDescuento > 0 && (
-                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      <span className="rounded-xs bg-red-600 px-2.5 py-1 text-xs font-normal text-white">
                         -{porcentajeDescuento}%
                       </span>
                     )}
@@ -450,7 +366,7 @@ const DetalleProducto = () => {
                   </div>
                 </>
               ) : (
-                <span className="text-3xl font-semibold tracking-tight text-slate-950">
+                <span className="text-3xl font-medium tracking-tight text-slate-950">
                   {formatearPrecio(precioFinal)}
                 </span>
               )}
@@ -463,9 +379,9 @@ const DetalleProducto = () => {
                     className="mt-0.5 shrink-0 text-[#285861]"
                   />
 
-                  <p className="text-sm leading-5 text-slate-600">
+                  <p className="text-sm font-normal leading-5 text-slate-600">
                     Hasta{" "}
-                    <strong className="font-semibold text-slate-800">
+                    <strong className="font-medium text-slate-800">
                       {CUOTAS_SIN_INTERES} cuotas sin interés
                     </strong>{" "}
                     de {formatearPrecio(valorCuota)}.
@@ -495,7 +411,7 @@ const DetalleProducto = () => {
             </div>
 
             {variantes.length > 0 && (
-              <div className="mt-5">
+              <div id="selector-variantes" className="mt-5">
                 <div className="flex items-center gap-2">
                   <Ruler
                     size={17}
@@ -503,7 +419,7 @@ const DetalleProducto = () => {
                     className="text-slate-500"
                   />
 
-                  <h2 className="text-sm font-semibold text-slate-900">
+                  <h2 className="text-sm font-medium text-slate-900">
                     Talle / variante
                   </h2>
                 </div>
@@ -516,7 +432,7 @@ const DetalleProducto = () => {
                       onClick={() =>
                         setVarianteSeleccionada(variante)
                       }
-                      className={`rounded-md border px-3.5 py-2 text-sm font-medium transition ${
+                      className={`rounded-xs border px-3.5 py-2 text-sm font-medium transition ${
                         varianteSeleccionada === variante
                           ? "border-[#285861] bg-[#285861] text-white"
                           : "border-slate-200 bg-white text-slate-700 hover:border-[#7FA0A3]"
@@ -531,7 +447,7 @@ const DetalleProducto = () => {
 
             {colores.length > 0 && (
               <div className="mt-5">
-                <h2 className="text-sm font-semibold text-slate-900">
+                <h2 className="text-sm font-medium text-slate-900">
                   Colores disponibles
                 </h2>
 
@@ -539,7 +455,7 @@ const DetalleProducto = () => {
                   {colores.map((color) => (
                     <span
                       key={color}
-                      className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
+                      className="rounded-xs border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
                     >
                       {color}
                     </span>
@@ -548,11 +464,31 @@ const DetalleProducto = () => {
               </div>
             )}
 
+        {(caracteristicas.length > 0 ||
+          contenidoPaquete.length > 0) && (
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            {caracteristicas.length > 0 && (
+              <ListaDetalles
+                titulo="Características"
+                elementos={caracteristicas}
+              />
+            )}
+
+            {contenidoPaquete.length > 0 && (
+              <ListaDetalles
+                titulo="Contenido del paquete"
+                elementos={contenidoPaquete}
+              />
+            )}
+          </div>
+        )}
+
+
             <button
               type="button"
               onClick={comprar}
               disabled={!disponible}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-[#285861] px-5 py-3.5 text-sm font-medium text-white transition hover:bg-[#204850] disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xs bg-[#285861] px-5 py-3.5 text-sm font-medium text-white transition hover:bg-[#204850] disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               <ShoppingBag size={18} strokeWidth={1.8} />
               {disponible
@@ -562,29 +498,16 @@ const DetalleProducto = () => {
                   : "No disponible"}
             </button>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <Beneficio
-                icono={Truck}
-                titulo="Producto físico"
-                texto="Coordinamos el envío al completar tu pedido."
-              />
-
-              <Beneficio
-                icono={ShieldCheck}
-                titulo="Compra segura"
-                texto="El pago se coordina mediante Mercado Pago."
-              />
-            </div>
           </section>
         </div>
 
         <div className="mt-8 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-            <h2 className="text-lg font-semibold text-slate-900">
+          <section className="rounded-xs border border-slate-200 bg-white p-3 sm:p-4">
+            <h2 className="text-sm font-medium text-slate-900">
               Descripción
             </h2>
 
-            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
+            <p className="mt-3 whitespace-pre-line text-xs font-normal leading-6 text-slate-600">
               {descripcionLarga ||
                 "Consulta los detalles de este producto antes de realizar tu pedido."}
             </p>
@@ -595,8 +518,8 @@ const DetalleProducto = () => {
             material ||
             dimensiones ||
             peso) && (
-            <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-slate-900">
+            <section className="rounded-xs border border-slate-200 bg-white p-3 sm:p-4">
+              <h2 className="text-sm font-medium text-slate-900">
                 Datos del producto
               </h2>
 
@@ -628,78 +551,23 @@ const DetalleProducto = () => {
           )}
         </div>
 
-        {(caracteristicas.length > 0 ||
-          contenidoPaquete.length > 0) && (
-          <div className="mt-5 grid gap-5 md:grid-cols-2">
-            {caracteristicas.length > 0 && (
-              <ListaDetalles
-                titulo="Características"
-                elementos={caracteristicas}
-              />
-            )}
-
-            {contenidoPaquete.length > 0 && (
-              <ListaDetalles
-                titulo="Contenido del paquete"
-                elementos={contenidoPaquete}
-              />
-            )}
-          </div>
+        {modalAbierto && (
+          <Checkout
+            productoInicial={producto}
+            varianteInicial={varianteSeleccionada}
+            modal
+            onClose={() => setModalAbierto(false)}
+          />
         )}
-
-        <section className="mt-5 rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-start gap-3">
-            <Clock3
-              size={19}
-              strokeWidth={1.8}
-              className="mt-0.5 shrink-0 text-[#285861]"
-            />
-
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900">
-                ¿Cómo continúa la compra?
-              </h2>
-
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Al tocar “Comprar ahora” completarás tus datos,
-                dirección de envío, cantidad y variante. Después
-                continuarás por WhatsApp para recibir el link de pago
-                de Mercado Pago.
-              </p>
-            </div>
-          </div>
-        </section>
       </div>
     </main>
   );
 };
 
 const EstadoProducto = ({ texto }) => (
-  <div className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+  <div className="inline-flex items-center gap-2 rounded-xs bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
     <Package size={16} strokeWidth={1.8} />
     {texto}
-  </div>
-);
-
-const Beneficio = ({ icono: Icono, titulo, texto }) => (
-  <div className="rounded-lg border border-slate-200 bg-white p-3">
-    <div className="flex items-start gap-2.5">
-      <Icono
-        size={17}
-        strokeWidth={1.8}
-        className="mt-0.5 shrink-0 text-[#285861]"
-      />
-
-      <div>
-        <p className="text-xs font-semibold text-slate-800">
-          {titulo}
-        </p>
-
-        <p className="mt-0.5 text-[11px] leading-5 text-slate-500">
-          {texto}
-        </p>
-      </div>
-    </div>
   </div>
 );
 
@@ -713,12 +581,12 @@ const Dato = ({ etiqueta, valor }) => (
 );
 
 const ListaDetalles = ({ titulo, elementos }) => (
-  <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-    <h2 className="text-lg font-semibold text-slate-900">
+  <section className="rounded-xs border border-slate-200 bg-white p-3 sm:p-4">
+    <h2 className="text-sm font-medium text-slate-900">
       {titulo}
     </h2>
 
-    <div className="mt-4 space-y-2.5">
+    <div className="mt-3 space-y-2">
       {elementos.map((elemento, indice) => (
         <div
           key={`${elemento}-${indice}`}
@@ -730,7 +598,7 @@ const ListaDetalles = ({ titulo, elementos }) => (
             className="mt-0.5 shrink-0 text-[#285861]"
           />
 
-          <p className="text-sm leading-6 text-slate-600">
+          <p className="text-xs font-normal leading-5 text-slate-600">
             {elemento}
           </p>
         </div>
