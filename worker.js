@@ -242,6 +242,73 @@ export default {
     sincronizarEntorno(env);
     const url = new URL(request.url);
 
+    /* =========================
+   PREVIEWS PARA COMPARTIR
+========================= */
+
+if (
+  url.pathname.startsWith("/compartir/") ||
+  url.pathname.startsWith("/compartir-facebook/")
+) {
+  try {
+    const esFacebook =
+      url.pathname.startsWith("/compartir-facebook/");
+
+    const prefijo = esFacebook
+      ? "/compartir-facebook/"
+      : "/compartir/";
+
+    const productoId = decodeURIComponent(
+      url.pathname.slice(prefijo.length)
+    ).trim();
+
+    if (!productoId) {
+      return new Response(
+        "Falta el ID del producto",
+        { status: 400 }
+      );
+    }
+
+    const urlInterna = new URL(request.url);
+
+    urlInterna.pathname = "/api/admin/pedidos";
+    urlInterna.search = "";
+
+    urlInterna.searchParams.set(
+      "accion",
+      esFacebook
+        ? "preview-producto-facebook"
+        : "preview-producto"
+    );
+
+    urlInterna.searchParams.set(
+      "id",
+      productoId
+    );
+
+    const requestInterno = new Request(
+      urlInterna.toString(),
+      request
+    );
+
+    return await ejecutarHandlerGenerico(
+      requestInterno,
+      env,
+      handlerAdminPedidos
+    );
+  } catch (error) {
+    console.error(
+      "Error generando preview para compartir:",
+      error
+    );
+
+    return new Response(
+      "No se pudo generar la vista previa.",
+      { status: 500 }
+    );
+  }
+}
+
     if (url.pathname === "/api/prueba-mongodb") return pruebaMongoDB(env);
 if (url.pathname === "/api/diagnostico-redes") return diagnosticoRedes(env);
 
