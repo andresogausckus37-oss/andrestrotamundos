@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { conectarMongoDB } from "../../lib/mongodb.js";
-
+import { enviarEmailCompra } from "../../lib/emailCompra.js";
 /* =========================
    AUTENTICACIÓN ADMIN
 ========================= */
@@ -418,10 +418,54 @@ const crearPedidoFisico = async (req, res) => {
     historialEstados: [{ estado: "pedido_iniciado", fecha }],
   };
   await db.collection("pedidos").insertOne(pedido);
-  return res.status(201).json({
-    ok: true, pedidoId, estado: pedido.estado,
-    productos, subtotal, costoEnvio, total, metodoPago,
+
+try {
+  await enviarEmailCompra({
+    pedidoId,
+    email: pedido.emailComprador,
+    nombreComprador: pedido.nombreComprador,
+    productos: pedido.productos,
+    total: pedido.total,
   });
+
+  await db.collection("pedidos").updateOne(
+    { pedidoId },
+    {
+      $set: {
+        emailInicialEnviado: true,
+        emailInicialEnviadoEn: new Date(),
+      },
+    }
+  );
+} catch (errorEmail) {
+  console.error(
+    "Error enviando email inicial del pedido:",
+    errorEmail
+  );
+
+  await db.collection("pedidos").updateOne(
+    { pedidoId },
+    {
+      $set: {
+        emailInicialEnviado: false,
+        errorEmailInicial:
+          errorEmail?.message ||
+          "Error desconocido enviando email.",
+      },
+    }
+  );
+}
+
+return res.status(201).json({
+  ok: true,
+  pedidoId,
+  estado: pedido.estado,
+  productos,
+  subtotal,
+  costoEnvio,
+  total,
+  metodoPago,
+});
 };
 
 /* =========================
