@@ -807,13 +807,63 @@ const editarProducto = async (req, res) => {
     ...datosEditables
   } = cambios;
 
+  const fecha = new Date();
+
+  let ofertaLanzamiento =
+    datosEditables.ofertaLanzamiento;
+
+  if (
+    ofertaLanzamiento &&
+    typeof ofertaLanzamiento === "object" &&
+    !Array.isArray(ofertaLanzamiento) &&
+    ofertaLanzamiento.activa === true
+  ) {
+    const duracionDias = Number(
+      ofertaLanzamiento.duracionDias
+    );
+
+    if (
+      !Number.isInteger(duracionDias) ||
+      duracionDias < 1 ||
+      duracionDias > 30
+    ) {
+      return res.status(400).json({
+        error:
+          "La duración de la oferta debe ser de 1 a 30 días.",
+      });
+    }
+
+    ofertaLanzamiento = {
+      ...ofertaLanzamiento,
+      activa: true,
+      duracionDias,
+      iniciaEn: fecha,
+      finalizaEn: new Date(
+        fecha.getTime() +
+          duracionDias * 24 * 60 * 60 * 1000
+      ),
+    };
+  } else if (ofertaLanzamiento) {
+    ofertaLanzamiento = {
+      ...ofertaLanzamiento,
+      activa: false,
+    };
+  }
+
   const productoActualizado = {
     ...datosEditables,
+
+    ...(ofertaLanzamiento
+      ? { ofertaLanzamiento }
+      : {}),
+
     id: productoActual.id,
     tipo: "fisico",
+
     creadoEn:
-      productoActual.creadoEn || new Date(),
-    actualizadoEn: new Date(),
+      productoActual.creadoEn || fecha,
+
+    actualizadoEn: fecha,
   };
 
   if (!productoActualizado.imagenes) {
