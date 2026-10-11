@@ -241,6 +241,9 @@ export default {
   async fetch(request, env) {
     sincronizarEntorno(env);
     const url = new URL(request.url);
+    if (url.pathname === "/api/ia/copys") {
+  return generarCopyConIA(request, env);
+    }
 
     /* =========================
    PREVIEWS PARA COMPARTIR

@@ -2,6 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "andrestrotamundos",
   "main": "worker.js",
+  "ai": {
+  "binding": "AI"
+},
   "compatibility_date": "2026-10-09",
   "compatibility_flags": ["nodejs_compat"],
 
@@ -21,5 +24,105 @@
 
   "triggers": {
     "crons": ["*/5 * * * *"]
+  }
+}
+
+async function generarCopyConIA(request, env) {
+  if (request.method !== "POST") {
+    return Response.json(
+      { error: "Método no permitido" },
+      { status: 405 }
+    );
+  }
+
+  if (!env.AI) {
+    return Response.json(
+      { error: "Workers AI no está configurado" },
+      { status: 503 }
+    );
+  }
+
+  try {
+    const datos = await request.json();
+
+    const nombre = String(datos.nombre || "").trim();
+    const descripcion = String(datos.descripcion || "").trim();
+    const plataforma = String(datos.plataforma || "").trim();
+
+    if (
+      !nombre ||
+      !["facebook", "whatsapp"].includes(plataforma)
+    ) {
+      return Response.json(
+        { error: "Datos inválidos" },
+        { status: 400 }
+      );
+    }
+
+    const prompt = `
+Sos un redactor publicitario argentino especializado
+en comercio electrónico.
+
+Producto: ${nombre}
+Descripción: ${descripcion}
+
+Plataforma: ${plataforma}
+
+Generá un copy comercial natural, atractivo y breve.
+
+Reglas:
+- Español argentino.
+- No inventar características.
+- No inventar descuentos ni promociones.
+- No incluir URLs.
+- No usar más de 2 emojis.
+- Evitar textos repetitivos.
+- Facebook: generar exactamente 5 hashtags relevantes.
+- WhatsApp: no generar hashtags.
+
+Respondé exclusivamente con JSON válido:
+{
+  "copy": "texto",
+  "hashtags": ["#Etiqueta1"]
+}
+`;
+
+    const resultado = await env.AI.run(
+      "@cf/meta/llama-3.1-8b-instruct",
+      {
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      }
+    );
+
+    const texto = String(resultado.response || "")
+      .replace(/```json|```/g, "")
+      .trim();
+
+    const generado = JSON.parse(texto);
+
+    return Response.json({
+      ok: true,
+      copy: String(generado.copy || ""),
+      hashtags:
+        plataforma === "facebook" &&
+        Array.isArray(generado.hashtags)
+          ? generado.hashtags.slice(0, 5)
+          : [],
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        ok: false,
+        error: error.message,
+      },
+      { status: 500 }
+    );
   }
 }

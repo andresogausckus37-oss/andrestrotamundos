@@ -810,57 +810,156 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
   // GENERAR BORRADORES LOCALES
   // =======================================================
 
-  const generarContenido = () => {
-    const seleccionados = [
-      producto1,
-      producto2,
-    ].filter(Boolean);
+  const generarContenido = async () => {
+  const seleccionados = [
+    producto1,
+    producto2,
+  ].filter(Boolean);
 
-    if (!seleccionados.length) {
-      setError(
-        "Selecciona al menos un producto."
-      );
+  if (!seleccionados.length) {
+    setError(
+      "Selecciona al menos un producto."
+    );
 
-      return;
-    }
+    return;
+  }
 
-    try {
-      setGenerando(true);
-      setError("");
+  try {
+    setGenerando(true);
+    setError("");
 
-      const resultados =
-        seleccionados.map(
-          (producto) => ({
-            productoId:
-              producto.id,
+    const resultados = await Promise.all(
+      seleccionados.map(
+        async (producto) => {
+          try {
+            const respuesta = await fetch(
+              "/api/ia/copys",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body: JSON.stringify({
+                  nombre:
+                    producto.nombre,
 
-            nombre:
-              producto.nombre,
+                  descripcion:
+                    producto.descripcionLarga ||
+                    producto.descripcion ||
+                    "",
 
-            contenido:
+                  plataforma:
+                    "facebook",
+                }),
+              }
+            );
+
+            const datos =
+              await respuesta.json();
+
+            if (!respuesta.ok) {
+              throw new Error(
+                datos.error ||
+                  "Error generando contenido con IA"
+              );
+            }
+
+            /*
+             * Primero generamos toda la estructura
+             * mediante nuestras plantillas locales.
+             */
+            const contenido =
               generarContenidoRedesLocal(
                 producto
-              ),
-          })
-        );
+              );
 
-      setContenidos(
-        resultados
-      );
-    } catch (error) {
-      console.error(
-        "Error generando contenido:",
-        error
-      );
+            /*
+             * Reemplazamos únicamente la publicación
+             * comercial de Facebook por la versión IA.
+             */
+            if (
+              contenido.facebook
+                ?.publicaciones?.length
+            ) {
+              const indice =
+                contenido.facebook
+                  .publicaciones.length - 1;
 
-      setError(
-        error.message ||
-          "No se pudo generar el contenido."
-      );
-    } finally {
-      setGenerando(false);
+              contenido.facebook
+                .publicaciones[indice] = {
+                  ...contenido.facebook
+                    .publicaciones[indice],
+
+                  texto:
+                    datos.copy,
+
+                  hashtags:
+                    Array.isArray(
+                      datos.hashtags
+                    )
+                      ? datos.hashtags.slice(
+                          0,
+                          5
+                        )
+                      : [],
+                };
+            }
+
+            return {
+              productoId:
+                producto.id,
+
+              nombre:
+                producto.nombre,
+
+              contenido,
+            };
+          } catch (errorIA) {
+            console.warn(
+              "Workers AI no disponible. Usando plantilla local:",
+              errorIA
+            );
+
+            /*
+             * FALLBACK AUTOMÁTICO.
+             *
+             * Si Cloudflare AI falla o agotamos
+             * la cuota, Admin Redes sigue
+             * funcionando normalmente.
+             */
+            return {
+              productoId:
+                producto.id,
+
+              nombre:
+                producto.nombre,
+
+              contenido:
+                generarContenidoRedesLocal(
+                  producto
+                ),
+            };
           }
-  };
+        }
+      )
+    );
+
+    setContenidos(resultados);
+  } catch (error) {
+    console.error(
+      "Error generando contenido:",
+      error
+    );
+
+    setError(
+      error.message ||
+        "No se pudo generar el contenido."
+    );
+  } finally {
+    setGenerando(false);
+  }
+};
   
   // =======================================================
   // EDITAR UNA PUBLICACIÓN
