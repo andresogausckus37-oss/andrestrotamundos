@@ -2,6 +2,7 @@ import handlerContenidoRedes from "./api/contenido-redes.js";
 import handlerAdminLogin from "./api/admin/login.js";
 import handlerAdminPedidos from "./api/admin/pedidos.js";
 import handlerVisitas from "./api/visitas.js";
+import crypto from "crypto";
 
 const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
 
@@ -241,9 +242,45 @@ export default {
   async fetch(request, env) {
     sincronizarEntorno(env);
     const url = new URL(request.url);
+
     if (url.pathname === "/api/ia/copys") {
-  return generarCopyConIA(request, env);
-    }
+  if (
+    !adminAutorizadoWorker(
+      request,
+      env
+    )
+  ) {
+    return Response.json(
+      {
+        ok: false,
+        error: "No autorizado",
+      },
+      { status: 401 }
+    );
+  }
+
+  try {
+    return await generarCopyConIA(
+      request,
+      env
+    );
+  } catch (error) {
+    console.error(
+      "Error ejecutando Workers AI:",
+      error
+    );
+
+    return Response.json(
+      {
+        ok: false,
+        error:
+          error?.message ||
+          "Error generando contenido con IA",
+      },
+      { status: 500 }
+    );
+  }
+}
 
     /* =========================
    PREVIEWS PARA COMPARTIR
@@ -399,3 +436,166 @@ if (url.pathname === RUTA_CONTENIDO_REDES) {
     );
   }
 };
+
+async function generarCopyConIA(request, env) {
+  if (request.method !== "POST") {
+    return Response.json(
+      { error: "Método no permitido" },
+      { status: 405 }
+    );
+  }
+
+  if (!env.AI) {
+    return Response.json(
+      { error: "Workers AI no está configurado" },
+      { status: 503 }
+    );
+  }
+
+  try {
+    const datos = await request.json();
+
+    const nombre = String(datos.nombre || "").trim();
+    const descripcion = String(datos.descripcion || "").trim();
+    const plataforma = String(datos.plataforma || "").trim();
+
+    if (
+      !nombre ||
+      !["facebook", "whatsapp"].includes(plataforma)
+    ) {
+      return Response.json(
+        { error: "Datos inválidos" },
+        { status: 400 }
+      );
+    }
+
+    const prompt = `
+Sos un redactor publicitario argentino especializado
+en comercio electrónico.
+
+Producto: ${nombre}
+Descripción: ${descripcion}
+
+Plataforma: ${plataforma}
+
+Generá un copy comercial natural, atractivo y breve.
+
+Reglas:
+- Español argentino.
+- No inventar características.
+- No inventar descuentos ni promociones.
+- No incluir URLs.
+- No usar más de 2 emojis.
+- Evitar textos repetitivos.
+- Facebook: generar exactamente 5 hashtags relevantes.
+- WhatsApp: no generar hashtags.
+
+Respondé exclusivamente con JSON válido:
+{
+  "copy": "texto",
+  "hashtags": ["#Etiqueta1"]
+}
+`;
+
+    const resultado = await env.AI.run(
+      "@cf/meta/llama-3.1-8b-instruct",
+      {
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      }
+    );
+
+    const texto = String(resultado.response || "")
+      .replace(/```json|```/g, "")
+      .trim();
+
+    const generado = JSON.parse(texto);
+
+    return Response.json({
+      ok: true,
+      copy: String(generado.copy || ""),
+      hashtags:
+        plataforma === "facebook" &&
+        Array.isArray(generado.hashtags)
+          ? generado.hashtags.slice(0, 5)
+          : [],
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        ok: false,
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+}
+function obtenerCookiesWorker(request) {
+  const cookies = {};
+  const header =
+    request.headers.get("cookie") || "";
+
+  header.split(";").forEach((cookie) => {
+    const [nombre, ...valor] =
+      cookie.trim().split("=");
+
+    if (nombre) {
+      cookies[nombre] =
+        decodeURIComponent(
+          valor.join("=")
+        );
+    }
+  });
+
+  return cookies;
+}
+
+function adminAutorizadoWorker(
+  request,
+  env
+) {
+  const adminPassword =
+    env.ADMIN_PASSWORD;
+
+  if (!adminPassword) {
+    return false;
+  }
+
+  const tokenEsperado = crypto
+    .createHmac(
+      "sha256",
+      String(adminPassword)
+    )
+    .update(
+      "andres-imprimibles-admin"
+    )
+    .digest("hex");
+
+  const token =
+    obtenerCookiesWorker(request)
+      .admin_token;
+
+  if (!token) {
+    return false;
+  }
+
+  const a = Buffer.from(token);
+  const b = Buffer.from(
+    tokenEsperado
+  );
+
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    a,
+    b
+  );
+}
