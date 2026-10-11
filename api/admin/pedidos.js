@@ -1129,18 +1129,36 @@ const generarPreviewProducto = async (
   }
 
   const rutaCompartir = usarImagenFacebook
-  ? "compartir-facebook"
-  : "compartir";
+    ? "compartir-facebook"
+    : "compartir";
 
-const urlCompartir =
-  `https://andreshousesitter.com/${rutaCompartir}/${encodeURIComponent(
-    producto.id
-  )}`;
+  /*
+   * Dominio dinámico.
+   *
+   * Mientras usamos workers.dev tomará ese dominio.
+   * Cuando conectemos andreshousesitter.com a Cloudflare,
+   * automáticamente utilizará el dominio real.
+   */
+  const protocolo =
+    req.headers?.["x-forwarded-proto"] ||
+    "https";
 
-const urlProducto =
-  `https://andreshousesitter.com/tienda/${encodeURIComponent(
-    producto.id
-  )}`;
+  const host =
+    req.headers?.host ||
+    "andrestrotamundos.andresogausckus37.workers.dev";
+
+  const origen =
+    `${protocolo}://${host}`;
+
+  const urlCompartir =
+    `${origen}/${rutaCompartir}/${encodeURIComponent(
+      producto.id
+    )}`;
+
+  const urlProducto =
+    `${origen}/tienda/${encodeURIComponent(
+      producto.id
+    )}`;
 
   const tituloSeguro =
     escaparHtml(nombre);
