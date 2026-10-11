@@ -150,21 +150,20 @@ const imagenes = useMemo(() => {
       : [];
   }, [producto]);
 
-  const ofertaActiva = useMemo(() => {
-    if (!producto?.oferta?.activa) return false;
+  const precioOferta =
+    Number(producto?.oferta?.precioARS) || 0;
 
-    const precioOferta =
-      Number(producto.oferta?.precioARS) || 0;
+  const finalizaOferta =
+    producto?.ofertaLanzamiento?.finalizaEn;
 
-    if (precioOferta <= 0) return false;
+  const ofertaDentroDePlazo = finalizaOferta
+    ? new Date(finalizaOferta).getTime() > ahora
+    : true;
 
-    const finalizaEn =
-      producto.ofertaLanzamiento?.finalizaEn;
-
-    if (!finalizaEn) return true;
-
-    return new Date(finalizaEn).getTime() > Date.now();
-  }, [producto]);
+  const ofertaActiva =
+    producto?.oferta?.activa === true &&
+    precioOferta > 0 &&
+    ofertaDentroDePlazo;
 
   const precioNormal = Number(producto?.precioARS) || 0;
 
@@ -239,9 +238,10 @@ const imagenes = useMemo(() => {
   };
 };
 
-const tiempoRestante = obtenerTiempoRestante(
-  producto?.ofertaLanzamiento?.finalizaEn
-);
+const tiempoRestante =
+  ofertaActiva && finalizaOferta
+    ? obtenerTiempoRestante(finalizaOferta)
+    : null;
 
   const comprar = () => {
     if (!disponible) return;
