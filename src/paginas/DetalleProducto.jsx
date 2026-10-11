@@ -24,7 +24,7 @@ const DetalleProducto = () => {
   const [imagenActiva, setImagenActiva] = useState(0);
   const [varianteSeleccionada, setVarianteSeleccionada] =
     useState("");
-
+const [ahora, setAhora] = useState(() => Date.now());
   useEffect(() => {
     let cancelado = false;
 
@@ -96,28 +96,27 @@ const DetalleProducto = () => {
     };
   }, [id]);
 
-  const imagenes = useMemo(() => {
-    if (!producto) return [];
+  useEffect(() => {
+  const intervalo = setInterval(() => {
+    setAhora(Date.now());
+  }, 1000);
 
-    const posibles = [
-      producto.imagenes?.portada,
-      producto.imagenes?.portadaFacebook,
-      producto.imagenes?.preview,
-      ...(Array.isArray(producto.imagenes?.previewsIndividuales)
-        ? producto.imagenes.previewsIndividuales
-        : []),
-      producto.imagenes?.redes?.feed?.presentacion,
-      producto.imagenes?.redes?.feed?.incluye,
-      producto.imagenes?.redes?.feed?.beneficios,
-      producto.imagenes?.redes?.feed?.comoFunciona,
-      producto.imagenes?.redes?.vertical?.presentacion,
-      producto.imagenes?.redes?.vertical?.incluye,
-      producto.imagenes?.redes?.vertical?.beneficios,
-      producto.imagenes?.redes?.vertical?.comoFunciona,
-    ].filter(Boolean);
+  return () => clearInterval(intervalo);
+}, []);
+  
+const imagenes = useMemo(() => {
+  if (!producto) return [];
 
-    return [...new Set(posibles)].slice(0, 8);
-  }, [producto]);
+  const posibles = [
+    producto.imagenes?.portada,
+    producto.imagenes?.preview,
+    ...(Array.isArray(producto.imagenes?.previewsIndividuales)
+      ? producto.imagenes.previewsIndividuales
+      : []),
+  ].filter(Boolean);
+
+  return [...new Set(posibles)].slice(0, 4);
+}, [producto]);
 
   const variantes = useMemo(() => {
     if (!producto) return [];
@@ -208,6 +207,43 @@ const DetalleProducto = () => {
       currency: "ARS",
       maximumFractionDigits: 0,
     }).format(Number(valor) || 0);
+
+  const obtenerTiempoRestante = (finalizaEn) => {
+  if (!finalizaEn) return null;
+
+  const final = new Date(finalizaEn).getTime();
+
+  if (!Number.isFinite(final)) {
+    return null;
+  }
+
+  const diferencia = final - ahora;
+
+  if (diferencia <= 0) {
+    return null;
+  }
+
+  const totalSegundos = Math.floor(
+    diferencia / 1000
+  );
+
+  return {
+    dias: Math.floor(totalSegundos / 86400),
+    horas: Math.floor(
+      (totalSegundos % 86400) / 3600
+    ),
+    minutos: Math.floor(
+      (totalSegundos % 3600) / 60
+    ),
+    segundos: totalSegundos % 60,
+  };
+};
+
+const tiempoRestante = ofertaActiva
+  ? obtenerTiempoRestante(
+      producto?.ofertaLanzamiento?.finalizaEn
+    )
+  : null;
 
   const comprar = () => {
     if (!disponible) return;
@@ -370,6 +406,19 @@ const DetalleProducto = () => {
                       </span>
                     )}
                   </div>
+
+                  {tiempoRestante && (
+  <div className="mt-3 inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-3 py-2">
+    <span className="text-xs font-medium text-black">
+      Finaliza en{" "}
+      {tiempoRestante.dias > 0 &&
+        `${tiempoRestante.dias}d `}
+      {String(tiempoRestante.horas).padStart(2, "0")}h{" "}
+      {String(tiempoRestante.minutos).padStart(2, "0")}m{" "}
+      {String(tiempoRestante.segundos).padStart(2, "0")}s
+    </span>
+  </div>
+)}
                 </>
               ) : (
                 <span className="text-3xl font-medium tracking-tight text-slate-950">
