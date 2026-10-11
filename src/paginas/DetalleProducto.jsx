@@ -239,11 +239,9 @@ const imagenes = useMemo(() => {
   };
 };
 
-const tiempoRestante = ofertaActiva
-  ? obtenerTiempoRestante(
-      producto?.ofertaLanzamiento?.finalizaEn
-    )
-  : null;
+const tiempoRestante = obtenerTiempoRestante(
+  producto?.ofertaLanzamiento?.finalizaEn
+);
 
   const comprar = () => {
     if (!disponible) return;
