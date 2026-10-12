@@ -369,8 +369,8 @@ const tiempoRestante =
             </nav>
           </section>
 
-          <section className="lg:pt-1">
-            <h1 className="mt-3 text-2xl font-medium leading-tight text-slate-950 sm:text-3xl">
+          <section className="lg:pt-0">
+  <h1 className="mt-0 text-2xl font-medium leading-tight text-slate-950 sm:text-3xl">
               {nombre}
             </h1>
 
@@ -463,6 +463,17 @@ const tiempoRestante =
               )}
             </div>
 
+            <section className="mt-4 rounded-xs border border-slate-200 bg-white p-3 sm:p-4">
+  <h2 className="text-sm font-medium text-slate-900">
+    Descripción del producto
+  </h2>
+
+  <p className="mt-2 whitespace-pre-line text-xs font-normal leading-6 text-slate-600">
+    {descripcionLarga ||
+      "Consulta los detalles de este producto antes de realizar tu pedido."}
+  </p>
+</section>
+
             {variantes.length > 0 && (
               <div id="selector-variantes" className="mt-5">
                 <div className="flex items-center gap-2">
@@ -519,7 +530,7 @@ const tiempoRestante =
 
         {(caracteristicas.length > 0 ||
           contenidoPaquete.length > 0) && (
-          <div className="mt-5 grid grid-cols-2 gap-2">
+          <div className="mt-5 grid grid-cols-1 gap-2">
             {caracteristicas.length > 0 && (
               <ListaDetalles
                 titulo="Características"
@@ -554,17 +565,7 @@ const tiempoRestante =
           </section>
         </div>
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-          <section className="rounded-xs border border-slate-200 bg-white p-3 sm:p-4">
-            <h2 className="text-sm font-medium text-slate-900">
-              Descripción
-            </h2>
-
-            <p className="mt-3 whitespace-pre-line text-xs font-normal leading-6 text-slate-600">
-              {descripcionLarga ||
-                "Consulta los detalles de este producto antes de realizar tu pedido."}
-            </p>
-          </section>
+        <div className="mt-8 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">         
 
           {(marca ||
             modelo ||
@@ -634,12 +635,16 @@ const Dato = ({ etiqueta, valor }) => (
 );
 
 const ListaDetalles = ({ titulo, elementos }) => (
-  <section className="rounded-xs border border-slate-200 bg-white p-3 sm:p-4">
-    <h2 className="text-sm font-medium text-slate-900">
-      {titulo}
-    </h2>
+  <details className="group rounded-xs border border-slate-200 bg-white">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 text-sm font-medium text-slate-900 sm:p-4 [&::-webkit-details-marker]:hidden">
+      <span>{titulo}</span>
 
-    <div className="mt-3 space-y-2">
+      <span className="text-slate-500 transition-transform duration-200 group-open:rotate-180">
+        ▼
+      </span>
+    </summary>
+
+    <div className="space-y-2 border-t border-slate-100 p-3 sm:p-4">
       {elementos.map((elemento, indice) => (
         <div
           key={`${elemento}-${indice}`}
@@ -657,7 +662,7 @@ const ListaDetalles = ({ titulo, elementos }) => (
         </div>
       ))}
     </div>
-  </section>
+  </details>
 );
 
 export default DetalleProducto;
