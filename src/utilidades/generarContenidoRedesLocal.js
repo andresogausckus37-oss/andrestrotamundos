@@ -1169,54 +1169,48 @@ export function generarContenidoRedesLocal(
 // mientras se actualizan sus consumidores.
 // =========================================================
 function generarCalendarioProducto(producto, imagenes, original) {
-  const url = original.urlProducto || original.url || original.enlace || original.urls?.producto || "";
-  const video = original.videoMP4 || original.videoMp4 || original.video?.url || original.video || original.recursosRedes?.video || "";
-  const feed = imagenes.feed.todas.slice(0, 3);
+  const datos = original || {};
+  const nombre = String(producto.nombre || "").trim();
+  const descripcion = String(producto.descripcion || producto.descripcionLarga || "").trim();
+  const categoria = String(producto.categoria || "").trim();
+  const beneficios = obtenerBeneficios(producto).map(String).filter(Boolean);
+  const caracteristicas = obtenerIncluye(producto).map(String).filter(Boolean);
+  const urlDirecta = [producto.urlProducto, datos.urlProducto, datos.urls?.producto, datos.url, datos.enlace].find(v => typeof v === "string" && /^https?:\/\//i.test(v.trim()));
+  const url = urlDirecta || (typeof window !== "undefined" && window.location?.origin && datos.id ? `${window.location.origin}/tienda/${encodeURIComponent(datos.id)}` : "");
+  const video = [producto.videoReel, producto.videoMP4, datos.videoReel, datos.videoMP4, datos.videoMp4, datos.recursosRedes?.video].find(v => typeof v === "string" && v.trim()) || "";
+  const feed = [producto.recursosRedes?.imagenesFeed, imagenes.feed.todas].find(v => Array.isArray(v) && v.filter(Boolean).length >= 3)?.filter(Boolean).slice(0, 3) || imagenes.feed.todas.slice(0, 3);
   const verticales = imagenes.vertical.todas.slice(0, 3);
-  const principal = feed[0] || null;
-  const beneficio = obtenerBeneficios(producto);
-  const detalle = obtenerIncluye(producto);
-  const temas = {
-    threads: [
-      `¿Sabías que ${obtenerNombre(producto)} puede ayudarte a incorporar actividades imprimibles a tu rutina? ${beneficio[0] || "Podés imprimirlo y usarlo cuando quieras"}.`,
-      `Una idea para aprovechar ${obtenerNombre(producto)}: elegí una actividad, imprimila y guardá las restantes para otro momento.`,
-    ],
-    facebook: [
-      `¿Sabías que podés utilizar ${obtenerNombre(producto)} sin depender de una pantalla? ${detalle[0] || "El material se entrega en formato digital"}.`,
-      `Consejo práctico: prepará las hojas de ${obtenerNombre(producto)} antes de empezar y tenelas a mano para usar cuando quieras.`,
-    ],
-  };
-  const contenidoPorRed = {
-    instagram: `Descubrí ${obtenerNombre(producto)}. ${descripcionCantidad(producto)} para imprimir y disfrutar.`,
-    threads: `Conocé ${obtenerNombre(producto)} y explorá sus actividades imprimibles.`,
-    facebook: `Presentamos ${obtenerNombre(producto)}: ${descripcionCantidad(producto)} en formato digital.`,
-    whatsapp: `${obtenerNombre(producto)}: actividades listas para imprimir.`,
-  };
-  const construir = (p, dia, indice) => {
-    const grupo = p.red === "facebook" && p.tipo === "grupo" ? "facebook_grupos" : p.red;
-    const sabias = p.tipo === "sabias_que" || p.variante === "sabias_que";
-    const texto = sabias
-      ? (grupo === "facebook_grupos" ? temas.facebook[0] : temas.threads[0])
-      : contenidoPorRed[p.red];
-    const cta = p.enlaceEnBio ? "Encontralo en el enlace de nuestra bio." : "Conocé el producto en el enlace.";
-    const etiquetas = p.cantidadHashtags ? crearHashtags(producto).slice(0, p.cantidadHashtags) : [];
-    const textoCompleto = [texto, cta, p.usarEnlaceProducto && url ? url : "", etiquetas.join(" ")].filter(Boolean).join("\n\n");
-    const recurso = p.recurso === "video" ? video : p.recurso === "imagenesFeed" ? feed : p.recurso === "portadaFacebook" ? null : principal;
-    return {
-      id: `${dia}-${p.red}-${p.tipo}-${p.variante || indice}`,
-      dia, hora: p.hora, red: p.red, tipo: p.tipo,
-      variante: p.variante || null, publicacionAutomatica: p.publicacionAutomatica,
-      formato: p.recurso, recurso, imagenPrincipal: principal,
-      imagenesFeed: feed, imagenesVerticales: verticales,
-      video, vistaPreviaEnlace: Boolean(p.vistaPreviaEnlace),
-      texto, cta, urlProducto: p.usarEnlaceProducto ? url : "",
-      hashtags: etiquetas, textoCompleto,
-      // Para acciones semiautomáticas: copiar textoCompleto y usar recurso.
-      requiereConfirmacionManual: !p.publicacionAutomatica,
-    };
-  };
-  return [
-    ...CICLO_PRODUCTO.dia1.publicaciones.map((p, i) => construir(p, "dia1", i)),
-    ...CICLO_PRODUCTO.dia2.publicaciones.map((p, i) => construir(p, "dia2", i)),
+  const principal = feed[0] || "";
+  const palabras = `${nombre} ${categoria}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-zA-Z0-9]+/).filter(w => w.length > 3);
+  const etiquetas = [...new Set(["#TiendaOnline", "#Productos", ...palabras.map(w => `#${w}`), "#Novedades", "#CompraOnline", "#DescubriMas"])].slice(0, 5);
+  const dato1 = beneficios[0] || caracteristicas[0] || descripcion;
+  const dato2 = caracteristicas.find(v => v !== dato1) || beneficios.find(v => v !== dato1) || (descripcion !== dato1 ? descripcion : "");
+  const publicaciones = [
+    ...CICLO_PRODUCTO.dia1.publicaciones.map((p, i) => ({...p, dia: "dia1", indice: i})),
+    ...CICLO_PRODUCTO.dia2.publicaciones.map((p, i) => ({...p, dia: "dia2", indice: i})),
   ];
+  if (!nombre) throw new Error("Falta el nombre del producto");
+  if (!url) throw new Error(`Falta la URL pública del producto: ${nombre}`);
+  if (!video) throw new Error(`Falta el MP4 del producto: ${nombre}`);
+  if (feed.length !== 3) throw new Error(`Faltan imágenes 4:5 del producto: ${nombre}`);
+  return publicaciones.map(p => {
+    const esThreadsDato = p.red === "threads" && p.tipo === "sabias_que";
+    const esFacebookDato = p.red === "facebook" && p.variante === "sabias_que";
+    const contexto = esThreadsDato ? (dato1 ? `¿Sabías que ${nombre} tiene esta característica? ${dato1}` : `Conocé ${nombre}. ${descripcion || categoria}`)
+      : esFacebookDato ? (dato2 ? `Un detalle útil de ${nombre}: ${dato2}` : `Conocé más sobre ${nombre}: ${categoria || descripcion}`)
+      : `${nombre}. ${descripcion || categoria || "Conocé sus detalles en nuestra tienda."}`;
+    const cta = p.enlaceEnBio ? "Más información en el link de la bio." : "Consultá los detalles del producto en nuestra tienda.";
+    const hashtags = p.cantidadHashtags ? etiquetas : [];
+    const recurso = p.recurso === "video" ? video : p.recurso === "imagenesFeed" ? feed : p.recurso === "portadaFacebook" ? (producto.recursosRedes?.portadaFacebook || principal) : principal;
+    return {
+      id: `${p.dia}-${p.red}-${p.tipo}-${p.variante || p.indice}`,
+      dia: p.dia, hora: p.hora, red: p.red, tipo: p.tipo, variante: p.variante || null,
+      publicacionAutomatica: p.publicacionAutomatica, requiereConfirmacionManual: !p.publicacionAutomatica,
+      formato: p.recurso, recurso, imagenPrincipal: principal, imagenesFeed: feed, imagenesVerticales: verticales,
+      video, videoUrl: p.recurso === "video" ? video : "", imagen: p.recurso === "video" ? null : recurso,
+      vistaPreviaEnlace: Boolean(p.vistaPreviaEnlace), texto: contexto, cta,
+      urlProducto: p.usarEnlaceProducto ? url : "", hashtags,
+      textoCompleto: [contexto, cta, p.usarEnlaceProducto ? url : "", hashtags.join(" ")].filter(Boolean).join("\n\n"),
+    };
+  });
 }
