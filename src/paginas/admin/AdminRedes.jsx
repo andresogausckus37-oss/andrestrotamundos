@@ -388,6 +388,8 @@ export default function AdminRedes() {
     setProducto2Id,
   ] = useState("");
 
+  const [producto3Id, setProducto3Id] = useState("");
+
   const [
     cargandoProductos,
             setCargandoProductos,
@@ -777,7 +779,7 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
     }
 
     setMensajeCalendario(
-      "Contenido actualizado. Las 20 publicaciones fueron regeneradas."
+      "Contenido actualizado. Las publicaciones fueron regeneradas."
     );
 
     await cargarCalendario();
@@ -810,6 +812,8 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
         producto.id === producto2Id
     );
 
+  const producto3 = productosDigitales.find((producto) => producto.id === producto3Id);
+
   // =======================================================
   // GENERAR BORRADORES LOCALES
   // =======================================================
@@ -818,6 +822,7 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
   const seleccionados = [
     producto1,
     producto2,
+    producto3,
   ].filter(Boolean);
 
   if (!seleccionados.length) {
@@ -1306,7 +1311,7 @@ const aprobarContenido = async (
   // =======================================================
 
   const hayProductoSeleccionado =
-    Boolean(producto1 || producto2);
+    Boolean(producto1 || producto2 || producto3);
 
   const compartirEnGrupoFacebook = async (pieza, destino, item) => {
     try {
@@ -1699,7 +1704,7 @@ const urlProducto = productoId
               Cargando productos...
             </div>
           ) : (
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
               {/* PRODUCTO 1 */}
 
               <div>
@@ -1728,8 +1733,7 @@ const urlProducto = productoId
                         key={producto.id}
                         value={producto.id}
                         disabled={
-                          producto.id ===
-                          producto2Id
+                          producto.id === producto2Id || producto.id === producto3Id
                         }
                       >
                         {producto.nombre}
@@ -1767,14 +1771,30 @@ const urlProducto = productoId
                         key={producto.id}
                         value={producto.id}
                         disabled={
-                          producto.id ===
-                          producto1Id
+                          producto.id === producto1Id || producto.id === producto3Id
                         }
                       >
                         {producto.nombre}
                       </option>
                     )
                   )}
+                </select>
+              </div>
+
+              {/* PRODUCTO 3 */}
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Producto 3</label>
+                <select
+                  value={producto3Id}
+                  onChange={(event) => { setProducto3Id(event.target.value); setContenidos([]); }}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] text-slate-700 outline-none transition focus:border-violet-400"
+                >
+                  <option value="">Seleccionar producto</option>
+                  {productosDigitales.map((producto) => (
+                    <option key={producto.id} value={producto.id} disabled={producto.id === producto1Id || producto.id === producto2Id}>
+                      {producto.nombre}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -2402,6 +2422,22 @@ const urlProducto = productoId
                                       {pieza.hora} AR
                                     </span>
                                   </div>
+
+                                  {(pieza.publicacion?.texto || pieza.publicacion?.cta) && (
+                                    <button type="button" onClick={async () => {
+                                      const p = pieza.publicacion;
+                                      const url = p.urlProducto || p.url || (item.productoId ? `https://andreshousesitter.com/compartir/${encodeURIComponent(item.productoId)}` : "");
+                                      const etiquetas = Array.isArray(p.hashtags) ? p.hashtags.join(" ") : "";
+                                      const texto = [p.texto, p.cta, url, etiquetas].filter(Boolean).join("\n\n");
+                                      try { await navigator.clipboard.writeText(texto); alert("Texto, CTA y enlace copiados."); }
+                                      catch { alert("No se pudo copiar el texto."); }
+                                    }} className="mt-1.5 w-full rounded-md border border-violet-200 px-2 py-1.5 text-[10px] font-semibold text-violet-700">Copiar publicación completa</button>
+                                  )}
+                                  {(() => {
+                                    const p = pieza.publicacion || {};
+                                    const recursos = [p.videoUrl, p.video, ...(Array.isArray(p.imagen) ? p.imagen : p.imagen ? [p.imagen] : [])].filter((v) => typeof v === "string" && /^https?:\/\//.test(v));
+                                    return recursos.map((url, i) => <a key={`${url}-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="mt-1 block text-[10px] font-semibold text-blue-700 underline">Abrir recurso {i + 1}</a>);
+                                  })()}
 
                                   {pieza.estado === "publicado" ? (
                                     <p className="mt-1 text-[9px] font-semibold text-emerald-600">

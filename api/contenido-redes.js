@@ -1565,77 +1565,47 @@ const crearCalendarioInicial = (
     });
   };
 
-  // =======================================================
-  // SEMANA SIMPLE - 3 PRODUCTOS / 2 DÍAS CADA UNO
-  //
-  // Solo incluimos aquí formatos que el backend actual
-  // puede publicar automáticamente sin implementar APIs
-  // nuevas esta semana.
-  // =======================================================
+  // Priorizar las 13 piezas generadas para cada producto.
+  // Las publicaciones semiautomáticas quedan pendientes de acción manual.
+  if (Array.isArray(contenido?.calendario) && contenido.calendario.length) {
+    const offsets = { dia1: 0, dia2: 1 };
+    contenido.calendario.forEach((pieza, posicion) => {
+      const diaIndice = offsets[pieza.dia];
+      if (diaIndice === undefined) return;
+      const manual = pieza.requiereConfirmacionManual === true ||
+        pieza.publicacionAutomatica === false;
+      const tipo = pieza.tipo === "grupo" ?
+        `grupo_${pieza.variante || "post"}` : pieza.tipo;
+      calendario.push({
+        fecha: dias[diaIndice].fecha,
+        dia: dias[diaIndice].dia,
+        hora: pieza.hora,
+        red: pieza.red,
+        tipo,
+        indice: posicion,
+        publicacion: {
+          ...pieza,
+          texto: pieza.textoCompleto || pieza.texto || "",
+          imagenes: pieza.imagenesFeed || [],
+          video: pieza.video || "",
+        },
+        estado: manual ? "pendiente_manual" :
+          (["instagram:reel", "instagram:carrusel", "threads:video", "threads:sabias_que", "threads:carrusel"].includes(`${pieza.red}:${pieza.tipo}`)
+            ? "programado" : "pendiente_integracion"),
+        publicacionAutomatica: !manual,
+        zonaHoraria: ZONA_HORARIA_RED,
+      });
+    });
+    return calendario;
+  }
 
-  // DÍA 1 - VIDEO COMO PIEZA PRINCIPAL
-  // Producto 1 comienza excepcionalmente a las 12:00.
-  // Productos 2 y 3 comienzan a las 09:00.
-  const horaReel =
-    bloque === 0 ? "12:00" : "09:00";
-
-  agregar(
-    0,
-    horaReel,
-    "instagram",
-    "reel",
-    0,
-    contenido?.instagram?.reel
-  );
-
-  // Threads actualmente publica texto mediante la API.
-  agregar(
-    0,
-    bloque === 0 ? "12:30" : "09:30",
-    "threads",
-    "publicacion",
-    0,
-    contenido?.threads?.[0]
-  );
-
-  // Facebook actual publica feed/foto. El Reel MP4 y Story
-  // quedan como acciones manuales esta semana.
-  agregar(
-    0,
-    bloque === 0 ? "13:00" : "10:00",
-    "facebook",
-    "publicacion",
-    0,
-    contenido?.facebook?.publicaciones?.[0]
-  );
-
-  // DÍA 2 - IMÁGENES / CONTENIDO COMPLEMENTARIO
-  agregar(
-    1,
-    "10:00",
-    "instagram",
-    "carrusel",
-    0,
-    contenido?.instagram?.carrusel
-  );
-
-  agregar(
-    1,
-    "13:00",
-    "threads",
-    "publicacion",
-    1,
-    contenido?.threads?.[1]
-  );
-
-  agregar(
-    1,
-    "15:00",
-    "facebook",
-    "publicacion",
-    1,
-    contenido?.facebook?.publicaciones?.[1]
-  );
+  // Compatibilidad con contenidos aprobados antes de la migración.
+  agregar(0, "17:00", "instagram", "reel", 0, contenido?.instagram?.reel);
+  agregar(0, "18:00", "threads", "publicacion", 0, contenido?.threads?.[0]);
+  agregar(0, "17:00", "facebook", "publicacion", 0, contenido?.facebook?.publicaciones?.[0]);
+  agregar(1, "10:00", "instagram", "carrusel", 0, contenido?.instagram?.carrusel);
+  agregar(1, "10:00", "threads", "publicacion", 1, contenido?.threads?.[1]);
+  agregar(1, "10:00", "facebook", "publicacion", 1, contenido?.facebook?.publicaciones?.[1]);
 
   return calendario;
 };
@@ -2393,7 +2363,7 @@ async function ejecutarPublicacionesPendientes(
 
     documento.calendario.forEach(
       (pieza) => {
-        if (pieza?.estado !== "programado") {
+        if (pieza?.estado !== "programado" || pieza.publicacionAutomatica === false) {
           return;
         }
 

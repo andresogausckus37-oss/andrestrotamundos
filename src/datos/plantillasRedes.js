@@ -1,364 +1,116 @@
-// =========================================================
-// PLANTILLAS DE CONTENIDO PARA REDES SOCIALES
-// =========================================================
-//
-// Define:
-// 1. Qué contenido genera cada producto.
-// 2. Qué formatos multimedia necesita.
-// 3. Horarios predeterminados.
-// 4. Distribución semanal para 2 productos.
-//
-// Los copys finales NO se guardan aquí.
-// =========================================================
-
-
-// =========================================================
-// CONFIGURACIÓN GENERAL
-// =========================================================
+// Calendario base: tres productos por semana, dos días por producto.
+// Los copys se generan en otra capa. Este archivo define piezas y recursos.
 
 export const CONFIGURACION_REDES = {
-  productosPorSemana: 2,
-
-  diasPorProducto: 3,
-
+  productosPorSemana: 3,
+  diasPorProducto: 2,
   domingoLibre: true,
 };
 
-
-// =========================================================
-// FORMATOS MULTIMEDIA
-// =========================================================
-
 export const FORMATOS_REDES = {
-  cuadrado: {
-    nombre: "Cuadrado",
-    proporcion: "1:1",
-    ancho: 1080,
-    alto: 1080,
-  },
-
-  feedInstagram: {
-    nombre: "Feed Instagram",
-    proporcion: "4:5",
-    ancho: 1080,
-    alto: 1350,
-  },
-
-  vertical: {
-    nombre: "Vertical",
-    proporcion: "9:16",
-    ancho: 1080,
-    alto: 1920,
-  },
+  cuadrado: { nombre: "Cuadrado", proporcion: "1:1", ancho: 1080, alto: 1080 },
+  feedInstagram: { nombre: "Feed Instagram", proporcion: "4:5", ancho: 1080, alto: 1350 },
+  vertical: { nombre: "Vertical", proporcion: "9:16", ancho: 1080, alto: 1920 },
+  portadaFacebook: { nombre: "Vista previa de enlace Facebook", proporcion: "10:7", ancho: 900, alto: 630 },
 };
 
-
-// =========================================================
-// CONTENIDO GENERADO POR CADA PRODUCTO
-// =========================================================
-
-export const plantillaContenidoProducto = {
-  instagram: {
-    carrusel: {
-      cantidad: 1,
-      formato: "feedInstagram",
-      generarCopy: true,
-      generarCTA: true,
-      generarHashtags: true,
-      cantidadHashtags: 5,
-    },
-
-    reel: {
-      cantidad: 1,
-      formato: "vertical",
-      generarCopy: true,
-      generarCTA: true,
-      generarHashtags: true,
-      generarGuion: true,
-      cantidadHashtags: 5,
-      duracionObjetivo: 15,
-    },
-
-    stories: {
-      cantidad: 3,
-      formato: "vertical",
-
-      tipos: [
-        {
-          tipo: "presentacion",
-          generarTexto: true,
-          usarEnlaceProducto: false,
-        },
-        {
-          tipo: "desafio",
-          generarTexto: true,
-          usarEnlaceProducto: false,
-        },
-        {
-          tipo: "cta",
-          generarTexto: true,
-          usarEnlaceProducto: true,
-        },
-      ],
-    },
-  },
-
-  threads: {
-    cantidad: 3,
-
-    publicaciones: [
-      {
-        tipo: "interaccion",
-        generarCopy: true,
-        usarEnlaceProducto: false,
-      },
-      {
-        tipo: "desafio",
-        generarCopy: true,
-        usarEnlaceProducto: false,
-      },
-      {
-        tipo: "producto",
-        generarCopy: true,
-        usarEnlaceProducto: true,
-      },
-    ],
-  },
-
-  facebook: {
-    pagina: {
-      cantidad: 1,
-      formato: "cuadrado",
-      generarCopy: true,
-      generarCTA: true,
-      usarEnlaceProducto: true,
-    },
-
-    grupos: {
-      cantidad: 3,
-      formato: "cuadrado",
-
-      publicaciones: [
-        {
-          tipo: "interaccion",
-          generarCopy: true,
-          usarEnlaceProducto: false,
-        },
-        {
-          tipo: "desafio",
-          generarCopy: true,
-          usarEnlaceProducto: false,
-        },
-        {
-          tipo: "producto",
-          generarCopy: true,
-          usarEnlaceProducto: true,
-        },
-      ],
-
-      publicacionAutomatica: false,
-    },
-  },
-
-  whatsapp: {
-    estados: {
-      cantidad: 1,
-      formato: "vertical",
-      generarTexto: true,
-      generarCTA: true,
-      usarEnlaceProducto: true,
-      publicacionAutomatica: false,
-    },
-  },
+// Recursos existentes por producto: 1 MP4, 3 imágenes 4:5, 3 imágenes 9:16.
+// portadaFacebook es la vista previa del enlace del producto en grupos;
+// no se agrega como octavo archivo multimedia al inventario.
+export const RECURSOS_PRODUCTO_REDES = {
+  video: { cantidad: 1, formato: "mp4" },
+  imagenesFeed: { cantidad: 3, formato: "feedInstagram" },
+  imagenesVerticales: { cantidad: 3, formato: "vertical" },
+  imagenPrincipal: { origen: "imagenesFeed", indice: 0 },
 };
 
-
-// =========================================================
-// HORARIOS PREDETERMINADOS
-// =========================================================
-//
-// Serán editables posteriormente desde el Admin.
-// =========================================================
-
-export const HORARIOS_PREDETERMINADOS = {
-  instagram: {
-    carrusel: "18:00",
-    reel: "19:00",
-    story: "20:00",
-  },
-
-  threads: {
-    publicacion: "13:00",
-  },
-
-  facebook: {
-    pagina: "19:00",
-    grupos: "16:00",
-  },
-
-  whatsapp: {
-    estado: "20:30",
-  },
-};
-
-
-// =========================================================
-// CICLO DE 3 DÍAS POR PRODUCTO
-// =========================================================
-//
-// Día 1 = Descubrimiento
-// Día 2 = Participación
-// Día 3 = Conversión
-// =========================================================
+// Cada pieza requiere copy y CTA; los hashtags se incluyen salvo WhatsApp.
+// En las publicaciones semiautomáticas, la interfaz deberá permitir copiar
+// el texto completo y abrir/descargar los recursos existentes correspondientes.
+const pieza = (red, tipo, hora, recurso, extra = {}) => ({
+  red, tipo, hora, recurso,
+  generarCopy: true,
+  generarCTA: true,
+  cantidadHashtags: red === "whatsapp" ? 0 : 5,
+  usarEnlaceProducto: red !== "instagram",
+  publicacionAutomatica: !["grupo", "estado", "whatsapp_grupo"].includes(tipo),
+  ...extra,
+});
 
 export const CICLO_PRODUCTO = {
   dia1: {
-    objetivo: "descubrimiento",
-
+    objetivo: "presentacion",
     publicaciones: [
-      {
-        red: "instagram",
-        tipo: "carrusel",
-        hora: "18:00",
-      },
-      {
-        red: "instagram",
-        tipo: "story",
-        variante: "presentacion",
-        hora: "20:00",
-      },
-      {
-        red: "threads",
-        tipo: "interaccion",
-        hora: "13:00",
-      },
-      {
-        red: "facebook",
-        tipo: "grupo",
-        variante: "interaccion",
-        hora: "16:00",
-      },
+      pieza("instagram", "reel", "17:00", "video", { usarEnlaceProducto: false, enlaceEnBio: true }),
+      pieza("threads", "video", "18:00", "video"),
+      pieza("threads", "sabias_que", "21:00", "imagenPrincipal", { variante: "threads", contenidoDiferenciado: true }),
+      pieza("facebook", "reel_pagina", "17:00", "video"),
+      pieza("facebook", "story_pagina", "20:00", "video"),
+      pieza("facebook", "grupo", "18:00", "video", { variante: "reel", publicacionAutomatica: false }),
+      pieza("facebook", "grupo", "20:00", "imagenPrincipal", { variante: "sabias_que", contenidoDiferenciado: true, publicacionAutomatica: false }),
+      pieza("whatsapp", "estado", "17:00", "video", { publicacionAutomatica: false }),
     ],
   },
-
   dia2: {
-    objetivo: "participacion",
-
-    publicaciones: [
-      {
-        red: "instagram",
-        tipo: "reel",
-        hora: "19:00",
-      },
-      {
-        red: "instagram",
-        tipo: "story",
-        variante: "desafio",
-        hora: "20:00",
-      },
-      {
-        red: "threads",
-        tipo: "desafio",
-        hora: "13:00",
-      },
-      {
-        red: "facebook",
-        tipo: "grupo",
-        variante: "desafio",
-        hora: "16:00",
-      },
-    ],
-  },
-
-  dia3: {
     objetivo: "conversion",
-
     publicaciones: [
-      {
-        red: "instagram",
-        tipo: "story",
-        variante: "cta",
-        hora: "20:00",
-      },
-      {
-        red: "threads",
-        tipo: "producto",
-        hora: "13:00",
-      },
-      {
-        red: "facebook",
-        tipo: "grupo",
-        variante: "producto",
-        hora: "16:00",
-      },
-      {
-        red: "whatsapp",
-        tipo: "estado",
-        hora: "20:30",
-      },
+      pieza("instagram", "carrusel", "10:00", "imagenesFeed", { cantidadImagenes: 3, usarEnlaceProducto: false, enlaceEnBio: true }),
+      pieza("threads", "carrusel", "10:00", "imagenesFeed", { cantidadImagenes: 3 }),
+      pieza("facebook", "carrusel_pagina", "10:00", "imagenesFeed", { cantidadImagenes: 3 }),
+      pieza("facebook", "grupo", "10:00", "portadaFacebook", { variante: "enlace_producto", publicacionAutomatica: false, vistaPreviaEnlace: true }),
+      pieza("whatsapp", "whatsapp_grupo", "10:00", "imagenPrincipal", { publicacionAutomatica: false }),
     ],
   },
 };
 
+// Compatibilidad: las demás partes del proyecto pueden leer esta plantilla.
+export const plantillaContenidoProducto = {
+  instagram: {
+    reel: { cantidad: 1, formato: "vertical", recurso: "video", generarCopy: true, generarCTA: true, generarHashtags: true, cantidadHashtags: 5 },
+    carrusel: { cantidad: 1, formato: "feedInstagram", recurso: "imagenesFeed", cantidadImagenes: 3, generarCopy: true, generarCTA: true, generarHashtags: true, cantidadHashtags: 5 },
+  },
+  threads: { cantidad: 3, publicaciones: [
+    { tipo: "video", recurso: "video", usarEnlaceProducto: true },
+    { tipo: "sabias_que", recurso: "imagenPrincipal", usarEnlaceProducto: true, variante: "threads" },
+    { tipo: "carrusel", recurso: "imagenesFeed", cantidadImagenes: 3, usarEnlaceProducto: true },
+  ] },
+  facebook: {
+    pagina: { cantidad: 3, publicaciones: [
+      { tipo: "reel_pagina", recurso: "video" },
+      { tipo: "story_pagina", recurso: "video" },
+      { tipo: "carrusel_pagina", recurso: "imagenesFeed", cantidadImagenes: 3 },
+    ] },
+    grupos: { cantidad: 3, publicacionAutomatica: false, publicaciones: [
+      { tipo: "reel", recurso: "video" },
+      { tipo: "sabias_que", recurso: "imagenPrincipal", variante: "facebook_grupos" },
+      { tipo: "enlace_producto", recurso: "portadaFacebook", vistaPreviaEnlace: true },
+    ] },
+  },
+  whatsapp: { estados: { cantidad: 2, publicacionAutomatica: false, publicaciones: [
+    { tipo: "estado", recurso: "video" },
+    { tipo: "whatsapp_grupo", recurso: "imagenPrincipal" },
+  ] } },
+};
 
-// =========================================================
-// SEMANA BASE
-// =========================================================
-//
-// Producto 1 → lunes, martes y miércoles.
-// Producto 2 → jueves, viernes y sábado.
-// Domingo → libre.
-// =========================================================
+export const HORARIOS_PREDETERMINADOS = {
+  instagram: { reel: "17:00", carrusel: "10:00" },
+  threads: { video: "18:00", sabias_que: "21:00", carrusel: "10:00" },
+  facebook: {
+    pagina: { reel: "17:00", story: "20:00", carrusel: "10:00" },
+    grupos: { reel: "18:00", sabias_que: "20:00", enlace_producto: "10:00" },
+  },
+  whatsapp: { estado: "17:00", grupo: "10:00" },
+};
 
 export const SEMANA_BASE = [
-  {
-    dia: "lunes",
-    numeroDia: 1,
-    producto: 1,
-    ciclo: "dia1",
-  },
-  {
-    dia: "martes",
-    numeroDia: 2,
-    producto: 1,
-    ciclo: "dia2",
-  },
-  {
-    dia: "miercoles",
-    numeroDia: 3,
-    producto: 1,
-    ciclo: "dia3",
-  },
-  {
-    dia: "jueves",
-    numeroDia: 4,
-    producto: 2,
-    ciclo: "dia1",
-  },
-  {
-    dia: "viernes",
-    numeroDia: 5,
-    producto: 2,
-    ciclo: "dia2",
-  },
-  {
-    dia: "sabado",
-    numeroDia: 6,
-    producto: 2,
-    ciclo: "dia3",
-  },
-  {
-    dia: "domingo",
-    numeroDia: 0,
-    producto: null,
-    ciclo: null,
-  },
+  { dia: "lunes", numeroDia: 1, producto: 1, ciclo: "dia1" },
+  { dia: "martes", numeroDia: 2, producto: 1, ciclo: "dia2" },
+  { dia: "miercoles", numeroDia: 3, producto: 2, ciclo: "dia1" },
+  { dia: "jueves", numeroDia: 4, producto: 2, ciclo: "dia2" },
+  { dia: "viernes", numeroDia: 5, producto: 3, ciclo: "dia1" },
+  { dia: "sabado", numeroDia: 6, producto: 3, ciclo: "dia2" },
+  { dia: "domingo", numeroDia: 0, producto: null, ciclo: null },
 ];
-
-
-// =========================================================
-// ESTADOS DE PUBLICACIÓN
-// =========================================================
 
 export const ESTADOS_PUBLICACION = {
   BORRADOR: "borrador",

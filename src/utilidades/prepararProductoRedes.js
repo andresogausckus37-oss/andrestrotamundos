@@ -1,83 +1,69 @@
+// Normaliza los recursos ya cargados en AdminEditarProducto.
+// No genera ni modifica archivos multimedia.
+const urlValida = (valor) => typeof valor === "string" ? valor.trim() : "";
+
 export function prepararProductoRedes(producto) {
-  if (!producto) {
-    throw new Error("Producto no válido");
-  }
+  if (!producto) throw new Error("Producto no válido");
+
+  const feedOrigen = producto.imagenes?.redes?.feed || {};
+  const verticalOrigen = producto.imagenes?.redes?.vertical || {};
+  const feed = [
+    feedOrigen.presentacion || producto.imagenes?.portada,
+    feedOrigen.incluye || producto.imagenes?.preview,
+    feedOrigen.beneficios || producto.imagenes?.previewsIndividuales?.[0],
+  ].map(urlValida);
+  const vertical = [
+    verticalOrigen.presentacion,
+    verticalOrigen.incluye,
+    verticalOrigen.beneficios,
+  ].map(urlValida);
+  const video = urlValida(producto.videoReel || producto.videoMP4 || producto.videoMp4);
+  const urlProducto = urlValida(producto.urlProducto || producto.url || producto.enlace || producto.urls?.producto);
 
   return {
     id: producto.id,
     nombre: producto.nombre,
     categoria: producto.categoria,
     linea: producto.linea,
-
     descripcion: producto.descripcion,
     descripcionLarga: producto.descripcionLarga,
-
     publico: producto.edadRecomendada,
     nivel: producto.nivel,
-
     cantidadActividades: producto.laminas,
-
     formato: producto.formato,
     tamano: producto.tamano,
     entrega: producto.entrega,
-
     incluye: producto.incluye || [],
     beneficios: producto.beneficios || [],
-
     precio: {
       ars: producto.precioARS,
-      ofertaARS: producto.oferta?.activa
-        ? producto.oferta.precioARS
-        : null,
-
+      ofertaARS: producto.oferta?.activa ? producto.oferta.precioARS : null,
       usd: producto.precioUSD,
-      ofertaUSD: producto.ofertaUSD?.activa
-        ? producto.ofertaUSD.precioUSD
-        : null,
+      ofertaUSD: producto.ofertaUSD?.activa ? producto.ofertaUSD.precioUSD : null,
     },
-
+    urlProducto,
+    videoMP4: video,
+    videoReel: video,
+    recursosRedes: {
+      video,
+      imagenPrincipal: feed[0],
+      imagenesFeed: feed,
+      imagenesVerticales: vertical,
+      // Solo vista previa al compartir el enlace en grupos de Facebook.
+      portadaFacebook: urlValida(producto.imagenes?.portadaFacebook),
+    },
     imagenes: {
-      // ==========================================
-      // COMERCIALES 4:5
-      // Tienda + Instagram Feed + Facebook + Threads
-      // 1080 × 1350
-      // ==========================================
       feed: {
-        presentacion:
-          producto.imagenes?.portada || "",
-
-        incluye:
-          producto.imagenes?.preview || "",
-
-        beneficios:
-          producto.imagenes
-            ?.previewsIndividuales?.[0] || "",
-
-        comoFunciona:
-          producto.imagenes
-            ?.previewsIndividuales?.[1] || "",
+        presentacion: feed[0],
+        incluye: feed[1],
+        beneficios: feed[2],
+        comoFunciona: "",
       },
-
-      // ==========================================
-      // STORIES / REELS 9:16
-      // 1080 × 1920
-      // ==========================================
       vertical: {
-        presentacion:
-          producto.imagenes?.redes
-            ?.vertical?.presentacion || "",
-
-        incluye:
-          producto.imagenes?.redes
-            ?.vertical?.incluye || "",
-
-        beneficios:
-          producto.imagenes?.redes
-            ?.vertical?.beneficios || "",
-
-        comoFunciona:
-          producto.imagenes?.redes
-            ?.vertical?.comoFunciona || "",
+        presentacion: vertical[0],
+        incluye: vertical[1],
+        beneficios: vertical[2],
+        comoFunciona: "",
       },
     },
   };

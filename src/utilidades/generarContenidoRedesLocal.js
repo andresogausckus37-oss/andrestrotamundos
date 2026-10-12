@@ -1,3 +1,4 @@
+import { CICLO_PRODUCTO } from "../datos/plantillasRedes";
 import { prepararProductoRedes } from "./prepararProductoRedes";
 
 // =========================================================
@@ -1114,6 +1115,8 @@ export function generarContenidoRedesLocal(
    * 9:16
    */
 
+  const calendario = generarCalendarioProducto(producto, imagenes, productoOriginal);
+
   return {
     productoId:
       producto.id,
@@ -1122,6 +1125,7 @@ export function generarContenidoRedesLocal(
       producto.nombre,
 
     generador: "local",
+    calendario,
 
     instagram: {
       carrusel:
@@ -1157,4 +1161,62 @@ export function generarContenidoRedesLocal(
         ),
     },
   };
+}
+
+// =========================================================
+// CALENDARIO NUEVO: 13 PIEZAS POR PRODUCTO
+// Se conserva el resultado antiguo para no romper el Admin
+// mientras se actualizan sus consumidores.
+// =========================================================
+function generarCalendarioProducto(producto, imagenes, original) {
+  const url = original.urlProducto || original.url || original.enlace || original.urls?.producto || "";
+  const video = original.videoMP4 || original.videoMp4 || original.video?.url || original.video || original.recursosRedes?.video || "";
+  const feed = imagenes.feed.todas.slice(0, 3);
+  const verticales = imagenes.vertical.todas.slice(0, 3);
+  const principal = feed[0] || null;
+  const beneficio = obtenerBeneficios(producto);
+  const detalle = obtenerIncluye(producto);
+  const temas = {
+    threads: [
+      `¿Sabías que ${obtenerNombre(producto)} puede ayudarte a incorporar actividades imprimibles a tu rutina? ${beneficio[0] || "Podés imprimirlo y usarlo cuando quieras"}.`,
+      `Una idea para aprovechar ${obtenerNombre(producto)}: elegí una actividad, imprimila y guardá las restantes para otro momento.`,
+    ],
+    facebook: [
+      `¿Sabías que podés utilizar ${obtenerNombre(producto)} sin depender de una pantalla? ${detalle[0] || "El material se entrega en formato digital"}.`,
+      `Consejo práctico: prepará las hojas de ${obtenerNombre(producto)} antes de empezar y tenelas a mano para usar cuando quieras.`,
+    ],
+  };
+  const contenidoPorRed = {
+    instagram: `Descubrí ${obtenerNombre(producto)}. ${descripcionCantidad(producto)} para imprimir y disfrutar.`,
+    threads: `Conocé ${obtenerNombre(producto)} y explorá sus actividades imprimibles.`,
+    facebook: `Presentamos ${obtenerNombre(producto)}: ${descripcionCantidad(producto)} en formato digital.`,
+    whatsapp: `${obtenerNombre(producto)}: actividades listas para imprimir.`,
+  };
+  const construir = (p, dia, indice) => {
+    const grupo = p.red === "facebook" && p.tipo === "grupo" ? "facebook_grupos" : p.red;
+    const sabias = p.tipo === "sabias_que" || p.variante === "sabias_que";
+    const texto = sabias
+      ? (grupo === "facebook_grupos" ? temas.facebook[0] : temas.threads[0])
+      : contenidoPorRed[p.red];
+    const cta = p.enlaceEnBio ? "Encontralo en el enlace de nuestra bio." : "Conocé el producto en el enlace.";
+    const etiquetas = p.cantidadHashtags ? crearHashtags(producto).slice(0, p.cantidadHashtags) : [];
+    const textoCompleto = [texto, cta, p.usarEnlaceProducto && url ? url : "", etiquetas.join(" ")].filter(Boolean).join("\n\n");
+    const recurso = p.recurso === "video" ? video : p.recurso === "imagenesFeed" ? feed : p.recurso === "portadaFacebook" ? null : principal;
+    return {
+      id: `${dia}-${p.red}-${p.tipo}-${p.variante || indice}`,
+      dia, hora: p.hora, red: p.red, tipo: p.tipo,
+      variante: p.variante || null, publicacionAutomatica: p.publicacionAutomatica,
+      formato: p.recurso, recurso, imagenPrincipal: principal,
+      imagenesFeed: feed, imagenesVerticales: verticales,
+      video, vistaPreviaEnlace: Boolean(p.vistaPreviaEnlace),
+      texto, cta, urlProducto: p.usarEnlaceProducto ? url : "",
+      hashtags: etiquetas, textoCompleto,
+      // Para acciones semiautomáticas: copiar textoCompleto y usar recurso.
+      requiereConfirmacionManual: !p.publicacionAutomatica,
+    };
+  };
+  return [
+    ...CICLO_PRODUCTO.dia1.publicaciones.map((p, i) => construir(p, "dia1", i)),
+    ...CICLO_PRODUCTO.dia2.publicaciones.map((p, i) => construir(p, "dia2", i)),
+  ];
 }
