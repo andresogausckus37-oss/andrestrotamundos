@@ -1911,252 +1911,61 @@ const urlProducto = productoId
                         </div>
                       </div>
 
-                      {/* RESUMEN */}
-
-                      <div className="mt-3 grid grid-cols-3 gap-1.5">
-                        <div className="rounded-lg bg-slate-50 p-2 text-center">
-                          <p className="text-base font-bold text-slate-900">
-                            {
-                              contenido
-                                .threads
-                                .length
-                            }
-                          </p>
-
-                          <p className="text-[9px] font-bold uppercase text-slate-400">
-                            Threads
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg bg-slate-50 p-2 text-center">
-                          <p className="text-base font-bold text-slate-900">
-                            {contenido
-                              .instagram
-                              .stories
-                              .length + 2}
-                          </p>
-
-                          <p className="text-[9px] font-bold uppercase text-slate-400">
-                            Instagram
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg bg-slate-50 p-2 text-center">
-                          <p className="text-base font-bold text-slate-900">
-                            {
-                              contenido
-                                .facebook
-                                .publicaciones
-                                .length
-                            }
-                          </p>
-
-                          <p className="text-[9px] font-bold uppercase text-slate-400">
-                            Facebook
-                          </p>
-                        </div>
+                      {/* RESUMEN DEL CALENDARIO VIGENTE */}
+                      <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                        <p className="text-sm font-bold text-slate-900">
+                          {contenido.calendario?.length || 0} piezas por producto
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Instagram 2 · Threads 3 · Fan Page 3 · Grupos Facebook 3 · WhatsApp 2
+                        </p>
                       </div>
                     </div>
 
-                    {/* REDES */}
-
-                    <div className="space-y-2.5 p-3">
-                      {/* INSTAGRAM */}
-
-                      <BloqueRed
-                        titulo="Instagram"
-                        icono={
-                          <Image
-                            size={17}
-                            className="text-violet-600"
-                          />
-                        }
-                      >
-                        <div className="mb-2 flex items-center gap-2">
-                          <Image
-                            size={13}
-                            className="text-slate-400"
-                          />
-
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                            Feed
+                    {/* PUBLICACIONES DEL CALENDARIO NUEVO */}
+                    <div className="space-y-3 p-3">
+                      {(contenido.calendario || []).map((pieza) => (
+                        <div key={pieza.id} className="rounded-xl border border-slate-200 p-3 space-y-2">
+                          <p className="text-xs font-bold uppercase text-slate-700">
+                            {pieza.dia === "dia1" ? "Día 1" : "Día 2"} · {pieza.hora} · {pieza.red} · {pieza.variante || pieza.tipo}
                           </p>
-                        </div>
-
-                        <PublicacionEditable
-                          titulo="Carrusel"
-                          relacionAspecto="4:5"
-                          publicacion={
-                            contenido
-                              .instagram
-                              .carrusel
-                          }
-                          onCambiar={(
-                            publicacion
-                          ) =>
-                            actualizarCarrusel(
-                              indiceProducto,
-                              publicacion
-                            )
-                                                      }
-                        />
-
-                        <PublicacionEditable
-                          titulo="Reel"
-                          relacionAspecto="9:16"
-                          videoUrl={
-                            productosDigitales.find(
-                              (producto) =>
-                                producto.id ===
-                                item.productoId
-                            )?.videoReel || ""
-                          }
-                          publicacion={
-                            contenido.instagram.reel
-                          }
-                          onCambiar={(publicacion) =>
-                            actualizarReel(
-                              indiceProducto,
-                              publicacion
-                            )
-                          }
-                        />
-
-                        <div className="pt-1">
-                          <div className="mb-2 flex items-center gap-2">
-                            <MessageCircle
-                              size={13}
-                              className="text-slate-400"
-                            />
-
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                              Stories
-                            </p>
-                          </div>
-
-                          <div className="space-y-2">
-                            {contenido.instagram.stories.map(
-                              (
-                                story,
-                                indice
-                              ) => (
-                                <PublicacionEditable
-                                  key={`story-${indice}`}
-                                  titulo={`Story ${
-                                    indice +
-                                    1
-                                  }`}
-                                  relacionAspecto="9:16"
-                                  publicacion={
-                                    story
-                                  }
-                                  onCambiar={(
-                                    publicacion
-                                  ) =>
-                                    actualizarStory(
-                                      indiceProducto,
-                                      indice,
-                                      publicacion
-                                    )
-                                  }
-                                />
-                              )
+                          <textarea
+                            className="w-full rounded-lg border border-slate-200 p-2 text-sm"
+                            rows={5}
+                            value={pieza.textoCompleto || ""}
+                            onChange={(event) => {
+                              const textoCompleto = event.target.value;
+                              actualizarContenido(indiceProducto, (actual) => ({
+                                ...actual,
+                                calendario: actual.calendario.map((p) =>
+                                  p.id === pieza.id ? { ...p, textoCompleto } : p
+                                ),
+                              }));
+                            }}
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" className="rounded-lg bg-slate-900 px-3 py-2 text-xs text-white"
+                              onClick={() => navigator.clipboard.writeText(pieza.textoCompleto || "")}
+                            >Copiar texto completo</button>
+                            {([...(Array.isArray(pieza.recurso) ? pieza.recurso : pieza.recurso ? [pieza.recurso] : [])])
+                              .filter((url) => typeof url === "string" && /^https?:\/\//.test(url))
+                              .map((url, indice) => (
+                                <a key={indice} href={url} target="_blank" rel="noreferrer"
+                                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                                >Abrir recurso {indice + 1}</a>
+                              ))}
+                            {pieza.vistaPreviaEnlace && pieza.urlProducto && (
+                              <a href={pieza.urlProducto} target="_blank" rel="noreferrer"
+                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                              >Abrir enlace del producto</a>
                             )}
                           </div>
+                          {!pieza.publicacionAutomatica && (
+                            <p className="text-xs text-amber-700">Publicación semiautomática: adjuntá el recurso al compartir. Copiar el texto no adjunta imágenes.</p>
+                          )}
                         </div>
-                      </BloqueRed>
-
-                      {indiceProducto === 0 && mensajeCalendario && (
-                        <div
-                          className={`rounded-lg border px-3 py-2 text-[11px] font-medium ${
-                            mensajeCalendario.startsWith("Error:")
-                              ? "border-red-200 bg-red-50 text-red-700"
-                              : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          }`}
-                        >
-                          {mensajeCalendario}
-                        </div>
-                      )}
-
-                      {/* THREADS */}
-
-                      <BloqueRed
-                        titulo="Threads"
-                        icono={
-                          <MessageCircle
-                            size={17}
-                            className="text-slate-800"
-                          />
-                        }
-                      >
-                        {contenido.threads.map(
-                          (
-                            publicacion,
-                            indice
-                          ) => (
-                            <PublicacionEditable
-                              key={`threads-${indice}`}
-                              titulo={`Publicación ${
-                                indice +
-                                1
-                              }`}
-                              relacionAspecto="4:5"
-                              publicacion={
-                                publicacion
-                                                        }
-                                                            onCambiar={(
-                                nuevaPublicacion
-                              ) =>
-                                actualizarThreads(
-                                  indiceProducto,
-                                  indice,
-                                  nuevaPublicacion
-                                )
-                              }
-                            />
-                          )
-                        )}
-                      </BloqueRed>
-
-                      {/* FACEBOOK */}
-
-                      <BloqueRed
-                        titulo="Facebook"
-                        icono={
-                          <MessageCircle
-                            size={17}
-                            className="text-blue-600"
-                          />
-                        }
-                      >
-                        {contenido.facebook.publicaciones.map(
-                          (
-                            publicacion,
-                            indice
-                          ) => (
-                            <PublicacionEditable
-                              key={`facebook-${indice}`}
-                              titulo={`Publicación ${
-                                indice +
-                                1
-                              }`}
-                              relacionAspecto="4:5"
-                              publicacion={
-                                publicacion
-                              }
-                              onCambiar={(
-                                nuevaPublicacion
-                              ) =>
-                                actualizarFacebook(
-                                  indiceProducto,
-                                  indice,
-                                  nuevaPublicacion
-                                )
-                              }
-                            />
-                          )
-                        )}
-                      </BloqueRed>
+                      ))}
+                    </div>
 
 {/* GUARDAR BORRADOR */}
 
@@ -2266,9 +2075,10 @@ const urlProducto = productoId
       ]
     }
   </div>
+
 )}
                       
-                    </div>
+                    
                   </section>
                 );
               }
