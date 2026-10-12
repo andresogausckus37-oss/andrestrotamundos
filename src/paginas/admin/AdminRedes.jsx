@@ -372,6 +372,18 @@ const formatearHoraDiagnostico = (valor) => {
   }).format(fecha);
 };
 
+
+function VistaPreviaRedes({ recursos = [], tipo = "" }) {
+  const urls = [...new Set(recursos.flat(Infinity).filter((v) => typeof v === "string" && /^(https?:\/\/|\/)/.test(v)))];
+  const video = /video|reel|story|estado/.test(String(tipo).toLowerCase());
+  const visibles = video ? urls.slice(0, 1) : /carrusel/.test(String(tipo).toLowerCase()) ? urls.slice(0, 3) : urls.slice(0, 1);
+  if (!visibles.length) return <p className="text-xs text-amber-700">Recurso multimedia no disponible</p>;
+  return <div className="flex flex-wrap gap-2">{visibles.map((url, i) => video ?
+    <video key={url} src={url} controls playsInline preload="metadata" className="h-32 w-24 rounded-lg bg-black object-contain" /> :
+    <img key={url} src={url} alt={`Vista previa ${i + 1}`} loading="lazy" className="h-32 w-24 rounded-lg border border-slate-200 object-cover" />
+  )}</div>;
+}
+
 export default function AdminRedes() {
   const [
     productosDigitales,
@@ -1690,7 +1702,7 @@ const urlProducto = productoId
           </div>
 
           <p className="mt-2 text-xs text-slate-500">
-            Selecciona uno o dos productos
+            Seleccioná tres productos para preparar su contenido
             para preparar su contenido.
           </p>
 
@@ -1947,13 +1959,7 @@ const urlProducto = productoId
                             <button type="button" className="rounded-lg bg-slate-900 px-3 py-2 text-xs text-white"
                               onClick={() => navigator.clipboard.writeText(pieza.textoCompleto || "")}
                             >Copiar texto completo</button>
-                            {([...(Array.isArray(pieza.recurso) ? pieza.recurso : pieza.recurso ? [pieza.recurso] : [])])
-                              .filter((url) => typeof url === "string" && /^https?:\/\//.test(url))
-                              .map((url, indice) => (
-                                <a key={indice} href={url} target="_blank" rel="noreferrer"
-                                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
-                                >Abrir recurso {indice + 1}</a>
-                              ))}
+                            <VistaPreviaRedes recursos={Array.isArray(pieza.recurso) ? pieza.recurso : [pieza.recurso]} tipo={pieza.variante || pieza.tipo} />
                             {pieza.vistaPreviaEnlace && pieza.urlProducto && (
                               <a href={pieza.urlProducto} target="_blank" rel="noreferrer"
                                 className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
@@ -2243,11 +2249,10 @@ const urlProducto = productoId
                                       catch { alert("No se pudo copiar el texto."); }
                                     }} className="mt-1.5 w-full rounded-md border border-violet-200 px-2 py-1.5 text-[10px] font-semibold text-violet-700">Copiar publicación completa</button>
                                   )}
-                                  {(() => {
-                                    const p = pieza.publicacion || {};
-                                    const recursos = [p.videoUrl, p.video, ...(Array.isArray(p.imagen) ? p.imagen : p.imagen ? [p.imagen] : [])].filter((v) => typeof v === "string" && /^https?:\/\//.test(v));
-                                    return recursos.map((url, i) => <a key={`${url}-${i}`} href={url} target="_blank" rel="noopener noreferrer" className="mt-1 block text-[10px] font-semibold text-blue-700 underline">Abrir recurso {i + 1}</a>);
-                                  })()}
+                                  <VistaPreviaRedes
+                                    recursos={[pieza.publicacion?.videoUrl, pieza.publicacion?.video, pieza.publicacion?.imagen]}
+                                    tipo={pieza.tipo}
+                                  />
 
                                   {pieza.estado === "publicado" ? (
                                     <p className="mt-1 text-[9px] font-semibold text-emerald-600">
