@@ -1,4 +1,4 @@
-import { prepararProductoRedes } from "./prepararProductoRedes";
+import { prepararProductoRedes } from "../src/utilidades/prepararProductoRedes.js";
 
 // =========================================================
 // UTILIDADES
