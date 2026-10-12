@@ -389,6 +389,11 @@ export default function AdminRedes() {
   ] = useState("");
 
   const [
+    producto3Id,
+    setProducto3Id,
+  ] = useState("");
+
+  const [
     cargandoProductos,
             setCargandoProductos,
   ] = useState(true);
@@ -810,6 +815,12 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
         producto.id === producto2Id
     );
 
+  const producto3 =
+    productosDigitales.find(
+      (producto) =>
+        producto.id === producto3Id
+    );
+
   // =======================================================
   // GENERAR BORRADORES LOCALES
   // =======================================================
@@ -818,6 +829,7 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
   const seleccionados = [
     producto1,
     producto2,
+    producto3,
   ].filter(Boolean);
 
   if (!seleccionados.length) {
@@ -1306,7 +1318,7 @@ const aprobarContenido = async (
   // =======================================================
 
   const hayProductoSeleccionado =
-    Boolean(producto1 || producto2);
+    Boolean(producto1 || producto2 || producto3);
 
   const compartirEnGrupoFacebook = async (pieza, destino, item) => {
     try {
@@ -1319,7 +1331,7 @@ const aprobarContenido = async (
   item?.productoId || "";
 
 const urlProducto = productoId
-  ? `https://andreshousesitter.com/compartir/${encodeURIComponent(
+  ? `${window.location.origin}/compartir-facebook/${encodeURIComponent(
       productoId
     )}`
   : "";
@@ -1379,7 +1391,7 @@ const urlProducto = productoId
     const productoId = item?.productoId || "";
 
     const urlProducto = productoId
-  ? `https://andreshousesitter.com/compartir/${encodeURIComponent(
+  ? `${window.location.origin}/compartir/${encodeURIComponent(
       productoId
     )}`
   : "";
@@ -1685,7 +1697,7 @@ const urlProducto = productoId
           </div>
 
           <p className="mt-2 text-xs text-slate-500">
-            Selecciona uno o dos productos
+            Selecciona hasta tres productos
             para preparar su contenido.
           </p>
 
@@ -1699,7 +1711,7 @@ const urlProducto = productoId
               Cargando productos...
             </div>
           ) : (
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
               {/* PRODUCTO 1 */}
 
               <div>
@@ -1728,8 +1740,8 @@ const urlProducto = productoId
                         key={producto.id}
                         value={producto.id}
                         disabled={
-                          producto.id ===
-                          producto2Id
+                          producto.id === producto2Id ||
+                          producto.id === producto3Id
                         }
                       >
                         {producto.nombre}
@@ -1767,8 +1779,47 @@ const urlProducto = productoId
                         key={producto.id}
                         value={producto.id}
                         disabled={
-                          producto.id ===
-                          producto1Id
+                          producto.id === producto1Id ||
+                          producto.id === producto3Id
+                        }
+                      >
+                        {producto.nombre}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* PRODUCTO 3 */}
+
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  Producto 3
+                </label>
+
+                <select
+                  value={producto3Id}
+                  onChange={(event) => {
+                    setProducto3Id(
+                      event.target.value
+                    );
+
+                    setContenidos([]);
+                  }}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] text-slate-700 outline-none transition focus:border-violet-400"
+                >
+                  <option value="">
+                    Seleccionar producto
+                  </option>
+
+                  {productosDigitales.map(
+                    (producto) => (
+                      <option
+                        key={producto.id}
+                        value={producto.id}
+                        disabled={
+                          producto.id === producto1Id ||
+                          producto.id === producto2Id
                         }
                       >
                         {producto.nombre}
