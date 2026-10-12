@@ -26,7 +26,6 @@ function sincronizarEntorno(env) {
       process.env[clave] = String(env[clave]);
     }
   }
-  process.env.NODE_ENV = "production";
 }
 
 async function leerBody(request) {
