@@ -265,10 +265,14 @@ const Tienda = () => {
     const tarjeta = contenedor.children[indiceReel];
 
     if (tarjeta) {
-      tarjeta.scrollIntoView({
+      const posicion =
+        tarjeta.offsetLeft -
+        contenedor.offsetLeft -
+        (contenedor.clientWidth - tarjeta.clientWidth) / 2;
+
+      contenedor.scrollTo({
+        left: posicion,
         behavior: "smooth",
-        block: "nearest",
-        inline: "center",
       });
     }
   }, [indiceReel, productosConReel.length]);
@@ -460,9 +464,9 @@ const Tienda = () => {
                         <button
                           type="button"
                           onClick={() => irAProducto(producto.id)}
-                          className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-[#285861] px-2.5 py-2 text-[10px] font-medium text-white transition-colors hover:bg-[#204850] sm:text-xs"
+                          className="mt-2 inline-flex w-full items-center justify-center rounded-xs bg-[#285861] px-2.5 py-2 text-[10px] font-medium text-white transition-colors hover:bg-[#204850] sm:text-xs"
                         >
-                          Comprar ahora
+                          Ver producto
                         </button>
                       </div>
                     </article>
@@ -476,9 +480,7 @@ const Tienda = () => {
 
       <section className="border-b border-[#DCE5E4] bg-white">
         <div className="mx-auto max-w-6xl px-5 py-8 text-center sm:py-10">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xs bg-[#EEF5F5] text-[#285861]">
-            <ShoppingBag size={23} strokeWidth={1.7} />
-        </div>
+          
 
         <p className="mx-auto mt-2 max-w-2xl text-sm font-normal leading-6 text-[#687477] sm:text-base">
           Encontrá productos seleccionados para vos, comprá en minutos y recibí atención personalizada.
@@ -529,7 +531,7 @@ const Tienda = () => {
       <section className="mb-20 px-4 py-8 sm:px-5 sm:py-10">
         <div className="mx-auto max-w-4xl">
           <div className="mb-5">
-            <h2 className="text-center text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
+            <h2 className="text-left text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
               {categoriaActiva === "todos"
                 ? "Productos destacados"
                 : CATEGORIAS.find(

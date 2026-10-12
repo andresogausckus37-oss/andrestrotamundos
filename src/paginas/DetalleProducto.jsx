@@ -443,7 +443,7 @@ const tiempoRestante =
               )}
             </div>
 
-            <div className="mt-4">
+            <div className="mt-1 py-0">
               {sinStock ? (
                 <EstadoProducto texto="Sin stock" />
               ) : proximamente ? (
@@ -451,7 +451,7 @@ const tiempoRestante =
               ) : pausado ? (
                 <EstadoProducto texto="Producto temporalmente no disponible" />
               ) : (
-                <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+                <div className="flex items-center gap-2 leading-4 text-sm font-normal text-emerald-700">
                   <Check size={17} strokeWidth={2} />
                   Disponible
                   {Number.isFinite(stock) && stock > 0 && (
@@ -463,7 +463,7 @@ const tiempoRestante =
               )}
             </div>
 
-            <section className="mt-4 rounded-xs border border-slate-200 bg-white p-3 sm:p-4">
+            <section className="mt-4 rounded-xs mb-10 border border-slate-200 bg-white p-3 sm:p-4">
   <h2 className="text-sm font-medium text-slate-900">
     Descripción del producto
   </h2>
@@ -564,47 +564,7 @@ const tiempoRestante =
             </button>
 
           </section>
-        </div>
-
-        <div className="mt-8 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">         
-
-          {(marca ||
-            modelo ||
-            material ||
-            dimensiones ||
-            peso) && (
-            <section className="rounded-xs border border-slate-200 bg-white p-3 sm:p-4">
-              <h2 className="text-sm font-medium text-slate-900">
-                Datos del producto
-              </h2>
-
-              <div className="mt-4 divide-y divide-slate-100">
-                {marca && (
-                  <Dato etiqueta="Marca" valor={marca} />
-                )}
-
-                {modelo && (
-                  <Dato etiqueta="Modelo" valor={modelo} />
-                )}
-
-                {material && (
-                  <Dato etiqueta="Material" valor={material} />
-                )}
-
-                {dimensiones && (
-                  <Dato
-                    etiqueta="Dimensiones"
-                    valor={dimensiones}
-                  />
-                )}
-
-                {peso && (
-                  <Dato etiqueta="Peso" valor={peso} />
-                )}
-              </div>
-            </section>
-          )}
-        </div>
+        </div>     
 
         {modalAbierto && (
           <Checkout

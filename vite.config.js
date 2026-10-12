@@ -10,7 +10,7 @@ export default defineConfig({
 
     proxy: {
       "/api": {
-        target: "https://andreshousesitter.com",
+        target: "https://andrestrotamundos.andresogausckus37.workers.dev",
         changeOrigin: true,
         secure: true,
       },
