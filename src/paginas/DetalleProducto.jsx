@@ -469,7 +469,8 @@ const tiempoRestante =
   </h2>
 
   <p className="mt-2 whitespace-pre-line text-xs font-normal leading-6 text-slate-600">
-    {descripcionCorta ||
+    {producto?.descripcionCorta ||
+  producto?.descripcion ||
   "Descripción no disponible."}
   </p>
 </section>
