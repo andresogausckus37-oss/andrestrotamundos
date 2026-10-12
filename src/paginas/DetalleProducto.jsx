@@ -18,19 +18,13 @@ const DetalleProducto = () => {
   const { id } = useParams();
 
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [ahora, setAhora] = useState(() => Date.now());
-
-  useEffect(() => {
-    const intervalo = window.setInterval(() => setAhora(Date.now()), 1000);
-    return () => window.clearInterval(intervalo);
-  }, []);
   const [producto, setProducto] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [imagenActiva, setImagenActiva] = useState(0);
   const [varianteSeleccionada, setVarianteSeleccionada] =
     useState("");
-
+const [ahora, setAhora] = useState(() => Date.now());
   useEffect(() => {
     let cancelado = false;
 
@@ -102,28 +96,27 @@ const DetalleProducto = () => {
     };
   }, [id]);
 
-  const imagenes = useMemo(() => {
-    if (!producto) return [];
+  useEffect(() => {
+  const intervalo = setInterval(() => {
+    setAhora(Date.now());
+  }, 1000);
 
-    const posibles = [
-      producto.imagenes?.portada,
-      producto.imagenes?.portadaFacebook,
-      producto.imagenes?.preview,
-      ...(Array.isArray(producto.imagenes?.previewsIndividuales)
-        ? producto.imagenes.previewsIndividuales
-        : []),
-      producto.imagenes?.redes?.feed?.presentacion,
-      producto.imagenes?.redes?.feed?.incluye,
-      producto.imagenes?.redes?.feed?.beneficios,
-      producto.imagenes?.redes?.feed?.comoFunciona,
-      producto.imagenes?.redes?.vertical?.presentacion,
-      producto.imagenes?.redes?.vertical?.incluye,
-      producto.imagenes?.redes?.vertical?.beneficios,
-      producto.imagenes?.redes?.vertical?.comoFunciona,
-    ].filter(Boolean);
+  return () => clearInterval(intervalo);
+}, []);
+  
+const imagenes = useMemo(() => {
+  if (!producto) return [];
 
-    return [...new Set(posibles)].slice(0, 8);
-  }, [producto]);
+  const posibles = [
+    producto.imagenes?.portada,
+    producto.imagenes?.preview,
+    ...(Array.isArray(producto.imagenes?.previewsIndividuales)
+      ? producto.imagenes.previewsIndividuales
+      : []),
+  ].filter(Boolean);
+
+  return [...new Set(posibles)].slice(0, 4);
+}, [producto]);
 
   const variantes = useMemo(() => {
     if (!producto) return [];
@@ -157,34 +150,20 @@ const DetalleProducto = () => {
       : [];
   }, [producto]);
 
-  const ofertaActiva = useMemo(() => {
-    if (!producto?.oferta?.activa) return false;
+  const precioOferta =
+    Number(producto?.oferta?.precioARS) || 0;
 
-    const precioOferta =
-      Number(producto.oferta?.precioARS) || 0;
+  const finalizaOferta =
+    producto?.ofertaLanzamiento?.finalizaEn;
 
-    if (precioOferta <= 0) return false;
+  const ofertaDentroDePlazo = finalizaOferta
+    ? new Date(finalizaOferta).getTime() > ahora
+    : true;
 
-    const finalizaEn =
-      producto.ofertaLanzamiento?.finalizaEn;
-
-    if (!finalizaEn) return true;
-
-    return new Date(finalizaEn).getTime() > ahora;
-  }, [producto, ahora]);
-
-  const tiempoOferta = useMemo(() => {
-    if (producto?.ofertaLanzamiento?.activa !== true) return null;
-    const fin = new Date(producto.ofertaLanzamiento.finalizaEn).getTime();
-    if (!Number.isFinite(fin) || fin <= ahora) return null;
-    const segundos = Math.ceil((fin - ahora) / 1000);
-    return {
-      dias: Math.floor(segundos / 86400),
-      horas: Math.floor((segundos % 86400) / 3600),
-      minutos: Math.floor((segundos % 3600) / 60),
-      segundos: segundos % 60,
-    };
-  }, [producto, ahora]);
+  const ofertaActiva =
+    producto?.oferta?.activa === true &&
+    precioOferta > 0 &&
+    ofertaDentroDePlazo;
 
   const precioNormal = Number(producto?.precioARS) || 0;
 
@@ -227,6 +206,42 @@ const DetalleProducto = () => {
       currency: "ARS",
       maximumFractionDigits: 0,
     }).format(Number(valor) || 0);
+
+  const obtenerTiempoRestante = (finalizaEn) => {
+  if (!finalizaEn) return null;
+
+  const final = new Date(finalizaEn).getTime();
+
+  if (!Number.isFinite(final)) {
+    return null;
+  }
+
+  const diferencia = final - ahora;
+
+  if (diferencia <= 0) {
+    return null;
+  }
+
+  const totalSegundos = Math.floor(
+    diferencia / 1000
+  );
+
+  return {
+    dias: Math.floor(totalSegundos / 86400),
+    horas: Math.floor(
+      (totalSegundos % 86400) / 3600
+    ),
+    minutos: Math.floor(
+      (totalSegundos % 3600) / 60
+    ),
+    segundos: totalSegundos % 60,
+  };
+};
+
+const tiempoRestante =
+  ofertaActiva && finalizaOferta
+    ? obtenerTiempoRestante(finalizaOferta)
+    : null;
 
   const comprar = () => {
     if (!disponible) return;
@@ -325,7 +340,7 @@ const DetalleProducto = () => {
             {imagenes.length > 1 && (
               <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
                 {imagenes.map((imagen, indice) => (
-                  <button
+                                  <button
                     key={`${imagen}-${indice}`}
                     type="button"
                     onClick={() => setImagenActiva(indice)}
@@ -389,20 +404,24 @@ const DetalleProducto = () => {
                       </span>
                     )}
                   </div>
+
+                  {tiempoRestante && (
+  <div className="mt-3 inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-3 py-2">
+    <span className="text-xs font-medium text-black">
+      Finaliza en{" "}
+      {tiempoRestante.dias > 0 &&
+        `${tiempoRestante.dias}d `}
+      {String(tiempoRestante.horas).padStart(2, "0")}h{" "}
+      {String(tiempoRestante.minutos).padStart(2, "0")}m{" "}
+      {String(tiempoRestante.segundos).padStart(2, "0")}s
+    </span>
+  </div>
+)}
                 </>
               ) : (
                 <span className="text-3xl font-medium tracking-tight text-slate-950">
                   {formatearPrecio(precioFinal)}
                 </span>
-              )}
-
-              {tiempoOferta && (
-                <div className="mt-3 inline-flex max-w-full items-center rounded-xs border border-black bg-white px-3 py-2">
-                  <span className="text-xs font-normal text-black" role="timer">
-                    Oferta finaliza en {tiempoOferta.dias > 0 ? `${tiempoOferta.dias}d ` : ""}
-                    {String(tiempoOferta.horas).padStart(2, "0")}h {String(tiempoOferta.minutos).padStart(2, "0")}m {String(tiempoOferta.segundos).padStart(2, "0")}s
-                  </span>
-                </div>
               )}
 
               {valorCuota > 0 && (
