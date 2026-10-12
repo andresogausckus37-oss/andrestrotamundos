@@ -1212,12 +1212,17 @@ async function guardarBorrador(
       : "";
 
   const nombreProducto =
-        typeof req.body?.nombreProducto === "string"
+    typeof req.body?.nombreProducto === "string"
       ? req.body.nombreProducto.trim()
       : "";
 
   const contenido =
     req.body?.contenido;
+
+  const origen =
+    req.body?.origen === "ia"
+      ? "ia"
+      : "plantilla";
 
   if (!productoId) {
     return res.status(400).json({
@@ -1262,12 +1267,13 @@ async function guardarBorrador(
       },
       {
         $set: {
-          productoId,
-          nombreProducto,
-          contenido,
-          estado: "borrador",
-          actualizadoEn: ahora,
-        },
+  productoId,
+  nombreProducto,
+  contenido,
+  origen,
+  estado: "borrador",
+  actualizadoEn: ahora,
+},
 
         $setOnInsert: {
           creadoEn: ahora,

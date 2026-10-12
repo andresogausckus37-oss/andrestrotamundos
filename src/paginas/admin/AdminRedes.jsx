@@ -543,6 +543,10 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
 
                 contenido:
                   borrador.contenido,
+
+                origen:
+                  borrador.origen ||
+                  "plantilla",
               })
             )
           );
@@ -903,6 +907,8 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
                           5
                         )
                       : [],
+
+                  origen: "ia",
                 };
             }
 
@@ -914,6 +920,8 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
                 producto.nombre,
 
               contenido,
+
+              origen: "ia",
             };
           } catch (errorIA) {
             console.warn(
@@ -939,6 +947,8 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
                 generarContenidoRedesLocal(
                   producto
                 ),
+
+              origen: "plantilla",
             };
           }
         }
@@ -1147,6 +1157,10 @@ const guardarBorrador = async (
 
             contenido:
               item.contenido,
+
+            origen:
+              item.origen ||
+              "plantilla",
           }),
         }
       );
@@ -1846,9 +1860,23 @@ const urlProducto = productoId
                         </div>
 
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
-                            Borrador
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
+                              Borrador
+                            </p>
+
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                                item.origen === "ia"
+                                  ? "bg-violet-100 text-violet-700"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {item.origen === "ia"
+                                ? "Generado con IA"
+                                : "Plantilla React"}
+                            </span>
+                          </div>
 
                           <h2 className="mt-0.5 text-base font-bold text-slate-900">
                             {item.nombre}
