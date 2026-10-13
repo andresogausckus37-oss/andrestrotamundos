@@ -706,6 +706,40 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
     cargarCalendario();
   }, []);
 
+  const publicarReelAhora = async (item, pieza) => {
+  if (!window.confirm("¿Publicar este Reel ahora en la página de Facebook?")) return;
+
+  try {
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=publicar-programado",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productoId: item.productoId,
+          fecha: pieza.fecha,
+          hora: pieza.hora,
+          red: pieza.red,
+          tipo: pieza.tipo,
+          indice: pieza.indice,
+        }),
+      }
+    );
+
+    const datos = await leerRespuestaApi(respuesta);
+
+    if (!respuesta.ok || !datos.ok) {
+      throw new Error(datos.error || "No se pudo publicar.");
+    }
+
+    alert("Reel publicado correctamente.");
+    await cargarCalendario();
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+    await cargarCalendario();
+  }
+};
+
   const programarAprobado = async (item) => {
     try {
       setProgramandoId(item.productoId);
@@ -2383,6 +2417,19 @@ const urlProducto = productoId
                                       catch { alert("No se pudo copiar el texto."); }
                                     }} className="mt-1.5 w-full rounded-md border border-violet-200 px-2 py-1.5 text-[10px] font-semibold text-violet-700">Copiar publicación completa</button>
                                   )}
+
+                                  {pieza.red === "facebook" &&
+  pieza.tipo === "reel_pagina" &&
+  pieza.estado === "programado" &&
+  pieza.publicacionAutomatica !== false && (
+    <button
+      type="button"
+      onClick={() => publicarReelAhora(item, pieza)}
+      className="mt-2 w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white"
+    >
+      Publicar Reel ahora
+    </button>
+  )}
                                   <VistaPreviaRedes
                                     recursos={[
                                       pieza.publicacion?.videoUrl,
