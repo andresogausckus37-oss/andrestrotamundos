@@ -1516,7 +1516,7 @@ const urlProducto = productoId
   if (
     publicandoPrueba ||
     !productoPruebaId ||
-    !/^https:\/\//i.test(videoPruebaUrl.trim())
+  !/^https:\/\//i.test(videoPruebaUrl.trim())
   ) {
     alert("Seleccioná un producto y una URL HTTPS del MP4.");
     return;
@@ -1547,7 +1547,7 @@ const urlProducto = productoId
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productoId: productoPruebaId,
-          videoUrl: videoPruebaUrl.trim(),
+          
           texto: textoPrueba.trim(),
           idPrueba: clave,
           confirmar: "PUBLICAR_REEL_FACEBOOK",

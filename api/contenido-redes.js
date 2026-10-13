@@ -1441,7 +1441,7 @@ async function probarReelFacebookIndividual(req, res) {
 
   const {
     productoId,
-    videoUrl,
+    
     texto,
     idPrueba,
     confirmar,
@@ -1457,8 +1457,7 @@ async function probarReelFacebookIndividual(req, res) {
   if (
     typeof productoId !== "string" ||
     !productoId.trim() ||
-    typeof videoUrl !== "string" ||
-    !/^https:\/\//i.test(videoUrl.trim()) ||
+    
     typeof idPrueba !== "string" ||
     !/^[a-zA-Z0-9_-]{8,80}$/.test(idPrueba)
   ) {
@@ -1469,6 +1468,20 @@ async function probarReelFacebookIndividual(req, res) {
   }
 
   const db = await conectarMongoDB();
+
+const producto = await db.collection("productos").findOne({
+  id: productoId.trim(),
+});
+
+const videoGuardado = producto?.videoReel;
+
+if (!videoGuardado || !/^https:\/\//i.test(videoGuardado)) {
+  return res.status(400).json({
+    ok: false,
+    error: "El producto no tiene un MP4 guardado.",
+  });
+}
+  
   const pruebas = db.collection("pruebas_publicacion_redes");
 
   const clave = `facebook_reel_${idPrueba}`;
@@ -1496,7 +1509,7 @@ async function probarReelFacebookIndividual(req, res) {
     const resultado = await publicarReelFacebook({
       productoId: productoId.trim(),
       publicacion: {
-        videoUrl: videoUrl.trim(),
+        videoUrl: videoGuardado,
         texto: typeof texto === "string" ? texto : "",
       },
     });
