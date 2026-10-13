@@ -1198,6 +1198,168 @@ async function publicarFacebook({
   };
 }
 
+async function publicarStoryFacebook({ publicacion, productoId }) {
+  verificarConfiguracionFacebook();
+
+  const imagen = extraerImagenesInstagram(publicacion)[0];
+
+  if (!imagen) {
+    throw new Error("La historia de Facebook necesita una imagen HTTPS.");
+  }
+
+  const carga = await fetch(
+    `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/photos`,
+    {
+      method: "POST",
+      body: new URLSearchParams({
+        access_token: FACEBOOK_PAGE_ACCESS_TOKEN,
+        url: imagen,
+        published: "false",
+      }),
+    }
+  );
+
+  const foto = await leerJsonSeguro(carga);
+
+  if (!carga.ok || !foto?.id) {
+    throw new Error(
+      foto?.error?.message || "No se pudo cargar la imagen."
+    );
+  }
+
+  const respuesta = await fetch(
+    `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/photo_stories`,
+    {
+      method: "POST",
+      body: new URLSearchParams({
+        access_token: FACEBOOK_PAGE_ACCESS_TOKEN,
+        photo_id: String(foto.id),
+      }),
+    }
+  );
+
+  const datos = await leerJsonSeguro(respuesta);
+
+  if (!respuesta.ok || datos?.success !== true) {
+    throw new Error(
+      datos?.error?.message || "Facebook no confirmó la historia."
+    );
+  }
+
+  const publicacionId = String(datos.post_id || foto.id);
+  const db = await conectarMongoDB();
+
+  await db.collection("publicaciones_redes").insertOne({
+    proveedor: "facebook",
+    tipo: "story_pagina",
+    productoId: productoId || null,
+    publicacionId,
+    paginaId: FACEBOOK_PAGE_ID,
+    imagen,
+    estado: "publicado",
+    publicadoEn: new Date(),
+    creadoEn: new Date(),
+  });
+
+  return {
+    ok: true,
+    proveedor: "facebook",
+    tipo: "story_pagina",
+    publicacionId,
+  };
+}
+
+async function publicarCarruselFacebook({ publicacion, productoId }) {
+  verificarConfiguracionFacebook();
+
+  const imagenes = extraerImagenesInstagram(publicacion);
+
+  if (imagenes.length !== 3) {
+    throw new Error("El carrusel de Facebook requiere exactamente 3 imágenes HTTPS.");
+  }
+
+  const texto = typeof publicacion?.texto === "string"
+    ? publicacion.texto.trim()
+    : "";
+
+  const fotos = [];
+
+  for (const imagen of imagenes) {
+    const respuesta = await fetch(
+      `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/photos`,
+      {
+        method: "POST",
+        body: new URLSearchParams({
+          access_token: FACEBOOK_PAGE_ACCESS_TOKEN,
+          url: imagen,
+          published: "false",
+        }),
+      }
+    );
+
+    const datos = await leerJsonSeguro(respuesta);
+
+    if (!respuesta.ok || !datos?.id) {
+      throw new Error(
+        datos?.error?.message || "Facebook no pudo cargar una imagen."
+      );
+    }
+
+    fotos.push(String(datos.id));
+  }
+
+  const parametros = new URLSearchParams({
+    access_token: FACEBOOK_PAGE_ACCESS_TOKEN,
+    message: texto,
+  });
+
+  fotos.forEach((id, indice) => {
+    parametros.set(
+      `attached_media[${indice}]`,
+      JSON.stringify({ media_fbid: id })
+    );
+  });
+
+  const respuesta = await fetch(
+    `${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/feed`,
+    {
+      method: "POST",
+      body: parametros,
+    }
+  );
+
+  const datos = await leerJsonSeguro(respuesta);
+
+  if (!respuesta.ok || !datos?.id) {
+    throw new Error(
+      datos?.error?.message || "Facebook no pudo publicar el carrusel."
+    );
+  }
+
+  const publicacionId = String(datos.id);
+  const db = await conectarMongoDB();
+
+  await db.collection("publicaciones_redes").insertOne({
+    proveedor: "facebook",
+    tipo: "carrusel_pagina",
+    productoId: productoId || null,
+    publicacionId,
+    paginaId: FACEBOOK_PAGE_ID,
+    texto,
+    imagenes,
+    estado: "publicado",
+    publicadoEn: new Date(),
+    creadoEn: new Date(),
+  });
+
+  return {
+    ok: true,
+    proveedor: "facebook",
+    tipo: "carrusel_pagina",
+    publicacionId,
+  };
+}
+
 // =========================================================
 // FACEBOOK - REEL MP4 (sin activación automática todavía)
 // =========================================================
@@ -1263,6 +1425,113 @@ async function publicarReelFacebook({ publicacion, productoId }) {
     estado: "publicado", publicadoEn: new Date(), creadoEn: new Date(),
   });
   return { ok: true, proveedor: "facebook", tipo: "reel_pagina", publicacionId: videoId };
+}
+
+// =========================================================
+// PRUEBA INDIVIDUAL - FACEBOOK REEL
+// =========================================================
+
+async function probarReelFacebookIndividual(req, res) {
+  if (process.env.HABILITAR_PRUEBAS_REDES !== "true") {
+    return res.status(403).json({
+      ok: false,
+      error: "Las pruebas están deshabilitadas.",
+    });
+  }
+
+  const {
+    productoId,
+    videoUrl,
+    texto,
+    idPrueba,
+    confirmar,
+  } = req.body || {};
+
+  if (confirmar !== "PUBLICAR_REEL_FACEBOOK") {
+    return res.status(400).json({
+      ok: false,
+      error: "Falta confirmar la publicación real.",
+    });
+  }
+
+  if (
+    typeof productoId !== "string" ||
+    !productoId.trim() ||
+    typeof videoUrl !== "string" ||
+    !/^https:\/\//i.test(videoUrl.trim()) ||
+    typeof idPrueba !== "string" ||
+    !/^[a-zA-Z0-9_-]{8,80}$/.test(idPrueba)
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error: "Datos de prueba inválidos.",
+    });
+  }
+
+  const db = await conectarMongoDB();
+  const pruebas = db.collection("pruebas_publicacion_redes");
+
+  const clave = `facebook_reel_${idPrueba}`;
+
+  try {
+    await pruebas.insertOne({
+      _id: clave,
+      productoId: productoId.trim(),
+      red: "facebook",
+      tipo: "reel_pagina",
+      estado: "iniciado",
+      creadoEn: new Date(),
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        ok: false,
+        error: "Esta prueba ya fue utilizada. No se repetirá.",
+      });
+    }
+    throw error;
+  }
+
+  try {
+    const resultado = await publicarReelFacebook({
+      productoId: productoId.trim(),
+      publicacion: {
+        videoUrl: videoUrl.trim(),
+        texto: typeof texto === "string" ? texto : "",
+      },
+    });
+
+    await pruebas.updateOne(
+      { _id: clave },
+      {
+        $set: {
+          estado: "publicado",
+          publicacionId: resultado.publicacionId,
+          finalizadoEn: new Date(),
+        },
+      }
+    );
+
+    return res.status(200).json(resultado);
+  } catch (error) {
+    await pruebas.updateOne(
+      { _id: clave },
+      {
+        $set: {
+          estado: "revision_manual",
+          error: error.message,
+          finalizadoEn: new Date(),
+        },
+      }
+    );
+
+    return res.status(502).json({
+      ok: false,
+      error: error.message,
+      mensaje:
+        "Revisá la página de Facebook antes de realizar otra prueba.",
+    });
+  }
 }
 
 // =========================================================
@@ -1639,8 +1908,11 @@ const crearCalendarioInicial = (
     contenido.calendario.forEach((pieza, posicion) => {
       const diaIndice = offsets[pieza.dia];
       if (diaIndice === undefined) return;
-      const manual = pieza.requiereConfirmacionManual === true ||
-        pieza.publicacionAutomatica === false;
+      
+      const manual =
+  pieza.requiereConfirmacionManual === true ||
+  pieza.publicacionAutomatica === false;
+      
       const tipo = pieza.tipo === "grupo" ?
         `grupo_${pieza.variante || "post"}` : pieza.tipo;
       calendario.push({
@@ -1657,7 +1929,7 @@ const crearCalendarioInicial = (
           video: pieza.video || "",
         },
         estado: manual ? "pendiente_manual" :
-          (["instagram:reel", "instagram:carrusel", "threads:video", "threads:sabias_que", "threads:carrusel"].includes(`${pieza.red}:${pieza.tipo}`)
+          (["instagram:reel", "instagram:carrusel", "threads:video", "threads:sabias_que", "threads:carrusel", "facebook:reel_pagina"].includes(`${pieza.red}:${pieza.tipo}`)
             ? "programado" : "pendiente_integracion"),
         publicacionAutomatica: !manual,
         zonaHoraria: ZONA_HORARIA_RED,
@@ -1881,11 +2153,32 @@ async function regenerarContenidoProgramado(
     });
   }
 
+  if (
+    Array.isArray(documento.calendario) &&
+    documento.calendario.some(
+      (p) =>
+        p.compartidoManualFacebook?.estado === "compartido" ||
+        p.estado === "publicado" ||
+        p.estado === "publicando" ||
+        p.estado === "error" ||
+        p.publicacionId ||
+        p.procesandoDesde ||
+        p.ultimoIntentoEn ||
+        p.publicadoEn ||
+        Number(p.intentosPublicacion) > 0
+    )
+  ) {
+    return res.status(409).json({
+      ok: false,
+      error: "No se puede regenerar un calendario con publicaciones o intentos registrados."
+    });
+  }
+
   const ahora = new Date();
 
-  // Crea nuevamente las 20 piezas.
-  // Todas quedan en estado "programado"
-  // y sin publicacionId/publicadoEn anteriores.
+  // Regenera el calendario únicamente si no hubo
+// publicaciones ni intentos de publicación previos.
+  
   const semanaInicio =
   documento.semanaInicio ||
   documento.calendario?.[0]?.fecha ||
@@ -2067,6 +2360,20 @@ async function ejecutarPublicacionPieza({
     });
   }
 
+  if (red === "facebook" && tipo === "carrusel_pagina") {
+  return publicarCarruselFacebook({
+    publicacion: pieza.publicacion,
+    productoId,
+  });
+  }
+
+  if (red === "facebook" && tipo === "story_pagina") {
+  return publicarStoryFacebook({
+    publicacion: pieza.publicacion,
+    productoId,
+  });
+  }
+
   if (red === "facebook" && tipo === "reel_pagina") {
     return publicarReelFacebook({
       publicacion: pieza.publicacion,
@@ -2074,7 +2381,10 @@ async function ejecutarPublicacionPieza({
     });
   }
 
-  if (red === "facebook" && tipo === "publicacion") {
+  if (
+  red === "facebook" &&
+  tipo === "publicacion"
+) {
     return publicarFacebook({
       publicacion: pieza.publicacion,
       productoId,
@@ -2178,7 +2488,33 @@ async function publicarProgramado(
   const pieza =
     documento.calendario[posicion];
 
+  const formatosPermitidos = [
+  "instagram:reel",
+  "instagram:carrusel",
+  "threads:video",
+  "threads:sabias_que",
+  "threads:carrusel",
+  "facebook:reel_pagina",
+];
+
+if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
+  return res.status(409).json({
+    ok: false,
+    error: "Formato todavía no habilitado para publicación.",
+  });
+}
+
+  if (pieza.publicacionAutomatica === false ||
+    pieza.estado === "pendiente_manual" ||
+    pieza.estado === "pendiente_integracion") {
+  return res.status(409).json({
+    ok: false,
+    error: "Esta publicación no está habilitada para publicación automática."
+  });
+  }
+
   if (pieza.estado === "publicado") {
+    
     return res.status(409).json({
       ok: false,
       error:
@@ -2321,10 +2657,6 @@ async function publicarProgramado(
     });
   } catch (errorPublicacion) {
     const ahoraError = new Date();
-    const intentosActuales =
-      (Number(pieza.intentosPublicacion) || 0) + 1;
-    const alcanzoMaximoIntentos =
-      intentosActuales >= MAX_INTENTOS_PUBLICACION;
 
     await db
       .collection("contenido_redes")
@@ -2337,7 +2669,7 @@ async function publicarProgramado(
         {
           $set: {
             [`calendario.${posicion}.estado`]:
-              alcanzoMaximoIntentos ? "error" : "programado",
+              "error",
             [`calendario.${posicion}.ultimoError`]:
               errorPublicacion?.message ||
               "Error publicando contenido.",
@@ -2442,11 +2774,13 @@ async function ejecutarPublicacionesPendientes(
         }
 
         if (
-          (Number(pieza.intentosPublicacion) || 0) >=
-          MAX_INTENTOS_PUBLICACION
-        ) {
-          return;
-        }
+  (Number(pieza.intentosPublicacion) || 0) > 0 ||
+  pieza.ultimoIntentoEn ||
+  pieza.procesandoDesde ||
+  pieza.publicacionId
+) {
+  return;
+}
 
         const vencida =
           pieza.fecha < fecha ||
@@ -2454,6 +2788,18 @@ async function ejecutarPublicacionesPendientes(
             pieza.hora <= hora);
 
         if (!vencida) return;
+
+        const fechaProgramada = new Date(
+  `${pieza.fecha}T${pieza.hora}:00-03:00`
+);
+
+if (
+  !Number.isFinite(fechaProgramada.getTime()) ||
+  Date.now() - fechaProgramada.getTime() > 3600000
+) {
+  return;
+}
+        
                 pendientes.push({
           productoId:
             documento.productoId,
@@ -3013,11 +3359,15 @@ async function marcarCompartidoFacebook(req, res) {
 
   const ahora = new Date();
 
-  await db
+  const resultado = await db
     .collection("contenido_redes")
     .updateOne(
       {
         _id: documento._id,
+        [`calendario.${posicion}.estado`]: "pendiente_manual",
+        [`calendario.${posicion}.compartidoManualFacebook.estado`]: {
+          $ne: "compartido",
+        },
       },
       {
         $set: {
@@ -3029,6 +3379,13 @@ async function marcarCompartidoFacebook(req, res) {
         },
       }
     );
+
+  if (resultado.modifiedCount === 0) {
+    return res.status(409).json({
+      ok: false,
+      error: "La publicación ya fue confirmada o no es manual.",
+    });
+  }
 
   return res.status(200).json({
     ok: true,
@@ -3252,6 +3609,21 @@ if (
       );
     }
 
+    // PRUEBA INDIVIDUAL FACEBOOK REEL
+if (
+  req.method === "POST" &&
+  accion === "probar-reel-facebook"
+) {
+  if (!adminAutorizado(req)) {
+    return res.status(401).json({
+      ok: false,
+      error: "No autorizado",
+    });
+  }
+
+  return probarReelFacebookIndividual(req, res);
+}
+
     // -----------------------------------------------------
     // PUBLICAR AHORA UNA PIEZA PROGRAMADA
     // -----------------------------------------------------
@@ -3279,7 +3651,8 @@ if (
 
     if (
       req.method === "POST" &&
-      accion === "crear-prueba-automatica"
+      accion === "crear-prueba-automatica" &&
+process.env.HABILITAR_PRUEBAS_REDES === "true"
     ) {
       if (!adminAutorizado(req)) {
         return res.status(401).json({

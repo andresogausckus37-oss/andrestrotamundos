@@ -45,7 +45,7 @@ export const CICLO_PRODUCTO = {
       pieza("threads", "video", "18:00", "video"),
       pieza("threads", "sabias_que", "21:00", "imagenPrincipal", { variante: "threads", contenidoDiferenciado: true }),
       pieza("facebook", "reel_pagina", "17:00", "video"),
-      pieza("facebook", "story_pagina", "20:00", "video"),
+      pieza("facebook", "story_pagina", "20:00", "imagenVertical"),
       pieza("facebook", "grupo", "18:00", "video", { variante: "reel", publicacionAutomatica: false }),
       pieza("facebook", "grupo", "20:00", "imagenPrincipal", { variante: "sabias_que", contenidoDiferenciado: true, publicacionAutomatica: false }),
       pieza("whatsapp", "estado", "17:00", "video", { publicacionAutomatica: false }),
@@ -77,7 +77,7 @@ export const plantillaContenidoProducto = {
   facebook: {
     pagina: { cantidad: 3, publicaciones: [
       { tipo: "reel_pagina", recurso: "video" },
-      { tipo: "story_pagina", recurso: "video" },
+      { tipo: "story_pagina", recurso: "imagenVertical" },
       { tipo: "carrusel_pagina", recurso: "imagenesFeed", cantidadImagenes: 3 },
     ] },
     grupos: { cantidad: 3, publicacionAutomatica: false, publicaciones: [

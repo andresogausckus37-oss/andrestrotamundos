@@ -56,15 +56,30 @@ export function generarContenidoRedesLocal(original) {
         : `${nombre}. ${descripcion}`;
     const cta = p.red === "instagram" ? "Más información en el link de la bio." : "Conocé el producto en nuestra tienda.";
     const hashtags = p.red === "whatsapp" ? [] : hashtagsBase;
-    const recurso = p.recurso === "video" ? video : p.recurso === "imagenesFeed" ? feed : p.recurso === "portadaFacebook" ? portada : principal;
-    const imagenes = p.recurso === "imagenesFeed" ? feed : p.recurso === "video" ? [] : [recurso];
+    
+    const recurso =
+  p.recurso === "video" ? video :
+  p.recurso === "imagenesFeed" ? feed :
+  p.recurso === "imagenVertical" ? vertical[0] :
+  p.recurso === "portadaFacebook" ? portada :
+  principal;
+    
+    const imagenes =
+  p.red === "facebook" && p.tipo === "story_pagina"
+    ? [vertical[0]]
+    : p.recurso === "imagenesFeed"
+      ? feed
+      : p.recurso === "video"
+        ? []
+        : [recurso];
+    
     const urlProducto = p.red === "instagram" ? "" : url;
     return {
       id: `${p.dia}-${p.red}-${p.tipo}-${p.variante || p.i}`,
       dia: p.dia, red: p.red, tipo: p.tipo, variante: p.variante || null, hora: p.hora,
       publicacionAutomatica: Boolean(p.publicacionAutomatica), requiereConfirmacionManual: !p.publicacionAutomatica,
       formato: p.recurso, recurso, recursos: p.recurso === "video" ? [video] : imagenes,
-      imagen: p.recurso === "video" ? "" : imagenes[0], imagenes,
+      imagen: imagenes[0] || "", imagenes,
       imagenPrincipal: principal, imagenesFeed: feed, imagenesVerticales: vertical,
       video: p.recurso === "video" ? video : "", videoUrl: p.recurso === "video" ? video : "",
       vistaPreviaEnlace: Boolean(p.vistaPreviaEnlace),

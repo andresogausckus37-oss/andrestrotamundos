@@ -402,6 +402,13 @@ export default function AdminRedes() {
 
   const [producto3Id, setProducto3Id] = useState("");
 
+  const [productoPruebaId, setProductoPruebaId] = useState("");
+const [videoPruebaUrl, setVideoPruebaUrl] = useState("");
+const [textoPrueba, setTextoPrueba] = useState("");
+const [idPruebaReel, setIdPruebaReel] = useState("");
+const [publicandoPrueba, setPublicandoPrueba] = useState(false);
+const [resultadoPrueba, setResultadoPrueba] = useState("");
+
   const [
     cargandoProductos,
             setCargandoProductos,
@@ -1505,8 +1512,73 @@ const urlProducto = productoId
   }
 };
 
+  const ejecutarPruebaReelFacebook = async () => {
+  if (
+    publicandoPrueba ||
+    !productoPruebaId ||
+    !/^https:\/\//i.test(videoPruebaUrl.trim())
+  ) {
+    alert("Seleccioná un producto y una URL HTTPS del MP4.");
+    return;
+  }
+
+  if (
+    !window.confirm(
+      "¿Publicar este Reel REAL en la página de Facebook? Esta acción no se puede deshacer."
+    )
+  ) {
+    return;
+  }
+
+  const clave =
+    idPruebaReel ||
+    `reel-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  setIdPruebaReel(clave);
+  setPublicandoPrueba(true);
+  setResultadoPrueba("");
+
+  try {
+    const respuesta = await fetch(
+      "/api/contenido-redes?accion=probar-reel-facebook",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productoId: productoPruebaId,
+          videoUrl: videoPruebaUrl.trim(),
+          texto: textoPrueba.trim(),
+          idPrueba: clave,
+          confirmar: "PUBLICAR_REEL_FACEBOOK",
+        }),
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(datos.error || "No se pudo completar la prueba.");
+    }
+
+    setResultadoPrueba(
+      `Publicado correctamente. ID de Facebook: ${datos.publicacionId}`
+    );
+  } catch (error) {
+    setResultadoPrueba(
+      `${error.message}. Revisá Facebook antes de intentar otra prueba.`
+    );
+  } finally {
+    setPublicandoPrueba(false);
+  }
+};
+
   const confirmarCompartidoFacebook = async (item, pieza) => {
   const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.indice}`;
+
+    if (pieza.compartidoManualFacebook?.estado === "compartido") {
+  return;
+    }
 
   try {
     setConfirmandoCompartidoFacebook(clave);
@@ -1606,6 +1678,74 @@ const urlProducto = productoId
             contenido antes de aprobarlo.
           </p>
         </div>
+
+        {/* PRUEBA INDIVIDUAL FACEBOOK REEL */}
+<section className="mb-4 rounded-xl border border-amber-200 bg-white p-3">
+  <h2 className="text-sm font-bold text-slate-900">
+    Prueba de Reel de Facebook
+  </h2>
+
+  <p className="mt-1 text-xs text-amber-700">
+    Publicación real. No afecta el calendario semanal.
+  </p>
+
+  <div className="mt-3 space-y-2">
+    <select
+      value={productoPruebaId}
+      onChange={(e) => setProductoPruebaId(e.target.value)}
+      disabled={Boolean(idPruebaReel)}
+      className="w-full rounded-lg border border-slate-200 p-2 text-xs"
+    >
+      <option value="">Seleccionar producto</option>
+      {productosDigitales.map((producto) => (
+        <option key={producto.id} value={producto.id}>
+          {producto.nombre}
+        </option>
+      ))}
+    </select>
+
+    <input
+      type="url"
+      value={videoPruebaUrl}
+      onChange={(e) => setVideoPruebaUrl(e.target.value)}
+      disabled={Boolean(idPruebaReel)}
+      placeholder="URL HTTPS del video MP4"
+      className="w-full rounded-lg border border-slate-200 p-2 text-xs"
+    />
+
+    <textarea
+      value={textoPrueba}
+      onChange={(e) => setTextoPrueba(e.target.value)}
+      disabled={Boolean(idPruebaReel)}
+      placeholder="Descripción del Reel"
+      rows={3}
+      className="w-full rounded-lg border border-slate-200 p-2 text-xs"
+    />
+
+    <button
+      type="button"
+      onClick={ejecutarPruebaReelFacebook}
+      disabled={publicandoPrueba || Boolean(idPruebaReel)}
+      className="w-full rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300"
+    >
+      {publicandoPrueba
+        ? "Publicando..."
+        : "Publicar Reel de prueba"}
+    </button>
+
+    {idPruebaReel && (
+      <p className="text-xs text-slate-600">
+        Identificador de prueba: {idPruebaReel}
+      </p>
+    )}
+
+    {resultadoPrueba && (
+      <p className="text-xs text-slate-700">
+        {resultadoPrueba}
+      </p>
+    )}
+  </div>
+</section>
 
                 {/* GRUPOS DE FACEBOOK */}
 
@@ -2341,16 +2481,20 @@ const urlProducto = productoId
     </button>
   )}
 
-                                  {pieza.red === "facebook" && (
+                                  {pieza.red === "facebook" &&
+  pieza.estado === "pendiente_manual" && (
   <button
     type="button"
     onClick={() =>
       confirmarCompartidoFacebook(item, pieza)
     }
+    
     disabled={
-      confirmandoCompartidoFacebook ===
-      `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.indice}`
+  pieza.compartidoManualFacebook?.estado === "compartido" ||
+  confirmandoCompartidoFacebook ===
+    `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.indice}`
     }
+    
     className={`mt-2 w-full rounded-md px-2 py-1.5 text-[10px] font-bold text-white transition ${
       pieza.compartidoManualFacebook?.estado ===
       "compartido"
