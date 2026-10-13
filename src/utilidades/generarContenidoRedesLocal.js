@@ -30,7 +30,7 @@ export function generarContenidoRedesLocal(original) {
   const principal = feed[0] || "";
   const portada = texto(recursos.portadaFacebook) || principal;
   if (!nombre) throw new Error("El producto no tiene nombre.");
-  if (!url) throw new Error(`Falta la URL pública de tienda para ${nombre}.`);
+  
   if (!/^https:\/\//i.test(video)) {
     throw new Error(`El video MP4 de ${nombre} necesita una URL pública HTTPS.`);
   }
@@ -54,7 +54,12 @@ export function generarContenidoRedesLocal(original) {
       : esGrupoTip
         ? `Un detalle para tener en cuenta sobre ${nombre}: ${detalleAlternativo}`
         : `${nombre}. ${descripcion}`;
-    const cta = p.red === "instagram" ? "Más información en el link de la bio." : "Conocé el producto en nuestra tienda.";
+    const cta = p.red === "instagram"
+  ? "Más información en el link de la bio."
+  : url
+    ? "Conocé el producto en nuestra tienda."
+    : "Consultanos para más información sobre este producto.";
+    
     const hashtags = p.red === "whatsapp" ? [] : hashtagsBase;
     
     const recurso =
