@@ -1367,10 +1367,21 @@ async function publicarCarruselFacebook({ publicacion, productoId }) {
 async function publicarReelFacebook({ publicacion, productoId }) {
   verificarConfiguracionFacebook();
 
-  const videoUrl = [publicacion?.video, publicacion?.videoUrl]
-    .find((valor) => typeof valor === "string" && /^https:\/\//i.test(valor.trim()))?.trim();
-  if (!videoUrl) {
-    throw new Error("El reel de Facebook requiere una URL pública HTTPS del MP4.");
+  const dbProducto = await conectarMongoDB();
+
+  const producto = await dbProducto
+    .collection("productos")
+    .findOne({ id: productoId });
+
+  const videoUrl =
+    typeof producto?.videoReel === "string"
+      ? producto.videoReel.trim()
+      : "";
+
+  if (!/^https:\/\//i.test(videoUrl)) {
+    throw new Error(
+      "El producto no tiene un MP4 público guardado."
+    );
   }
 
   const texto = typeof publicacion?.texto === "string"
