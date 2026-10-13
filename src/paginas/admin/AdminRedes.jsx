@@ -1959,7 +1959,17 @@ const urlProducto = productoId
                             <button type="button" className="rounded-lg bg-slate-900 px-3 py-2 text-xs text-white"
                               onClick={() => navigator.clipboard.writeText(pieza.textoCompleto || "")}
                             >Copiar texto completo</button>
-                            <VistaPreviaRedes recursos={Array.isArray(pieza.recurso) ? pieza.recurso : [pieza.recurso]} tipo={pieza.variante || pieza.tipo} />
+                            <VistaPreviaRedes
+                              recursos={[
+                                pieza.videoUrl,
+                                pieza.video,
+                                pieza.recurso,
+                                pieza.imagenes,
+                                pieza.imagenesFeed,
+                                pieza.imagen,
+                              ]}
+                              tipo={pieza.variante || pieza.tipo}
+                            />
                             {pieza.vistaPreviaEnlace && pieza.urlProducto && (
                               <a href={pieza.urlProducto} target="_blank" rel="noreferrer"
                                 className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
@@ -2172,12 +2182,8 @@ const urlProducto = productoId
 
                     <button
   type="button"
-  onClick={() =>
-    regenerarProgramado(item)
-  }
-  disabled={
-    regenerandoId === item.productoId
-  }
+  disabled={true}
+  title="Regeneración deshabilitada para proteger las publicaciones existentes"
   className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[10px] font-bold text-white disabled:bg-violet-300"
 >
   {regenerandoId ===
@@ -2194,7 +2200,7 @@ const urlProducto = productoId
     <>
       <RefreshCw size={14} />
 
-      Regenerar contenido programado
+      Regeneración temporalmente deshabilitada
     </>
   )}
 </button>
@@ -2250,7 +2256,14 @@ const urlProducto = productoId
                                     }} className="mt-1.5 w-full rounded-md border border-violet-200 px-2 py-1.5 text-[10px] font-semibold text-violet-700">Copiar publicación completa</button>
                                   )}
                                   <VistaPreviaRedes
-                                    recursos={[pieza.publicacion?.videoUrl, pieza.publicacion?.video, pieza.publicacion?.imagen]}
+                                    recursos={[
+                                      pieza.publicacion?.videoUrl,
+                                      pieza.publicacion?.video,
+                                      pieza.publicacion?.recurso,
+                                      pieza.publicacion?.imagenes,
+                                      pieza.publicacion?.imagenesFeed,
+                                      pieza.publicacion?.imagen,
+                                    ]}
                                     tipo={pieza.tipo}
                                   />
 

@@ -1199,6 +1199,73 @@ async function publicarFacebook({
 }
 
 // =========================================================
+// FACEBOOK - REEL MP4 (sin activación automática todavía)
+// =========================================================
+
+async function publicarReelFacebook({ publicacion, productoId }) {
+  verificarConfiguracionFacebook();
+
+  const videoUrl = [publicacion?.video, publicacion?.videoUrl]
+    .find((valor) => typeof valor === "string" && /^https:\/\//i.test(valor.trim()))?.trim();
+  if (!videoUrl) {
+    throw new Error("El reel de Facebook requiere una URL pública HTTPS del MP4.");
+  }
+
+  const texto = typeof publicacion?.texto === "string"
+    ? publicacion.texto.trim() : "";
+
+  const inicio = await fetch(`${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/video_reels`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      access_token: FACEBOOK_PAGE_ACCESS_TOKEN,
+      upload_phase: "start",
+    }).toString(),
+  });
+  const inicioDatos = await leerJsonSeguro(inicio);
+  if (!inicio.ok || !inicioDatos?.video_id || !inicioDatos?.upload_url) {
+    throw new Error(inicioDatos?.error?.message || "Facebook no pudo iniciar el reel.");
+  }
+
+  const videoId = String(inicioDatos.video_id);
+  const carga = await fetch(inicioDatos.upload_url, {
+    method: "POST",
+    headers: {
+      Authorization: `OAuth ${FACEBOOK_PAGE_ACCESS_TOKEN}`,
+      file_url: videoUrl,
+    },
+  });
+  const cargaDatos = await leerJsonSeguro(carga);
+  if (!carga.ok || cargaDatos?.error) {
+    throw new Error(cargaDatos?.error?.message || "Facebook no pudo cargar el MP4.");
+  }
+
+  const finalizar = await fetch(`${FACEBOOK_API}/${FACEBOOK_PAGE_ID}/video_reels`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      access_token: FACEBOOK_PAGE_ACCESS_TOKEN,
+      upload_phase: "finish",
+      video_id: videoId,
+      video_state: "PUBLISHED",
+      description: texto,
+    }).toString(),
+  });
+  const finalDatos = await leerJsonSeguro(finalizar);
+  if (!finalizar.ok || finalDatos?.success !== true) {
+    throw new Error(finalDatos?.error?.message || "Facebook no confirmó la publicación del reel.");
+  }
+
+  const db = await conectarMongoDB();
+  await db.collection("publicaciones_redes").insertOne({
+    proveedor: "facebook", tipo: "reel_pagina", productoId: productoId || null,
+    publicacionId: videoId, paginaId: FACEBOOK_PAGE_ID, texto, videoUrl,
+    estado: "publicado", publicadoEn: new Date(), creadoEn: new Date(),
+  });
+  return { ok: true, proveedor: "facebook", tipo: "reel_pagina", publicacionId: videoId };
+}
+
+// =========================================================
 // BORRADORES DE CONTENIDO
 // =========================================================
 
@@ -1586,7 +1653,7 @@ const crearCalendarioInicial = (
         publicacion: {
           ...pieza,
           texto: pieza.textoCompleto || pieza.texto || "",
-          imagenes: pieza.imagenesFeed || [],
+          imagenes: pieza.imagenes || (pieza.imagen ? [pieza.imagen] : []),
           video: pieza.video || "",
         },
         estado: manual ? "pendiente_manual" :
@@ -2000,7 +2067,14 @@ async function ejecutarPublicacionPieza({
     });
   }
 
-  if (red === "facebook") {
+  if (red === "facebook" && tipo === "reel_pagina") {
+    return publicarReelFacebook({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
+
+  if (red === "facebook" && tipo === "publicacion") {
     return publicarFacebook({
       publicacion: pieza.publicacion,
       productoId,

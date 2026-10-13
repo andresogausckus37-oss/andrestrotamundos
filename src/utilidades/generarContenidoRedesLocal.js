@@ -31,8 +31,13 @@ export function generarContenidoRedesLocal(original) {
   const portada = texto(recursos.portadaFacebook) || principal;
   if (!nombre) throw new Error("El producto no tiene nombre.");
   if (!url) throw new Error(`Falta la URL pública de tienda para ${nombre}.`);
-  if (!video) throw new Error(`Falta el video MP4 para ${nombre}.`);
+  if (!/^https:\/\//i.test(video)) {
+    throw new Error(`El video MP4 de ${nombre} necesita una URL pública HTTPS.`);
+  }
   if (feed.length !== 3) throw new Error(`Se requieren tres imágenes 4:5 para ${nombre}.`);
+  if (vertical.length !== 3) {
+    throw new Error(`Se requieren tres imágenes 9:16 para ${nombre}.`);
+  }
   const datos = datoConfiable(producto);
   const descripcion = datos[0] || `Conocé ${nombre} y sus características en la tienda.`;
   const detalleAlternativo = datos.find(d => d !== descripcion) || `Consultá las características y condiciones de ${nombre} en la tienda.`;
