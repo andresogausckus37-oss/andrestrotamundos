@@ -403,7 +403,7 @@ export default function AdminRedes() {
   const [producto3Id, setProducto3Id] = useState("");
 
   const [productoPruebaId, setProductoPruebaId] = useState("");
-const [videoPruebaUrl, setVideoPruebaUrl] = useState("");
+
 const [textoPrueba, setTextoPrueba] = useState("");
 const [idPruebaReel, setIdPruebaReel] = useState("");
 const [publicandoPrueba, setPublicandoPrueba] = useState(false);
@@ -1513,14 +1513,11 @@ const urlProducto = productoId
 };
 
   const ejecutarPruebaReelFacebook = async () => {
-  if (
-    publicandoPrueba ||
-    !productoPruebaId ||
-  !/^https:\/\//i.test(videoPruebaUrl.trim())
-  ) {
-    alert("Seleccioná un producto y una URL HTTPS del MP4.");
-    return;
-  }
+    
+    if (publicandoPrueba || !productoPruebaId) {
+      alert("Seleccioná un producto.");
+      return;
+    }
 
   if (
     !window.confirm(
@@ -1703,15 +1700,6 @@ const urlProducto = productoId
         </option>
       ))}
     </select>
-
-    <input
-      type="url"
-      value={videoPruebaUrl}
-      onChange={(e) => setVideoPruebaUrl(e.target.value)}
-      disabled={Boolean(idPruebaReel)}
-      placeholder="URL HTTPS del video MP4"
-      className="w-full rounded-lg border border-slate-200 p-2 text-xs"
-    />
 
     <textarea
       value={textoPrueba}
