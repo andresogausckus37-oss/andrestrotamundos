@@ -34,18 +34,50 @@ function PublicacionEditable({
       ? publicacion.hashtags
       : [];
 
-  const actualizarTexto = (texto) => {
-    onCambiar({
+  const actualizarPublicacion = (cambios) => {
+    const nueva = {
       ...publicacion,
+      ...cambios,
+    };
+
+    const copy = String(
+      nueva.copy || ""
+    ).trim();
+
+    const cta = String(
+      nueva.cta || ""
+    ).trim();
+
+    const url = String(
+      nueva.urlProducto || ""
+    ).trim();
+
+    const hashtags =
+      nueva.red === "whatsapp"
+        ? []
+        : Array.isArray(nueva.hashtags)
+          ? nueva.hashtags
+          : [];
+
+    nueva.textoCompleto = [
+      copy,
+      cta,
+      url,
+      hashtags.join(" "),
+    ].filter(Boolean).join("\n\n");
+
+    onCambiar(nueva);
+  };
+
+  const actualizarTexto = (texto) => {
+    actualizarPublicacion({
       texto,
+      copy: texto,
     });
   };
 
   const actualizarCTA = (cta) => {
-    onCambiar({
-      ...publicacion,
-      cta,
-    });
+    actualizarPublicacion({ cta });
   };
 
   const actualizarHashtags = (valor) => {
@@ -54,8 +86,7 @@ function PublicacionEditable({
       .map((item) => item.trim())
       .filter(Boolean);
 
-    onCambiar({
-      ...publicacion,
+    actualizarPublicacion({
       hashtags: nuevosHashtags,
     });
   };
@@ -871,7 +902,8 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
   // GENERAR BORRADORES LOCALES
   // =======================================================
 
-  const generarContenido = async () => {
+                 
+const generarContenido = async () => {
   const seleccionados = [
     producto1,
     producto2,
@@ -879,151 +911,146 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
   ].filter(Boolean);
 
   if (!seleccionados.length) {
-    setError(
-      "Selecciona al menos un producto."
-    );
-
+    setError("Selecciona al menos un producto.");
     return;
   }
 
-  try {
-    setGenerando(true);
-    setError("");
+  setGenerando(true);
+  setError("");
 
+  try {
     const resultados = await Promise.all(
-      seleccionados.map(
-        async (producto) => {
-          try {
-            const respuesta = await fetch(
-              "/api/ia/copys",
-              {
+      seleccionados.map(async (producto) => {
+        // React genera la estructura y el respaldo.
+        const contenido = generarContenidoRedesLocal(producto);
+
+        const descripcion =
+          producto.descripcionLarga ||
+          producto.descripcion ||
+          "";
+
+        const publicaciones = await Promise.all(
+          contenido.calendario.map(async (pieza) => {
+            try {
+              const respuesta = await fetch("/api/ia/copys", {
                 method: "POST",
+                credentials: "include",
                 headers: {
-                  "Content-Type":
-                    "application/json",
+                  "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  nombre:
-                    producto.nombre,
+  nombre: producto.nombre,
+  descripcion,
+  plataforma: pieza.red,
+  tipo: pieza.tipo,
+  variante: pieza.variante || "",
+  contexto: [
+    `Red social: ${pieza.red}`,
+    `Formato: ${pieza.tipo}`,
+    `Variante: ${pieza.variante || "general"}`,
+    `Producto: ${producto.nombre}`,
+  ].join(". "),
+}),
+              });
 
-                  descripcion:
-                    producto.descripcionLarga ||
-                    producto.descripcion ||
-                    "",
+              const datos = await respuesta.json();
 
-                  plataforma:
-                    "facebook",
-                }),
+              if (!respuesta.ok || !datos.ok) {
+                throw new Error(
+                  datos.error || "Error generando contenido con IA"
+                );
               }
-            );
 
-            const datos =
-              await respuesta.json();
+              const copy = String(datos.copy || "").trim();
+              const cta = String(datos.cta || "").trim();
 
-            if (!respuesta.ok) {
-              throw new Error(
-                datos.error ||
-                  "Error generando contenido con IA"
+              const hashtags = pieza.red === "whatsapp"
+                ? []
+                : datos.hashtags;
+
+              if (
+                !copy ||
+                !cta ||
+                !Array.isArray(hashtags) ||
+                (pieza.red !== "whatsapp" && hashtags.length !== 5)
+              ) {
+                throw new Error("Contenido IA incompleto");
+              }
+
+              const urlProducto = pieza.urlProducto || "";
+
+              const textoCompleto = [
+                copy,
+                cta,
+                urlProducto,
+                hashtags.join(" "),
+              ].filter(Boolean).join("\n\n");
+
+              return {
+                ...pieza,
+                texto: copy,
+                copy,
+                cta,
+                hashtags,
+                textoCompleto,
+                origen: "ia",
+              };
+            } catch (errorIA) {
+              console.warn(
+                `Respaldo React para ${pieza.red}/${pieza.tipo}:`,
+                errorIA
               );
+
+              return {
+                ...pieza,
+                origen: "plantilla",
+              };
             }
+          })
+        );
 
-            /*
-             * Primero generamos toda la estructura
-             * mediante nuestras plantillas locales.
-             */
-            const contenido =
-              generarContenidoRedesLocal(
-                producto
-              );
+        // Sincronizamos todas las vistas con el calendario.
+        contenido.calendario = publicaciones;
 
-            /*
-             * Reemplazamos únicamente la publicación
-             * comercial de Facebook por la versión IA.
-             */
-            if (
-              contenido.facebook
-                ?.publicaciones?.length
-            ) {
-              const indice =
-                contenido.facebook
-                  .publicaciones.length - 1;
+        contenido.instagram = {
+          ...contenido.instagram,
+          reel: publicaciones.find(
+            p => p.red === "instagram" && p.tipo === "reel"
+          ),
+          carrusel: publicaciones.find(
+            p => p.red === "instagram" && p.tipo === "carrusel"
+          ),
+          stories: publicaciones.filter(
+            p => p.red === "instagram" && p.tipo.includes("story")
+          ),
+        };
 
-              contenido.facebook
-                .publicaciones[indice] = {
-                  ...contenido.facebook
-                    .publicaciones[indice],
+        contenido.threads = publicaciones.filter(
+          p => p.red === "threads"
+        );
 
-                  texto:
-                    datos.copy,
+        contenido.facebook = {
+          ...contenido.facebook,
+          publicaciones: publicaciones.filter(
+            p => p.red === "facebook"
+          ),
+        };
 
-                  hashtags:
-                    Array.isArray(
-                      datos.hashtags
-                    )
-                      ? datos.hashtags.slice(
-                          0,
-                          5
-                        )
-                      : [],
-
-                  origen: "ia",
-                };
-            }
-
-            return {
-              productoId:
-                producto.id,
-
-              nombre:
-                producto.nombre,
-
-              contenido,
-
-              origen: "ia",
-            };
-          } catch (errorIA) {
-            console.warn(
-              "Workers AI no disponible. Usando plantilla local:",
-              errorIA
-            );
-
-            /*
-             * FALLBACK AUTOMÁTICO.
-             *
-             * Si Cloudflare AI falla o agotamos
-             * la cuota, Admin Redes sigue
-             * funcionando normalmente.
-             */
-            return {
-              productoId:
-                producto.id,
-
-              nombre:
-                producto.nombre,
-
-              contenido:
-                generarContenidoRedesLocal(
-                  producto
-                ),
-
-              origen: "plantilla",
-            };
-          }
-        }
-      )
+        return {
+          productoId: producto.id,
+          nombre: producto.nombre,
+          contenido,
+          origen: publicaciones.every(p => p.origen === "ia")
+            ? "ia"
+            : "mixto",
+        };
+      })
     );
 
     setContenidos(resultados);
   } catch (error) {
-    console.error(
-      "Error generando contenido:",
-      error
-    );
-
-    setError(
-      error.message ||
-        "No se pudo generar el contenido."
-    );
+    console.error("Error generando contenido:", error);
+    setError(error.message || "No se pudo generar el contenido.");
   } finally {
     setGenerando(false);
   }
@@ -1033,30 +1060,56 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
   // EDITAR UNA PUBLICACIÓN
   // =======================================================
 
-  const actualizarContenido = (
-    indiceProducto,
-    actualizador
-  ) => {
-    setContenidos(
-      (actuales) =>
-        actuales.map(
-          (item, indice) => {
-            if (
-              indice !==
-              indiceProducto
-            ) {
-              return item;
-            }
+  const actualizarContenido = (indiceProducto, actualizador) => {
+    setContenidos((actuales) =>
+      actuales.map((item, indice) => {
+        if (indice !== indiceProducto) return item;
 
-            return {
-              ...item,
-              contenido:
-                actualizador(
-                  item.contenido
-                ),
-            };
+        const anterior = item.contenido;
+        const actualizado = actualizador(anterior);
+
+        const reemplazos = new Map();
+
+        const vincular = (viejo, nuevo) => {
+          if (viejo && nuevo && viejo !== nuevo) {
+            reemplazos.set(viejo, nuevo);
           }
-        )
+        };
+
+        vincular(anterior.instagram?.reel, actualizado.instagram?.reel);
+        vincular(anterior.instagram?.carrusel, actualizado.instagram?.carrusel);
+
+        ["stories", "publicaciones"].forEach((campo) => {
+          const antes = anterior.instagram?.[campo] || [];
+          const despues = actualizado.instagram?.[campo] || [];
+          antes.forEach((pieza, i) => vincular(pieza, despues[i]));
+        });
+
+        ["threads"].forEach((campo) => {
+          const antes = anterior[campo] || [];
+          const despues = actualizado[campo] || [];
+          antes.forEach((pieza, i) => vincular(pieza, despues[i]));
+        });
+
+        const facebookAntes = anterior.facebook?.publicaciones || [];
+        const facebookDespues = actualizado.facebook?.publicaciones || [];
+
+        facebookAntes.forEach((pieza, i) =>
+          vincular(pieza, facebookDespues[i])
+        );
+
+        const calendario = (anterior.calendario || []).map(
+          (pieza) => reemplazos.get(pieza) || pieza
+        );
+
+        return {
+          ...item,
+          contenido: {
+            ...actualizado,
+            calendario,
+          },
+        };
+      })
     );
   };
 

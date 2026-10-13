@@ -457,10 +457,13 @@ async function generarCopyConIA(request, env) {
     const nombre = String(datos.nombre || "").trim();
     const descripcion = String(datos.descripcion || "").trim();
     const plataforma = String(datos.plataforma || "").trim();
+    const tipo = String(datos.tipo || "").trim();
+    const variante = String(datos.variante || "").trim();
+const contexto = String(datos.contexto || "").trim();
 
     if (
       !nombre ||
-      !["facebook", "whatsapp"].includes(plataforma)
+      !["facebook", "instagram", "threads", "whatsapp"].includes(plataforma)
     ) {
       return Response.json(
         { error: "Datos inválidos" },
@@ -469,32 +472,61 @@ async function generarCopyConIA(request, env) {
     }
 
     const prompt = `
-Sos un redactor publicitario argentino especializado
-en comercio electrónico.
+    Sos un redactor publicitario argentino especializado
+    en comercio electrónico y redes sociales.
 
-Producto: ${nombre}
-Descripción: ${descripcion}
+    Producto: ${nombre}
+    Descripción: ${descripcion}
+    Plataforma: ${plataforma}
+Tipo de publicación: ${tipo || "publicación general"}
 
-Plataforma: ${plataforma}
+Variante: ${variante || "general"}
+Contexto específico: ${contexto || "presentación del producto"}
 
-Generá un copy comercial natural, atractivo y breve.
+- Adaptar el enfoque comercial a la variante y al contexto.
+- No repetir literalmente el nombre del producto innecesariamente.
+- No inventar datos para diferenciar publicaciones.
 
-Reglas:
-- Español argentino.
-- No inventar características.
-- No inventar descuentos ni promociones.
-- No incluir URLs.
-- No usar más de 2 emojis.
-- Evitar textos repetitivos.
-- Facebook: generar exactamente 5 hashtags relevantes.
-- WhatsApp: no generar hashtags.
+INSTRUCCIONES SEGÚN EL FORMATO:
+- Reel: copy breve, atractivo y con un gancho inicial.
+- Carrusel: destacar las características y ventajas comprobables.
+- Historia o estado: mensaje corto, directo y fácil de leer.
+- Publicación de Facebook: texto comercial natural y persuasivo.
+- Grupo de Facebook: tono cercano, informativo y sin parecer spam.
+- Threads: texto conversacional que invite a interactuar.
+- WhatsApp: mantener el estilo breve y sin hashtags.
+- Adaptar el CTA al formato y a la plataforma.
+- No utilizar siempre la misma estructura ni las mismas frases.
 
-Respondé exclusivamente con JSON válido:
-{
-  "copy": "texto",
-  "hashtags": ["#Etiqueta1"]
-}
-`;
+    Generá contenido comercial personalizado para este producto.
+
+    REGLAS OBLIGATORIAS:
+    - Escribir en español argentino, natural y profesional.
+    - Adaptar el copy a la plataforma indicada.
+    - Destacar únicamente características presentes en la descripción.
+    - No inventar beneficios, características, precios ni promociones.
+    - Evitar textos genéricos, repetitivos o exagerados.
+    - Incluir entre 1 y 3 emojis relevantes según el producto y el contenido.
+- Utilizar los emojis de manera natural, sin sobrecargar el texto.
+- Evitar emojis repetidos o que no tengan relación con el producto.
+- No incluir emojis en los hashtags.
+    - Generar un CTA breve, persuasivo y relacionado con el producto.
+    - No incluir URLs: la aplicación agregará el enlace real.
+    - No repetir el CTA dentro del copy.
+    - Para Facebook, Instagram y Threads: exactamente 5 hashtags relevantes.
+    - Los hashtags deben ser específicos del producto, sin palabras sueltas como #Para o #Con.
+    - Para WhatsApp: no generar hashtags.
+    - No incluir hashtags dentro del copy ni del CTA.
+
+    Respondé exclusivamente con JSON válido:
+    {
+      "copy": "Texto comercial con entre 1 y 3 emojis relevantes",
+      "cta": "Llamado a la acción personalizado",
+      "hashtags": ["#Etiqueta1", "#Etiqueta2", "#Etiqueta3", "#Etiqueta4", "#Etiqueta5"]
+    }
+
+    Para WhatsApp, devolver "hashtags": [].
+    `;
 
     const resultado = await env.AI.run(
       "@cf/meta/llama-3.1-8b-instruct",
@@ -516,15 +548,41 @@ Respondé exclusivamente con JSON válido:
 
     const generado = JSON.parse(texto);
 
+    const copy = String(generado.copy || "").trim();
+    const cta = String(generado.cta || "").trim();
+
+    const hashtags = plataforma === "whatsapp"
+      ? []
+      : Array.isArray(generado.hashtags)
+        ? [...new Set(
+            generado.hashtags
+              .filter(h => typeof h === "string")
+              .map(h => h.trim())
+              .filter(h => /^#[\p{L}\p{N}_]+$/u.test(h))
+          )].slice(0, 5)
+        : [];
+
+    if (
+      !copy ||
+      !cta ||
+      (plataforma !== "whatsapp" && hashtags.length !== 5)
+    ) {
+      return Response.json(
+        {
+          ok: false,
+          error: "La IA devolvió contenido incompleto.",
+        },
+        { status: 422 }
+      );
+    }
+
     return Response.json({
       ok: true,
-      copy: String(generado.copy || ""),
-      hashtags:
-        plataforma === "facebook" &&
-        Array.isArray(generado.hashtags)
-          ? generado.hashtags.slice(0, 5)
-          : [],
+      copy,
+      cta,
+      hashtags,
     });
+    
   } catch (error) {
     return Response.json(
       {

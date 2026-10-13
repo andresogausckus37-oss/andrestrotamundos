@@ -7,10 +7,37 @@ const urlPublica = (v) => /^https?:\/\//i.test(texto(v)) ? texto(v) : "";
 const sinEtiquetas = (v) => texto(v).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
 function etiquetas(producto) {
+  const palabrasExcluidas = new Set([
+    "para", "con", "sin", "del", "las", "los",
+    "una", "uno", "por", "tipo", "color",
+    "nuevo", "producto", "incluye", "ideal",
+    "soporte", "unidad"
+  ]);
+
   const palabras = `${producto.nombre || ""} ${producto.categoria || ""}`
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .split(/[^a-zA-Z0-9]+/).filter(p => p.length >= 4);
-  return [...new Set([...palabras.map(p => `#${p}`), "#TiendaOnline", "#Productos", "#Novedades", "#CompraOnline", "#CatalogoOnline"])].slice(0, 5);
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(p =>
+      p.length >= 4 &&
+      !palabrasExcluidas.has(p.toLowerCase())
+    );
+
+  const hashtags = [
+    ...new Set(
+      palabras.map(p => `#${p}`)
+    )
+  ];
+
+  const adicionales = [
+    "#TiendaOnline",
+    "#CompraOnline",
+    "#Novedades",
+    "#CatalogoOnline",
+    "#Productos"
+  ];
+
+  return [...new Set([...hashtags, ...adicionales])].slice(0, 5);
 }
 
 function datoConfiable(producto) {
@@ -49,16 +76,33 @@ export function generarContenidoRedesLocal(original) {
   const calendario = plantilla.map(p => {
     const esThreadsTip = p.red === "threads" && p.tipo === "sabias_que";
     const esGrupoTip = p.red === "facebook" && p.variante === "sabias_que";
+    
+    const emojis = {
+      instagram: "✨",
+      facebook: "🛍️",
+      threads: "💡",
+      whatsapp: "📲",
+    };
+
+    const emoji = emojis[p.red] || "✨";
+
     const copy = esThreadsTip
-      ? `¿Sabías qué? ${nombre}: ${descripcion}`
+      ? `${emoji} ¿Sabías qué? ${nombre}: ${descripcion}`
       : esGrupoTip
-        ? `Un detalle para tener en cuenta sobre ${nombre}: ${detalleAlternativo}`
-        : `${nombre}. ${descripcion}`;
+        ? `${emoji} Un detalle para tener en cuenta sobre ${nombre}: ${detalleAlternativo}`
+        : p.tipo === "reel"
+          ? `${emoji} Descubrí ${nombre}. ${descripcion}`
+          : p.tipo?.includes("story") || p.tipo?.includes("estado")
+            ? `${emoji} ${nombre}. ¡Conocé sus características!`
+            : `${emoji} ${nombre}. ${descripcion}`;
+
     const cta = p.red === "instagram"
-  ? "Más información en el link de la bio."
-  : url
-    ? "Conocé el producto en nuestra tienda."
-    : "Consultanos para más información sobre este producto.";
+  ? "Descubrí más sobre este producto en el enlace de nuestra bio."
+  : p.red === "whatsapp"
+    ? "Consultanos para conocer más detalles."
+    : url
+      ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
+      : "Consultanos para conocer más detalles.";
     
     const hashtags = p.red === "whatsapp" ? [] : hashtagsBase;
     

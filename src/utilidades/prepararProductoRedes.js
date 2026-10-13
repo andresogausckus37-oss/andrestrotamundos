@@ -18,7 +18,11 @@ export function prepararProductoRedes(producto) {
     verticalOrigen.beneficios,
   ].map(urlValida);
   const video = urlValida(producto.videoReel || producto.videoMP4 || producto.videoMp4);
-  const urlProducto = urlValida(producto.urlProducto || producto.url || producto.enlace || producto.urls?.producto);
+  const slug = urlValida(producto.slug);
+
+  const urlProducto = producto.id
+  ? `https://andreshousesitter.com/tienda/${encodeURIComponent(producto.id)}`
+  : "";
 
   return {
     id: producto.id,
