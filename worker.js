@@ -281,6 +281,32 @@ export default {
   }
 }
 
+    // METADATOS DE PRODUCTOS PARA WHATSAPP Y FACEBOOK
+if (
+  request.method === "GET" &&
+  /^\/tienda\/[^/]+\/?$/.test(url.pathname) &&
+  /facebookexternalhit|facebot|whatsapp|twitterbot|telegrambot|linkedinbot|pinterest|discordbot/i.test(
+    request.headers.get("user-agent") || ""
+  )
+) {
+  const productoId = decodeURIComponent(
+    url.pathname.replace(/^\/tienda\//, "").replace(/\/$/, "")
+  );
+
+  const urlInterna = new URL(request.url);
+  urlInterna.pathname = "/api/admin/pedidos";
+  urlInterna.search = "";
+
+  urlInterna.searchParams.set("accion", "preview-producto");
+  urlInterna.searchParams.set("id", productoId);
+
+  return await ejecutarHandlerGenerico(
+    new Request(urlInterna.toString(), request),
+    env,
+    handlerAdminPedidos
+  );
+}
+
     /* =========================
    PREVIEWS PARA COMPARTIR
 ========================= */
