@@ -1077,7 +1077,7 @@ if (esReel) {
   textoCompleto,
   origen: "ia",
 };
-              };
+              
             } catch (errorIA) {
               console.warn(
                 `Respaldo React para ${pieza.red}/${pieza.tipo}:`,
