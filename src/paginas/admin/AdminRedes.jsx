@@ -1001,8 +1001,49 @@ const generarContenido = async () => {
                 );
               }
 
-              const copy = String(datos.copy || "").trim();
-              const cta = String(datos.cta || "").trim();
+              const esReel =
+  (pieza.red === "instagram" && pieza.tipo === "reel") ||
+  (pieza.red === "facebook" && pieza.tipo === "reel_pagina");
+
+let copy = String(datos.copy || "").trim();
+const cta = String(datos.cta || "").trim();
+
+if (esReel) {
+  copy = copy
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/#[\p{L}\p{N}_]+/gu, "")
+    .trim();
+
+  if (cta) {
+    const posicion = copy.toLowerCase().indexOf(cta.toLowerCase());
+    if (posicion !== -1) {
+      copy = (
+        copy.slice(0, posicion) +
+        copy.slice(posicion + cta.length)
+      ).trim();
+    }
+  }
+
+  const inicio = copy
+    .replace(/^[^\p{L}\p{N}]+/u, "")
+    .toLowerCase();
+
+  const nombre = String(producto.nombre || "").toLowerCase();
+
+  if (
+    ["descubrí", "conocé", "te presentamos"].some(
+      frase => inicio.startsWith(`${frase} ${nombre}`)
+    )
+  ) {
+    copy = descripcion.trim();
+
+    if (copy.toLowerCase().startsWith(nombre)) {
+      copy = copy.slice(producto.nombre.length)
+        .replace(/^[\s:.,\-–]+/, "")
+        .trim() || descripcion.trim();
+    }
+  }
+}
 
               const hashtags = pieza.red === "whatsapp"
                 ? []
@@ -1017,7 +1058,7 @@ const generarContenido = async () => {
                 throw new Error("Contenido IA incompleto");
               }
 
-              const urlProducto = pieza.urlProducto || "";
+              const urlProducto = esReel ? "" : pieza.urlProducto || "";
 
               const textoCompleto = [
                 copy,
@@ -1027,13 +1068,15 @@ const generarContenido = async () => {
               ].filter(Boolean).join("\n\n");
 
               return {
-                ...pieza,
-                texto: copy,
-                copy,
-                cta,
-                hashtags,
-                textoCompleto,
-                origen: "ia",
+  ...pieza,
+  texto: copy,
+  copy,
+  cta,
+  hashtags,
+  urlProducto,
+  textoCompleto,
+  origen: "ia",
+};
               };
             } catch (errorIA) {
               console.warn(

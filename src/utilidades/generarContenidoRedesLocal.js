@@ -74,6 +74,7 @@ export function generarContenidoRedesLocal(original) {
     ...CICLO_PRODUCTO.dia2.publicaciones.map((p, i) => ({ ...p, dia: "dia2", i })),
   ];
   const calendario = plantilla.map(p => {
+    
     const esThreadsTip = p.red === "threads" && p.tipo === "sabias_que";
     const esGrupoTip = p.red === "facebook" && p.variante === "sabias_que";
     
@@ -86,7 +87,13 @@ export function generarContenidoRedesLocal(original) {
 
     const emoji = emojis[p.red] || "✨";
 
-    const copy = esThreadsTip
+const esReel =
+  (p.red === "instagram" && p.tipo === "reel") ||
+  (p.red === "facebook" && p.tipo === "reel_pagina");
+    
+    const copy = esReel
+  ? descripcion
+  : esThreadsTip
       ? `${emoji} ¿Sabías qué? ${nombre}: ${descripcion}`
       : esGrupoTip
         ? `${emoji} Un detalle para tener en cuenta sobre ${nombre}: ${detalleAlternativo}`
@@ -122,7 +129,8 @@ export function generarContenidoRedesLocal(original) {
         ? []
         : [recurso];
     
-    const urlProducto = p.red === "instagram" ? "" : url;
+    const urlProducto =
+  p.red === "instagram" || esReel ? "" : url;
     return {
       id: `${p.dia}-${p.red}-${p.tipo}-${p.variante || p.i}`,
       dia: p.dia, red: p.red, tipo: p.tipo, variante: p.variante || null, hora: p.hora,

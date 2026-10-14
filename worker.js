@@ -514,7 +514,16 @@ Contexto específico: ${contexto || "presentación del producto"}
 - No inventar datos para diferenciar publicaciones.
 
 INSTRUCCIONES SEGÚN EL FORMATO:
-- Reel: copy breve, atractivo y con un gancho inicial.
+- Reel de Instagram y reel_pagina de Facebook:
+  comenzar con una situación, necesidad o beneficio real del producto.
+- No comenzar con "Descubrí [nombre del producto]",
+  "Conocé [nombre del producto]" ni copiar el título al inicio.
+- El nombre puede aparecer naturalmente dentro del texto.
+- No incluir URLs, CTA ni hashtags dentro del copy.
+- El CTA debe aparecer únicamente en el campo cta.
+- Los 5 hashtags deben aparecer únicamente en el array hashtags.
+- Usar un tono cercano, natural y diferente para cada plataforma.
+
 - Carrusel: destacar las características y ventajas comprobables.
 - Historia o estado: mensaje corto, directo y fácil de leer.
 - Publicación de Facebook: texto comercial natural y persuasivo.
