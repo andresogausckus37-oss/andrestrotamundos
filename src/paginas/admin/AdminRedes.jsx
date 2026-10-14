@@ -771,6 +771,46 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
   }
 };
 
+  const [reintentandoThreadsId, setReintentandoThreadsId] = useState("");
+
+  const reintentarThreads = async (item, pieza) => {
+    const clave = `${item.productoId}|${pieza.fecha}|${pieza.hora}|${pieza.indice}`;
+    if (reintentandoThreadsId) return;
+    if (!window.confirm("¿Reintentar UNA vez esta publicación de Threads?")) return;
+
+    setReintentandoThreadsId(clave);
+    try {
+      const respuesta = await fetch(
+        "/api/contenido-redes?accion=publicar-programado",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            productoId: item.productoId,
+            fecha: pieza.fecha,
+            hora: pieza.hora,
+            red: pieza.red,
+            tipo: pieza.tipo,
+            indice: pieza.indice,
+            reintentar: true,
+          }),
+        }
+      );
+
+      const datos = await leerRespuestaApi(respuesta);
+      if (!respuesta.ok || !datos?.ok) {
+        throw new Error(datos?.error || "Falló el reintento de Threads.");
+      }
+      alert("Publicación enviada correctamente a Threads.");
+    } catch (error) {
+      alert(`Threads: ${error.message}`);
+    } finally {
+      setReintentandoThreadsId("");
+      await cargarCalendario();
+    }
+  };
+
   const programarAprobado = async (item) => {
     try {
       setProgramandoId(item.productoId);
@@ -2483,6 +2523,28 @@ const urlProducto = productoId
       Publicar Reel ahora
     </button>
   )}
+                                  {pieza.red === "threads" &&
+                                    pieza.estado === "error" &&
+                                    Number(pieza.intentosPublicacion) === 1 &&
+                                    !pieza.publicacionId &&
+                                    !pieza.publicadoEn &&
+                                    !pieza.procesandoDesde &&
+                                    String(pieza.ultimoError || "").startsWith(
+                                      "Threads no pudo crear la publicación."
+                                    ) && (
+                                      <button
+                                        type="button"
+                                        disabled={Boolean(reintentandoThreadsId)}
+                                        onClick={() => reintentarThreads(item, pieza)}
+                                        className="mt-2 w-full rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                                      >
+                                        {reintentandoThreadsId ===
+                                        `${item.productoId}|${pieza.fecha}|${pieza.hora}|${pieza.indice}`
+                                          ? "Reintentando Threads..."
+                                          : "Reintentar Threads (una vez)"}
+                                      </button>
+                                    )}
+
                                   <VistaPreviaRedes
                                     recursos={[
                                       pieza.publicacion?.videoUrl,
@@ -2503,7 +2565,7 @@ const urlProducto = productoId
                                     <div className="mt-1 space-y-0.5">
                                       <p className="text-[9px] font-semibold text-amber-600">
                                         {Number(pieza.intentosPublicacion) > 0
-                                          ? `Reintentando · ${pieza.intentosPublicacion} ${Number(pieza.intentosPublicacion) === 1 ? "intento" : "intentos"}`
+                                          ? `Intentos registrados: ${pieza.intentosPublicacion}`
                                           : "Pendiente · esperando al cron"}
                                       </p>
 
@@ -2526,7 +2588,7 @@ const urlProducto = productoId
                                       {Array.isArray(pieza.imagenesIntentadas) &&
                                         pieza.imagenesIntentadas.length > 0 && (
                                           <p className="text-[9px] text-slate-400">
-                                            Imágenes enviadas: {pieza.imagenesIntentadas.length}
+                                            Imágenes registradas: {pieza.imagenesIntentadas.length}
                                           </p>
                                         )}
                                     </div>

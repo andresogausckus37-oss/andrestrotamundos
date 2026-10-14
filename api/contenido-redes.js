@@ -2560,16 +2560,58 @@ if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
     });
   }
 
+  // Un reintento manual, exclusivamente si Threads rechazó
+  // la creación del contenedor (no tras un fallo al publicarlo).
+  // El cron no envía "reintentar", por lo que nunca entra aquí.
+  const esReintentoThreads =
+    req.body?.reintentar === true &&
+    red === "threads" &&
+    pieza.estado === "error" &&
+    Number(pieza.intentosPublicacion) === 1 &&
+    !pieza.publicacionId &&
+    !pieza.publicadoEn &&
+    !pieza.procesandoDesde &&
+    String(pieza.ultimoError || "").startsWith(
+      "Threads no pudo crear la publicación."
+    );
+
+  const esPrimerIntento =
+    pieza.estado === "programado" &&
+    (Number(pieza.intentosPublicacion) || 0) === 0 &&
+    !pieza.ultimoIntentoEn &&
+    !pieza.publicacionId &&
+    !pieza.publicadoEn &&
+    !pieza.procesandoDesde;
+
+  if (!esPrimerIntento && !esReintentoThreads) {
+    return res.status(409).json({
+      ok: false,
+      error: "La publicación no admite otro intento automático ni un reintento manual seguro.",
+    });
+  }
+
   const inicio = new Date();
+
+  // Reclamo atómico: dos clics o dos procesos no pueden
+  // tomar la misma pieza, ni publicar de nuevo una ya publicada.
+  const filtroReclamo = {
+    _id: documento._id,
+    [`calendario.${posicion}.estado`]:
+      esReintentoThreads ? "error" : "programado",
+    [`calendario.${posicion}.intentosPublicacion`]:
+      esReintentoThreads ? 1 : { $in: [null, 0] },
+    [`calendario.${posicion}.publicacionId`]: null,
+    [`calendario.${posicion}.publicadoEn`]: null,
+    [`calendario.${posicion}.procesandoDesde`]: null,
+    ...(esReintentoThreads
+      ? { [`calendario.${posicion}.ultimoError`]: pieza.ultimoError }
+      : { [`calendario.${posicion}.ultimoIntentoEn`]: null }),
+  };
 
   const reclamo = await db
     .collection("contenido_redes")
     .updateOne(
-      {
-        _id: documento._id,
-        [`calendario.${posicion}.estado`]:
-          "programado",
-      },
+      filtroReclamo,
       {
         $set: {
           [`calendario.${posicion}.estado`]:
