@@ -1,3 +1,4 @@
+
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "andrestrotamundos",
@@ -21,7 +22,12 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": [
+      "/api/*",
+      "/tienda/*",
+      "/compartir/*",
+      "/compartir-facebook/*"
+    ]
   },
 
   "triggers": {
