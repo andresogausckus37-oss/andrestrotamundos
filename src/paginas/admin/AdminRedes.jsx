@@ -2546,9 +2546,9 @@ const urlProducto = productoId
                                   {(pieza.publicacion?.texto || pieza.publicacion?.cta) && (
                                     <button type="button" onClick={async () => {
                                       const p = pieza.publicacion;
-                                      const url = p.urlProducto || p.url || (item.productoId ? `https://andreshousesitter.com/compartir/${encodeURIComponent(item.productoId)}` : "");
-                                      const etiquetas = Array.isArray(p.hashtags) ? p.hashtags.join(" ") : "";
-                                      const texto = [p.texto, p.cta, url, etiquetas].filter(Boolean).join("\n\n");
+                                      const texto = String(
+                                        p.textoCompleto || p.texto || ""
+                                      ).trim();
                                       try { await navigator.clipboard.writeText(texto); alert("Texto, CTA y enlace copiados."); }
                                       catch { alert("No se pudo copiar el texto."); }
                                     }} className="mt-1.5 w-full rounded-md border border-violet-200 px-2 py-1.5 text-[10px] font-semibold text-violet-700">Copiar publicación completa</button>
