@@ -2525,7 +2525,7 @@ const urlProducto = productoId
   )}
                                   {pieza.red === "threads" &&
                                     pieza.estado === "error" &&
-                                    Number(pieza.intentosPublicacion) === 1 &&
+                                    Number(pieza.intentosPublicacion) === 2 &&
                                     !pieza.publicacionId &&
                                     !pieza.publicadoEn &&
                                     !pieza.procesandoDesde &&

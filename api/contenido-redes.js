@@ -320,10 +320,11 @@ async function callbackThreads(req, res) {
 // =========================================================
 
 async function publicarThreads(req, res) {
-  const texto =
-    typeof req.body?.texto === "string"
-      ? req.body.texto.trim()
-      : "";
+  const texto = Array.from(
+  typeof req.body?.texto === "string"
+    ? req.body.texto.trim()
+    : ""
+).slice(0, 500).join("").trim();
 
   const productoId =
     typeof req.body?.productoId === "string"
@@ -2567,7 +2568,9 @@ if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
     req.body?.reintentar === true &&
     red === "threads" &&
     pieza.estado === "error" &&
-    Number(pieza.intentosPublicacion) === 1 &&
+    
+    Number(pieza.intentosPublicacion) === 2 &&
+    
     !pieza.publicacionId &&
     !pieza.publicadoEn &&
     !pieza.procesandoDesde &&
@@ -2599,7 +2602,7 @@ if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
     [`calendario.${posicion}.estado`]:
       esReintentoThreads ? "error" : "programado",
     [`calendario.${posicion}.intentosPublicacion`]:
-      esReintentoThreads ? 1 : { $in: [null, 0] },
+      esReintentoThreads ? 2 : { $in: [null, 0] },
     [`calendario.${posicion}.publicacionId`]: null,
     [`calendario.${posicion}.publicadoEn`]: null,
     [`calendario.${posicion}.procesandoDesde`]: null,
