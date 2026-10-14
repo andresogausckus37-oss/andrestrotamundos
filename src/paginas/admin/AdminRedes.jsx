@@ -1186,6 +1186,37 @@ if (esGrupoPost) {
         );
 
         publicaciones = publicaciones.map((pieza) => {
+
+
+  if (
+    pieza.red === "facebook" &&
+    pieza.tipo === "reel_pagina"
+  ) {
+    const copy = String(pieza.copy || pieza.texto || "")
+      .replace(/https?:\/\/\S+/gi, "")
+      .replace(/#[\p{L}\p{N}_]+/gu, "")
+      .trim();
+
+    const cta = "¿Qué te parece? Contanos.";
+
+    const hashtags = Array.isArray(pieza.hashtags)
+      ? pieza.hashtags
+      : [];
+
+    return {
+      ...pieza,
+      copy,
+      texto: copy,
+      cta,
+      urlProducto: "",
+      textoCompleto: [
+        copy,
+        cta,
+        hashtags.join(" ")
+      ].filter(Boolean).join("\n\n")
+    };
+  }   
+          
   if (pieza.red !== "threads" || pieza.tipo !== "video") {
     return pieza;
   }
@@ -2822,7 +2853,8 @@ const urlProducto = productoId
                                   )}
 
                                   {pieza.red === "facebook" &&
-                                    destinosCompartir
+  pieza.tipo !== "reel_pagina" &&
+  destinosCompartir
                                       .filter(
                                         (destino) =>
                                           destino.plataforma === "facebook" &&
@@ -2842,6 +2874,7 @@ const urlProducto = productoId
                                       ))}
 
 {pieza.red === "facebook" &&
+  pieza.tipo !== "reel_pagina" && (
   pieza?.publicacion?.imagen && (
     <button
       type="button"

@@ -47,18 +47,24 @@ const INSTAGRAM_API =
 // FACEBOOK - CONFIGURACIÓN
 // =========================================================
 
-const FACEBOOK_PAGE_ID =
-  process.env.FACEBOOK_PAGE_ID;
-
-const FACEBOOK_PAGE_ACCESS_TOKEN =
-  process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+let FACEBOOK_PAGE_ID = "";
+let FACEBOOK_PAGE_ACCESS_TOKEN = "";
 
 const FACEBOOK_API_VERSION = "v26.0";
 
 const FACEBOOK_API =
   `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
 
+
 function verificarConfiguracionFacebook() {
+  FACEBOOK_PAGE_ID = String(
+    process.env.FACEBOOK_PAGE_ID || ""
+  ).trim();
+
+  FACEBOOK_PAGE_ACCESS_TOKEN = String(
+    process.env.FACEBOOK_PAGE_ACCESS_TOKEN || ""
+  ).trim();
+
   if (
     !FACEBOOK_PAGE_ID ||
     !FACEBOOK_PAGE_ACCESS_TOKEN
@@ -68,6 +74,7 @@ function verificarConfiguracionFacebook() {
     );
   }
 }
+
 
 // =========================================================
 // AUTENTICACIÓN ADMIN
