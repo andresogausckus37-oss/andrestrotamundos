@@ -1047,6 +1047,20 @@ if (esReel) {
     }
   }
 }
+              if (pieza.red === "threads" && pieza.tipo === "video") {
+  const nombreSeguro = String(producto.nombre || "")
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  if (nombreSeguro) {
+    copy = copy.replace(
+      new RegExp(
+        `^[^\\p{L}\\p{N}]*${nombreSeguro}\\s*[.:;!?–-]*\\s*`,
+        "iu"
+      ),
+      ""
+    ).trim();
+  }
+}
 
               if (esEstadoWhatsapp) {
   const nombre = String(producto.nombre || "").trim();

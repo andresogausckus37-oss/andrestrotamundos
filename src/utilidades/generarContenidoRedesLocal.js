@@ -117,12 +117,16 @@ export function generarContenidoRedesLocal(original) {
           .trim() + "…";
     }
 
+const esThreadsVideo =
+  p.red === "threads" && p.tipo === "video";
     
-      const copy = esEstadoWhatsapp
-      ? `${emoji} ${copyEstado}`
-      : esReel
-        ? descripcion
-        : esThreadsTip
+        const copy = esEstadoWhatsapp
+        ? `${emoji} ${copyEstado}`
+        : esReel
+          ? descripcion
+          : esThreadsVideo
+            ? descripcion
+            : esThreadsTip
       
       ? `${emoji} ¿Sabías qué? ${nombre}: ${descripcion}`
       : esGrupoTip
