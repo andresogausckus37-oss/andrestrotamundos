@@ -87,36 +87,42 @@ export function generarContenidoRedesLocal(original) {
 
     const emoji = emojis[p.red] || "✨";
 
-const esReel =
-  (p.red === "instagram" && p.tipo === "reel") ||
-  (p.red === "facebook" && p.tipo === "reel_pagina");
+
+    const esReel =
+      (p.red === "instagram" && p.tipo === "reel") ||
+      (p.red === "facebook" && p.tipo === "reel_pagina");
 
     const esEstadoWhatsapp =
-  p.red === "whatsapp" && p.tipo === "estado";
+      p.red === "whatsapp" && p.tipo === "estado";
 
-let copyEstado = descripcion
-  .replace(/^[^\p{L}\p{N}]+/u, "")
-  .trim();
+    let copyEstado = descripcion
+      .replace(/^[^\p{L}\p{N}]+/u, "")
+      .trim();
 
-if (copyEstado.toLowerCase().startsWith(nombre.toLowerCase())) {
-  copyEstado = copyEstado
-    .slice(nombre.length)
-    .replace(/^[\s.,:;–-]+/, "")
-    .trim();
-}
+    if (
+      nombre &&
+      copyEstado.toLowerCase().startsWith(nombre.toLowerCase())
+    ) {
+      copyEstado = copyEstado
+        .slice(nombre.length)
+        .replace(/^[\s.,:;–-]+/, "")
+        .trim();
+    }
 
-if (copyEstado.length > 130) {
-  copyEstado = copyEstado
-    .slice(0, 130)
-    .replace(/\s+\S*$/, "")
-    .trim() + "…";
-}
+    if (copyEstado.length > 130) {
+      copyEstado =
+        copyEstado
+          .slice(0, 130)
+          .replace(/\s+\S*$/, "")
+          .trim() + "…";
+    }
+
     
-    const copy = esEstadoWhatsapp
-  ? copyEstado
-  : esReel
-    ? descripcion
-    : esThreadsTip
+      const copy = esEstadoWhatsapp
+      ? `${emoji} ${copyEstado}`
+      : esReel
+        ? descripcion
+        : esThreadsTip
       
       ? `${emoji} ¿Sabías qué? ${nombre}: ${descripcion}`
       : esGrupoTip
@@ -128,14 +134,14 @@ if (copyEstado.length > 130) {
             : `${emoji} ${nombre}. ${descripcion}`;
 
     const cta = esEstadoWhatsapp
-  ? "¡Encontralo en nuestra tienda!"
-  : p.red === "instagram"
-    ? "Descubrí más sobre este producto en el enlace de nuestra bio."
-    : p.red === "whatsapp"
-      ? "Consultanos para conocer más detalles."
-      : url
-        ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
-        : "Consultanos para conocer más detalles.";
+    ? "¡Encontralo en nuestra tienda!"
+    : p.red === "instagram"
+      ? "Descubrí más sobre este producto en el enlace de nuestra bio."
+      : p.red === "whatsapp"
+        ? "Consultanos para conocer más detalles."
+        : url
+          ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
+          : "Consultanos para conocer más detalles.";
     
     const hashtags = p.red === "whatsapp" ? [] : hashtagsBase;
     

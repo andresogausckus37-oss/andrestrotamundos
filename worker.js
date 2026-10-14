@@ -529,7 +529,12 @@ INSTRUCCIONES SEGÚN EL FORMATO:
 - Publicación de Facebook: texto comercial natural y persuasivo.
 - Grupo de Facebook: tono cercano, informativo y sin parecer spam.
 - Threads: texto conversacional que invite a interactuar.
-- WhatsApp: mantener el estilo breve y sin hashtags.
+- WhatsApp estado: copy natural de máximo 130 caracteres.
+- No iniciar el copy con el título del producto.
+- Destacar un uso o beneficio verificable.
+- No incluir URLs ni hashtags dentro del copy.
+- Para WhatsApp estado, CTA exacto: ¡Encontralo en nuestra tienda!
+- La aplicación agrega la URL al final para generar su vista previa.
 - Adaptar el CTA al formato y a la plataforma.
 - No utilizar siempre la misma estructura ni las mismas frases.
 

@@ -1005,8 +1005,11 @@ const generarContenido = async () => {
   (pieza.red === "instagram" && pieza.tipo === "reel") ||
   (pieza.red === "facebook" && pieza.tipo === "reel_pagina");
 
+              const esEstadoWhatsapp =
+  pieza.red === "whatsapp" && pieza.tipo === "estado";
+
 let copy = String(datos.copy || "").trim();
-const cta = String(datos.cta || "").trim();
+let cta = String(datos.cta || "").trim();
 
 if (esReel) {
   copy = copy
@@ -1044,6 +1047,37 @@ if (esReel) {
     }
   }
 }
+
+              if (esEstadoWhatsapp) {
+  const nombre = String(producto.nombre || "").trim();
+
+  const inicio = copy
+    .replace(/^[^\p{L}\p{N}]+/u, "")
+    .trim();
+
+  if (
+    nombre &&
+    inicio.toLowerCase().startsWith(nombre.toLowerCase())
+  ) {
+    copy = pieza.copy;
+  }
+
+  copy = copy
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/#[\p{L}\p{N}_]+/gu, "")
+    .replace(/Consultanos para conocer más detalles\.?/gi, "")
+    .replace(/¡Encontralo en nuestra tienda!/gi, "")
+    .trim();
+
+  if (copy.length > 130) {
+    copy = copy
+      .slice(0, 130)
+      .replace(/\s+\S*$/, "")
+      .trim() + "…";
+  }
+
+  cta = "¡Encontralo en nuestra tienda!";
+              }
 
               const hashtags = pieza.red === "whatsapp"
                 ? []
