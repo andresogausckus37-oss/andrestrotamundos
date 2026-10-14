@@ -320,11 +320,20 @@ async function callbackThreads(req, res) {
 // =========================================================
 
 async function publicarThreads(req, res) {
-  const texto = Array.from(
-  typeof req.body?.texto === "string"
-    ? req.body.texto.trim()
-    : ""
-).slice(0, 500).join("").trim();
+  const textoOriginal =
+    typeof req.body?.texto === "string"
+      ? req.body.texto.trim()
+      : "";
+
+  const url = textoOriginal.match(/https?:\/\/[^\s]+/g)?.pop() || "";
+  const cuerpo = url ? textoOriginal.replace(url, "").trim() : textoOriginal;
+  const final = url ? `\n\n${url}` : "";
+
+  const texto =
+    Array.from(cuerpo)
+      .slice(0, 500 - Array.from(final).length)
+      .join("")
+      .trimEnd() + final;
 
   const productoId =
     typeof req.body?.productoId === "string"
