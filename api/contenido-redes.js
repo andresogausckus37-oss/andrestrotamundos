@@ -2341,14 +2341,20 @@ async function ejecutarPublicacionPieza({
     );
 
     if (
-      estadoHttp < 200 ||
-      estadoHttp >= 300 ||
-      !resultadoThreads?.ok
-    ) {
-      throw new Error(
-        resultadoThreads?.error ||
-          "No se pudo publicar en Threads."
-      );
+  estadoHttp < 200 ||
+  estadoHttp >= 300 ||
+  !resultadoThreads?.ok
+) {
+  const mensaje = [
+    resultadoThreads?.error,
+    resultadoThreads?.detalle,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  throw new Error(
+    mensaje || "No se pudo publicar en Threads."
+  );
     }
 
     return resultadoThreads;
