@@ -969,45 +969,7 @@ const generarContenido = async () => {
           producto.descripcion ||
           "";
 
-        let publicaciones = await Promise.all(
-
-          publicaciones = publicaciones.map((pieza) => {
-  if (pieza.red !== "threads" || pieza.tipo !== "video") {
-    return pieza;
-  }
-
-  const nombreSeguro = String(producto.nombre || "")
-    .trim()
-    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-  const copyOriginal = String(pieza.copy || pieza.texto || "").trim();
-
-  const copy = nombreSeguro
-    ? copyOriginal.replace(
-        new RegExp(
-          `^[^\\p{L}\\p{N}]*${nombreSeguro}\\s*[.:;!?–-]*\\s*`,
-          "iu"
-        ),
-        ""
-      ).trim()
-    : copyOriginal;
-
-  const textoCompleto = [
-    copy,
-    pieza.cta,
-    pieza.urlProducto,
-    ...(Array.isArray(pieza.hashtags)
-      ? [pieza.hashtags.join(" ")]
-      : [])
-  ].filter(Boolean).join("\n\n");
-
-  return {
-    ...pieza,
-    copy,
-    texto: copy,
-    textoCompleto
-  };
-});
+        let publicaciones = await Promise.all(      
           contenido.calendario.map(async (pieza) => {
             try {
               const respuesta = await fetch("/api/ia/copys", {
@@ -1177,6 +1139,44 @@ if (esReel) {
             }
           })
         );
+
+        publicaciones = publicaciones.map((pieza) => {
+  if (pieza.red !== "threads" || pieza.tipo !== "video") {
+    return pieza;
+  }
+
+  const nombreSeguro = String(producto.nombre || "")
+    .trim()
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const copyOriginal = String(pieza.copy || pieza.texto || "").trim();
+
+  const copy = nombreSeguro
+    ? copyOriginal.replace(
+        new RegExp(
+          `^[^\\p{L}\\p{N}]*${nombreSeguro}\\s*[.:;!?–-]*\\s*`,
+          "iu"
+        ),
+        ""
+      ).trim()
+    : copyOriginal;
+
+  const textoCompleto = [
+    copy,
+    pieza.cta,
+    pieza.urlProducto,
+    ...(Array.isArray(pieza.hashtags)
+      ? [pieza.hashtags.join(" ")]
+      : [])
+  ].filter(Boolean).join("\n\n");
+
+  return {
+    ...pieza,
+    copy,
+    texto: copy,
+    textoCompleto
+  };
+});
 
         // Sincronizamos todas las vistas con el calendario.
         contenido.calendario = publicaciones;
