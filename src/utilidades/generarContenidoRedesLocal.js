@@ -117,16 +117,24 @@ export function generarContenidoRedesLocal(original) {
           .trim() + "…";
     }
 
-const esThreadsVideo =
-  p.red === "threads" && p.tipo === "video";
-    
-        const copy = esEstadoWhatsapp
-        ? `${emoji} ${copyEstado}`
-        : esReel
-          ? descripcion
-          : esThreadsVideo
+
+          const esThreadsVideo =
+            p.red === "threads" && p.tipo === "video";
+
+          const esGrupoPost =
+            p.red === "facebook" &&
+            p.tipo === "grupo" &&
+            p.variante === "post";
+
+          const copy = esGrupoPost
             ? descripcion
-            : esThreadsTip
+            : esEstadoWhatsapp
+              ? `${emoji} ${copyEstado}`
+              : esReel
+                ? descripcion
+                : esThreadsVideo
+                  ? descripcion
+                  : esThreadsTip
       
       ? `${emoji} ¿Sabías qué? ${nombre}: ${descripcion}`
       : esGrupoTip
@@ -137,35 +145,39 @@ const esThreadsVideo =
             ? `${emoji} ${nombre}. ¡Conocé sus características!`
             : `${emoji} ${nombre}. ${descripcion}`;
 
-    const cta = esEstadoWhatsapp
-    ? "¡Encontralo en nuestra tienda!"
-    : p.red === "instagram"
-      ? "Descubrí más sobre este producto en el enlace de nuestra bio."
-      : p.red === "whatsapp"
-        ? "Consultanos para conocer más detalles."
-        : url
-          ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
-          : "Consultanos para conocer más detalles.";
-    
-    const hashtags = p.red === "whatsapp" ? [] : hashtagsBase;
-    
+
+    const cta = esGrupoPost
+      ? "¡Conocelo en nuestra tienda!"
+      : esEstadoWhatsapp
+        ? "¡Encontralo en nuestra tienda!"
+        : p.red === "instagram"
+          ? "Descubrí más sobre este producto en el enlace de nuestra bio."
+          : p.red === "whatsapp"
+            ? "Consultanos para conocer más detalles."
+            : url
+              ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
+              : "Consultanos para conocer más detalles.";
+
+    const hashtags =
+      p.red === "whatsapp" ? [] : hashtagsBase;
+
     const recurso =
-  esEstadoWhatsapp ? "" :
-  p.recurso === "video" ? video :
-  p.recurso === "imagenesFeed" ? feed :
-  p.recurso === "imagenVertical" ? vertical[0] :
-  p.recurso === "portadaFacebook" ? portada :
-  principal;
-    
+      esGrupoPost || esEstadoWhatsapp ? "" :
+      p.recurso === "video" ? video :
+      p.recurso === "imagenesFeed" ? feed :
+      p.recurso === "imagenVertical" ? vertical[0] :
+      p.recurso === "portadaFacebook" ? portada :
+      principal;
+
     const imagenes =
-  esEstadoWhatsapp ? [] :
-  p.red === "facebook" && p.tipo === "story_pagina"
-    ? [vertical[0]]
-    : p.recurso === "imagenesFeed"
-      ? feed
-      : p.recurso === "video"
-        ? []
-        : [recurso];
+      esGrupoPost || esEstadoWhatsapp ? [] :
+      p.red === "facebook" && p.tipo === "story_pagina"
+        ? [vertical[0]]
+        : p.recurso === "imagenesFeed"
+          ? feed
+          : p.recurso === "video"
+            ? []
+            : [recurso];
     
     const urlProducto =
   p.red === "instagram" || esReel ? "" : url;

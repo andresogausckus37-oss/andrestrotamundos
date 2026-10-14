@@ -1008,6 +1008,11 @@ const generarContenido = async () => {
               const esEstadoWhatsapp =
   pieza.red === "whatsapp" && pieza.tipo === "estado";
 
+              const esGrupoPost =
+  pieza.red === "facebook" &&
+  pieza.tipo === "grupo" &&
+  pieza.variante === "post";
+
 let copy = String(datos.copy || "").trim();
 let cta = String(datos.cta || "").trim();
 
@@ -1092,6 +1097,46 @@ if (esReel) {
 
   cta = "¡Encontralo en nuestra tienda!";
               }
+
+              
+if (esGrupoPost) {
+  const nombre = String(producto.nombre || "").trim();
+
+  if (nombre) {
+    const nombreSeguro = nombre.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&"
+    );
+
+    copy = copy.replace(
+      new RegExp(
+        `^[^\\p{L}\\p{N}]*${nombreSeguro}\\s*[.:;!?–-]*\\s*`,
+        "iu"
+      ),
+      ""
+    ).trim();
+  }
+
+  copy = copy
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/#[\p{L}\p{N}_]+/gu, "")
+    .trim();
+
+  if (cta) {
+    const ctaSeguro = cta.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&"
+    );
+
+    copy = copy.replace(
+      new RegExp(ctaSeguro, "gi"),
+      ""
+    ).trim();
+  }
+
+  cta = "¡Conocelo en nuestra tienda!";
+}
+              
 
               const hashtags = pieza.red === "whatsapp"
                 ? []
@@ -1590,6 +1635,25 @@ const aprobarContenido = async (
 
   const compartirEnGrupoFacebook = async (pieza, destino, item) => {
     try {
+
+if (pieza.red === "facebook" && pieza.tipo === "grupo_post") {
+  const p = pieza.publicacion || {};
+
+  const texto = String(
+    p.textoCompleto || p.texto || ""
+  ).trim();
+
+  await navigator.clipboard.writeText(texto);
+
+  window.open(
+    destino.url,
+    "_blank",
+    "noopener,noreferrer"
+  );
+
+  return;
+}
+      
       const textoBase =
         typeof pieza?.publicacion?.texto === "string"
           ? pieza.publicacion.texto.trim()
