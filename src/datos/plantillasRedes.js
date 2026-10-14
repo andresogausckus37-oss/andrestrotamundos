@@ -48,7 +48,10 @@ export const CICLO_PRODUCTO = {
       pieza("facebook", "story_pagina", "20:00", "imagenVertical"),
       pieza("facebook", "grupo", "18:00", "video", { variante: "reel", publicacionAutomatica: false }),
       pieza("facebook", "grupo", "20:00", "imagenPrincipal", { variante: "sabias_que", contenidoDiferenciado: true, publicacionAutomatica: false }),
-      pieza("whatsapp", "estado", "17:00", "video", { publicacionAutomatica: false }),
+      pieza("whatsapp", "estado", "17:00", "enlaceProducto", {
+  publicacionAutomatica: false,
+  vistaPreviaEnlace: true
+}),
     ],
   },
   dia2: {

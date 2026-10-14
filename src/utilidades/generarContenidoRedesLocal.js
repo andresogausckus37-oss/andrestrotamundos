@@ -90,10 +90,34 @@ export function generarContenidoRedesLocal(original) {
 const esReel =
   (p.red === "instagram" && p.tipo === "reel") ||
   (p.red === "facebook" && p.tipo === "reel_pagina");
+
+    const esEstadoWhatsapp =
+  p.red === "whatsapp" && p.tipo === "estado";
+
+let copyEstado = descripcion
+  .replace(/^[^\p{L}\p{N}]+/u, "")
+  .trim();
+
+if (copyEstado.toLowerCase().startsWith(nombre.toLowerCase())) {
+  copyEstado = copyEstado
+    .slice(nombre.length)
+    .replace(/^[\s.,:;–-]+/, "")
+    .trim();
+}
+
+if (copyEstado.length > 130) {
+  copyEstado = copyEstado
+    .slice(0, 130)
+    .replace(/\s+\S*$/, "")
+    .trim() + "…";
+}
     
-    const copy = esReel
-  ? descripcion
-  : esThreadsTip
+    const copy = esEstadoWhatsapp
+  ? copyEstado
+  : esReel
+    ? descripcion
+    : esThreadsTip
+      
       ? `${emoji} ¿Sabías qué? ${nombre}: ${descripcion}`
       : esGrupoTip
         ? `${emoji} Un detalle para tener en cuenta sobre ${nombre}: ${detalleAlternativo}`
@@ -103,17 +127,20 @@ const esReel =
             ? `${emoji} ${nombre}. ¡Conocé sus características!`
             : `${emoji} ${nombre}. ${descripcion}`;
 
-    const cta = p.red === "instagram"
-  ? "Descubrí más sobre este producto en el enlace de nuestra bio."
-  : p.red === "whatsapp"
-    ? "Consultanos para conocer más detalles."
-    : url
-      ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
-      : "Consultanos para conocer más detalles.";
+    const cta = esEstadoWhatsapp
+  ? "¡Encontralo en nuestra tienda!"
+  : p.red === "instagram"
+    ? "Descubrí más sobre este producto en el enlace de nuestra bio."
+    : p.red === "whatsapp"
+      ? "Consultanos para conocer más detalles."
+      : url
+        ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
+        : "Consultanos para conocer más detalles.";
     
     const hashtags = p.red === "whatsapp" ? [] : hashtagsBase;
     
     const recurso =
+  esEstadoWhatsapp ? "" :
   p.recurso === "video" ? video :
   p.recurso === "imagenesFeed" ? feed :
   p.recurso === "imagenVertical" ? vertical[0] :
@@ -121,6 +148,7 @@ const esReel =
   principal;
     
     const imagenes =
+  esEstadoWhatsapp ? [] :
   p.red === "facebook" && p.tipo === "story_pagina"
     ? [vertical[0]]
     : p.recurso === "imagenesFeed"
