@@ -2817,10 +2817,7 @@ async function ejecutarPublicacionesPendientes(
   `${pieza.fecha}T${pieza.hora}:00-03:00`
 );
 
-if (
-  !Number.isFinite(fechaProgramada.getTime()) ||
-  Date.now() - fechaProgramada.getTime() > 3600000
-) {
+if (!Number.isFinite(fechaProgramada.getTime())) {
   return;
 }
         
