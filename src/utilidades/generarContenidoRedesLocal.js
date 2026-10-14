@@ -194,7 +194,9 @@ export function generarContenidoRedesLocal(original) {
       textoCompleto: [copy, cta, urlProducto, hashtags.join(" ")].filter(Boolean).join("\n\n"),
     };
   });
-  if (calendario.length !== 13) throw new Error("El calendario debe contener exactamente 13 publicaciones.");
+  
+  if (calendario.length !== 12) throw new Error("El calendario debe contener exactamente 12 publicaciones.");
+  
   return {
     productoId: producto.id, nombreProducto: nombre, generador: "local", calendario,
     // Compatibilidad temporal con consumidores anteriores del panel Admin.
