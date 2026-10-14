@@ -969,7 +969,45 @@ const generarContenido = async () => {
           producto.descripcion ||
           "";
 
-        const publicaciones = await Promise.all(
+        let publicaciones = await Promise.all(
+
+          publicaciones = publicaciones.map((pieza) => {
+  if (pieza.red !== "threads" || pieza.tipo !== "video") {
+    return pieza;
+  }
+
+  const nombreSeguro = String(producto.nombre || "")
+    .trim()
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const copyOriginal = String(pieza.copy || pieza.texto || "").trim();
+
+  const copy = nombreSeguro
+    ? copyOriginal.replace(
+        new RegExp(
+          `^[^\\p{L}\\p{N}]*${nombreSeguro}\\s*[.:;!?–-]*\\s*`,
+          "iu"
+        ),
+        ""
+      ).trim()
+    : copyOriginal;
+
+  const textoCompleto = [
+    copy,
+    pieza.cta,
+    pieza.urlProducto,
+    ...(Array.isArray(pieza.hashtags)
+      ? [pieza.hashtags.join(" ")]
+      : [])
+  ].filter(Boolean).join("\n\n");
+
+  return {
+    ...pieza,
+    copy,
+    texto: copy,
+    textoCompleto
+  };
+});
           contenido.calendario.map(async (pieza) => {
             try {
               const respuesta = await fetch("/api/ia/copys", {
