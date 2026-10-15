@@ -175,6 +175,37 @@ function copyGrupoVideo(producto, descripcion) {
     : "🎥 Mirá este producto en video y conocé sus características antes de elegir.";
 }
 
+// Facebook Página Carrusel: copy breve sin repetir el título de la ficha.
+function copyCarruselFacebook(producto, descripcion) {
+  const nombre = texto(producto.nombre);
+  const fuente = `${nombre} ${sinEtiquetas(descripcion)}`;
+  if (/patillera/i.test(fuente) && /barba|patillas/i.test(fuente) &&
+      /inal[aá]mbric/i.test(fuente) && /cortar|perfilar|retocar/i.test(fuente)) {
+    return "✂️ ¿Querés retocar barba y patillas en casa? Esta patillera inalámbrica te permite cortar y perfilar con comodidad.";
+  }
+  const detalle = copyGrupoEnlace(nombre, descripcion);
+  const oraciones = detalle.match(/[^.!?]+[.!?]?/g)?.map(v => v.trim()).filter(Boolean) || [];
+  let resumen = "";
+  for (const oracion of oraciones) {
+    const candidato = [resumen, oracion].filter(Boolean).join(" ");
+    if (candidato.length > 170) break;
+    resumen = candidato;
+  }
+  if (!resumen) resumen = detalle.slice(0, 170).replace(/\s+\S*$/, "").trim();
+  return resumen
+    ? `🛍️ ¿Qué ofrece este producto? ${resumen}`
+    : "🛍️ Mirá las características y los detalles de este producto antes de elegir.";
+}
+
+function hashtagsCarruselFacebook(producto) {
+  const fuente = `${producto.nombre || ""} ${producto.descripcion || ""} ${producto.descripcionLarga || ""}`;
+  if (/patillera/i.test(fuente) && /barba|patillas/i.test(fuente) &&
+      /inal[aá]mbric/i.test(fuente) && /cabello|pelo/i.test(fuente)) {
+    return ["#PatilleraInalambrica", "#PerfiladoDeBarba", "#CorteDeCabello", "#BarbaYPatillas", "#BarberiaEnCasa"];
+  }
+  return hashtagsGrupoEnlace(producto);
+}
+
 function datoConfiable(producto) {
   return [...lista(producto.beneficios), ...lista(producto.incluye), sinEtiquetas(producto.descripcion), sinEtiquetas(producto.descripcionLarga)]
     .filter(Boolean);
@@ -270,6 +301,7 @@ export function generarContenidoRedesLocal(original) {
   const calendario = plantilla.map(p => {
     
     const esCarruselInstagram = p.red === "instagram" && p.tipo === "carrusel";
+    const esCarruselFacebook = p.red === "facebook" && p.tipo === "carrusel_pagina";
     const esThreadsTip = p.red === "threads" && p.tipo === "sabias_que";
     const esGrupoTip = p.red === "facebook" && p.variante === "sabias_que";
     const esGruposVideo = p.red === "facebook" && p.tipo === "grupos_video";
@@ -354,6 +386,8 @@ const esStoryFacebook =
             ? ""
             : esCarruselInstagram
               ? copyCarrusel
+            : esCarruselFacebook
+              ? copyCarruselFacebook(producto, descripcion)
             : esGrupoPost
               ? descripcion
             : esGrupoEnlace
@@ -380,7 +414,7 @@ const esStoryFacebook =
 
     const cta = esStoryFacebook
     ? ""
-    : esThreadsTip || esGrupoEnlace || esGruposVideo
+    : esThreadsTip || esGrupoEnlace || esGruposVideo || esCarruselFacebook
       ? "¡Conocelo en nuestra tienda!"
     : esEstadoWhatsapp || esThreadsPost
       ? "¡Encontralo en nuestra tienda!"
@@ -395,6 +429,7 @@ const esStoryFacebook =
     const hashtags =
       p.red === "whatsapp" || esStoryFacebook ? []
         : esCarruselInstagram ? hashtagsParaCarrusel
+        : esCarruselFacebook ? hashtagsCarruselFacebook(producto)
         : esGrupoEnlace || esGruposVideo ? hashtagsGrupoEnlace(producto)
         : hashtagsBase;
 

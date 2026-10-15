@@ -1161,6 +1161,9 @@ const generarContenido = async () => {
     ...(pieza.red === "facebook" && pieza.tipo === "grupos_video"
       ? ["Video para un grupo de compraventa: escribí un copy cercano de máximo 240 caracteres, sin repetir el nombre completo del producto. Elegí un beneficio o uso real y comprobable, con un gancho natural que acompañe el video. No inventes características, no incluyas URL ni hashtags en el copy. CTA exacto: ¡Conocelo en nuestra tienda! Proponé cinco hashtags relevantes del producto, sin etiquetas comerciales genéricas."]
       : []),
+    ...(pieza.red === "facebook" && pieza.tipo === "carrusel_pagina"
+      ? ["Publicación para carrusel de tres fotos en Facebook Página. Escribí un copy cercano y breve (máximo 220 caracteres) que destaque una utilidad o característica real; no abras con el nombre del producto ni lo repitas completo. No incluyas el enlace, CTA ni hashtags dentro del copy. CTA exacto: ¡Conocelo en nuestra tienda! Cinco hashtags relevantes del producto, evitando #TiendaOnline, #CompraOnline y etiquetas comerciales genéricas."]
+      : []),
     `Red social: ${pieza.red}`,
     `Formato: ${pieza.tipo}`,
     `Variante: ${pieza.variante || "general"}`,
@@ -1484,6 +1487,58 @@ if (esGrupoPost) {
             return {
               ...pieza, copy, texto: copy, cta, hashtags,
               textoCompleto: [copy, cta, pieza.urlProducto || "", hashtags.join(" ")]
+                .filter(Boolean).join("\n\n"),
+            };
+          }
+
+          // Facebook Página Carrusel: solo ajustar texto, CTA y etiquetas.
+          // Conservar las tres imágenes y el mecanismo existente de publicación.
+          if (pieza.red === "facebook" && pieza.tipo === "carrusel_pagina") {
+            const respaldo = contenido.calendario.find(p => p.id === pieza.id);
+            const nombre = String(producto.nombre || "").trim();
+            const nombreSeguro = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const limpiar = (valor) => {
+              let resultado = String(valor || "")
+                .replace(/https?:\/\/\S+/gi, "")
+                .replace(/#[\p{L}\p{N}_]+/gu, "")
+                .replace(/¡Conocelo en nuestra tienda!/gi, "")
+                .replace(/\s+/g, " ").trim();
+              if (nombreSeguro) {
+                resultado = resultado.replace(
+                  new RegExp(`^[^\\p{L}\\p{N}]*${nombreSeguro}\\s*[.:;!?–-]*\\s*`, "iu"), ""
+                ).trim();
+              }
+              return resultado;
+            };
+            let copy = limpiar(pieza.copy || pieza.texto);
+            if (!copy || copy.length > 220 ||
+                (nombre && copy.toLowerCase().includes(nombre.toLowerCase()))) {
+              copy = limpiar(respaldo?.copy);
+            }
+            if (!copy) throw new Error("Falta el copy para Facebook Carrusel.");
+            const cta = "¡Conocelo en nuestra tienda!";
+            const urlProducto = String(pieza.urlProducto || respaldo?.urlProducto || "").trim();
+            if (!/^https:\/\//i.test(urlProducto)) {
+              throw new Error("Falta la URL HTTPS del producto para Facebook Carrusel.");
+            }
+            const hashtags = [];
+            const vistos = new Set();
+            const genericos = new Set(["#tiendaonline", "#compraonline", "#catalogoonline", "#productos", "#ofertasonline"]);
+            for (const candidato of [
+              ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
+              ...(Array.isArray(respaldo?.hashtags) ? respaldo.hashtags : []),
+            ]) {
+              const etiqueta = String(candidato || "").trim();
+              const clave = etiqueta.toLowerCase();
+              if (!/^#[\p{L}\p{N}_]+$/u.test(etiqueta) || vistos.has(clave) || genericos.has(clave)) continue;
+              vistos.add(clave);
+              hashtags.push(etiqueta);
+              if (hashtags.length === 5) break;
+            }
+            if (hashtags.length !== 5) throw new Error("Facebook Carrusel necesita cinco hashtags válidos.");
+            return {
+              ...pieza, copy, texto: copy, cta, urlProducto, hashtags,
+              textoCompleto: [copy, cta, urlProducto, hashtags.join(" ")]
                 .filter(Boolean).join("\n\n"),
             };
           }
