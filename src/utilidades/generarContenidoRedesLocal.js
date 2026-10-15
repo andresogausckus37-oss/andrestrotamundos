@@ -89,6 +89,67 @@ export function etiquetasCarrusel(producto, usados = []) {
   return resultado;
 }
 
+// Facebook Grupo - enlace: texto breve sin repetir el título mostrado por la tarjeta.
+function copyGrupoEnlace(nombre, descripcion) {
+  let contenido = sinEtiquetas(descripcion)
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/#[\p{L}\p{N}_]+/gu, "")
+    .trim();
+  if (nombre) {
+    const escapado = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    contenido = contenido.replace(
+      new RegExp(`^[^\\p{L}\\p{N}]*${escapado}\\s*[.:;!?–-]*\\s*`, "iu"),
+      ""
+    ).trim();
+  }
+  const oraciones = contenido.match(/[^.!?]+[.!?]?/g)?.map(v => v.trim()).filter(Boolean) || [];
+  const elegidas = [];
+  for (const oracion of oraciones) {
+    const posible = [...elegidas, oracion].join(" ");
+    if (posible.length > 230) break;
+    elegidas.push(oracion);
+  }
+  return elegidas.join(" ") || contenido.slice(0, 230).replace(/\s+\S*$/, "").trim();
+}
+
+// Cinco hashtags relacionados con el nombre y la descripción; sin etiquetas comerciales genéricas.
+function hashtagsGrupoEnlace(producto) {
+  const omitir = new Set(["para", "con", "sin", "del", "las", "los", "una", "uno", "por", "que", "desde", "como", "este", "esta", "sobre", "muy", "mas", "y", "de", "el", "la", "un"]);
+  const tokens = (valor) => sinEtiquetas(valor).normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-zA-Z0-9]+/).filter(p => p.length >= 3 && !omitir.has(p.toLowerCase()));
+  const pares = (palabras) => palabras.slice(0, -1).map((p, i) =>
+    `#${p}${palabras[i + 1][0].toUpperCase()}${palabras[i + 1].slice(1)}`
+  );
+  const nombre = tokens(producto.nombre || "");
+  const descripcion = tokens(producto.descripcion || producto.descripcionLarga || "");
+  const textoDesc = sinEtiquetas(producto.descripcion || producto.descripcionLarga || "").toLowerCase();
+  const etiquetasPorUso = [
+    ...( /cortar[^.]*cabello|corte de cabello/i.test(textoDesc) ? ["#CorteDeCabello"] : []),
+    ...( /barba[^.]*patillas|patillas[^.]*barba/i.test(textoDesc) ? ["#BarbaYPatillas"] : []),
+    ...( /iluminaci[oó]n|luces led/i.test(textoDesc) ? ["#IluminacionLED"] : []),
+  ];
+  const candidatos = [
+    ...pares(nombre).slice(0, 2),
+    ...pares(descripcion).slice(0, 1),
+    ...etiquetasPorUso,
+    ...pares(nombre), ...pares(descripcion),
+    ...nombre.map(p => `#${p}`), ...descripcion.map(p => `#${p}`),
+    ...etiquetas(producto), "#CatalogoOnline", "#Productos"
+  ];
+  const resultado = [];
+  const vistos = new Set();
+  for (const candidato of candidatos) {
+    if (!/^#[a-zA-Z0-9_]+$/.test(candidato)) continue;
+    const clave = candidato.toLowerCase();
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    resultado.push(candidato);
+    if (resultado.length === 5) break;
+  }
+  return resultado;
+}
+
 function datoConfiable(producto) {
   return [...lista(producto.beneficios), ...lista(producto.incluye), sinEtiquetas(producto.descripcion), sinEtiquetas(producto.descripcionLarga)]
     .filter(Boolean);
@@ -259,6 +320,9 @@ const esStoryFacebook =
             p.red === "facebook" &&
             p.tipo === "grupo" &&
             p.variante === "post";
+          const esGrupoEnlace =
+            p.red === "facebook" && p.tipo === "grupo" &&
+            p.variante === "enlace_producto";
 
           const copy = esStoryFacebook
             ? ""
@@ -266,6 +330,8 @@ const esStoryFacebook =
               ? copyCarrusel
             : esGrupoPost
               ? descripcion
+            : esGrupoEnlace
+              ? copyGrupoEnlace(nombre, descripcion)
             : esEstadoWhatsapp
               ? `${emoji} ${copyEstado}`
               : esReel
@@ -286,7 +352,7 @@ const esStoryFacebook =
 
     const cta = esStoryFacebook
     ? ""
-    : esThreadsTip
+    : esThreadsTip || esGrupoEnlace
       ? "¡Conocelo en nuestra tienda!"
     : esEstadoWhatsapp || esThreadsPost
       ? "¡Encontralo en nuestra tienda!"
@@ -301,6 +367,7 @@ const esStoryFacebook =
     const hashtags =
       p.red === "whatsapp" || esStoryFacebook ? []
         : esCarruselInstagram ? hashtagsParaCarrusel
+        : esGrupoEnlace ? hashtagsGrupoEnlace(producto)
         : hashtagsBase;
 
     const recurso =

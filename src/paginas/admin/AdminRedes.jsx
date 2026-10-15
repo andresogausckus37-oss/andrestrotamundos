@@ -1155,6 +1155,9 @@ const generarContenido = async () => {
     ...(pieza.red === "threads" && pieza.tipo === "sabias_que"
       ? ["Escribí un ¿Sabías que...? natural y cercano de hasta 155 caracteres, sin empezar por el nombre completo del producto. Elegí UNA característica, un componente, un modo de uso o un beneficio verificable en la descripción y explicá para qué sirve. No inventes datos ni prometas durabilidad sin evidencia. No pongas el enlace, el CTA ni hashtags dentro del copy. CTA exacto: ¡Conocelo en nuestra tienda! Generá 5 hashtags relevantes."]
       : []),
+    ...(pieza.red === "facebook" && pieza.tipo === "grupo" && pieza.variante === "enlace_producto"
+      ? ["Publicación para un grupo de compraventa: escribí un copy cercano y breve que explique una utilidad real del producto. La tarjeta del enlace ya muestra el título: no lo repitas al inicio ni escribas una introducción con el nombre completo. No incluyas URL ni hashtags dentro del copy. CTA exacto: ¡Conocelo en nuestra tienda! Cinco hashtags pertinentes al producto, evitando etiquetas genéricas de comercio."]
+      : []),
     `Red social: ${pieza.red}`,
     `Formato: ${pieza.tipo}`,
     `Variante: ${pieza.variante || "general"}`,
@@ -1478,6 +1481,64 @@ if (esGrupoPost) {
             return {
               ...pieza, copy, texto: copy, cta, hashtags,
               textoCompleto: [copy, cta, pieza.urlProducto || "", hashtags.join(" ")]
+                .filter(Boolean).join("\n\n"),
+            };
+          }
+
+          // Facebook Grupo - enlace: el nombre ya figura en la tarjeta OG.
+          if (pieza.red === "facebook" && pieza.tipo === "grupo" && pieza.variante === "enlace_producto") {
+            const respaldo = contenido.calendario.find(p => p.id === pieza.id);
+            const nombre = String(producto.nombre || "").trim();
+            const escapado = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const limpiar = (valor) => {
+              let resultado = String(valor || "")
+                .replace(/https?:\/\/\S+/gi, "")
+                .replace(/#[\p{L}\p{N}_]+/gu, "")
+                .replace(/¡Conocelo en nuestra tienda!/gi, "")
+                .replace(/\s+/g, " ").trim();
+              if (escapado) {
+                resultado = resultado.replace(
+                  new RegExp(`^[^\\p{L}\\p{N}]*${escapado}\\s*[.:;!?–-]*\\s*`, "iu"), ""
+                ).trim();
+              }
+              return resultado;
+            };
+            let copy = limpiar(pieza.copy || pieza.texto);
+            if (!copy || copy.length > 260 ||
+                (nombre && copy.toLowerCase().includes(nombre.toLowerCase()))) {
+              copy = limpiar(respaldo?.copy);
+            }
+            if (!copy) throw new Error("Falta el copy del enlace para el grupo Facebook.");
+            const cta = "¡Conocelo en nuestra tienda!";
+            const urlProducto = String(pieza.urlProducto || respaldo?.urlProducto || "").trim();
+            if (!/^https:\/\//i.test(urlProducto)) throw new Error("Falta el enlace del producto para Facebook Grupo.");
+            const hashtags = [];
+            const vistos = new Set();
+            for (const candidato of [
+              ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
+              ...(Array.isArray(respaldo?.hashtags) ? respaldo.hashtags : []),
+            ]) {
+              const h = String(candidato || "").trim();
+              const generica = new Set(["#tiendaonline", "#compraonline", "#catalogoonline", "#productos", "#ofertasonline"]);
+              if (!/^#[\p{L}\p{N}_]+$/u.test(h) || vistos.has(h.toLowerCase()) || generica.has(h.toLowerCase())) continue;
+              vistos.add(h.toLowerCase());
+              hashtags.push(h);
+              if (hashtags.length === 5) break;
+            }
+            if (hashtags.length !== 5) {
+              for (const candidato of (respaldo?.hashtags || [])) {
+                const h = String(candidato || "").trim();
+                if (!/^#[\p{L}\p{N}_]+$/u.test(h) || vistos.has(h.toLowerCase())) continue;
+                vistos.add(h.toLowerCase());
+                hashtags.push(h);
+                if (hashtags.length === 5) break;
+              }
+            }
+            if (hashtags.length !== 5) throw new Error("Facebook Grupo necesita cinco hashtags válidos.");
+            return {
+              ...pieza, copy, texto: copy, cta, urlProducto, hashtags,
+              vistaPreviaEnlace: true,
+              textoCompleto: [copy, cta, urlProducto, hashtags.join(" ")]
                 .filter(Boolean).join("\n\n"),
             };
           }
@@ -2053,6 +2114,26 @@ const aprobarContenido = async (
 
   const compartirEnGrupoFacebook = async (pieza, destino, item) => {
     try {
+
+// Enlace a Facebook Grupo: incluir copy, CTA y hashtags, manteniendo la tarjeta OG.
+if (pieza.red === "facebook" && pieza.tipo === "grupo_enlace_producto") {
+  const p = pieza.publicacion || {};
+  const productoId = String(item?.productoId || "").trim();
+  const enlaceVistaPrevia = productoId
+    ? `https://andreshousesitter.com/compartir/${encodeURIComponent(productoId)}`
+    : String(p.urlProducto || "").trim();
+  const contenido = String(p.textoCompleto || [
+    p.copy || p.texto || "", p.cta || "", p.urlProducto || "",
+    Array.isArray(p.hashtags) ? p.hashtags.join(" ") : ""
+  ].filter(Boolean).join("\n\n")).trim();
+  const urlOriginal = String(p.urlProducto || "").trim();
+  const textoFinal = urlOriginal && contenido.includes(urlOriginal)
+    ? contenido.replace(urlOriginal, enlaceVistaPrevia)
+    : [contenido, enlaceVistaPrevia].filter(Boolean).join("\n\n");
+  await navigator.clipboard.writeText(textoFinal);
+  window.open(destino.url, "_blank", "noopener,noreferrer");
+  return;
+}
 
 if (pieza.red === "facebook" && pieza.tipo === "grupo_post") {
   const p = pieza.publicacion || {};
@@ -3297,7 +3378,11 @@ const urlProducto = productoId
                                       .filter(
                                         (destino) =>
                                           destino.plataforma === "facebook" &&
-                                          destino.tipo === "grupo"
+                                          destino.tipo === "grupo" &&
+                                          (pieza.tipo !== "grupo_enlace_producto" ||
+                                            String(destino.nombre || "")
+                                              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                                              .trim().toUpperCase() === "COMPRA-VENTA CORDOBA")
                                       )
                                       .map((destino) => (
                                         <button
@@ -3313,6 +3398,7 @@ const urlProducto = productoId
                                       ))}
 
 {pieza.red === "facebook" &&
+  pieza.tipo !== "grupo_enlace_producto" &&
   pieza?.publicacion?.imagen && (
     <button
       type="button"
@@ -3357,7 +3443,8 @@ const urlProducto = productoId
 )}
 
 {pieza.red === "facebook" &&
-  pieza.tipo !== "reel_pagina" && (
+  pieza.tipo !== "reel_pagina" &&
+  pieza.tipo !== "grupo_enlace_producto" && (
   <button
     type="button"
     onClick={() =>
