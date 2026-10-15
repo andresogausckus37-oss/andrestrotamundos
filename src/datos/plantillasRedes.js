@@ -47,7 +47,7 @@ export const CICLO_PRODUCTO = {
       pieza("facebook", "reel_pagina", "18:00", "video"),
       // Facebook Story pausada: se conserva la lógica, pero no entra al calendario.
       
-      pieza("facebook", "grupo", "20:00", "imagenPrincipal", { variante: "sabias_que", contenidoDiferenciado: true, publicacionAutomatica: false }),
+      pieza("facebook", "grupos_video", "20:00", "video", { contenidoDiferenciado: true, publicacionAutomatica: false, vistaPreviaEnlace: false }),
       pieza("whatsapp", "estado", "17:00", "enlaceProducto", {
         publicacionAutomatica: false,
         usarEnlaceProducto: true,
@@ -85,7 +85,7 @@ export const plantillaContenidoProducto = {
     ] },
     grupos: { cantidad: 2, publicacionAutomatica: false, publicaciones: [
       
-      { tipo: "sabias_que", recurso: "imagenPrincipal", variante: "facebook_grupos" },
+      { tipo: "grupos_video", recurso: "video", variante: "facebook_grupos" },
       { tipo: "enlace_producto", recurso: "portadaFacebook", vistaPreviaEnlace: true },
     ] },
   },
@@ -105,7 +105,7 @@ export const HORARIOS_PREDETERMINADOS = {
   threads: { post: "18:00", sabias_que: "21:00", carrusel: "10:00" },
   facebook: {
     pagina: { reel: "17:00", story: "20:00", carrusel: "10:00" },
-    grupos: { reel: "18:00", sabias_que: "20:00", enlace_producto: "10:00" },
+    grupos: { reel: "18:00", grupos_video: "20:00", enlace_producto: "10:00" },
   },
   whatsapp: { estado: "17:00", grupo: "10:00" },
 };

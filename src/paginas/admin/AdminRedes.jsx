@@ -1158,6 +1158,9 @@ const generarContenido = async () => {
     ...(pieza.red === "facebook" && pieza.tipo === "grupo" && pieza.variante === "enlace_producto"
       ? ["Publicación para un grupo de compraventa: escribí un copy cercano y breve que explique una utilidad real del producto. La tarjeta del enlace ya muestra el título: no lo repitas al inicio ni escribas una introducción con el nombre completo. No incluyas URL ni hashtags dentro del copy. CTA exacto: ¡Conocelo en nuestra tienda! Cinco hashtags pertinentes al producto, evitando etiquetas genéricas de comercio."]
       : []),
+    ...(pieza.red === "facebook" && pieza.tipo === "grupos_video"
+      ? ["Video para un grupo de compraventa: escribí un copy cercano de máximo 240 caracteres, sin repetir el nombre completo del producto. Elegí un beneficio o uso real y comprobable, con un gancho natural que acompañe el video. No inventes características, no incluyas URL ni hashtags en el copy. CTA exacto: ¡Conocelo en nuestra tienda! Proponé cinco hashtags relevantes del producto, sin etiquetas comerciales genéricas."]
+      : []),
     `Red social: ${pieza.red}`,
     `Formato: ${pieza.tipo}`,
     `Variante: ${pieza.variante || "general"}`,
@@ -1481,6 +1484,69 @@ if (esGrupoPost) {
             return {
               ...pieza, copy, texto: copy, cta, hashtags,
               textoCompleto: [copy, cta, pieza.urlProducto || "", hashtags.join(" ")]
+                .filter(Boolean).join("\n\n"),
+            };
+          }
+
+          // Facebook Grupos Video: MP4 manual, sin tarjeta de enlace ni imágenes.
+          if (pieza.red === "facebook" && pieza.tipo === "grupos_video") {
+            const respaldo = contenido.calendario.find(p => p.id === pieza.id);
+            const nombre = String(producto.nombre || "").trim();
+            const escapado = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const limpiar = (valor) => {
+              let resultado = String(valor || "")
+                .replace(/https?:\/\/\S+/gi, "")
+                .replace(/#[\p{L}\p{N}_]+/gu, "")
+                .replace(/¡Conocelo en nuestra tienda!/gi, "")
+                .replace(/\s+/g, " ").trim();
+              if (escapado) {
+                resultado = resultado.replace(
+                  new RegExp(`^[^\\p{L}\\p{N}]*${escapado}\\s*[.:;!?–-]*\\s*`, "iu"), ""
+                ).trim();
+              }
+              return resultado;
+            };
+            let copy = limpiar(pieza.copy || pieza.texto);
+            if (!copy || copy.length > 240 ||
+                (nombre && copy.toLowerCase().includes(nombre.toLowerCase()))) {
+              copy = limpiar(respaldo?.copy);
+            }
+            if (!copy) throw new Error("Falta el copy del video para grupos de Facebook.");
+            const cta = "¡Conocelo en nuestra tienda!";
+            const urlProducto = String(pieza.urlProducto || respaldo?.urlProducto || "").trim();
+            if (!/^https:\/\//i.test(urlProducto)) throw new Error("Falta la URL HTTPS del producto para Facebook Grupos Video.");
+            const videoUrl = String(respaldo?.videoUrl || respaldo?.video || "").trim();
+            if (!/^https:\/\//i.test(videoUrl)) throw new Error("Falta el MP4 HTTPS para Facebook Grupos Video.");
+            const hashtags = [];
+            const vistos = new Set();
+            const genericos = new Set(["#tiendaonline", "#compraonline", "#catalogoonline", "#productos", "#ofertasonline"]);
+            for (const candidato of [
+              ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
+              ...(Array.isArray(respaldo?.hashtags) ? respaldo.hashtags : []),
+            ]) {
+              const h = String(candidato || "").trim();
+              const clave = h.toLowerCase();
+              if (!/^#[\p{L}\p{N}_]+$/u.test(h) || vistos.has(clave) || genericos.has(clave)) continue;
+              vistos.add(clave);
+              hashtags.push(h);
+              if (hashtags.length === 5) break;
+            }
+            if (hashtags.length !== 5) {
+              for (const candidato of respaldo?.hashtags || []) {
+                const h = String(candidato || "").trim();
+                if (!/^#[\p{L}\p{N}_]+$/u.test(h) || vistos.has(h.toLowerCase())) continue;
+                vistos.add(h.toLowerCase());
+                hashtags.push(h);
+                if (hashtags.length === 5) break;
+              }
+            }
+            if (hashtags.length !== 5) throw new Error("Facebook Grupos Video necesita cinco hashtags válidos.");
+            return {
+              ...pieza, copy, texto: copy, cta, urlProducto, hashtags,
+              formato: "video", recurso: videoUrl, recursos: [videoUrl],
+              video: videoUrl, videoUrl, imagen: "", imagenes: [],
+              vistaPreviaEnlace: false,
+              textoCompleto: [copy, cta, urlProducto, hashtags.join(" ")]
                 .filter(Boolean).join("\n\n"),
             };
           }
@@ -2114,6 +2180,26 @@ const aprobarContenido = async (
 
   const compartirEnGrupoFacebook = async (pieza, destino, item) => {
     try {
+
+// Grupos Video: copiar mensaje completo y abrir el grupo, sin generar
+// tarjeta de enlace. Adjuntar el archivo MP4 manualmente en Facebook.
+if (pieza.red === "facebook" && pieza.tipo === "grupos_video") {
+  const p = pieza.publicacion || {};
+  const textoFinal = String(p.textoCompleto || [
+    p.copy || p.texto || "", p.cta || "", p.urlProducto || "",
+    Array.isArray(p.hashtags) ? p.hashtags.join(" ") : ""
+  ].filter(Boolean).join("\n\n")).trim();
+  // Abrir sin esperar el portapapeles evita que el navegador bloquee la pestaña.
+  const copia = navigator.clipboard?.writeText(textoFinal);
+  window.open(destino.url, "_blank", "noopener,noreferrer");
+  try {
+    if (copia) await copia;
+    else alert("Copiá el texto desde el calendario y adjuntá el MP4 manualmente en Facebook.");
+  } catch {
+    alert("No se pudo copiar automáticamente. Usá 'Copiar texto completo' en Admin.");
+  }
+  return;
+}
 
 // Enlace a Facebook Grupo: incluir copy, CTA y hashtags, manteniendo la tarjeta OG.
 if (pieza.red === "facebook" && pieza.tipo === "grupo_enlace_producto") {
@@ -3331,6 +3417,14 @@ const urlProducto = productoId
                                     urlProducto={pieza.publicacion?.urlProducto || ""}
                                   />
 
+                                  {pieza.red === "facebook" && pieza.tipo === "grupos_video" && (
+                                    <p className="text-[10px] text-slate-600">
+                                      Guardá el MP4 desde los controles del video y adjuntalo manualmente
+                                      al publicar en el grupo. El botón Compartir copia el texto y abre el grupo;
+                                      Facebook no adjunta el archivo automáticamente.
+                                    </p>
+                                  )}
+
                                   {pieza.estado === "publicado" ? (
                                     <p className="mt-1 text-[9px] font-semibold text-emerald-600">
                                       Publicado
@@ -3379,7 +3473,7 @@ const urlProducto = productoId
                                         (destino) =>
                                           destino.plataforma === "facebook" &&
                                           destino.tipo === "grupo" &&
-                                          (pieza.tipo !== "grupo_enlace_producto" ||
+                                          (!["grupo_enlace_producto", "grupos_video"].includes(pieza.tipo) ||
                                             String(destino.nombre || "")
                                               .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                                               .trim().toUpperCase() === "COMPRA-VENTA CORDOBA")
@@ -3399,6 +3493,7 @@ const urlProducto = productoId
 
 {pieza.red === "facebook" &&
   pieza.tipo !== "grupo_enlace_producto" &&
+  pieza.tipo !== "grupos_video" &&
   pieza?.publicacion?.imagen && (
     <button
       type="button"
@@ -3444,7 +3539,8 @@ const urlProducto = productoId
 
 {pieza.red === "facebook" &&
   pieza.tipo !== "reel_pagina" &&
-  pieza.tipo !== "grupo_enlace_producto" && (
+  pieza.tipo !== "grupo_enlace_producto" &&
+  pieza.tipo !== "grupos_video" && (
   <button
     type="button"
     onClick={() =>

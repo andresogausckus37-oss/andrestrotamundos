@@ -150,6 +150,31 @@ function hashtagsGrupoEnlace(producto) {
   return resultado;
 }
 
+// Facebook Grupos Video: copy breve, basado en datos reales del producto.
+// El video ocupa el lugar de la tarjeta con vista previa del enlace.
+function copyGrupoVideo(producto, descripcion) {
+  const nombre = texto(producto.nombre);
+  const fuente = `${nombre} ${sinEtiquetas(descripcion)}`;
+  if (/\b(?:dj|fiestas?|audior[ií]tmic[ao]s?|par\s*\d+)\b/i.test(fuente) &&
+      /\b(?:luz|luces|iluminaci[oó]n|rgb)\b/i.test(fuente)) {
+    return "🎶 ¿Querés sumar color a tus fiestas? Mirá esta iluminación LED RGB y conocé cómo puede acompañar tus eventos.";
+  }
+  if (/patillera|barba|patillas/i.test(fuente)) {
+    return "✂️ ¿Querés hacer retoques de barba o patillas en casa? Mirá el video y conocé esta opción para tu cuidado personal.";
+  }
+  const detalle = copyGrupoEnlace(nombre, descripcion)
+    .replace(/^(?:consult[aá]|conoc[eé]|descubr[ií])\b[^.!?]*(?:[.!?]|$)/i, "")
+    .trim();
+  const frases = detalle.match(/[^.!?]+[.!?]?/g)?.map((p) => p.trim()).filter(Boolean) || [];
+  const resumen = frases.reduce((actual, frase) => {
+    const candidato = [actual, frase].filter(Boolean).join(" ");
+    return candidato.length <= 180 ? candidato : actual;
+  }, "");
+  return resumen
+    ? `🎥 Mirá este producto en video. ${resumen}`
+    : "🎥 Mirá este producto en video y conocé sus características antes de elegir.";
+}
+
 function datoConfiable(producto) {
   return [...lista(producto.beneficios), ...lista(producto.incluye), sinEtiquetas(producto.descripcion), sinEtiquetas(producto.descripcionLarga)]
     .filter(Boolean);
@@ -247,6 +272,7 @@ export function generarContenidoRedesLocal(original) {
     const esCarruselInstagram = p.red === "instagram" && p.tipo === "carrusel";
     const esThreadsTip = p.red === "threads" && p.tipo === "sabias_que";
     const esGrupoTip = p.red === "facebook" && p.variante === "sabias_que";
+    const esGruposVideo = p.red === "facebook" && p.tipo === "grupos_video";
     
     const emojis = {
       instagram: "✨",
@@ -332,6 +358,8 @@ const esStoryFacebook =
               ? descripcion
             : esGrupoEnlace
               ? copyGrupoEnlace(nombre, descripcion)
+            : esGruposVideo
+              ? copyGrupoVideo(producto, descripcion)
             : esEstadoWhatsapp
               ? `${emoji} ${copyEstado}`
               : esReel
@@ -352,7 +380,7 @@ const esStoryFacebook =
 
     const cta = esStoryFacebook
     ? ""
-    : esThreadsTip || esGrupoEnlace
+    : esThreadsTip || esGrupoEnlace || esGruposVideo
       ? "¡Conocelo en nuestra tienda!"
     : esEstadoWhatsapp || esThreadsPost
       ? "¡Encontralo en nuestra tienda!"
@@ -367,7 +395,7 @@ const esStoryFacebook =
     const hashtags =
       p.red === "whatsapp" || esStoryFacebook ? []
         : esCarruselInstagram ? hashtagsParaCarrusel
-        : esGrupoEnlace ? hashtagsGrupoEnlace(producto)
+        : esGrupoEnlace || esGruposVideo ? hashtagsGrupoEnlace(producto)
         : hashtagsBase;
 
     const recurso =
@@ -403,7 +431,7 @@ const esStoryFacebook =
       imagen: imagenes[0] || "", imagenes,
       imagenPrincipal: principal, imagenesFeed: feed, imagenesVerticales: vertical,
       video: p.recurso === "video" ? video : "", videoUrl: p.recurso === "video" ? video : "",
-      vistaPreviaEnlace: Boolean(p.vistaPreviaEnlace),
+      vistaPreviaEnlace: esGruposVideo ? false : Boolean(p.vistaPreviaEnlace),
       // La composición de la imagen con el CTA se realizará en el backend.
       // Hasta entonces "imagen" sigue siendo la imagen vertical original.
       ctaVisual: esStoryFacebook,
