@@ -242,6 +242,31 @@ export default {
     sincronizarEntorno(env);
     const url = new URL(request.url);
 
+    
+if (url.pathname === "/api/diagnostico-facebook") {
+  if (!adminAutorizadoWorker(request, env)) {
+    return Response.json(
+      { error: "No autorizado" },
+      { status: 401 }
+    );
+  }
+
+  return Response.json({
+    pageIdEnCloudflare:
+      Boolean(String(env.FACEBOOK_PAGE_ID || "").trim()),
+
+    tokenEnCloudflare:
+      Boolean(String(env.FACEBOOK_PAGE_ACCESS_TOKEN || "").trim()),
+
+    pageIdEnProceso:
+      Boolean(String(process.env.FACEBOOK_PAGE_ID || "").trim()),
+
+    tokenEnProceso:
+      Boolean(String(process.env.FACEBOOK_PAGE_ACCESS_TOKEN || "").trim())
+  });
+}
+    
+
     if (url.pathname === "/api/ia/copys") {
   if (
     !adminAutorizadoWorker(
