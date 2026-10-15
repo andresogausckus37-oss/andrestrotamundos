@@ -1124,6 +1124,250 @@ async function publicarReelInstagram({
 }
 
 // =========================================================
+// INSTAGRAM REEL PROGRAMADO: PROCESAMIENTO POR ETAPAS
+// Cada invocación consulta Meta UNA sola vez. Se guarda el
+// contenedor para no recrearlo ni publicar por duplicado.
+// =========================================================
+
+const MAX_CONSULTAS_REEL_INSTAGRAM = 20;
+const PAUSA_REEL_INSTAGRAM_MS = 5 * 60 * 1000;
+const BLOQUEO_CONSULTA_REEL_MS = 3 * 60 * 1000;
+
+async function iniciarReelInstagramProgramado({ db, documentoId, posicion, productoId, publicacion }) {
+  verificarConfiguracionInstagram();
+
+  const producto = await db.collection("productos").findOne({ id: productoId });
+  const videoUrl = typeof producto?.videoReel === "string" ? producto.videoReel.trim() : "";
+  if (!/^https:\/\//i.test(videoUrl)) {
+    throw new Error("El producto no tiene un MP4 público guardado.");
+  }
+  const texto = typeof publicacion?.texto === "string" ? publicacion.texto.trim() : "";
+  const cuenta = await obtenerCuentaInstagram();
+  const parametros = { media_type: "REELS", video_url: videoUrl };
+  if (texto) parametros.caption = texto;
+
+  // Solo se crea una vez. Si la API respondió pero MongoDB falla,
+  // el reclamo inicial queda bloqueado: jamás se recrea automáticamente.
+  const contenedorId = await crearContenedorInstagram(cuenta.id, parametros);
+  const ahora = new Date();
+  const campo = `calendario.${posicion}`;
+  const guardado = await db.collection("contenido_redes").updateOne(
+    {
+      _id: documentoId,
+      [`${campo}.estado`]: "publicando",
+      [`${campo}.igContenedorId`]: null,
+    },
+    {
+      $set: {
+        [`${campo}.estado`]: "procesando_instagram",
+        [`${campo}.igEtapa`]: "esperando",
+        [`${campo}.igContenedorId`]: contenedorId,
+        [`${campo}.igCuentaId`]: cuenta.id,
+        [`${campo}.igUsername`]: cuenta.username || null,
+        [`${campo}.igVideoUrl`]: videoUrl,
+        [`${campo}.igTexto`]: texto,
+        [`${campo}.igCreadoEn`]: ahora,
+        [`${campo}.igProximaConsultaEn`]: ahora,
+        [`${campo}.igConsultas`]: 0,
+        actualizadoEn: ahora,
+      },
+      $unset: { [`${campo}.procesandoDesde`]: "" },
+    }
+  );
+  if (guardado.modifiedCount !== 1) {
+    throw new Error("Instagram creó el contenedor, pero no se pudo guardar de forma segura. Revisá antes de reintentar.");
+  }
+  return {
+    ok: true,
+    proveedor: "instagram",
+    tipo: "reel",
+    estado: "procesando_instagram",
+    mensaje: "Instagram recibió el Reel. El cron continuará verificando el mismo contenedor hasta publicarlo.",
+  };
+}
+
+async function continuarReelInstagramProgramado({ db, productoId, fecha, hora, indice }) {
+  const documento = await db.collection("contenido_redes").findOne({
+    productoId,
+    estado: "programado",
+  });
+  if (!documento?.calendario) return { ok: false, error: "El calendario ya no está programado." };
+  const posicion = documento.calendario.findIndex((pieza) =>
+    pieza.red === "instagram" && pieza.tipo === "reel" &&
+    pieza.fecha === fecha && pieza.hora === hora && Number(pieza.indice) === Number(indice)
+  );
+  if (posicion < 0) return { ok: false, error: "No se encontró el Reel programado." };
+  const pieza = documento.calendario[posicion];
+  if (pieza.estado !== "procesando_instagram" || !pieza.igContenedorId) {
+    return { ok: false, error: "El Reel ya no necesita procesamiento." };
+  }
+
+  const campo = `calendario.${posicion}`;
+  const ahora = new Date();
+  const coleccion = db.collection("contenido_redes");
+
+  if (pieza.igEtapa === "esperando") {
+    const inicioBloqueo = new Date(ahora.getTime() - BLOQUEO_CONSULTA_REEL_MS);
+    const reclamo = await coleccion.updateOne(
+      {
+        _id: documento._id,
+        [`${campo}.estado`]: "procesando_instagram",
+        [`${campo}.igEtapa`]: "esperando",
+        [`${campo}.igContenedorId`]: pieza.igContenedorId,
+        $or: [
+          { [`${campo}.igConsultaDesde`]: null },
+          { [`${campo}.igConsultaDesde`]: { $lt: inicioBloqueo } },
+        ],
+      },
+      { $set: { [`${campo}.igConsultaDesde`]: ahora, actualizadoEn: ahora } }
+    );
+    if (reclamo.modifiedCount !== 1) {
+      return { ok: true, estado: "procesando_instagram", mensaje: "Otro proceso ya está consultando el Reel." };
+    }
+
+    try {
+      verificarConfiguracionInstagram();
+      const parametros = new URLSearchParams({
+        fields: "status_code,status",
+        access_token: INSTAGRAM_ACCESS_TOKEN,
+      });
+      const respuesta = await fetch(`${INSTAGRAM_API}/${pieza.igContenedorId}?${parametros}`);
+      const datos = await leerJsonSeguro(respuesta);
+      if (!respuesta.ok) {
+        throw new Error(datos?.error?.message || "No se pudo consultar el procesamiento del Reel.");
+      }
+
+      const consultas = (Number(pieza.igConsultas) || 0) + 1;
+      const estadoMeta = String(datos?.status_code || "");
+      if (estadoMeta === "FINISHED") {
+        await coleccion.updateOne(
+          { _id: documento._id, [`${campo}.estado`]: "procesando_instagram", [`${campo}.igEtapa`]: "esperando", [`${campo}.igConsultaDesde`]: ahora },
+          {
+            $set: { [`${campo}.igEtapa`]: "listo", [`${campo}.igConsultas`]: consultas, actualizadoEn: new Date() },
+            $unset: { [`${campo}.igConsultaDesde`]: "", [`${campo}.igProximaConsultaEn`]: "" },
+          }
+        );
+        return { ok: true, estado: "procesando_instagram", mensaje: "El Reel está listo; se publicará en la siguiente ejecución del cron." };
+      }
+      if (estadoMeta === "ERROR" || estadoMeta === "EXPIRED" || consultas >= MAX_CONSULTAS_REEL_INSTAGRAM) {
+        const errorDefinitivo = new Error(estadoMeta === "ERROR" || estadoMeta === "EXPIRED"
+          ? (datos?.status || `Instagram marcó el contenedor como ${estadoMeta}.`)
+          : "Instagram no terminó de procesar el Reel tras 20 consultas. Revisá manualmente antes de reintentar.");
+        errorDefinitivo.reelDefinitivo = true;
+        throw errorDefinitivo;
+      }
+
+      await coleccion.updateOne(
+        { _id: documento._id, [`${campo}.estado`]: "procesando_instagram", [`${campo}.igEtapa`]: "esperando", [`${campo}.igConsultaDesde`]: ahora },
+        {
+          $set: {
+            [`${campo}.igConsultas`]: consultas,
+            [`${campo}.igUltimoEstado`]: estadoMeta || "IN_PROGRESS",
+            [`${campo}.igProximaConsultaEn`]: new Date(Date.now() + PAUSA_REEL_INSTAGRAM_MS),
+            actualizadoEn: new Date(),
+          },
+          $unset: { [`${campo}.igConsultaDesde`]: "" },
+        }
+      );
+      return { ok: true, estado: "procesando_instagram", mensaje: "Instagram sigue procesando el video. Se consultará en el siguiente ciclo." };
+    } catch (error) {
+      // Una lectura fallida no debe crear otro contenedor ni disparar media_publish.
+      const esDefinitivo = error.reelDefinitivo === true;
+      const consultas = (Number(pieza.igConsultas) || 0) + 1;
+      const falloDefinitivo = esDefinitivo || consultas >= MAX_CONSULTAS_REEL_INSTAGRAM;
+      await coleccion.updateOne(
+        { _id: documento._id, [`${campo}.estado`]: "procesando_instagram", [`${campo}.igEtapa`]: "esperando", [`${campo}.igConsultaDesde`]: ahora },
+        {
+          $set: {
+            [`${campo}.estado`]: falloDefinitivo ? "error" : "procesando_instagram",
+            [`${campo}.igConsultas`]: consultas,
+            [`${campo}.ultimoError`]: String(error.message || "Error consultando Instagram"),
+            [`${campo}.ultimoErrorEn`]: new Date(),
+            [`${campo}.igProximaConsultaEn`]: new Date(Date.now() + PAUSA_REEL_INSTAGRAM_MS),
+            actualizadoEn: new Date(),
+          },
+          $unset: { [`${campo}.igConsultaDesde`]: "" },
+        }
+      );
+      return { ok: !falloDefinitivo, estado: falloDefinitivo ? "error" : "procesando_instagram", error: String(error.message) };
+    }
+  }
+
+  if (pieza.igEtapa === "listo") {
+    // Marcamos "enviando" ANTES de solicitar media_publish. Si se corta
+    // la conexión, bloqueamos nuevas publicaciones para evitar duplicados.
+    const reclamo = await coleccion.updateOne(
+      { _id: documento._id, [`${campo}.estado`]: "procesando_instagram", [`${campo}.igEtapa`]: "listo" },
+      {
+        $set: {
+          [`${campo}.estado`]: "publicando",
+          [`${campo}.igEtapa`]: "enviando",
+          [`${campo}.igEnvioDesde`]: ahora,
+          actualizadoEn: ahora,
+        },
+      }
+    );
+    if (reclamo.modifiedCount !== 1) {
+      return { ok: true, estado: "procesando_instagram", mensaje: "El Reel ya fue tomado para publicación." };
+    }
+    try {
+      const publicacionId = await publicarContenedorInstagram(pieza.igCuentaId, pieza.igContenedorId);
+      const publicadoEn = new Date();
+      await coleccion.updateOne(
+        { _id: documento._id, [`${campo}.estado`]: "publicando", [`${campo}.igEtapa`]: "enviando" },
+        {
+          $set: {
+            [`${campo}.estado`]: "publicado",
+            [`${campo}.publicacionId`]: publicacionId,
+            [`${campo}.publicadoEn`]: publicadoEn,
+            [`${campo}.igEtapa`]: "publicado",
+            actualizadoEn: publicadoEn,
+          },
+          $unset: { [`${campo}.ultimoError`]: "", [`${campo}.ultimoErrorEn`]: "", [`${campo}.procesandoDesde`]: "" },
+        }
+      );
+
+      // El historial es auxiliar: no repetir media_publish si falla su inserción.
+      try {
+        await db.collection("publicaciones_redes").insertOne({
+          proveedor: "instagram", tipo: "reel", productoId, publicacionId,
+          cuentaId: pieza.igCuentaId, username: pieza.igUsername || null,
+          texto: pieza.igTexto || "", videoUrl: pieza.igVideoUrl || "",
+          estado: "publicado", publicadoEn, creadoEn: publicadoEn,
+        });
+      } catch (registroError) {
+        console.error("Reel publicado; no se pudo escribir el historial:", registroError);
+      }
+
+      // Cerrar el producto solo si todas sus piezas están publicadas.
+      const actualizado = await coleccion.findOne({ _id: documento._id });
+      if (actualizado?.calendario?.length && actualizado.calendario.every((item) => item.estado === "publicado")) {
+        await coleccion.updateOne(
+          { _id: documento._id, estado: "programado" },
+          { $set: { estado: "publicado", publicadoEn, actualizadoEn: publicadoEn } }
+        );
+      }
+      return { ok: true, estado: "publicado", publicacionId };
+    } catch (error) {
+      // El resultado de media_publish podría ser ambiguo: NO reintentar.
+      await coleccion.updateOne(
+        { _id: documento._id, [`${campo}.estado`]: "publicando", [`${campo}.igEtapa`]: "enviando" },
+        {
+          $set: {
+            [`${campo}.estado`]: "error",
+            [`${campo}.ultimoError`]: `Revisar Instagram antes de reintentar: ${error.message}`,
+            [`${campo}.ultimoErrorEn`]: new Date(),
+            actualizadoEn: new Date(),
+          },
+        }
+      );
+      return { ok: false, estado: "error", error: `Revisar Instagram antes de reintentar: ${error.message}` };
+    }
+  }
+  return { ok: false, error: "La etapa del Reel no está habilitada para ejecución automática." };
+}
+
+// =========================================================
 // FACEBOOK - PUBLICACIÓN
 // =========================================================
 
@@ -2837,6 +3081,19 @@ if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
   }
 
   try {
+    // El Reel programado se crea UNA sola vez. Su estado se consultará
+    // en próximos ciclos del cron, sin gastar 40 subrequests de golpe.
+    if (red === "instagram" && tipo === "reel") {
+      const resultado = await iniciarReelInstagramProgramado({
+        db,
+        documentoId: documento._id,
+        posicion,
+        productoId,
+        publicacion: pieza.publicacion,
+      });
+      return res.status(202).json(resultado);
+    }
+
     const resultado =
       await ejecutarPublicacionPieza({
         req,
@@ -3040,18 +3297,25 @@ async function ejecutarPublicacionesPendientes(
     documento.calendario.forEach(
       (pieza) => {
         if (pieza?.red === "facebook" && pieza?.tipo === "story_pagina") return;
-        if (pieza?.estado !== "programado" || pieza.publicacionAutomatica === false) {
+        if (pieza.publicacionAutomatica === false) return;
+        const esReelEnCurso =
+          pieza.red === "instagram" && pieza.tipo === "reel" &&
+          pieza.estado === "procesando_instagram" &&
+          pieza.igContenedorId &&
+          ["esperando", "listo"].includes(pieza.igEtapa);
+        if (!esReelEnCurso && pieza.estado !== "programado") return;
+        if (esReelEnCurso) {
+          const proxima = pieza.igProximaConsultaEn ? new Date(pieza.igProximaConsultaEn) : null;
+          if (proxima && proxima.getTime() > Date.now()) return;
+          const bloqueado = pieza.igConsultaDesde &&
+            new Date(pieza.igConsultaDesde).getTime() > Date.now() - BLOQUEO_CONSULTA_REEL_MS;
+          if (bloqueado) return;
+        } else if (
+          (Number(pieza.intentosPublicacion) || 0) > 0 ||
+          pieza.ultimoIntentoEn || pieza.procesandoDesde || pieza.publicacionId
+        ) {
           return;
         }
-
-        if (
-  (Number(pieza.intentosPublicacion) || 0) > 0 ||
-  pieza.ultimoIntentoEn ||
-  pieza.procesandoDesde ||
-  pieza.publicacionId
-) {
-  return;
-}
 
         const vencida =
           pieza.fecha < fecha ||
@@ -3076,6 +3340,7 @@ if (!Number.isFinite(fechaProgramada.getTime())) {
           red: pieza.red,
           tipo: pieza.tipo,
           indice: pieza.indice,
+          continuarReel: Boolean(esReelEnCurso),
           intentosPublicacion:
             Number(pieza.intentosPublicacion) || 0,
           ultimoIntentoEn:
@@ -3086,6 +3351,8 @@ if (!Number.isFinite(fechaProgramada.getTime())) {
   }
 
   pendientes.sort((a, b) => {
+    // Primero terminar Reels cuyo contenedor ya existe, sin crear otro.
+    if (a.continuarReel !== b.continuarReel) return a.continuarReel ? -1 : 1;
     const diferenciaIntentos =
       (a.intentosPublicacion || 0) -
       (b.intentosPublicacion || 0);
@@ -3119,13 +3386,24 @@ if (!Number.isFinite(fechaProgramada.getTime())) {
       },
     };
 
-    await publicarProgramado(
-      {
-        ...req,
-        body: pieza,
-      },
-      respuestaInterna
-    );
+    if (pieza.continuarReel) {
+      respuesta = await continuarReelInstagramProgramado({
+        db,
+        productoId: pieza.productoId,
+        fecha: pieza.fecha,
+        hora: pieza.hora,
+        indice: pieza.indice,
+      });
+      estadoHttp = respuesta.ok ? 200 : 502;
+    } else {
+      await publicarProgramado(
+        {
+          ...req,
+          body: pieza,
+        },
+        respuestaInterna
+      );
+    }
 
     resultados.push({
       ...pieza,
