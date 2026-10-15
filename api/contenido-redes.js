@@ -332,12 +332,18 @@ async function publicarThreads(req, res) {
       ? req.body.texto.trim()
       : "";
 
+  const imagenUrl =
+  typeof req.body?.imagenUrl === "string"
+    ? req.body.imagenUrl.trim()
+    : "";
+
   const url = textoOriginal.match(/https?:\/\/[^\s]+/g)?.pop() || "";
   const cuerpo = url ? textoOriginal.replace(url, "").trim() : textoOriginal;
   const final = url ? `\n\n${url}` : "";
 
-  const texto =
-    Array.from(cuerpo)
+  const texto = imagenUrl
+  ? textoOriginal
+  : Array.from(cuerpo)
       .slice(0, 500 - Array.from(final).length)
       .join("")
       .trimEnd() + final;
@@ -380,11 +386,12 @@ async function publicarThreads(req, res) {
     integracion.accessToken;
 
   const parametrosContenedor =
-    new URLSearchParams({
-      media_type: "TEXT",
-      text: texto,
-      access_token: accessToken,
-    });
+  new URLSearchParams({
+    media_type: imagenUrl ? "IMAGE" : "TEXT",
+    text: texto,
+    ...(imagenUrl ? { image_url: imagenUrl } : {}),
+    access_token: accessToken,
+  });
 
   const respuestaContenedor =
     await fetch(

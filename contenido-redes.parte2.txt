@@ -407,9 +407,12 @@ async function ejecutarPublicacionPieza({
       {
         ...req,
         body: {
-          texto,
-          productoId,
-        },
+  texto,
+  productoId,
+  imagenUrl: tipo === "video"
+    ? String(pieza.publicacion?.imagen || "")
+    : "",
+},
       },
       respuestaInterna
     );

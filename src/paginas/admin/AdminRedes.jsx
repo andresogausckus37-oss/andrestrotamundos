@@ -1282,6 +1282,98 @@ if (pieza.red === "facebook" && pieza.tipo === "reel_pagina") {
   };
 });
 
+        
+publicaciones = publicaciones.map((pieza) => {
+  if (pieza.red !== "threads" || pieza.tipo !== "video") {
+    return pieza;
+  }
+
+  const cta = "¡Encontralo en nuestra tienda!";
+  const urlProducto = String(pieza.urlProducto || "").trim();
+
+  const candidatos = [
+    ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
+    ...String(producto.nombre || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .split(/[^a-zA-Z0-9]+/)
+      .filter((palabra) => palabra.length >= 4),
+    "TiendaOnline",
+    "CompraOnline",
+    "ProductosOnline"
+  ];
+
+  const hashtags = [...new Set(
+    candidatos
+      .flatMap((valor) => String(valor).split(/\s+/))
+      .map((valor) =>
+        "#" + valor.replace(/^#+/, "").replace(/[^\p{L}\p{N}_]/gu, "")
+      )
+      .filter((valor) => valor.length > 1)
+  )].slice(0, 5);
+
+  const original = String(pieza.copy || pieza.texto || "")
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/#[\p{L}\p{N}_]+/gu, "")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/\uFE0F/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const fijo = [
+    cta,
+    urlProducto,
+    hashtags.join(" ")
+  ].join("\n\n");
+
+  const maximo = Math.max(
+    0,
+    Math.min(220, 500 - Array.from(fijo).length - 8)
+  );
+
+  const corto = Array.from(original)
+    .slice(0, maximo)
+    .join("")
+    .replace(/\s+\S*$/, "")
+    .trim();
+
+  const copy = `💡✨ ${corto}${
+    Array.from(original).length > maximo ? "…" : ""
+  }`;
+
+  const imagen = String(
+    producto.imagenes?.portadaFacebook || pieza.imagen || ""
+  ).trim();
+
+  if (!/^https:\/\//i.test(imagen)) {
+    throw new Error(
+      `Falta la imagen Facebook/Threads del producto ${producto.nombre}`
+    );
+  }
+
+  return {
+    ...pieza,
+    copy,
+    texto: copy,
+    cta,
+    hashtags,
+    urlProducto,
+    imagen,
+    imagenes: [imagen],
+    recurso: imagen,
+    recursos: [imagen],
+    video: "",
+    videoUrl: "",
+    textoCompleto: [
+      copy,
+      cta,
+      urlProducto,
+      hashtags.join(" ")
+    ].filter(Boolean).join("\n\n")
+  };
+});
+        
+
         // Sincronizamos todas las vistas con el calendario.
         contenido.calendario = publicaciones;
 

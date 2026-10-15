@@ -42,7 +42,7 @@ export const CICLO_PRODUCTO = {
     objetivo: "presentacion",
     publicaciones: [
       pieza("instagram", "reel", "17:00", "video", { usarEnlaceProducto: false, enlaceEnBio: true }),
-      pieza("threads", "video", "18:00", "video"),
+      pieza("threads", "video", "18:00", "portadaFacebook"),
       pieza("threads", "sabias_que", "21:00", "imagenPrincipal", { variante: "threads", contenidoDiferenciado: true }),
       pieza("facebook", "reel_pagina", "18:00", "video"),
       pieza("facebook", "story_pagina", "20:00", "imagenVertical"),  
