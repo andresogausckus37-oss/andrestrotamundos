@@ -2943,7 +2943,7 @@ if (!Number.isFinite(fechaProgramada.getTime())) {
 
   // Procesamos pocas piezas por invocación para no agotar
   // el tiempo máximo disponible durante la ejecución.
-  const lote = pendientes.slice(0, 3);
+  const lote = pendientes.slice(0, 1);
   const resultados = [];
 
   for (const pieza of lote) {

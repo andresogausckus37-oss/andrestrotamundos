@@ -4,6 +4,12 @@
   "name": "andrestrotamundos",
   "main": "worker.js",
 
+  "keep_vars": true,
+
+  "vars": {
+    "FACEBOOK_PAGE_ID": "1312632228596581"
+  },
+
   "ai": {
     "binding": "AI"
   },
