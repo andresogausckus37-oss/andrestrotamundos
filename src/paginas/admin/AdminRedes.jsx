@@ -1224,6 +1224,8 @@ if (pieza.red === "facebook" && pieza.tipo === "reel_pagina") {
   };
 }
 
+          if (pieza.red !== "threads" || pieza.tipo !== "video") {
+
     const copy = String(pieza.copy || pieza.texto || "")
       .replace(/https?:\/\/\S+/gi, "")
       .replace(/#[\p{L}\p{N}_]+/gu, "")
