@@ -1152,7 +1152,12 @@ if (esGrupoPost) {
                 throw new Error("Contenido IA incompleto");
               }
 
-              const urlProducto = esReel ? "" : pieza.urlProducto || "";
+              const urlProducto =
+  pieza.red === "facebook" && pieza.tipo === "reel_pagina"
+    ? pieza.urlProducto || ""
+    : esReel
+      ? ""
+      : pieza.urlProducto || "";
 
               const textoCompleto = [
                 copy,
@@ -1187,12 +1192,43 @@ if (esGrupoPost) {
         );
 
         publicaciones = publicaciones.map((pieza) => {
-  if (pieza.red === "facebook" && pieza.tipo === "reel_pagina") {
+  
+if (pieza.red === "facebook" && pieza.tipo === "reel_pagina") {
+  const copy = String(pieza.copy || pieza.texto || "")
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/#[\p{L}\p{N}_]+/gu, "")
+    .trim();
+
+  const cta = "¡Encontralo en nuestra tienda!";
+
+  const urlProducto = String(
+    pieza.urlProducto || ""
+  ).trim();
+
+  const hashtags = Array.isArray(pieza.hashtags)
+    ? pieza.hashtags
+    : [];
+
+  return {
+    ...pieza,
+    copy,
+    texto: copy,
+    cta,
+    urlProducto,
+    textoCompleto: [
+      copy,
+      cta,
+      urlProducto,
+      hashtags.join(" ")
+    ].filter(Boolean).join("\n\n")
+  };
+}
+
     const copy = String(pieza.copy || pieza.texto || "")
       .replace(/https?:\/\/\S+/gi, "")
       .replace(/#[\p{L}\p{N}_]+/gu, "")
       .trim();
-    const cta = "¿Qué te parece? Contanos.";
+    const cta = "¡Encontralo en nuestra tienda!"
     const hashtags = Array.isArray(pieza.hashtags) ? pieza.hashtags : [];
 
     return {

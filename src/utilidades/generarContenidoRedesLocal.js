@@ -180,7 +180,7 @@ export function generarContenidoRedesLocal(original) {
             : [recurso];
     
     const urlProducto =
-  p.red === "instagram" || esReel ? "" : url;
+  p.red === "instagram" ? "" : url;
     return {
       id: `${p.dia}-${p.red}-${p.tipo}-${p.variante || p.i}`,
       dia: p.dia, red: p.red, tipo: p.tipo, variante: p.variante || null, hora: p.hora,
