@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { generarContenidoRedesLocal } from "../../utilidades/generarContenidoRedesLocal";
+import { generarContenidoRedesLocal, etiquetasCarrusel } from "../../utilidades/generarContenidoRedesLocal";
 
 // =========================================================
 // COMPONENTE PUBLICACIÓN EDITABLE
@@ -1149,6 +1149,9 @@ const generarContenido = async () => {
   tipo: pieza.tipo,
   variante: pieza.variante || "",
   contexto: [
+    ...(pieza.red === "instagram" && pieza.tipo === "carrusel"
+      ? ["En el carrusel, no comiences con el nombre del producto. Usá un gancho centrado en detalles y usos comprobables; no repitas el enfoque ni el comienzo del Reel. Proponé cinco hashtags específicos distintos de los del Reel."]
+      : []),
     `Red social: ${pieza.red}`,
     `Formato: ${pieza.tipo}`,
     `Variante: ${pieza.variante || "general"}`,
@@ -1408,6 +1411,70 @@ if (esGrupoPost) {
               hashtags: [],
               vistaPreviaEnlace: true,
               textoCompleto: [copy, cta, urlProducto]
+                .filter(Boolean).join("\n\n"),
+            };
+          }
+
+          const esCarruselInstagram =
+            pieza.red === "instagram" && pieza.tipo === "carrusel";
+
+          if (esCarruselInstagram) {
+            const respaldo = contenido.calendario.find(p =>
+              p.red === "instagram" && p.tipo === "carrusel"
+            );
+            const reel = publicaciones.find(p =>
+              p.red === "instagram" && p.tipo === "reel"
+            );
+            const nombreSeguro = String(producto.nombre || "")
+              .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const sinNombre = (valor) => {
+              let limpio = String(valor || "")
+                .replace(/https?:\/\/\S+/gi, "")
+                .replace(/#[\p{L}\p{N}_]+/gu, "")
+                .trim();
+              if (nombreSeguro) {
+                limpio = limpio.replace(
+                  new RegExp(
+                    `^[^\\p{L}\\p{N}]*(?:(?:descubr[ií]|conoc[eé])\\s+)?${nombreSeguro}\\s*[.:;!?–-]*\\s*`,
+                    "iu"
+                  ), ""
+                ).trim();
+              }
+              return limpio;
+            };
+            const normalizar = (valor) => sinNombre(valor)
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+              .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+            let copy = sinNombre(pieza.copy || pieza.texto);
+            const principio = (valor) => normalizar(valor).split(" ").slice(0, 12).join(" ");
+            if (!copy || (principio(copy) && principio(copy) === principio(reel?.copy))) {
+              copy = sinNombre(respaldo?.copy);
+            }
+            if (!copy) throw new Error("Falta un copy para Instagram Carrusel.");
+
+            const usados = new Set(
+              (reel?.hashtags || []).map(h => String(h).toLowerCase())
+            );
+            const hashtags = [];
+            for (const candidato of [
+              ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
+              ...(respaldo?.hashtags || []),
+              ...etiquetasCarrusel(producto, reel?.hashtags || [])
+            ]) {
+              const etiqueta = String(candidato).trim();
+              const clave = etiqueta.toLowerCase();
+              if (!/^#[\p{L}\p{N}_]+$/u.test(etiqueta) || usados.has(clave)) continue;
+              usados.add(clave);
+              hashtags.push(etiqueta);
+              if (hashtags.length === 5) break;
+            }
+            if (hashtags.length !== 5) {
+              throw new Error("Faltan hashtags diferentes para Instagram Carrusel.");
+            }
+            const cta = "Descubrí más sobre este producto en el enlace de nuestra bio.";
+            return {
+              ...pieza, copy, texto: copy, cta, hashtags,
+              textoCompleto: [copy, cta, pieza.urlProducto || "", hashtags.join(" ")]
                 .filter(Boolean).join("\n\n"),
             };
           }

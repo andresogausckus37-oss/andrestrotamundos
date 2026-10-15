@@ -40,6 +40,55 @@ function etiquetas(producto) {
   return [...new Set([...hashtags, ...adicionales])].slice(0, 5);
 }
 
+// Hashtags específicos del carrusel, sin repetir los del Reel.
+export function etiquetasCarrusel(producto, usados = []) {
+  const bloqueados = new Set(usados.map(h => h.toLowerCase()));
+  const palabrasVacias = new Set([
+    "para", "como", "este", "esta", "entre", "sobre", "desde", "hasta",
+    "incluye", "cuenta", "ideal", "tiene", "mejora", "mejorar", "todos",
+    "todas", "puede", "podes", "hacer", "producto", "productos", "con", "sin",
+    "del", "las", "los", "una", "uno", "por", "mas", "que", "sus", "tus"
+  ]);
+  const tokens = (valor) => texto(valor)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(p => p.length >= 3 && !/^\d+$/.test(p) && !palabrasVacias.has(p.toLowerCase()));
+  const tokensOriginales = (valor) => texto(valor)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-zA-Z0-9]+/).filter(Boolean);
+  const valido = (p) => p.length >= 3 && !/^\d+$/.test(p) &&
+    !palabrasVacias.has(p.toLowerCase());
+  const pares = (valor) => {
+    const arr = tokensOriginales(valor);
+    return arr.slice(0, -1).flatMap((p, i) =>
+      valido(p) && valido(arr[i + 1])
+        ? [`#${p}${arr[i + 1][0].toUpperCase()}${arr[i + 1].slice(1)}`]
+        : []
+    );
+  };
+  const detallesTexto = `${producto.categoria || ""} ${producto.descripcion || ""} ${producto.descripcionLarga || ""}`;
+  const detalles = tokens(detallesTexto);
+  const candidatos = [
+    ...pares(producto.nombre), ...pares(detallesTexto),
+    ...detalles.map(p => `#${p}`),
+    "#DetallesDelProducto", "#GuiaDeCompra", "#CatalogoOnline",
+    "#ComprasPorInternet", "#TiendaVirtual", "#NovedadesDeLaTienda",
+    "#ExplorarCatalogo", "#ElegirOnline", "#DetallesYUsos",
+    "#ProductosDeLaTienda", "#InspiracionDeCompra", "#OpcionesDeCompra",
+    "#ConoceLosDetalles", "#DescubriElProducto"
+  ];
+  const resultado = [];
+  for (const candidato of candidatos) {
+    if (!/^#[a-zA-Z0-9_]+$/.test(candidato)) continue;
+    const clave = candidato.toLowerCase();
+    if (bloqueados.has(clave)) continue;
+    bloqueados.add(clave);
+    resultado.push(candidato);
+    if (resultado.length === 5) break;
+  }
+  return resultado;
+}
+
 function datoConfiable(producto) {
   return [...lista(producto.beneficios), ...lista(producto.incluye), sinEtiquetas(producto.descripcion), sinEtiquetas(producto.descripcionLarga)]
     .filter(Boolean);
@@ -76,12 +125,19 @@ export function generarContenidoRedesLocal(original) {
   const descripcion = datos[0] || `Conocé ${nombre} y sus características en la tienda.`;
   const detalleAlternativo = datos.find(d => d !== descripcion) || `Consultá las características y condiciones de ${nombre} en la tienda.`;
   const hashtagsBase = etiquetas(producto);
+  const hashtagsParaCarrusel = etiquetasCarrusel(producto, hashtagsBase);
+  const frases = descripcion.match(/[^.!?]+[.!?]?/g)?.map(f => f.trim()).filter(Boolean) || [];
+  const detalleCarrusel = frases.length > 1
+    ? frases.slice(1).join(" ")
+    : detalleAlternativo;
+  const copyCarrusel = `🔎 Mirá los detalles antes de elegir. ${detalleCarrusel}`;
   const plantilla = [
     ...CICLO_PRODUCTO.dia1.publicaciones.map((p, i) => ({ ...p, dia: "dia1", i })),
     ...CICLO_PRODUCTO.dia2.publicaciones.map((p, i) => ({ ...p, dia: "dia2", i })),
   ];
   const calendario = plantilla.map(p => {
     
+    const esCarruselInstagram = p.red === "instagram" && p.tipo === "carrusel";
     const esThreadsTip = p.red === "threads" && p.tipo === "sabias_que";
     const esGrupoTip = p.red === "facebook" && p.variante === "sabias_que";
     
@@ -160,6 +216,8 @@ const esStoryFacebook =
 
           const copy = esStoryFacebook
             ? ""
+            : esCarruselInstagram
+              ? copyCarrusel
             : esGrupoPost
               ? descripcion
             : esEstadoWhatsapp
@@ -193,7 +251,9 @@ const esStoryFacebook =
             : "Consultanos para conocer más detalles.";
 
     const hashtags =
-      p.red === "whatsapp" || esStoryFacebook ? [] : hashtagsBase;
+      p.red === "whatsapp" || esStoryFacebook ? []
+        : esCarruselInstagram ? hashtagsParaCarrusel
+        : hashtagsBase;
 
     const recurso =
       esGrupoPost || esEstadoWhatsapp ? "" :
