@@ -431,6 +431,25 @@ function VistaPreviaRedes({ recursos = [], tipo = "", urlProducto = "" }) {
   )}</div>;
 }
 
+// Facebook Story pausada: ocultarla de los calendarios sin borrar su implementación.
+const esStoryFacebookPausada = (pieza) =>
+  pieza?.red === "facebook" && pieza?.tipo === "story_pagina";
+
+function omitirStoryFacebook(contenido) {
+  if (!Array.isArray(contenido?.calendario)) return contenido;
+  const calendario = contenido.calendario.filter(
+    (pieza) => !esStoryFacebookPausada(pieza)
+  );
+  return {
+    ...contenido,
+    calendario,
+    facebook: {
+      ...(contenido.facebook || {}),
+      publicaciones: calendario.filter((pieza) => pieza.red === "facebook"),
+    },
+  };
+}
+
 // Facebook Story: el texto se dibuja en píxeles, no solo como overlay React.
 // Imagen original en MongoDB; JPEG final en R2. No utiliza Cloudflare IMAGES.
 async function prepararStoryFacebookCanvas(contenido, productoId) {
@@ -1011,7 +1030,7 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
     setMensajeCalendario("");
 
     const contenidoNuevo = await prepararStoryFacebookCanvas(
-      generarContenidoRedesLocal(producto), item.productoId
+      omitirStoryFacebook(generarContenidoRedesLocal(producto)), item.productoId
     );
 
     const respuesta = await fetch(
@@ -1738,7 +1757,7 @@ const guardarBorrador = async (
 
     // La imagen con CTA se genera ANTES de guardar el borrador.
     const contenidoPreparado = await prepararStoryFacebookCanvas(
-      item.contenido,
+      omitirStoryFacebook(item.contenido),
       item.productoId
     );
 
@@ -1792,7 +1811,7 @@ const guardarBorrador = async (
         ...actuales,
 
         [item.productoId]:
-          "Borrador guardado con imagen Facebook Story y CTA.",
+          "Borrador guardado correctamente (Facebook Story en pausa).",
       })
     );
   } catch (error) {
@@ -2608,7 +2627,7 @@ const urlProducto = productoId
                 indiceProducto
               ) => {
                 const contenido =
-                  item.contenido;
+                  omitirStoryFacebook(item.contenido);
 
                 return (
                   <section
@@ -2665,7 +2684,7 @@ const urlProducto = productoId
                         </p>
                         <p className="text-xs text-slate-500">
                           
-                          Instagram 2 · Threads 3 · Fan Page 3 · Grupos Facebook 2 · WhatsApp 1
+                          Instagram 2 · Threads 3 · Fan Page 2 · Grupos Facebook 2 · WhatsApp 1
                         </p>
                       </div>
                     </div>
@@ -2899,6 +2918,7 @@ const urlProducto = productoId
                 const calendario = Array.isArray(item.calendario)
                   ? item.calendario.filter(
                       (pieza) => !(
+                        esStoryFacebookPausada(pieza) ||
                         (pieza.red === "whatsapp" && pieza.tipo === "whatsapp_grupo") ||
                         (pieza.red === "facebook" &&
                           (pieza.tipo === "grupo_post" ||

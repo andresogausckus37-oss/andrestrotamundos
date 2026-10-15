@@ -251,7 +251,7 @@ const esStoryFacebook =
     };
   });
   
-  if (calendario.length !== 11) throw new Error("El calendario debe contener exactamente 11 publicaciones.");
+  if (calendario.length !== 10) throw new Error("El calendario debe contener exactamente 10 publicaciones.");
   
   return {
     productoId: producto.id, nombreProducto: nombre, generador: "local", calendario,

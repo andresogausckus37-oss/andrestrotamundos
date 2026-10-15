@@ -45,7 +45,7 @@ export const CICLO_PRODUCTO = {
       pieza("threads", "post", "18:00", "portadaFacebook"),
       pieza("threads", "sabias_que", "21:00", "imagenPrincipal", { variante: "threads", contenidoDiferenciado: true }),
       pieza("facebook", "reel_pagina", "18:00", "video"),
-      pieza("facebook", "story_pagina", "20:00", "imagenVertical"),  
+      // Facebook Story pausada: se conserva la lógica, pero no entra al calendario.
       
       pieza("facebook", "grupo", "20:00", "imagenPrincipal", { variante: "sabias_que", contenidoDiferenciado: true, publicacionAutomatica: false }),
       pieza("whatsapp", "estado", "17:00", "enlaceProducto", {
@@ -79,9 +79,8 @@ export const plantillaContenidoProducto = {
     { tipo: "carrusel", recurso: "imagenesFeed", cantidadImagenes: 3, usarEnlaceProducto: true },
   ] },
   facebook: {
-    pagina: { cantidad: 3, publicaciones: [
+    pagina: { cantidad: 2, publicaciones: [
       { tipo: "reel_pagina", recurso: "video" },
-      { tipo: "story_pagina", recurso: "imagenVertical" },
       { tipo: "carrusel_pagina", recurso: "imagenesFeed", cantidadImagenes: 3 },
     ] },
     grupos: { cantidad: 2, publicacionAutomatica: false, publicaciones: [

@@ -1659,6 +1659,22 @@ async function prepararStoriesVisuales(contenido, productoId, env) {
   };
 }
 
+// Facebook Story en pausa. Conservar la lógica de Canvas/R2 para reactivarla.
+function sinStoryFacebook(contenido) {
+  if (!Array.isArray(contenido?.calendario)) return contenido;
+  const calendario = contenido.calendario.filter(
+    (p) => !(p?.red === "facebook" && p?.tipo === "story_pagina")
+  );
+  return {
+    ...contenido,
+    calendario,
+    facebook: {
+      ...(contenido.facebook || {}),
+      publicaciones: calendario.filter((p) => p.red === "facebook"),
+    },
+  };
+}
+
 // =========================================================
 // BORRADORES DE CONTENIDO
 // =========================================================
@@ -1716,7 +1732,7 @@ async function guardarBorrador(
   // Generar la imagen final antes de guardar: el Admin podrá previsualizarla.
   let contenidoPreparado;
   try {
-    contenidoPreparado = await prepararStoriesVisuales(contenido, productoId, req.env);
+    contenidoPreparado = await prepararStoriesVisuales(sinStoryFacebook(contenido), productoId, req.env);
   } catch (error) {
     return res.status(422).json({
       ok: false,
@@ -2042,6 +2058,8 @@ const crearCalendarioInicial = (
   if (Array.isArray(contenido?.calendario) && contenido.calendario.length) {
     const offsets = { dia1: 0, dia2: 1 };
     contenido.calendario.forEach((pieza, posicion) => {
+      // No programar Facebook Story aunque venga de borradores anteriores.
+      if (pieza?.red === "facebook" && pieza?.tipo === "story_pagina") return;
 
       if (
   pieza.red === "whatsapp" &&
@@ -2085,7 +2103,7 @@ const crearCalendarioInicial = (
           (["instagram:reel", "instagram:carrusel", 
             "threads:video",
             "threads:post",
-            "threads:sabias_que", "threads:carrusel", "facebook:story_pagina", "facebook:reel_pagina"].includes(`${pieza.red}:${pieza.tipo}`)
+            "threads:sabias_que", "threads:carrusel", "facebook:reel_pagina"].includes(`${pieza.red}:${pieza.tipo}`)
             ? "programado" : "pendiente_integracion"),
         publicacionAutomatica: !manual,
         zonaHoraria: ZONA_HORARIA_RED,
@@ -2332,7 +2350,7 @@ async function regenerarContenidoProgramado(
 
   let contenidoPreparado;
   try {
-    contenidoPreparado = await prepararStoriesVisuales(contenido, productoId, req.env);
+    contenidoPreparado = await prepararStoriesVisuales(sinStoryFacebook(contenido), productoId, req.env);
   } catch (error) {
     return res.status(422).json({
       ok: false,
@@ -2672,6 +2690,14 @@ async function publicarProgramado(
   const pieza =
     documento.calendario[posicion];
 
+  // Suspensión expresa, incluso si esta pieza proviene de un calendario antiguo.
+  if (pieza.red === "facebook" && pieza.tipo === "story_pagina") {
+    return res.status(409).json({
+      ok: false,
+      error: "Facebook Story está en pausa. No se publicará.",
+    });
+  }
+
   const formatosPermitidos = [
   "instagram:reel",
   "instagram:carrusel",
@@ -2679,7 +2705,7 @@ async function publicarProgramado(
     "threads:post",
   "threads:sabias_que",
   "threads:carrusel",
-  "facebook:story_pagina", "facebook:reel_pagina",
+  "facebook:reel_pagina",
 ];
 
 if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
@@ -3013,6 +3039,7 @@ async function ejecutarPublicacionesPendientes(
 
     documento.calendario.forEach(
       (pieza) => {
+        if (pieza?.red === "facebook" && pieza?.tipo === "story_pagina") return;
         if (pieza?.estado !== "programado" || pieza.publicacionAutomatica === false) {
           return;
         }
