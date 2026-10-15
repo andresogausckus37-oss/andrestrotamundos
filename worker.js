@@ -131,7 +131,12 @@ async function ejecutarHandlerContenidoRedes(request, env) {
     url: request.url,
     query: Object.fromEntries(url.searchParams.entries()),
     body: await leerBody(request),
-    headers: headersComoObjeto(request)
+    headers: headersComoObjeto(request),
+    env: {
+      IMAGES: env.IMAGES,
+      PRODUCTOS_R2: env.PRODUCTOS_R2,
+      PRODUCTOS_R2_URL: "https://pub-60d59fb304eb48d384739f40d6f48d4f.r2.dev",
+    },
   };
   const res = crearRespuestaApi(url.origin);
   const retorno = await handlerContenidoRedes(req, res);

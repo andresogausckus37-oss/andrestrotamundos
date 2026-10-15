@@ -406,7 +406,7 @@ const formatearHoraDiagnostico = (valor) => {
 
 function VistaPreviaRedes({ recursos = [], tipo = "", urlProducto = "" }) {
   const urls = [...new Set(recursos.flat(Infinity).filter((v) => typeof v === "string" && /^(https?:\/\/|\/)/.test(v)))];
-  const video = /video|reel|story|estado/.test(String(tipo).toLowerCase());
+  const video = /video|reel|story|estado/.test(String(tipo).toLowerCase()) && tipo !== "story_pagina";
   const visibles = video ? urls.slice(0, 1) : /carrusel/.test(String(tipo).toLowerCase()) ? urls.slice(0, 3) : urls.slice(0, 1);
   if (!visibles.length && tipo === "estado" && /^https:\/\//i.test(urlProducto)) {
     return (
@@ -422,9 +422,11 @@ function VistaPreviaRedes({ recursos = [], tipo = "", urlProducto = "" }) {
     <img key={url} src={url} alt={`Vista previa ${i + 1}`} loading="lazy" 
       
       className={
-  tipo === "post"
-    ? "w-44 aspect-[10/7] rounded-lg border border-slate-200 bg-white object-contain"
-    : "h-32 w-24 rounded-lg border border-slate-200 object-cover"
+  tipo === "story_pagina"
+    ? "w-24 aspect-[9/16] rounded-lg border border-slate-200 bg-slate-100 object-contain"
+    : tipo === "post"
+      ? "w-44 aspect-[10/7] rounded-lg border border-slate-200 bg-white object-contain"
+      : "h-32 w-24 rounded-lg border border-slate-200 object-cover"
     } />
   )}</div>;
 }

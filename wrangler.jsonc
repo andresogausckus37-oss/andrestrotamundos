@@ -10,6 +10,9 @@
     "FACEBOOK_PAGE_ID": "1312632228596581"
   },
 
+  "images": { "binding": "IMAGES" },
+
+
   "ai": {
     "binding": "AI"
   },

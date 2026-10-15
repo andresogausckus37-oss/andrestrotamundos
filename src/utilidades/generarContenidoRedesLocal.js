@@ -58,9 +58,9 @@ export function generarContenidoRedesLocal(original) {
   const portada = texto(recursos.portadaFacebook);
 
   if (!/^https:\/\//i.test(portada)) {
-  throw new Error(
-    `Falta la imagen principal Facebook/Threads de ${nombre}.`
-  );
+    throw new Error(
+      `Falta la imagen principal Facebook/Threads de ${nombre}.`
+    );
   }
   
   if (!nombre) throw new Error("El producto no tiene nombre.");
@@ -96,11 +96,14 @@ export function generarContenidoRedesLocal(original) {
 
 
     const esReel =
-      (p.red === "instagram" && p.tipo === "reel") ||
-      (p.red === "facebook" && p.tipo === "reel_pagina");
+  (p.red === "instagram" && p.tipo === "reel") ||
+  (p.red === "facebook" && p.tipo === "reel_pagina");
 
-    const esEstadoWhatsapp =
-      p.red === "whatsapp" && p.tipo === "estado";
+const esEstadoWhatsapp =
+  p.red === "whatsapp" && p.tipo === "estado";
+
+const esStoryFacebook =
+  p.red === "facebook" && p.tipo === "story_pagina";
 
     // Copy breve y 2 emojis separados para Threads Post.
     const copyBaseThreads = descripcion
@@ -155,8 +158,10 @@ export function generarContenidoRedesLocal(original) {
             p.tipo === "grupo" &&
             p.variante === "post";
 
-          const copy = esGrupoPost
-            ? descripcion
+          const copy = esStoryFacebook
+            ? ""
+            : esGrupoPost
+              ? descripcion
             : esEstadoWhatsapp
               ? `${emoji} ${copyEstado}`
               : esReel
@@ -175,20 +180,20 @@ export function generarContenidoRedesLocal(original) {
             : `${emoji} ${nombre}. ${descripcion}`;
 
 
-    const cta = esGrupoPost
-      ? "¡Conocelo en nuestra tienda!"
-      : esEstadoWhatsapp || esThreadsPost
-        ? "¡Encontralo en nuestra tienda!"
-        : p.red === "instagram"
-          ? "Descubrí más sobre este producto en el enlace de nuestra bio."
-          : p.red === "whatsapp"
-            ? "Consultanos para conocer más detalles."
-            : url
-              ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
-              : "Consultanos para conocer más detalles.";
+    const cta = esStoryFacebook
+    ? ""
+    : esEstadoWhatsapp || esThreadsPost
+      ? "¡Encontralo en nuestra tienda!"
+      : p.red === "instagram"
+        ? "Descubrí más sobre este producto en el enlace de nuestra bio."
+        : p.red === "whatsapp"
+          ? "Consultanos para conocer más detalles."
+          : url
+            ? "Conocé todos los detalles y conseguí el tuyo en nuestra tienda online:"
+            : "Consultanos para conocer más detalles.";
 
     const hashtags =
-      p.red === "whatsapp" ? [] : hashtagsBase;
+      p.red === "whatsapp" || esStoryFacebook ? [] : hashtagsBase;
 
     const recurso =
       esGrupoPost || esEstadoWhatsapp ? "" :
@@ -200,7 +205,7 @@ export function generarContenidoRedesLocal(original) {
 
     const imagenes =
       esGrupoPost || esEstadoWhatsapp ? [] :
-      p.red === "facebook" && p.tipo === "story_pagina"
+      esStoryFacebook
         ? [vertical[0]]
         : p.recurso === "imagenesFeed"
           ? feed
@@ -208,7 +213,10 @@ export function generarContenidoRedesLocal(original) {
             ? []
             : [recurso];
     
-    const urlProducto = p.red === "instagram" ? "" : url;
+    const urlProducto = p.red === "instagram" || esStoryFacebook ? "" : url;
+    if (esStoryFacebook && !/^https:\/\//i.test(vertical[0])) {
+      throw new Error(`Facebook Story necesita una imagen vertical HTTPS: ${nombre}`);
+    }
     if (esEstadoWhatsapp && !/^https:\/\//i.test(urlProducto)) {
       throw new Error(`WhatsApp Estado necesita una URL pública del producto: ${nombre}`);
     }
@@ -221,13 +229,25 @@ export function generarContenidoRedesLocal(original) {
       imagenPrincipal: principal, imagenesFeed: feed, imagenesVerticales: vertical,
       video: p.recurso === "video" ? video : "", videoUrl: p.recurso === "video" ? video : "",
       vistaPreviaEnlace: Boolean(p.vistaPreviaEnlace),
+      // La composición de la imagen con el CTA se realizará en el backend.
+      // Hasta entonces "imagen" sigue siendo la imagen vertical original.
+      ctaVisual: esStoryFacebook,
+      textoStory: esStoryFacebook
+        ? {
+            linea1: "¡Encontralo en nuestra tienda!",
+            linea2: "Visitá nuestra página",
+          }
+        : null,
+      imagenOriginal: esStoryFacebook ? vertical[0] : null,
       texto: copy, copy, cta, hashtags, urlProducto,
       // En WhatsApp solo enviamos texto+URL: la portada la obtiene WhatsApp
       // automáticamente de las etiquetas OG de la página del producto.
-      textoCompleto: (esEstadoWhatsapp
-        ? [copy, cta, urlProducto]
-        : [copy, cta, urlProducto, hashtags.join(" ")]
-      ).filter(Boolean).join("\n\n"),
+      textoCompleto: esStoryFacebook
+        ? ""
+        : (esEstadoWhatsapp
+            ? [copy, cta, urlProducto]
+            : [copy, cta, urlProducto, hashtags.join(" ")]
+          ).filter(Boolean).join("\n\n"),
     };
   });
   
