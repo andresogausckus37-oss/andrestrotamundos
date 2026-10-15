@@ -15,8 +15,8 @@ export const FORMATOS_REDES = {
 };
 
 // Recursos existentes por producto: 1 MP4, 3 imágenes 4:5, 3 imágenes 9:16.
-// portadaFacebook es la vista previa del enlace del producto en grupos;
-// no se agrega como octavo archivo multimedia al inventario.
+// portadaFacebook se usa en Threads Post y en vistas previas de enlaces;
+// es un recurso que ya existe en el producto, no un archivo extra.
 export const RECURSOS_PRODUCTO_REDES = {
   video: { cantidad: 1, formato: "mp4" },
   imagenesFeed: { cantidad: 3, formato: "feedInstagram" },
@@ -42,16 +42,17 @@ export const CICLO_PRODUCTO = {
     objetivo: "presentacion",
     publicaciones: [
       pieza("instagram", "reel", "17:00", "video", { usarEnlaceProducto: false, enlaceEnBio: true }),
-      pieza("threads", "video", "18:00", "portadaFacebook"),
+      pieza("threads", "post", "18:00", "portadaFacebook"),
       pieza("threads", "sabias_que", "21:00", "imagenPrincipal", { variante: "threads", contenidoDiferenciado: true }),
       pieza("facebook", "reel_pagina", "18:00", "video"),
       pieza("facebook", "story_pagina", "20:00", "imagenVertical"),  
       
       pieza("facebook", "grupo", "20:00", "imagenPrincipal", { variante: "sabias_que", contenidoDiferenciado: true, publicacionAutomatica: false }),
       pieza("whatsapp", "estado", "17:00", "enlaceProducto", {
-  publicacionAutomatica: false,
-  vistaPreviaEnlace: true
-}),
+        publicacionAutomatica: false,
+        usarEnlaceProducto: true,
+        vistaPreviaEnlace: true,
+      }),
     ],
   },
   dia2: {
@@ -73,7 +74,7 @@ export const plantillaContenidoProducto = {
     carrusel: { cantidad: 1, formato: "feedInstagram", recurso: "imagenesFeed", cantidadImagenes: 3, generarCopy: true, generarCTA: true, generarHashtags: true, cantidadHashtags: 5 },
   },
   threads: { cantidad: 3, publicaciones: [
-    { tipo: "video", recurso: "video", usarEnlaceProducto: true },
+    { tipo: "post", recurso: "portadaFacebook", usarEnlaceProducto: true },
     { tipo: "sabias_que", recurso: "imagenPrincipal", usarEnlaceProducto: true, variante: "threads" },
     { tipo: "carrusel", recurso: "imagenesFeed", cantidadImagenes: 3, usarEnlaceProducto: true },
   ] },
@@ -94,7 +95,7 @@ export const plantillaContenidoProducto = {
     cantidad: 1,
     publicacionAutomatica: false,
     publicaciones: [
-      { tipo: "estado", recurso: "video" },
+      { tipo: "estado", recurso: "enlaceProducto", usarEnlaceProducto: true, vistaPreviaEnlace: true },
     ],
   },
 },
@@ -102,7 +103,7 @@ export const plantillaContenidoProducto = {
 
 export const HORARIOS_PREDETERMINADOS = {
   instagram: { reel: "17:00", carrusel: "10:00" },
-  threads: { video: "18:00", sabias_que: "21:00", carrusel: "10:00" },
+  threads: { post: "18:00", sabias_que: "21:00", carrusel: "10:00" },
   facebook: {
     pagina: { reel: "17:00", story: "20:00", carrusel: "10:00" },
     grupos: { reel: "18:00", sabias_que: "20:00", enlace_producto: "10:00" },

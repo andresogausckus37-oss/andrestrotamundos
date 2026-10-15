@@ -55,7 +55,14 @@ export function generarContenidoRedesLocal(original) {
   const feed = lista(recursos.imagenesFeed).slice(0, 3);
   const vertical = lista(recursos.imagenesVerticales).slice(0, 3);
   const principal = feed[0] || "";
-  const portada = texto(recursos.portadaFacebook) || principal;
+  const portada = texto(recursos.portadaFacebook);
+
+  if (!/^https:\/\//i.test(portada)) {
+  throw new Error(
+    `Falta la imagen principal Facebook/Threads de ${nombre}.`
+  );
+  }
+  
   if (!nombre) throw new Error("El producto no tiene nombre.");
   
   if (!/^https:\/\//i.test(video)) {
@@ -95,6 +102,28 @@ export function generarContenidoRedesLocal(original) {
     const esEstadoWhatsapp =
       p.red === "whatsapp" && p.tipo === "estado";
 
+    // Copy breve y 2 emojis separados para Threads Post.
+    const copyBaseThreads = descripcion
+      .replace(/https?:\/\/\S+/gi, "")
+      .replace(/#[\p{L}\p{N}_]+/gu, "")
+      .replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const maximoThreads = 195;
+    // Preferimos frases completas antes que terminar un copy en mitad de una idea.
+    const frasesThreads = copyBaseThreads.match(/[^.!?]+[.!?]?/g) || [];
+    let copyCortoThreads = "";
+    for (const frase of frasesThreads) {
+      const candidata = [copyCortoThreads, frase.trim()].filter(Boolean).join(" ");
+      if (Array.from(candidata).length > maximoThreads) break;
+      copyCortoThreads = candidata;
+    }
+    if (!copyCortoThreads) {
+      copyCortoThreads = Array.from(copyBaseThreads)
+        .slice(0, maximoThreads - 1).join("")
+        .replace(/\s+\S*$/, "").trim() + "…";
+    }
+
     let copyEstado = descripcion
       .replace(/^[^\p{L}\p{N}]+/u, "")
       .trim();
@@ -118,8 +147,8 @@ export function generarContenidoRedesLocal(original) {
     }
 
 
-          const esThreadsVideo =
-            p.red === "threads" && p.tipo === "video";
+          const esThreadsPost =
+            p.red === "threads" && p.tipo === "post";
 
           const esGrupoPost =
             p.red === "facebook" &&
@@ -132,8 +161,8 @@ export function generarContenidoRedesLocal(original) {
               ? `${emoji} ${copyEstado}`
               : esReel
                 ? descripcion
-                : esThreadsVideo
-                  ? descripcion
+                : esThreadsPost
+                  ? `💡 ${copyCortoThreads} ✨`
                   : esThreadsTip
       
       ? `${emoji} ¿Sabías qué? ${nombre}: ${descripcion}`
@@ -148,7 +177,7 @@ export function generarContenidoRedesLocal(original) {
 
     const cta = esGrupoPost
       ? "¡Conocelo en nuestra tienda!"
-      : esEstadoWhatsapp
+      : esEstadoWhatsapp || esThreadsPost
         ? "¡Encontralo en nuestra tienda!"
         : p.red === "instagram"
           ? "Descubrí más sobre este producto en el enlace de nuestra bio."
@@ -179,8 +208,10 @@ export function generarContenidoRedesLocal(original) {
             ? []
             : [recurso];
     
-    const urlProducto =
-  p.red === "instagram" ? "" : url;
+    const urlProducto = p.red === "instagram" ? "" : url;
+    if (esEstadoWhatsapp && !/^https:\/\//i.test(urlProducto)) {
+      throw new Error(`WhatsApp Estado necesita una URL pública del producto: ${nombre}`);
+    }
     return {
       id: `${p.dia}-${p.red}-${p.tipo}-${p.variante || p.i}`,
       dia: p.dia, red: p.red, tipo: p.tipo, variante: p.variante || null, hora: p.hora,
@@ -191,7 +222,12 @@ export function generarContenidoRedesLocal(original) {
       video: p.recurso === "video" ? video : "", videoUrl: p.recurso === "video" ? video : "",
       vistaPreviaEnlace: Boolean(p.vistaPreviaEnlace),
       texto: copy, copy, cta, hashtags, urlProducto,
-      textoCompleto: [copy, cta, urlProducto, hashtags.join(" ")].filter(Boolean).join("\n\n"),
+      // En WhatsApp solo enviamos texto+URL: la portada la obtiene WhatsApp
+      // automáticamente de las etiquetas OG de la página del producto.
+      textoCompleto: (esEstadoWhatsapp
+        ? [copy, cta, urlProducto]
+        : [copy, cta, urlProducto, hashtags.join(" ")]
+      ).filter(Boolean).join("\n\n"),
     };
   });
   

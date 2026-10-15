@@ -404,14 +404,28 @@ const formatearHoraDiagnostico = (valor) => {
 };
 
 
-function VistaPreviaRedes({ recursos = [], tipo = "" }) {
+function VistaPreviaRedes({ recursos = [], tipo = "", urlProducto = "" }) {
   const urls = [...new Set(recursos.flat(Infinity).filter((v) => typeof v === "string" && /^(https?:\/\/|\/)/.test(v)))];
   const video = /video|reel|story|estado/.test(String(tipo).toLowerCase());
   const visibles = video ? urls.slice(0, 1) : /carrusel/.test(String(tipo).toLowerCase()) ? urls.slice(0, 3) : urls.slice(0, 1);
+  if (!visibles.length && tipo === "estado" && /^https:\/\//i.test(urlProducto)) {
+    return (
+      <a href={urlProducto} target="_blank" rel="noreferrer"
+        className="text-xs text-violet-700 underline break-all">
+        Enlace del producto (vista previa de WhatsApp)
+      </a>
+    );
+  }
   if (!visibles.length) return <p className="text-xs text-amber-700">Recurso multimedia no disponible</p>;
   return <div className="flex flex-wrap gap-2">{visibles.map((url, i) => video ?
     <video key={url} src={url} controls playsInline preload="metadata" className="h-32 w-24 rounded-lg bg-black object-contain" /> :
-    <img key={url} src={url} alt={`Vista previa ${i + 1}`} loading="lazy" className="h-32 w-24 rounded-lg border border-slate-200 object-cover" />
+    <img key={url} src={url} alt={`Vista previa ${i + 1}`} loading="lazy" 
+      
+      className={
+  tipo === "post"
+    ? "w-44 aspect-[10/7] rounded-lg border border-slate-200 bg-white object-contain"
+    : "h-32 w-24 rounded-lg border border-slate-200 object-cover"
+    } />
   )}</div>;
 }
 
@@ -1053,7 +1067,7 @@ if (esReel) {
     }
   }
 }
-              if (pieza.red === "threads" && pieza.tipo === "video") {
+              if (pieza.red === "threads" && pieza.tipo === "post") {
   const nombreSeguro = String(producto.nombre || "")
     .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -1191,188 +1205,167 @@ if (esGrupoPost) {
           })
         );
 
+        // Ajustes finales por formato. No modificar otras publicaciones.
         publicaciones = publicaciones.map((pieza) => {
-  
-if (pieza.red === "facebook" && pieza.tipo === "reel_pagina") {
-  const copy = String(pieza.copy || pieza.texto || "")
-    .replace(/https?:\/\/\S+/gi, "")
-    .replace(/#[\p{L}\p{N}_]+/gu, "")
-    .trim();
+          const esReelFacebook =
+            pieza.red === "facebook" && pieza.tipo === "reel_pagina";
+          const esThreadsPost =
+            pieza.red === "threads" && pieza.tipo === "post";
+          const esEstadoWhatsapp =
+            pieza.red === "whatsapp" && pieza.tipo === "estado";
 
-  const cta = "¡Encontralo en nuestra tienda!";
+          if (esReelFacebook) {
+            const copy = String(pieza.copy || pieza.texto || "")
+              .replace(/https?:\/\/\S+/gi, "")
+              .replace(/#[\p{L}\p{N}_]+/gu, "")
+              .trim();
+            const cta = "¡Encontralo en nuestra tienda!";
+            const urlProducto = String(pieza.urlProducto || "").trim();
+            const hashtags = Array.isArray(pieza.hashtags)
+              ? pieza.hashtags : [];
 
-  const urlProducto = String(
-    pieza.urlProducto || ""
-  ).trim();
+            return {
+              ...pieza,
+              copy,
+              texto: copy,
+              cta,
+              urlProducto,
+              textoCompleto: [
+                copy, cta, urlProducto, hashtags.join(" ")
+              ].filter(Boolean).join("\n\n"),
+            };
+          }
 
-  const hashtags = Array.isArray(pieza.hashtags)
-    ? pieza.hashtags
-    : [];
+          if (esEstadoWhatsapp) {
+            const copy = String(pieza.copy || pieza.texto || "")
+              .replace(/https?:\/\/\S+/gi, "")
+              .replace(/#[\p{L}\p{N}_]+/gu, "")
+              .trim();
+            const cta = "¡Encontralo en nuestra tienda!";
+            const urlProducto = String(
+              pieza.urlProducto || producto.urlProducto || producto.url || ""
+            ).trim();
+            if (!/^https:\/\//i.test(urlProducto)) {
+              throw new Error(
+                `Falta la URL pública del producto para WhatsApp Estado: ${producto.nombre}`
+              );
+            }
+            return {
+              ...pieza,
+              copy,
+              texto: copy,
+              cta,
+              urlProducto,
+              hashtags: [],
+              vistaPreviaEnlace: true,
+              textoCompleto: [copy, cta, urlProducto]
+                .filter(Boolean).join("\n\n"),
+            };
+          }
 
-  return {
-    ...pieza,
-    copy,
-    texto: copy,
-    cta,
-    urlProducto,
-    textoCompleto: [
-      copy,
-      cta,
-      urlProducto,
-      hashtags.join(" ")
-    ].filter(Boolean).join("\n\n")
-  };
-}
+          if (!esThreadsPost) return pieza;
 
-          if (pieza.red !== "threads" || pieza.tipo !== "video") {
+          const cta = "¡Encontralo en nuestra tienda!";
+          const urlProducto = String(
+            pieza.urlProducto || producto.urlProducto || producto.url || ""
+          ).trim();
+          if (!/^https:\/\//i.test(urlProducto)) {
+            throw new Error(
+              `Falta la URL pública del producto para Threads: ${producto.nombre}`
+            );
+          }
 
-    const copy = String(pieza.copy || pieza.texto || "")
-      .replace(/https?:\/\/\S+/gi, "")
-      .replace(/#[\p{L}\p{N}_]+/gu, "")
-      .trim();
-    const cta = "¡Encontralo en nuestra tienda!"
-    const hashtags = Array.isArray(pieza.hashtags) ? pieza.hashtags : [];
+          // Conservar etiquetas IA válidas y completar hasta cinco.
+          const candidatos = [
+            ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
+            ...String(producto.nombre || "")
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .split(/[^a-zA-Z0-9]+/)
+              .filter((palabra) => palabra.length >= 4),
+            "TiendaOnline", "CompraOnline", "ProductosOnline",
+            "Novedades", "CatalogoOnline", "OfertasOnline",
+          ];
+          const hashtags = [];
+          const vistos = new Set();
+          for (const candidato of candidatos) {
+            for (const elemento of String(candidato).split(/\s+/)) {
+              const limpio = elemento
+                .replace(/^#+/, "")
+                .replace(/[^\p{L}\p{N}_]/gu, "");
+              const clave = limpio.toLowerCase();
+              if (limpio.length < 3 || vistos.has(clave)) continue;
+              vistos.add(clave);
+              hashtags.push(`#${limpio}`);
+              if (hashtags.length === 5) break;
+            }
+            if (hashtags.length === 5) break;
+          }
 
-    return {
-      ...pieza,
-      copy,
-      texto: copy,
-      cta,
-      urlProducto: "",
-      textoCompleto: [copy, cta, hashtags.join(" ")]
-        .filter(Boolean)
-        .join("\n\n"),
-    };
-  }
+          const nombreSeguro = String(producto.nombre || "")
+            .trim()
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const original = String(pieza.copy || pieza.texto || "")
+            .replace(/https?:\/\/\S+/gi, "")
+            .replace(/#[\p{L}\p{N}_]+/gu, "")
+            .replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
+            .replace(/\s+/g, " ")
+            .trim();
+          const sinNombre = nombreSeguro
+            ? original.replace(
+                new RegExp(
+                  `^[^\\p{L}\\p{N}]*${nombreSeguro}\\s*[.:;!?–-]*\\s*`,
+                  "iu"
+                ),
+                ""
+              ).trim()
+            : original;
 
-  if (pieza.red !== "threads" || pieza.tipo !== "video") {
-    return pieza;
-  }
+          const sufijo = [cta, urlProducto, hashtags.join(" ")]
+            .filter(Boolean).join("\n\n");
+          const maximo = Math.max(
+            0, Math.min(195, 500 - Array.from(sufijo).length - 14)
+          );
+          const recortado = Array.from(sinNombre).length > maximo;
+          const fragmento = recortado
+            ? Array.from(sinNombre).slice(0, maximo).join("")
+                .replace(/\s+\S*$/, "").trim()
+            : sinNombre;
+          const ultimaFrase = fragmento.lastIndexOf(".");
+          const acortado = recortado && ultimaFrase > maximo * 0.45
+            ? fragmento.slice(0, ultimaFrase + 1).trim()
+            : fragmento;
+          const copy = `💡 ${acortado}${
+            recortado && !/[.!?]$/.test(acortado) ? "…" : ""
+          } ✨`;
 
-  const nombreSeguro = String(producto.nombre || "")
-    .trim()
-    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          // Fuente real del producto: portada horizontal 900 × 630.
+          const imagen = String(
+            producto.imagenes?.portadaFacebook || pieza.imagen || ""
+          ).trim();
+          if (!/^https:\/\//i.test(imagen)) {
+            throw new Error(
+              `Falta la imagen Facebook/Threads del producto ${producto.nombre}`
+            );
+          }
 
-  const copyOriginal = String(pieza.copy || pieza.texto || "").trim();
-
-  const copy = nombreSeguro
-    ? copyOriginal.replace(
-        new RegExp(
-          `^[^\\p{L}\\p{N}]*${nombreSeguro}\\s*[.:;!?–-]*\\s*`,
-          "iu"
-        ),
-        ""
-      ).trim()
-    : copyOriginal;
-
-  const textoCompleto = [
-    copy,
-    pieza.cta,
-    pieza.urlProducto,
-    ...(Array.isArray(pieza.hashtags)
-      ? [pieza.hashtags.join(" ")]
-      : [])
-  ].filter(Boolean).join("\n\n");
-
-  return {
-    ...pieza,
-    copy,
-    texto: copy,
-    textoCompleto
-  };
-});
-
-        
-publicaciones = publicaciones.map((pieza) => {
-  if (pieza.red !== "threads" || pieza.tipo !== "video") {
-    return pieza;
-  }
-
-  const cta = "¡Encontralo en nuestra tienda!";
-  const urlProducto = String(pieza.urlProducto || "").trim();
-
-  const candidatos = [
-    ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
-    ...String(producto.nombre || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .split(/[^a-zA-Z0-9]+/)
-      .filter((palabra) => palabra.length >= 4),
-    "TiendaOnline",
-    "CompraOnline",
-    "ProductosOnline"
-  ];
-
-  const hashtags = [...new Set(
-    candidatos
-      .flatMap((valor) => String(valor).split(/\s+/))
-      .map((valor) =>
-        "#" + valor.replace(/^#+/, "").replace(/[^\p{L}\p{N}_]/gu, "")
-      )
-      .filter((valor) => valor.length > 1)
-  )].slice(0, 5);
-
-  const original = String(pieza.copy || pieza.texto || "")
-    .replace(/https?:\/\/\S+/gi, "")
-    .replace(/#[\p{L}\p{N}_]+/gu, "")
-    .replace(/\p{Extended_Pictographic}/gu, "")
-    .replace(/\uFE0F/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const fijo = [
-    cta,
-    urlProducto,
-    hashtags.join(" ")
-  ].join("\n\n");
-
-  const maximo = Math.max(
-    0,
-    Math.min(220, 500 - Array.from(fijo).length - 8)
-  );
-
-  const corto = Array.from(original)
-    .slice(0, maximo)
-    .join("")
-    .replace(/\s+\S*$/, "")
-    .trim();
-
-  const copy = `💡✨ ${corto}${
-    Array.from(original).length > maximo ? "…" : ""
-  }`;
-
-  const imagen = String(
-    producto.imagenes?.portadaFacebook || pieza.imagen || ""
-  ).trim();
-
-  if (!/^https:\/\//i.test(imagen)) {
-    throw new Error(
-      `Falta la imagen Facebook/Threads del producto ${producto.nombre}`
-    );
-  }
-
-  return {
-    ...pieza,
-    copy,
-    texto: copy,
-    cta,
-    hashtags,
-    urlProducto,
-    imagen,
-    imagenes: [imagen],
-    recurso: imagen,
-    recursos: [imagen],
-    video: "",
-    videoUrl: "",
-    textoCompleto: [
-      copy,
-      cta,
-      urlProducto,
-      hashtags.join(" ")
-    ].filter(Boolean).join("\n\n")
-  };
-});
-        
+          return {
+            ...pieza,
+            copy,
+            texto: copy,
+            cta,
+            hashtags,
+            urlProducto,
+            imagen,
+            imagenes: [imagen],
+            recurso: imagen,
+            recursos: [imagen],
+            video: "",
+            videoUrl: "",
+            textoCompleto: [copy, cta, urlProducto, hashtags.join(" ")]
+              .filter(Boolean).join("\n\n"),
+          };
+        });
 
         // Sincronizamos todas las vistas con el calendario.
         contenido.calendario = publicaciones;
@@ -2569,6 +2562,7 @@ const urlProducto = productoId
                                 pieza.imagen,
                               ]}
                               tipo={pieza.variante || pieza.tipo}
+                              urlProducto={pieza.urlProducto || ""}
                             />
                             {pieza.vistaPreviaEnlace && pieza.urlProducto && (
                               <a href={pieza.urlProducto} target="_blank" rel="noreferrer"
@@ -2762,9 +2756,10 @@ const urlProducto = productoId
                 const calendario = Array.isArray(item.calendario)
                   ? item.calendario.filter(
                       (pieza) => !(
-                        pieza.red === "facebook" &&
-                        (pieza.tipo === "grupo_post" ||
-                          (pieza.tipo === "grupo" && pieza.variante === "post"))
+                        (pieza.red === "whatsapp" && pieza.tipo === "whatsapp_grupo") ||
+                        (pieza.red === "facebook" &&
+                          (pieza.tipo === "grupo_post" ||
+                            (pieza.tipo === "grupo" && pieza.variante === "post")))
                       )
                     )
                   : [];
@@ -2858,22 +2853,52 @@ const urlProducto = productoId
                                     onClick={async () => {
                                       const p = pieza.publicacion || {};
 
-                                      const texto = String(
-                                        p.textoCompleto || p.texto || ""
-                                      ).trim();
-
                                       if (pieza.red === "whatsapp") {
+                                        const producto = productosDigitales.find(
+                                          (p) => String(p.id) === String(item.productoId)
+                                        );
+                                        const urlProducto = String(
+                                          p.urlProducto ||
+                                          producto?.urlProducto ||
+                                          producto?.url ||
+                                          ""
+                                        ).trim();
+
+                                        if (!/^https:\/\//i.test(urlProducto)) {
+                                          alert("Falta la URL pública del producto para compartir en WhatsApp.");
+                                          return;
+                                        }
+
+                                        const cta = String(
+                                          p.cta || "¡Encontralo en nuestra tienda!"
+                                        ).trim();
+                                        const copy = String(
+                                          p.copy || p.texto || ""
+                                        )
+                                          .replace(/https?:\/\/\S+/gi, "")
+                                          .replace(/#[\p{L}\p{N}_]+/gu, "")
+                                          .trim();
+                                        const copySinCTA = copy
+                                          .replace(/¡Encontralo en nuestra tienda!/gi, "")
+                                          .trim();
+                                        const textoWhatsapp = [
+                                          copySinCTA, cta, urlProducto
+                                        ].filter(Boolean).join("\n\n");
+
                                         try {
-                                          await navigator.clipboard.writeText(texto);
+                                          await navigator.clipboard.writeText(textoWhatsapp);
                                         } catch (error) {
-                                          console.error("No se pudo copiar:", error);
+                                          console.warn("No se pudo copiar; se abrirá WhatsApp igualmente:", error);
                                         }
 
                                         window.location.href =
-                                          `https://wa.me/?text=${encodeURIComponent(texto)}`;
-
+                                          `https://wa.me/?text=${encodeURIComponent(textoWhatsapp)}`;
                                         return;
                                       }
+
+                                      const texto = String(
+                                        p.textoCompleto || p.texto || ""
+                                      ).trim();
 
                                       try {
                                         await navigator.clipboard.writeText(texto);
@@ -2947,6 +2972,7 @@ const urlProducto = productoId
                                       pieza.publicacion?.imagen,
                                     ]}
                                     tipo={pieza.tipo}
+                                    urlProducto={pieza.publicacion?.urlProducto || ""}
                                   />
 
                                   {pieza.estado === "publicado" ? (

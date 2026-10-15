@@ -341,12 +341,26 @@ async function publicarThreads(req, res) {
   const cuerpo = url ? textoOriginal.replace(url, "").trim() : textoOriginal;
   const final = url ? `\n\n${url}` : "";
 
+  // Para posts con imagen, conservar íntegros CTA, URL y hashtags.
+  // La API Threads admite 500 caracteres como máximo.
+  if (imagenUrl && !/^https:\/\//i.test(imagenUrl)) {
+    return res.status(400).json({
+      ok: false,
+      error: "Threads Post requiere una imagen pública HTTPS.",
+    });
+  }
+  if (imagenUrl && Array.from(textoOriginal).length > 500) {
+    return res.status(400).json({
+      ok: false,
+      error: "Threads Post supera los 500 caracteres. Acortá el copy sin eliminar la URL ni los hashtags.",
+    });
+  }
   const texto = imagenUrl
-  ? textoOriginal
-  : Array.from(cuerpo)
-      .slice(0, 500 - Array.from(final).length)
-      .join("")
-      .trimEnd() + final;
+    ? textoOriginal
+    : Array.from(cuerpo)
+        .slice(0, 500 - Array.from(final).length)
+        .join("")
+        .trimEnd() + final;
 
   const productoId =
     typeof req.body?.productoId === "string"
@@ -1984,12 +1998,20 @@ const crearCalendarioInicial = (
         indice: posicion,
         publicacion: {
           ...pieza,
-          texto: pieza.textoCompleto || pieza.texto || "",
+          texto: (() => {
+            const base = String(pieza.textoCompleto || pieza.texto || "").trim();
+            if (pieza.red !== "whatsapp" || pieza.tipo !== "estado") return base;
+            const url = String(pieza.urlProducto || "").trim();
+            return url && !base.includes(url) ? `${base}\n\n${url}` : base;
+          })(),
           imagenes: pieza.imagenes || (pieza.imagen ? [pieza.imagen] : []),
           video: pieza.video || "",
         },
         estado: manual ? "pendiente_manual" :
-          (["instagram:reel", "instagram:carrusel", "threads:video", "threads:sabias_que", "threads:carrusel", "facebook:reel_pagina"].includes(`${pieza.red}:${pieza.tipo}`)
+          (["instagram:reel", "instagram:carrusel", 
+            "threads:video",
+            "threads:post",
+            "threads:sabias_que", "threads:carrusel", "facebook:reel_pagina"].includes(`${pieza.red}:${pieza.tipo}`)
             ? "programado" : "pendiente_integracion"),
         publicacionAutomatica: !manual,
         zonaHoraria: ZONA_HORARIA_RED,
@@ -2351,6 +2373,17 @@ async function ejecutarPublicacionPieza({
       );
     }
 
+    let imagenUrl = "";
+    if (tipo === "post") {
+      // Recuperamos la portada REAL del producto: no usar imagen Feed 4:5.
+      const dbProducto = await conectarMongoDB();
+      const producto = await dbProducto.collection("productos").findOne({ id: productoId });
+      imagenUrl = String(producto?.imagenes?.portadaFacebook || "").trim();
+      if (!/^https:\/\//i.test(imagenUrl)) {
+        throw new Error("Threads Post necesita la portada Facebook/Threads HTTPS del producto (900 × 630).");
+      }
+    }
+
     let resultadoThreads = null;
     let estadoHttp = 200;
 
@@ -2371,6 +2404,7 @@ async function ejecutarPublicacionPieza({
         body: {
           texto,
           productoId,
+          ...(tipo === "post" ? { imagenUrl } : {}),
         },
       },
       respuestaInterna
@@ -2558,6 +2592,7 @@ async function publicarProgramado(
   "instagram:reel",
   "instagram:carrusel",
   "threads:video",
+    "threads:post",
   "threads:sabias_que",
   "threads:carrusel",
   "facebook:reel_pagina",
