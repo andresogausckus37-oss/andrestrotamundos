@@ -182,6 +182,127 @@ async function ejecutarHandlerGenerico(request, env, handler) {
   );
 }
 
+// =========================================================
+// FACEBOOK STORY: imagen original y JPEG final desde React/Canvas.
+// Ambas rutas requieren la sesión de Admin. Sin Cloudflare Images.
+// =========================================================
+const URL_R2_STORIES =
+  "https://pub-60d59fb304eb48d384739f40d6f48d4f.r2.dev";
+
+function respuestaStoryError(mensaje, estado = 400) {
+  return Response.json({ ok: false, error: mensaje }, { status: estado });
+}
+
+async function obtenerProductoStory(productoId, env) {
+  const id = String(productoId || "").trim();
+  if (!id || id.length > 160) return null;
+  sincronizarEntorno(env);
+  const { conectarMongoDB } = await import("./lib/mongodb.js");
+  const db = await conectarMongoDB();
+  return db.collection("productos").findOne({ id });
+}
+
+async function imagenOriginalStory(request, env) {
+  if (!adminAutorizadoWorker(request, env)) {
+    return respuestaStoryError("No autorizado", 401);
+  }
+  if (request.method !== "GET") {
+    return respuestaStoryError("Método no permitido", 405);
+  }
+  const id = new URL(request.url).searchParams.get("productoId");
+  const producto = await obtenerProductoStory(id, env);
+  const original = String(producto?.imagenes?.redes?.vertical?.presentacion || "").trim();
+  if (!/^https:\/\//i.test(original)) {
+    return respuestaStoryError("No se encontró la imagen vertical original del producto.", 404);
+  }
+
+  // La URL se lee solamente de MongoDB: el cliente no puede convertir
+  // este endpoint autenticado en un proxy de URLs arbitrarias.
+  const prefijo = `${URL_R2_STORIES}/`;
+  let bytes;
+  let tipo;
+  if (original.startsWith(prefijo) && env.PRODUCTOS_R2?.get) {
+    const clave = decodeURIComponent(new URL(original).pathname.slice(1));
+    if (!clave || clave.includes("..")) return respuestaStoryError("Clave R2 no válida", 400);
+    const objeto = await env.PRODUCTOS_R2.get(clave);
+    if (!objeto) return respuestaStoryError("La imagen original no existe en R2", 404);
+    tipo = objeto.httpMetadata?.contentType || "image/jpeg";
+    bytes = await objeto.arrayBuffer();
+  } else {
+    const url = new URL(original);
+    if (url.protocol !== "https:" || url.username || url.password) {
+      return respuestaStoryError("URL de imagen no válida", 400);
+    }
+    const respuesta = await fetch(url.toString(), { redirect: "error" });
+    if (!respuesta.ok) return respuestaStoryError(`Error descargando la imagen original (${respuesta.status})`, 502);
+    tipo = respuesta.headers.get("content-type") || "";
+    if (!/^image\/(png|jpeg|webp)(?:;|$)/i.test(tipo)) {
+      return respuestaStoryError("El recurso original no es JPG, PNG o WebP", 422);
+    }
+    bytes = await respuesta.arrayBuffer();
+  }
+  if (bytes.byteLength < 100 || bytes.byteLength > 12 * 1024 * 1024) {
+    return respuestaStoryError("La imagen original debe pesar menos de 12 MB", 413);
+  }
+  if (!/^image\/(png|jpeg|webp)/i.test(tipo)) {
+    return respuestaStoryError("Formato original no admitido", 422);
+  }
+  return new Response(bytes, {
+    status: 200,
+    headers: {
+      "Content-Type": tipo,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+async function subirImagenStoryCanvas(request, env) {
+  if (!adminAutorizadoWorker(request, env)) {
+    return respuestaStoryError("No autorizado", 401);
+  }
+  if (request.method !== "POST") return respuestaStoryError("Método no permitido", 405);
+  const id = String(new URL(request.url).searchParams.get("productoId") || "").trim();
+  if (!id || id.length > 160 || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+    return respuestaStoryError("ID de producto no válido", 400);
+  }
+  if (!env.PRODUCTOS_R2?.put || !env.PRODUCTOS_R2?.head) {
+    return respuestaStoryError("Falta el binding PRODUCTOS_R2", 503);
+  }
+  const producto = await obtenerProductoStory(id, env);
+  if (!producto) return respuestaStoryError("El producto no existe", 404);
+  if (!String(producto.imagenes?.redes?.vertical?.presentacion || "").startsWith("https://")) {
+    return respuestaStoryError("El producto no tiene una imagen vertical pública", 422);
+  }
+  if (!/^image\/jpeg(?:;|$)/i.test(request.headers.get("content-type") || "")) {
+    return respuestaStoryError("Se requiere un JPEG generado por Canvas", 415);
+  }
+  const longitud = Number(request.headers.get("content-length") || 0);
+  if (longitud > 8 * 1024 * 1024) return respuestaStoryError("JPEG demasiado grande", 413);
+  const bytes = await request.arrayBuffer();
+  if (bytes.byteLength < 100 || bytes.byteLength > 8 * 1024 * 1024) {
+    return respuestaStoryError("JPEG vacío o demasiado grande", 413);
+  }
+  const firma = new Uint8Array(bytes);
+  if (firma[0] !== 0xff || firma[1] !== 0xd8 || firma[2] !== 0xff) {
+    return respuestaStoryError("El archivo no es un JPEG válido", 415);
+  }
+  const hash = crypto.createHash("sha256").update(Buffer.from(bytes)).digest("hex");
+  const clave = `redes/facebook-stories/${id}/canvas-v1-${hash.slice(0, 24)}.jpg`;
+  if (!(await env.PRODUCTOS_R2.head(clave))) {
+    await env.PRODUCTOS_R2.put(clave, bytes, {
+      httpMetadata: {
+        contentType: "image/jpeg",
+        cacheControl: "public, max-age=31536000, immutable",
+      },
+    });
+  }
+  return Response.json({
+    ok: true,
+    imagenUrl: `${URL_R2_STORIES}/${clave}`,
+  }, { headers: { "Cache-Control": "no-store" } });
+}
+
 async function pruebaMongoDB(env) {
   sincronizarEntorno(env);
   if (!env.MONGODB_URI) return Response.json({ ok:false, error:"MONGODB_URI no está configurado" }, { status:500 });
@@ -271,6 +392,22 @@ if (url.pathname === "/api/diagnostico-facebook") {
   });
 }
     
+
+    if (url.pathname === "/api/admin/story-imagen-origen") {
+      try { return await imagenOriginalStory(request, env); }
+      catch (error) {
+        console.error("Error leyendo imagen original de Story:", error);
+        return respuestaStoryError(error?.message || "No se pudo leer la imagen original", 500);
+      }
+    }
+
+    if (url.pathname === "/api/admin/story-imagen-cta") {
+      try { return await subirImagenStoryCanvas(request, env); }
+      catch (error) {
+        console.error("Error subiendo imagen Canvas de Story:", error);
+        return respuestaStoryError(error?.message || "No se pudo guardar la imagen Story", 500);
+      }
+    }
 
     if (url.pathname === "/api/ia/copys") {
   if (

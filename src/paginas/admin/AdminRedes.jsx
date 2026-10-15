@@ -431,6 +431,133 @@ function VistaPreviaRedes({ recursos = [], tipo = "", urlProducto = "" }) {
   )}</div>;
 }
 
+// Facebook Story: el texto se dibuja en píxeles, no solo como overlay React.
+// Imagen original en MongoDB; JPEG final en R2. No utiliza Cloudflare IMAGES.
+async function prepararStoryFacebookCanvas(contenido, productoId) {
+  if (!Array.isArray(contenido?.calendario)) return contenido;
+  const indices = contenido.calendario
+    .map((pieza, indice) => ({ pieza, indice }))
+    .filter(({ pieza }) => pieza.red === "facebook" && pieza.tipo === "story_pagina");
+  if (!indices.length) return contenido;
+
+  const respuestaOriginal = await fetch(
+    `/api/admin/story-imagen-origen?productoId=${encodeURIComponent(productoId)}`,
+    { credentials: "include", cache: "no-store" }
+  );
+  if (!respuestaOriginal.ok) {
+    const error = await respuestaOriginal.json().catch(() => ({}));
+    throw new Error(error.error || "No se pudo recuperar la imagen 9:16 de la Story.");
+  }
+  const blobOriginal = await respuestaOriginal.blob();
+  const blobUrl = URL.createObjectURL(blobOriginal);
+  let imagen;
+  try {
+    imagen = await new Promise((resolve, reject) => {
+      const elemento = new window.Image();
+      elemento.onload = () => resolve(elemento);
+      elemento.onerror = () => reject(new Error("No se pudo abrir la imagen original en Canvas."));
+      elemento.src = blobUrl;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1920;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) throw new Error("El navegador no dispone de Canvas 2D.");
+
+    ctx.fillStyle = "#101827";
+    ctx.fillRect(0, 0, 1080, 1920);
+    const escala = Math.min(1080 / imagen.naturalWidth, 1920 / imagen.naturalHeight);
+    const ancho = imagen.naturalWidth * escala;
+    const alto = imagen.naturalHeight * escala;
+    ctx.drawImage(imagen, (1080 - ancho) / 2, (1920 - alto) / 2, ancho, alto);
+
+    // Panel por encima de la zona inferior reservada para controles de Facebook.
+    const x = 58, y = 1415, w = 964, h = 287, r = 38;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(13, 20, 35, 0.93)";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.32)";
+    ctx.stroke();
+    ctx.restore();
+
+    const primera = String(indices[0].pieza.textoStory?.linea1 || "¡Encontralo en nuestra tienda!").trim();
+    const segunda = String(indices[0].pieza.textoStory?.linea2 || "Visitá nuestra página").trim();
+    const pintarTexto = (valor, posicionY, color, tamanoMaximo) => {
+      let tamano = tamanoMaximo;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `700 ${tamano}px Arial, sans-serif`;
+      while (ctx.measureText(valor).width > 875 && tamano > 30) {
+        tamano -= 2;
+        ctx.font = `700 ${tamano}px Arial, sans-serif`;
+      }
+      if (ctx.measureText(valor).width > 875) {
+        throw new Error("El CTA de la Story es demasiado largo para la imagen.");
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(valor, 540, posicionY);
+    };
+    pintarTexto(primera, 1512, "#FFFFFF", 54);
+    pintarTexto(segunda, 1604, "#FFE59A", 48);
+
+    const jpg = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (resultado) => resultado ? resolve(resultado) : reject(new Error("Canvas no generó el JPEG.")),
+        "image/jpeg", 0.9
+      );
+    });
+    const respuesta = await fetch(
+      `/api/admin/story-imagen-cta?productoId=${encodeURIComponent(productoId)}`,
+      { method: "POST", credentials: "include", headers: { "Content-Type": "image/jpeg" }, body: jpg }
+    );
+    const datos = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok || !datos.ok || !/^https:\/\//i.test(datos.imagenUrl || "")) {
+      throw new Error(datos.error || "No se pudo guardar la Story con CTA en R2.");
+    }
+    const imagenFinal = datos.imagenUrl;
+    const calendario = contenido.calendario.map((pieza) => {
+      if (pieza.red !== "facebook" || pieza.tipo !== "story_pagina") return pieza;
+      const original = String(
+        pieza.imagenOriginal || pieza.imagenesVerticales?.[0] || pieza.imagenes?.[0] || pieza.imagen || ""
+      ).trim();
+      return {
+        ...pieza,
+        copy: "", texto: "", cta: "", hashtags: [], urlProducto: "", textoCompleto: "",
+        ctaVisual: true,
+        ctaVisualGenerado: true,
+        imagenOriginal: original,
+        imagen: imagenFinal,
+        imagenes: [imagenFinal],
+        recurso: imagenFinal,
+        recursos: [imagenFinal],
+        textoStory: { linea1: primera, linea2: segunda },
+      };
+    });
+    return {
+      ...contenido,
+      calendario,
+      facebook: {
+        ...contenido.facebook,
+        publicaciones: calendario.filter((p) => p.red === "facebook"),
+      },
+    };
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
 export default function AdminRedes() {
   const [
     productosDigitales,
@@ -883,8 +1010,9 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
     setRegenerandoId(item.productoId);
     setMensajeCalendario("");
 
-    const contenidoNuevo =
-      generarContenidoRedesLocal(producto);
+    const contenidoNuevo = await prepararStoryFacebookCanvas(
+      generarContenidoRedesLocal(producto), item.productoId
+    );
 
     const respuesta = await fetch(
       "/api/contenido-redes?accion=regenerar-programado",
@@ -1608,6 +1736,12 @@ const guardarBorrador = async (
       })
     );
 
+    // La imagen con CTA se genera ANTES de guardar el borrador.
+    const contenidoPreparado = await prepararStoryFacebookCanvas(
+      item.contenido,
+      item.productoId
+    );
+
     const respuesta =
       await fetch(
         "/api/contenido-redes?accion=guardar-borrador",
@@ -1627,7 +1761,7 @@ const guardarBorrador = async (
               item.nombre,
 
             contenido:
-              item.contenido,
+              contenidoPreparado,
 
             origen:
               item.origen ||
@@ -1646,12 +1780,19 @@ const guardarBorrador = async (
       );
           }
 
+    // La vista previa ya muestra el JPEG real que se publicará.
+    setContenidos((actuales) => actuales.map((actual) =>
+      actual.productoId === item.productoId
+        ? { ...actual, contenido: contenidoPreparado }
+        : actual
+    ));
+
     setMensajesGuardado(
       (actuales) => ({
         ...actuales,
 
         [item.productoId]:
-          "Borrador guardado correctamente.",
+          "Borrador guardado con imagen Facebook Story y CTA.",
       })
     );
   } catch (error) {

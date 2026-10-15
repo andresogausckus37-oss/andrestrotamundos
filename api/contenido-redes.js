@@ -1603,144 +1603,58 @@ if (!videoGuardado || !/^https:\/\//i.test(videoGuardado)) {
 }
 
 // =========================================================
-// FACEBOOK STORY: CTA VISUAL (Cloudflare Images + R2)
-// Se genera AL GUARDAR EL BORRADOR, para revisarlo antes.
-// Conserva la imagen original y reutiliza la copia en R2.
+// FACEBOOK STORY: CTA preparado en React/Canvas y almacenado en R2.
+// La API valida el JPEG existente; no llama a Cloudflare Images.
 // =========================================================
-
-const FRANJA_STORY_FACEBOOK_BASE64 = "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";
 const TEXTO_STORY_FACEBOOK_1 = "¡Encontralo en nuestra tienda!";
 const TEXTO_STORY_FACEBOOK_2 = "Visitá nuestra página";
 
-async function componerStoryFacebook({
-  imagenOriginal,
-  productoId,
-  linea1,
-  linea2,
-  env,
-}) {
-  const imagenes = env?.IMAGES;
-  const bucket = env?.PRODUCTOS_R2;
-  const basePublica = String(env?.PRODUCTOS_R2_URL || "").replace(/\/$/, "");
-
-  if (!imagenes?.input || !imagenes?.text || !bucket?.put || !basePublica) {
-    throw new Error(
-      "Para crear la Story con CTA faltan los bindings IMAGES / PRODUCTOS_R2 o PRODUCTOS_R2_URL. Revisá worker.js y wrangler.jsonc."
-    );
-  }
-
-  if (!/^https:\/\//i.test(imagenOriginal)) {
-    throw new Error("Facebook Story necesita la imagen vertical original por HTTPS.");
-  }
-
-  const productoSeguro = String(productoId)
-    .replace(/[^a-zA-Z0-9_-]/g, "-")
-    .slice(0, 90) || "producto";
-  const huella = crypto.createHash("sha256")
-    .update(JSON.stringify([imagenOriginal, linea1, linea2, "franja-v1"]))
-    .digest("hex")
-    .slice(0, 24);
-  const clave = `redes/facebook-stories/${productoSeguro}/${huella}.jpg`;
-  const urlGenerada = `${basePublica}/${clave}`;
-
-  // Una sola transformación para cada combinación de foto + CTA.
-  if (await bucket.head(clave)) {
-    return urlGenerada;
-  }
-
-  const respuestaOriginal = await fetch(imagenOriginal);
-  if (!respuestaOriginal.ok) {
-    throw new Error(`No se pudo descargar la imagen 9:16 de la Story (${respuestaOriginal.status}).`);
-  }
-  const tipo = respuestaOriginal.headers.get("content-type") || "";
-  if (!tipo.startsWith("image/")) {
-    throw new Error("La URL original de la Story no devuelve una imagen.");
-  }
-  const bytes = await respuestaOriginal.arrayBuffer();
-  if (bytes.byteLength === 0 || bytes.byteLength > 20 * 1024 * 1024) {
-    throw new Error("La imagen original de Facebook Story debe pesar menos de 20 MB.");
-  }
-
-  // 1080x1920, sin recorte: fit=pad conserva todos los bordes.
-  const panel = Uint8Array.from(
-    Buffer.from(FRANJA_STORY_FACEBOOK_BASE64, "base64")
-  );
-  const izquierdaLinea = (cadena, fuente) => Math.max(
-    80,
-    Math.round((1080 - Array.from(cadena).length * fuente * 0.54) / 2)
-  );
-
-  const salida = await imagenes
-    .input(new Response(bytes).body)
-    .transform({ width: 1080, height: 1920, fit: "pad", background: "#111827" })
-    .draw(imagenes.input(new Response(panel).body), { left: 60, bottom: 280 })
-    .draw(imagenes.text(linea1, { color: "#FFFFFF", size: 50 }), {
-      left: izquierdaLinea(linea1, 50), bottom: 455,
-    })
-    .draw(imagenes.text(linea2, { color: "#FFE59A", size: 42 }), {
-      left: izquierdaLinea(linea2, 42), bottom: 355,
-    })
-    .output({ format: "image/jpeg", quality: 90 });
-
-  const respuestaFinal = salida.response();
-  if (!respuestaFinal.ok) {
-    throw new Error("Cloudflare Images no pudo componer la Story con CTA.");
-  }
-  await bucket.put(clave, await respuestaFinal.arrayBuffer(), {
-    httpMetadata: {
-      contentType: "image/jpeg",
-      cacheControl: "public, max-age=31536000, immutable",
-    },
-  });
-
-  return urlGenerada;
-}
-
 async function prepararStoriesVisuales(contenido, productoId, env) {
   if (!Array.isArray(contenido?.calendario)) return contenido;
+  const base = String(env?.PRODUCTOS_R2_URL || "").replace(/\/$/, "");
+  const bucket = env?.PRODUCTOS_R2;
+  const idSeguro = String(productoId || "").trim();
+  const prefijo = `redes/facebook-stories/${idSeguro}/canvas-v1-`;
 
-  const calendario = await Promise.all(
-    contenido.calendario.map(async (pieza) => {
-      if (pieza?.red !== "facebook" || pieza?.tipo !== "story_pagina") {
-        return pieza;
-      }
+  const calendario = await Promise.all(contenido.calendario.map(async (pieza) => {
+    if (pieza?.red !== "facebook" || pieza?.tipo !== "story_pagina") return pieza;
 
-      // Siempre usamos la imagen 9:16, nunca una miniatura Feed 4:5.
-      const original = String(
-        pieza.imagenOriginal ||
-        pieza.imagenesVerticales?.[0] ||
-        pieza.imagenes?.[0] ||
-        pieza.imagen || ""
-      ).trim();
-      const linea1 = String(pieza.textoStory?.linea1 || TEXTO_STORY_FACEBOOK_1).trim();
-      const linea2 = String(pieza.textoStory?.linea2 || TEXTO_STORY_FACEBOOK_2).trim();
-
-      const imagen = await componerStoryFacebook({
-        imagenOriginal: original, productoId, linea1, linea2, env,
-      });
-
-      return {
-        ...pieza,
-        copy: "", texto: "", cta: "", hashtags: [],
-        urlProducto: "", textoCompleto: "",
-        imagenOriginal: original,
-        imagen,
-        imagenes: [imagen],
-        recurso: imagen,
-        recursos: [imagen],
-        ctaVisual: true,
-        ctaVisualGenerado: true,
-        textoStory: { linea1, linea2 },
-      };
-    })
-  );
-
+    if (!pieza.ctaVisualGenerado || !/^https:\/\//i.test(pieza.imagen || "")) {
+      throw new Error("La Story no tiene imagen con CTA. Guardá desde el Admin actualizado.");
+    }
+    if (!bucket?.head || !base) {
+      throw new Error("Falta PRODUCTOS_R2 o su URL pública.");
+    }
+    const imagen = String(pieza.imagen).trim();
+    if (!imagen.startsWith(`${base}/${prefijo}`)) {
+      throw new Error("La imagen de Story no pertenece a este producto en R2.");
+    }
+    const clave = imagen.slice(base.length + 1);
+    if (!/^redes\/facebook-stories\/[a-zA-Z0-9_-]+\/canvas-v1-[a-f0-9]{24}\.jpg$/.test(clave)) {
+      throw new Error("La ruta de la Story con CTA es inválida.");
+    }
+    if (!(await bucket.head(clave))) {
+      throw new Error("La imagen final de Story todavía no existe en R2.");
+    }
+    const original = String(pieza.imagenOriginal || pieza.imagenesVerticales?.[0] || "").trim();
+    return {
+      ...pieza,
+      copy: "", texto: "", cta: "", hashtags: [], urlProducto: "", textoCompleto: "",
+      ctaVisual: true, ctaVisualGenerado: true,
+      imagenOriginal: original,
+      imagen, imagenes: [imagen], recurso: imagen, recursos: [imagen],
+      textoStory: {
+        linea1: String(pieza.textoStory?.linea1 || TEXTO_STORY_FACEBOOK_1).trim(),
+        linea2: String(pieza.textoStory?.linea2 || TEXTO_STORY_FACEBOOK_2).trim(),
+      },
+    };
+  }));
   return {
     ...contenido,
     calendario,
     facebook: {
       ...(contenido.facebook || {}),
-      publicaciones: calendario.filter((pieza) => pieza.red === "facebook"),
+      publicaciones: calendario.filter((p) => p.red === "facebook"),
     },
   };
 }
