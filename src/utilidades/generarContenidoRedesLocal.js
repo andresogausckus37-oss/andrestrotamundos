@@ -94,6 +94,51 @@ function datoConfiable(producto) {
     .filter(Boolean);
 }
 
+// Threads ¿Sabías qué?: usar solo características y usos del producto.
+function crearTipThreads(datos) {
+  const frases = datos.flatMap((valor) =>
+    sinEtiquetas(valor).split(/[.!?](?:\s+|$)/).map((frase) => frase.trim())
+  ).filter(Boolean);
+
+  const caracteristica = frases.find((frase) =>
+    /^(cuenta con|incluye|tiene|ofrece|permite|incorpora)\b/i.test(frase)
+  );
+  const uso = frases.find((frase) =>
+    /^(ideal para|sirve para|se usa para|se puede usar para)\b/i.test(frase)
+  );
+  const breve = (valor, maximo = 82) => {
+    const partes = String(valor || "").split(/[,;]/).map((v) => v.trim()).filter(Boolean);
+    let resultado = partes.slice(0, 2).join(", ");
+    if (resultado.length > maximo) resultado = partes[0] || "";
+    if (resultado.length > maximo) {
+      resultado = resultado.slice(0, maximo).replace(/\s+\S*$/, "").trim();
+    }
+    return resultado.replace(/[.!?,;:]+$/, "").trim();
+  };
+
+  let pregunta;
+  if (caracteristica) {
+    const dato = breve(caracteristica).replace(/^./, (letra) => letra.toLowerCase());
+    pregunta = `¿Sabías que este producto ${dato}?`;
+  } else if (uso) {
+    const aplicacion = breve(uso.replace(/^(ideal para|sirve para|se usa para|se puede usar para)\s*/i, ""));
+    pregunta = `¿Sabías que podés usar este producto para ${aplicacion}?`;
+  } else {
+    const dato = breve(frases[0] || "Conocé las características disponibles en nuestra tienda", 90);
+    pregunta = `¿Sabías que este producto puede resultarte útil? ${dato}.`;
+  }
+
+  if (caracteristica && uso) {
+    const actividades = uso
+      .replace(/^(ideal para|sirve para|se usa para|se puede usar para)\s*/i, "")
+      .split(/[,;]/).map((v) => v.trim()).filter(Boolean).slice(0, 2).join(" o ");
+    const complemento = ` Podés usarlo para ${actividades}.`;
+    if (actividades && (pregunta + complemento).length <= 155) pregunta += complemento;
+  }
+
+  return `💡 ${pregunta}`;
+}
+
 export function generarContenidoRedesLocal(original) {
   const producto = prepararProductoRedes(original);
   const nombre = texto(producto.nombre);
@@ -125,6 +170,7 @@ export function generarContenidoRedesLocal(original) {
   const descripcion = datos[0] || `Conocé ${nombre} y sus características en la tienda.`;
   const detalleAlternativo = datos.find(d => d !== descripcion) || `Consultá las características y condiciones de ${nombre} en la tienda.`;
   const hashtagsBase = etiquetas(producto);
+  const copyTipThreads = crearTipThreads(datos);
   const hashtagsParaCarrusel = etiquetasCarrusel(producto, hashtagsBase);
   const frases = descripcion.match(/[^.!?]+[.!?]?/g)?.map(f => f.trim()).filter(Boolean) || [];
   const detalleCarrusel = frases.length > 1
@@ -228,7 +274,7 @@ const esStoryFacebook =
                   ? `💡 ${copyCortoThreads} ✨`
                   : esThreadsTip
       
-      ? `${emoji} ¿Sabías qué? ${nombre}: ${descripcion}`
+      ? copyTipThreads
       : esGrupoTip
         ? `${emoji} Un detalle para tener en cuenta sobre ${nombre}: ${detalleAlternativo}`
         : p.tipo === "reel"
@@ -240,6 +286,8 @@ const esStoryFacebook =
 
     const cta = esStoryFacebook
     ? ""
+    : esThreadsTip
+      ? "¡Conocelo en nuestra tienda!"
     : esEstadoWhatsapp || esThreadsPost
       ? "¡Encontralo en nuestra tienda!"
       : p.red === "instagram"

@@ -1152,6 +1152,9 @@ const generarContenido = async () => {
     ...(pieza.red === "instagram" && pieza.tipo === "carrusel"
       ? ["En el carrusel, no comiences con el nombre del producto. Usá un gancho centrado en detalles y usos comprobables; no repitas el enfoque ni el comienzo del Reel. Proponé cinco hashtags específicos distintos de los del Reel."]
       : []),
+    ...(pieza.red === "threads" && pieza.tipo === "sabias_que"
+      ? ["Escribí un ¿Sabías que...? natural y cercano de hasta 155 caracteres, sin empezar por el nombre completo del producto. Elegí UNA característica, un componente, un modo de uso o un beneficio verificable en la descripción y explicá para qué sirve. No inventes datos ni prometas durabilidad sin evidencia. No pongas el enlace, el CTA ni hashtags dentro del copy. CTA exacto: ¡Conocelo en nuestra tienda! Generá 5 hashtags relevantes."]
+      : []),
     `Red social: ${pieza.red}`,
     `Formato: ${pieza.tipo}`,
     `Variante: ${pieza.variante || "general"}`,
@@ -1476,6 +1479,48 @@ if (esGrupoPost) {
               ...pieza, copy, texto: copy, cta, hashtags,
               textoCompleto: [copy, cta, pieza.urlProducto || "", hashtags.join(" ")]
                 .filter(Boolean).join("\n\n"),
+            };
+          }
+
+          // Threads ¿Sabías qué?: copy corto, pregunta útil y enlace íntegro.
+          if (pieza.red === "threads" && pieza.tipo === "sabias_que") {
+            const respaldo = contenido.calendario.find((p) => p.id === pieza.id);
+            const candidato = String(pieza.copy || pieza.texto || "")
+              .replace(/https?:\/\/\S+/gi, "")
+              .replace(/#[\p{L}\p{N}_]+/gu, "")
+              .replace(/^\s*💡\s*/u, "")
+              .replace(/\s+/g, " ").trim();
+            const valido = /^¿Sab[ií]as\s+que\b/iu.test(candidato) &&
+              Array.from(candidato).length <= 155;
+            const copy = valido ? `💡 ${candidato}` : String(respaldo?.copy || "").trim();
+            const cta = "¡Conocelo en nuestra tienda!";
+            const urlProducto = String(pieza.urlProducto || respaldo?.urlProducto || "").trim();
+            if (!copy || !/^https:\/\//i.test(urlProducto)) {
+              throw new Error(`Falta el copy o la URL HTTPS para Threads ¿Sabías qué?: ${producto.nombre}`);
+            }
+            const hashtags = [];
+            const usados = new Set();
+            for (const candidatoHashtag of [
+              ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
+              ...(Array.isArray(respaldo?.hashtags) ? respaldo.hashtags : []),
+            ]) {
+              const etiqueta = String(candidatoHashtag).trim();
+              const clave = etiqueta.toLowerCase();
+              if (!/^#[\p{L}\p{N}_]+$/u.test(etiqueta) || usados.has(clave)) continue;
+              usados.add(clave);
+              hashtags.push(etiqueta);
+              if (hashtags.length === 5) break;
+            }
+            if (hashtags.length !== 5) {
+              throw new Error("Threads ¿Sabías qué? necesita cinco hashtags válidos.");
+            }
+            const textoCompleto = [copy, cta, hashtags.join(" "), urlProducto]
+              .filter(Boolean).join("\n\n");
+            if (Array.from(textoCompleto).length > 500) {
+              throw new Error("Threads ¿Sabías qué? supera los 500 caracteres.");
+            }
+            return {
+              ...pieza, copy, texto: copy, cta, hashtags, urlProducto, textoCompleto,
             };
           }
 
