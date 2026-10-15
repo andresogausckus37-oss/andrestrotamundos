@@ -753,6 +753,7 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
           red: pieza.red,
           tipo: pieza.tipo,
           indice: pieza.indice,
+          reintentar: pieza.estado === "error",
         }),
       }
     );
@@ -1186,6 +1187,26 @@ if (esGrupoPost) {
         );
 
         publicaciones = publicaciones.map((pieza) => {
+  if (pieza.red === "facebook" && pieza.tipo === "reel_pagina") {
+    const copy = String(pieza.copy || pieza.texto || "")
+      .replace(/https?:\/\/\S+/gi, "")
+      .replace(/#[\p{L}\p{N}_]+/gu, "")
+      .trim();
+    const cta = "¿Qué te parece? Contanos.";
+    const hashtags = Array.isArray(pieza.hashtags) ? pieza.hashtags : [];
+
+    return {
+      ...pieza,
+      copy,
+      texto: copy,
+      cta,
+      urlProducto: "",
+      textoCompleto: [copy, cta, hashtags.join(" ")]
+        .filter(Boolean)
+        .join("\n\n"),
+    };
+  }
+
   if (pieza.red !== "threads" || pieza.tipo !== "video") {
     return pieza;
   }
@@ -2609,7 +2630,13 @@ const urlProducto = productoId
 
               {programados.map((item) => {
                 const calendario = Array.isArray(item.calendario)
-                  ? item.calendario
+                  ? item.calendario.filter(
+                      (pieza) => !(
+                        pieza.red === "facebook" &&
+                        (pieza.tipo === "grupo_post" ||
+                          (pieza.tipo === "grupo" && pieza.variante === "post"))
+                      )
+                    )
                   : [];
 
                 return (
@@ -2736,7 +2763,19 @@ const urlProducto = productoId
 
                                   {pieza.red === "facebook" &&
   pieza.tipo === "reel_pagina" &&
-  pieza.estado === "programado" &&
+  (
+    pieza.estado === "programado" ||
+    (
+      pieza.estado === "error" &&
+      Number(pieza.intentosPublicacion) === 1 &&
+      !pieza.publicacionId &&
+      !pieza.publicadoEn &&
+      !pieza.procesandoDesde &&
+      String(pieza.ultimoError || "").includes(
+        "Faltan FACEBOOK_PAGE_ID o FACEBOOK_PAGE_ACCESS_TOKEN"
+      )
+    )
+  ) &&
   pieza.publicacionAutomatica !== false && (
     <button
       type="button"
@@ -2822,6 +2861,7 @@ const urlProducto = productoId
                                   )}
 
                                   {pieza.red === "facebook" &&
+                                    pieza.tipo !== "reel_pagina" &&
                                     destinosCompartir
                                       .filter(
                                         (destino) =>
@@ -2885,7 +2925,8 @@ const urlProducto = productoId
   </button>
 )}
 
-{pieza.red === "facebook" && (
+{pieza.red === "facebook" &&
+  pieza.tipo !== "reel_pagina" && (
   <button
     type="button"
     onClick={() =>

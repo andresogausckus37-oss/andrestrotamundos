@@ -1942,11 +1942,18 @@ const crearCalendarioInicial = (
     });
   };
 
-  // Priorizar las 13 piezas generadas para cada producto.
+  // Priorizar las piezas generadas para cada producto.
   // Las publicaciones semiautomáticas quedan pendientes de acción manual.
   if (Array.isArray(contenido?.calendario) && contenido.calendario.length) {
     const offsets = { dia1: 0, dia2: 1 };
     contenido.calendario.forEach((pieza, posicion) => {
+      // El grupo_post fue retirado del calendario semanal.
+      if (
+        pieza.red === "facebook" &&
+        (pieza.tipo === "grupo_post" ||
+          (pieza.tipo === "grupo" && pieza.variante === "post"))
+      ) return;
+
       const diaIndice = offsets[pieza.dia];
       if (diaIndice === undefined) return;
       
@@ -2594,6 +2601,21 @@ if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
       "Threads no pudo crear la publicación."
     );
 
+  // Se admite un único reintento manual si la ejecución anterior
+  // terminó antes de contactar con Facebook por falta de credenciales.
+  const esReintentoFacebook =
+    req.body?.reintentar === true &&
+    red === "facebook" &&
+    tipo === "reel_pagina" &&
+    pieza.estado === "error" &&
+    Number(pieza.intentosPublicacion) === 1 &&
+    !pieza.publicacionId &&
+    !pieza.publicadoEn &&
+    !pieza.procesandoDesde &&
+    String(pieza.ultimoError || "").includes(
+      "Faltan FACEBOOK_PAGE_ID o FACEBOOK_PAGE_ACCESS_TOKEN"
+    );
+
   const esPrimerIntento =
     pieza.estado === "programado" &&
     (Number(pieza.intentosPublicacion) || 0) === 0 &&
@@ -2602,7 +2624,7 @@ if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
     !pieza.publicadoEn &&
     !pieza.procesandoDesde;
 
-  if (!esPrimerIntento && !esReintentoThreads) {
+  if (!esPrimerIntento && !esReintentoThreads && !esReintentoFacebook) {
     return res.status(409).json({
       ok: false,
       error: "La publicación no admite otro intento automático ni un reintento manual seguro.",
@@ -2616,13 +2638,13 @@ if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
   const filtroReclamo = {
     _id: documento._id,
     [`calendario.${posicion}.estado`]:
-      esReintentoThreads ? "error" : "programado",
+      esReintentoThreads || esReintentoFacebook ? "error" : "programado",
     [`calendario.${posicion}.intentosPublicacion`]:
-      esReintentoThreads ? 2 : { $in: [null, 0] },
+      esReintentoThreads ? 2 : esReintentoFacebook ? 1 : { $in: [null, 0] },
     [`calendario.${posicion}.publicacionId`]: null,
     [`calendario.${posicion}.publicadoEn`]: null,
     [`calendario.${posicion}.procesandoDesde`]: null,
-    ...(esReintentoThreads
+    ...(esReintentoThreads || esReintentoFacebook
       ? { [`calendario.${posicion}.ultimoError`]: pieza.ultimoError }
       : { [`calendario.${posicion}.ultimoIntentoEn`]: null }),
   };
