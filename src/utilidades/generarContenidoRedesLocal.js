@@ -195,7 +195,7 @@ export function generarContenidoRedesLocal(original) {
     };
   });
   
-  if (calendario.length !== 12) throw new Error("El calendario debe contener exactamente 12 publicaciones.");
+  if (calendario.length !== 11) throw new Error("El calendario debe contener exactamente 11 publicaciones.");
   
   return {
     productoId: producto.id, nombreProducto: nombre, generador: "local", calendario,

@@ -2437,7 +2437,7 @@ const urlProducto = productoId
                         </p>
                         <p className="text-xs text-slate-500">
                           
-                          Instagram 2 · Threads 3 · Fan Page 3 · Grupos Facebook 2 · WhatsApp 2
+                          Instagram 2 · Threads 3 · Fan Page 3 · Grupos Facebook 2 · WhatsApp 1
                         </p>
                       </div>
                     </div>

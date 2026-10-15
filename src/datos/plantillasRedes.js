@@ -61,7 +61,7 @@ export const CICLO_PRODUCTO = {
       pieza("threads", "carrusel", "10:00", "imagenesFeed", { cantidadImagenes: 3 }),
       pieza("facebook", "carrusel_pagina", "10:00", "imagenesFeed", { cantidadImagenes: 3 }),
       pieza("facebook", "grupo", "10:00", "portadaFacebook", { variante: "enlace_producto", publicacionAutomatica: false, vistaPreviaEnlace: true }),
-      pieza("whatsapp", "whatsapp_grupo", "10:00", "imagenPrincipal", { publicacionAutomatica: false }),
+      
     ],
   },
 };
@@ -89,10 +89,15 @@ export const plantillaContenidoProducto = {
       { tipo: "enlace_producto", recurso: "portadaFacebook", vistaPreviaEnlace: true },
     ] },
   },
-  whatsapp: { estados: { cantidad: 2, publicacionAutomatica: false, publicaciones: [
-    { tipo: "estado", recurso: "video" },
-    { tipo: "whatsapp_grupo", recurso: "imagenPrincipal" },
-  ] } },
+  whatsapp: {
+  estados: {
+    cantidad: 1,
+    publicacionAutomatica: false,
+    publicaciones: [
+      { tipo: "estado", recurso: "video" },
+    ],
+  },
+},
 };
 
 export const HORARIOS_PREDETERMINADOS = {

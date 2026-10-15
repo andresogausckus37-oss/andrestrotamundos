@@ -1947,6 +1947,11 @@ const crearCalendarioInicial = (
   if (Array.isArray(contenido?.calendario) && contenido.calendario.length) {
     const offsets = { dia1: 0, dia2: 1 };
     contenido.calendario.forEach((pieza, posicion) => {
+
+      if (
+  pieza.red === "whatsapp" &&
+  pieza.tipo === "whatsapp_grupo"
+) return;
       // El grupo_post fue retirado del calendario semanal.
       if (
         pieza.red === "facebook" &&
