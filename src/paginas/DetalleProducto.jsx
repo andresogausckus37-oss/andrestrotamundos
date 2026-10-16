@@ -374,6 +374,10 @@ const tiempoRestante =
               {nombre}
             </h1>
 
+            <div className="mt-2">
+              <CalificacionProducto productoId={producto.id} />
+            </div>
+
             <div className="mt-5 border-y border-slate-200 py-5">
               {ofertaActiva ? (
                 <>
@@ -559,26 +563,8 @@ const tiempoRestante =
                   : "No disponible"}
             </button>
 
-            <section
-              id="resenas-producto"
-              aria-labelledby="titulo-resenas-producto"
-              className="mt-8 border-t border-slate-200 pt-6"
-            >
-              <h2
-                id="titulo-resenas-producto"
-                className="text-lg font-medium text-slate-900"
-              >
-                Reseñas del producto
-              </h2>
-              <div className="mt-3">
-                <CalificacionProducto productoId={producto.id} />
-              </div>
-            </section>
           </section>
-        </div>
-
-        {/* Futuro: colocar aquí la sección de productos relacionados
-            «También te recomendamos», debajo de las reseñas. */}     
+        </div>     
 
         {modalAbierto && (
           <Checkout
