@@ -518,6 +518,98 @@ async function publicarThreads(req, res) {
 }
 
 // =========================================================
+// THREADS - CARRUSEL NATIVO DE TRES IMÁGENES 4:5
+// Se crean tres hijos IMAGE, un padre CAROUSEL y se publica el padre.
+// No usar publicarThreads(): esa ruta publicaría solo texto.
+// =========================================================
+async function publicarCarruselThreads({ publicacion, productoId }) {
+  const imagenes = Array.isArray(publicacion?.imagenes) && publicacion.imagenes.length === 3
+    ? publicacion.imagenes
+    : publicacion?.imagenesFeed;
+  if (!Array.isArray(imagenes) || imagenes.length !== 3 ||
+      new Set(imagenes).size !== 3 ||
+      !imagenes.every((url) => typeof url === "string" && /^https:\/\//i.test(url.trim()))) {
+    throw new Error("Threads Carrusel requiere exactamente 3 imágenes 4:5 diferentes con URL HTTPS.");
+  }
+
+  const texto = String(publicacion?.texto || publicacion?.textoCompleto || "").trim();
+  const urlProducto = String(publicacion?.urlProducto || "").trim();
+  if (!/^https:\/\//i.test(urlProducto) || !texto.includes(urlProducto)) {
+    throw new Error("Threads Carrusel necesita incluir la URL completa del producto en el texto.");
+  }
+  if (!texto || Array.from(texto).length > 500) {
+    throw new Error("Threads Carrusel requiere un copy de hasta 500 caracteres, incluida la URL y los hashtags.");
+  }
+
+  const db = await conectarMongoDB();
+  const integracion = await db.collection("integraciones").findOne({
+    proveedor: "threads", conectado: true,
+  });
+  if (!integracion?.accessToken || !integracion?.userId) {
+    throw new Error("Threads no está conectado.");
+  }
+
+  const crearContenedor = async (parametros, etiqueta) => {
+    const respuesta = await fetch(`${THREADS_API}/me/threads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        ...parametros,
+        access_token: integracion.accessToken,
+      }).toString(),
+    });
+    const datos = await leerJsonSeguro(respuesta);
+    if (!respuesta.ok || !datos?.id) {
+      throw new Error(datos?.error?.message || `Threads no pudo crear el contenedor ${etiqueta}.`);
+    }
+    return String(datos.id);
+  };
+
+  const hijos = [];
+  for (const imagen of imagenes) {
+    hijos.push(await crearContenedor({
+      media_type: "IMAGE",
+      image_url: imagen.trim(),
+      is_carousel_item: "true",
+    }, "IMAGE"));
+  }
+
+  const contenedor = await crearContenedor({
+    media_type: "CAROUSEL",
+    children: hijos.join(","),
+    text: texto,
+  }, "CAROUSEL");
+
+  const respuesta = await fetch(`${THREADS_API}/me/threads_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      creation_id: contenedor,
+      access_token: integracion.accessToken,
+    }).toString(),
+  });
+  const publicado = await leerJsonSeguro(respuesta);
+  if (!respuesta.ok || !publicado?.id) {
+    // El resultado puede ser ambiguo: el cron debe conservar el bloqueo
+    // de reintentos automáticos para evitar una publicación duplicada.
+    throw new Error(publicado?.error?.message || "Threads no confirmó la publicación del carrusel. Revisá antes de reintentar.");
+  }
+
+  const publicacionId = String(publicado.id);
+  try {
+    await db.collection("publicaciones_redes").insertOne({
+      proveedor: "threads", tipo: "carrusel", productoId: productoId || null,
+      publicacionId, texto, imagenes,
+      estado: "publicado", publicadoEn: new Date(), creadoEn: new Date(),
+    });
+  } catch (error) {
+    // Ya está publicado: un fallo del historial no debe producir otro envío.
+    console.error("Carrusel Threads publicado, pero falló su historial:", error);
+  }
+  return { ok: true, proveedor: "threads", tipo: "carrusel", publicacionId };
+}
+
+// =========================================================
 // INSTAGRAM - PUBLICACIÓN
 // =========================================================
 
@@ -2706,6 +2798,13 @@ async function ejecutarPublicacionPieza({
 }) {
   const red = pieza.red;
   const tipo = pieza.tipo;
+
+  if (red === "threads" && tipo === "carrusel") {
+    return publicarCarruselThreads({
+      publicacion: pieza.publicacion,
+      productoId,
+    });
+  }
 
   if (red === "threads") {
     const texto =

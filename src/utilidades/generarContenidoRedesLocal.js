@@ -206,6 +206,28 @@ function hashtagsCarruselFacebook(producto) {
   return hashtagsGrupoEnlace(producto);
 }
 
+// Threads Carrusel: tres fotos existentes, copy propio, sin título repetido.
+function copyCarruselThreads(producto, descripcion) {
+  const nombre = texto(producto.nombre);
+  const fuente = `${nombre} ${sinEtiquetas(descripcion)}`;
+  if (/patillera/i.test(fuente) && /barba|patillas/i.test(fuente) &&
+      /inal[aá]mbric/i.test(fuente)) {
+    return "✂️ ¿Querés perfilar barba y patillas desde casa? Mirá los detalles de esta patillera inalámbrica en las tres fotos.";
+  }
+  if (/aro de luz|iluminaci[oó]n|luces led/i.test(fuente) && /rgb|c[aá]lida|fr[ií]a/i.test(fuente)) {
+    return "💡 Mirá las tres fotos y conocé las opciones de iluminación que ofrece este producto.";
+  }
+  const detalle = copyGrupoEnlace(nombre, descripcion);
+  const primerDetalle = detalle.match(/[^.!?]+[.!?]?/)?.[0]?.trim() || "";
+  const maximo = 130;
+  const resumen = primerDetalle.length > maximo
+    ? primerDetalle.slice(0, maximo).replace(/\s+\S*$/, "").trim() + "…"
+    : primerDetalle;
+  return resumen
+    ? `📸 Mirá estos detalles. ${resumen}`
+    : "📸 Deslizá las tres fotos para conocer mejor este producto.";
+}
+
 function datoConfiable(producto) {
   return [...lista(producto.beneficios), ...lista(producto.incluye), sinEtiquetas(producto.descripcion), sinEtiquetas(producto.descripcionLarga)]
     .filter(Boolean);
@@ -302,6 +324,7 @@ export function generarContenidoRedesLocal(original) {
     
     const esCarruselInstagram = p.red === "instagram" && p.tipo === "carrusel";
     const esCarruselFacebook = p.red === "facebook" && p.tipo === "carrusel_pagina";
+    const esCarruselThreads = p.red === "threads" && p.tipo === "carrusel";
     const esThreadsTip = p.red === "threads" && p.tipo === "sabias_que";
     const esGrupoTip = p.red === "facebook" && p.variante === "sabias_que";
     const esGruposVideo = p.red === "facebook" && p.tipo === "grupos_video";
@@ -388,6 +411,8 @@ const esStoryFacebook =
               ? copyCarrusel
             : esCarruselFacebook
               ? copyCarruselFacebook(producto, descripcion)
+            : esCarruselThreads
+              ? copyCarruselThreads(producto, descripcion)
             : esGrupoPost
               ? descripcion
             : esGrupoEnlace
@@ -414,7 +439,7 @@ const esStoryFacebook =
 
     const cta = esStoryFacebook
     ? ""
-    : esThreadsTip || esGrupoEnlace || esGruposVideo || esCarruselFacebook
+    : esThreadsTip || esGrupoEnlace || esGruposVideo || esCarruselFacebook || esCarruselThreads
       ? "¡Conocelo en nuestra tienda!"
     : esEstadoWhatsapp || esThreadsPost
       ? "¡Encontralo en nuestra tienda!"
@@ -430,6 +455,7 @@ const esStoryFacebook =
       p.red === "whatsapp" || esStoryFacebook ? []
         : esCarruselInstagram ? hashtagsParaCarrusel
         : esCarruselFacebook ? hashtagsCarruselFacebook(producto)
+        : esCarruselThreads ? hashtagsGrupoEnlace(producto)
         : esGrupoEnlace || esGruposVideo ? hashtagsGrupoEnlace(producto)
         : hashtagsBase;
 
@@ -451,6 +477,16 @@ const esStoryFacebook =
             ? []
             : [recurso];
     
+    const sufijoThreadsCarrusel = [cta, url, hashtags.join(" ")].filter(Boolean).join("\n\n");
+    const maximoCopyThreadsCarrusel = Math.min(175, 500 - Array.from(sufijoThreadsCarrusel).length - 4);
+    if (esCarruselThreads && maximoCopyThreadsCarrusel < 30) {
+      throw new Error(`La URL del producto es demasiado larga para Threads Carrusel: ${nombre}`);
+    }
+    const copyFinal = esCarruselThreads && Array.from(copy).length > maximoCopyThreadsCarrusel
+      ? Array.from(copy).slice(0, maximoCopyThreadsCarrusel - 1).join("")
+          .replace(/\s+\S*$/, "").trim() + "…"
+      : copy;
+
     const urlProducto = p.red === "instagram" || esStoryFacebook ? "" : url;
     if (esStoryFacebook && !/^https:\/\//i.test(vertical[0])) {
       throw new Error(`Facebook Story necesita una imagen vertical HTTPS: ${nombre}`);
@@ -466,7 +502,7 @@ const esStoryFacebook =
       imagen: imagenes[0] || "", imagenes,
       imagenPrincipal: principal, imagenesFeed: feed, imagenesVerticales: vertical,
       video: p.recurso === "video" ? video : "", videoUrl: p.recurso === "video" ? video : "",
-      vistaPreviaEnlace: esGruposVideo ? false : Boolean(p.vistaPreviaEnlace),
+      vistaPreviaEnlace: esGruposVideo || esCarruselThreads ? false : Boolean(p.vistaPreviaEnlace),
       // La composición de la imagen con el CTA se realizará en el backend.
       // Hasta entonces "imagen" sigue siendo la imagen vertical original.
       ctaVisual: esStoryFacebook,
@@ -477,14 +513,14 @@ const esStoryFacebook =
           }
         : null,
       imagenOriginal: esStoryFacebook ? vertical[0] : null,
-      texto: copy, copy, cta, hashtags, urlProducto,
+      texto: copyFinal, copy: copyFinal, cta, hashtags, urlProducto,
       // En WhatsApp solo enviamos texto+URL: la portada la obtiene WhatsApp
       // automáticamente de las etiquetas OG de la página del producto.
       textoCompleto: esStoryFacebook
         ? ""
         : (esEstadoWhatsapp
             ? [copy, cta, urlProducto]
-            : [copy, cta, urlProducto, hashtags.join(" ")]
+            : [copyFinal, cta, urlProducto, hashtags.join(" ")]
           ).filter(Boolean).join("\n\n"),
     };
   });

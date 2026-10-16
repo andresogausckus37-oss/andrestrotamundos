@@ -1161,6 +1161,9 @@ const generarContenido = async () => {
     ...(pieza.red === "facebook" && pieza.tipo === "grupos_video"
       ? ["Video para un grupo de compraventa: escribí un copy cercano de máximo 240 caracteres, sin repetir el nombre completo del producto. Elegí un beneficio o uso real y comprobable, con un gancho natural que acompañe el video. No inventes características, no incluyas URL ni hashtags en el copy. CTA exacto: ¡Conocelo en nuestra tienda! Proponé cinco hashtags relevantes del producto, sin etiquetas comerciales genéricas."]
       : []),
+    ...(pieza.red === "threads" && pieza.tipo === "carrusel"
+      ? ["Carrusel nativo con tres fotos 4:5. Escribí un copy natural y cercano de máximo 170 caracteres, sin comenzar con el nombre completo del producto. Destacá un uso o detalle comprobable, distinto al Reel. No escribas la URL, el CTA ni hashtags dentro del copy. CTA exacto: ¡Conocelo en nuestra tienda! Proponé cinco hashtags específicos del producto."]
+      : []),
     ...(pieza.red === "facebook" && pieza.tipo === "carrusel_pagina"
       ? ["Publicación para carrusel de tres fotos en Facebook Página. Escribí un copy cercano y breve (máximo 220 caracteres) que destaque una utilidad o característica real; no abras con el nombre del producto ni lo repitas completo. No incluyas el enlace, CTA ni hashtags dentro del copy. CTA exacto: ¡Conocelo en nuestra tienda! Cinco hashtags relevantes del producto, evitando #TiendaOnline, #CompraOnline y etiquetas comerciales genéricas."]
       : []),
@@ -1488,6 +1491,85 @@ if (esGrupoPost) {
               ...pieza, copy, texto: copy, cta, hashtags,
               textoCompleto: [copy, cta, pieza.urlProducto || "", hashtags.join(" ")]
                 .filter(Boolean).join("\n\n"),
+            };
+          }
+
+          // Threads Carrusel: preservar tres fotos 4:5, URL y 5 hashtags.
+          if (pieza.red === "threads" && pieza.tipo === "carrusel") {
+            const respaldo = contenido.calendario.find((p) => p.id === pieza.id);
+            const nombre = String(producto.nombre || "").trim();
+            const escapado = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const limpiar = (valor) => {
+              let resultado = String(valor || "")
+                .replace(/https?:\/\/\S+/gi, "")
+                .replace(/#[\p{L}\p{N}_]+/gu, "")
+                .replace(/¡Conocelo en nuestra tienda!/gi, "")
+                .replace(/\s+/g, " ").trim();
+              if (escapado) {
+                resultado = resultado.replace(
+                  new RegExp(`^[^\\p{L}\\p{N}]*${escapado}\\s*[.:;!?–-]*\\s*`, "iu"), ""
+                ).trim();
+              }
+              return resultado;
+            };
+            let copy = limpiar(pieza.copy || pieza.texto);
+            const copiaReel = publicaciones.find((p) => p.red === "instagram" && p.tipo === "reel");
+            if (!copy || Array.from(copy).length > 170 ||
+                (nombre && copy.toLowerCase().includes(nombre.toLowerCase())) ||
+                copy.toLowerCase() === limpiar(copiaReel?.copy || copiaReel?.texto).toLowerCase()) {
+              copy = limpiar(respaldo?.copy);
+            }
+            const cta = "¡Conocelo en nuestra tienda!";
+            const urlProducto = String(pieza.urlProducto || respaldo?.urlProducto || "").trim();
+            if (!/^https:\/\//i.test(urlProducto)) {
+              throw new Error("Threads Carrusel necesita la URL HTTPS completa del producto.");
+            }
+            const hashtags = [];
+            const usados = new Set();
+            const genericos = new Set(["#tiendaonline", "#compraonline", "#catalogoonline", "#productos", "#ofertasonline"]);
+            for (const candidato of [
+              ...(Array.isArray(pieza.hashtags) ? pieza.hashtags : []),
+              ...(Array.isArray(respaldo?.hashtags) ? respaldo.hashtags : []),
+            ]) {
+              const etiqueta = String(candidato || "").trim();
+              const clave = etiqueta.toLowerCase();
+              if (!/^#[\p{L}\p{N}_]+$/u.test(etiqueta) || usados.has(clave) || genericos.has(clave)) continue;
+              usados.add(clave);
+              hashtags.push(etiqueta);
+              if (hashtags.length === 5) break;
+            }
+            // El respaldo local contiene etiquetas suficientes aunque la IA repita alguna.
+            if (hashtags.length !== 5) {
+              for (const etiqueta of respaldo?.hashtags || []) {
+                if (!/^#[\p{L}\p{N}_]+$/u.test(etiqueta) || usados.has(etiqueta.toLowerCase())) continue;
+                usados.add(etiqueta.toLowerCase());
+                hashtags.push(etiqueta);
+                if (hashtags.length === 5) break;
+              }
+            }
+            if (hashtags.length !== 5) throw new Error("Threads Carrusel necesita cinco hashtags válidos.");
+            const imagenes = Array.isArray(respaldo?.imagenesFeed) ? respaldo.imagenesFeed.slice(0, 3) : [];
+            if (imagenes.length !== 3 || new Set(imagenes).size !== 3 ||
+                !imagenes.every((url) => /^https:\/\//i.test(String(url)))) {
+              throw new Error("Threads Carrusel necesita tres imágenes 4:5 HTTPS distintas.");
+            }
+            const sufijo = [cta, urlProducto, hashtags.join(" ")].join("\n\n");
+            const maximo = Math.min(170, 500 - Array.from(sufijo).length - 4);
+            if (maximo < 30) throw new Error("La URL del producto no deja espacio para Threads Carrusel.");
+            if (Array.from(copy).length > maximo) {
+              copy = Array.from(copy).slice(0, maximo - 1).join("")
+                .replace(/\s+\S*$/, "").trim() + "…";
+            }
+            if (!copy) copy = limpiar(respaldo?.copy).slice(0, maximo);
+            const textoCompleto = [copy, cta, urlProducto, hashtags.join(" ")].join("\n\n");
+            if (Array.from(textoCompleto).length > 500) {
+              throw new Error("Threads Carrusel supera los 500 caracteres.");
+            }
+            return {
+              ...pieza, copy, texto: copy, cta, hashtags, urlProducto, textoCompleto,
+              formato: "imagenesFeed", recurso: imagenes, recursos: imagenes,
+              imagen: imagenes[0], imagenes, imagenesFeed: imagenes,
+              video: "", videoUrl: "", vistaPreviaEnlace: false,
             };
           }
 
