@@ -3523,6 +3523,7 @@ const urlProducto = productoId
 
                                   {pieza.red === "facebook" &&
                                     pieza.tipo !== "reel_pagina" &&
+                                    pieza.tipo !== "carrusel_pagina" &&
                                     destinosCompartir
                                       .filter(
                                         (destino) =>
@@ -3549,6 +3550,7 @@ const urlProducto = productoId
 {pieza.red === "facebook" &&
   pieza.tipo !== "grupo_enlace_producto" &&
   pieza.tipo !== "grupos_video" &&
+  pieza.tipo !== "carrusel_pagina" &&
   pieza?.publicacion?.imagen && (
     <button
       type="button"
@@ -3595,7 +3597,8 @@ const urlProducto = productoId
 {pieza.red === "facebook" &&
   pieza.tipo !== "reel_pagina" &&
   pieza.tipo !== "grupo_enlace_producto" &&
-  pieza.tipo !== "grupos_video" && (
+  pieza.tipo !== "grupos_video" &&
+  pieza.tipo !== "carrusel_pagina" && (
   <button
     type="button"
     onClick={() =>

@@ -2347,7 +2347,7 @@ const crearCalendarioInicial = (
           (["instagram:reel", "instagram:carrusel", 
             "threads:video",
             "threads:post",
-            "threads:sabias_que", "threads:carrusel", "facebook:reel_pagina"].includes(`${pieza.red}:${pieza.tipo}`)
+            "threads:sabias_que", "threads:carrusel", "facebook:reel_pagina", "facebook:carrusel_pagina"].includes(`${pieza.red}:${pieza.tipo}`)
             ? "programado" : "pendiente_integracion"),
         publicacionAutomatica: !manual,
         zonaHoraria: ZONA_HORARIA_RED,
@@ -2950,6 +2950,7 @@ async function publicarProgramado(
   "threads:sabias_que",
   "threads:carrusel",
   "facebook:reel_pagina",
+  "facebook:carrusel_pagina",
 ];
 
 if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
@@ -3292,6 +3293,49 @@ async function ejecutarPublicacionesPendientes(
   for (const documento of documentos) {
     if (!Array.isArray(documento.calendario)) {
       continue;
+    }
+
+    // Recuperar únicamente carruseles automáticos de HOY que quedaron
+    // en pendiente_integracion por no figurar en la lista anterior.
+    // Nunca rehabilitar piezas con intentos, ID de publicación o estado manual.
+    for (const [posicion, pieza] of documento.calendario.entries()) {
+      if (
+        pieza?.red !== "facebook" ||
+        pieza.tipo !== "carrusel_pagina" ||
+        pieza.estado !== "pendiente_integracion" ||
+        pieza.publicacionAutomatica !== true ||
+        pieza.fecha !== fecha ||
+        String(pieza.hora || "") > hora ||
+        Number(pieza.intentosPublicacion || 0) !== 0 ||
+        pieza.ultimoIntentoEn ||
+        pieza.procesandoDesde ||
+        pieza.publicacionId ||
+        pieza.publicadoEn
+      ) continue;
+
+      const ruta = `calendario.${posicion}`;
+      const restaurado = await db.collection("contenido_redes").updateOne(
+        {
+          _id: documento._id,
+          [`${ruta}.estado`]: "pendiente_integracion",
+          [`${ruta}.publicacionAutomatica`]: true,
+          [`${ruta}.intentosPublicacion`]: { $in: [null, 0] },
+          [`${ruta}.ultimoIntentoEn`]: null,
+          [`${ruta}.procesandoDesde`]: null,
+          [`${ruta}.publicacionId`]: null,
+          [`${ruta}.publicadoEn`]: null,
+        },
+        {
+          $set: {
+            [`${ruta}.estado`]: "programado",
+            actualizadoEn: new Date(),
+          },
+        }
+      );
+
+      if (restaurado.modifiedCount === 1) {
+        pieza.estado = "programado";
+      }
     }
 
     documento.calendario.forEach(
