@@ -312,6 +312,11 @@ const tiempoRestante =
   const dimensiones = producto.detalles?.dimensiones || "";
   const peso = producto.detalles?.peso || "";
 
+  const resenasDelProducto = resenasProductos.filter(
+  (resena) =>
+    String(resena.productoId) === String(producto.id)
+);
+
   return (
     <main className="min-h-screen bg-[#FCFDFC] px-4 pb-20 pt-4 sm:px-5 sm:pt-7">
       <div className="mx-auto max-w-7xl">
@@ -562,7 +567,7 @@ const tiempoRestante =
                 : sinStock
                   ? "Sin stock"
                   : "No disponible"}
-            </button>
+            </button>      
 
             {resenasDelProducto.length > 0 && (
   <section
