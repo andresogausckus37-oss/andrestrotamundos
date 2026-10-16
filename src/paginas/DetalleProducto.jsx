@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import CalificacionProducto from "../componentes/CalificacionProducto";
+import { resenasProductos } from "../datos/resenasProductos";
 import Checkout from "./Checkout";
 import { agregarAlCarrito } from "../utilidades/carrito";
 
@@ -562,6 +563,49 @@ const tiempoRestante =
                   ? "Sin stock"
                   : "No disponible"}
             </button>
+
+            {resenasDelProducto.length > 0 && (
+  <section
+    id="resenas-producto"
+    className="mt-8 border-t border-slate-200 pt-6"
+  >
+    <div className="mb-4 flex items-center justify-between">
+      <h2 className="text-base font-medium text-slate-900">
+        Reseñas del producto
+      </h2>
+      <span className="text-xs text-slate-500">
+        {resenasDelProducto.length} reseñas
+      </span>
+    </div>
+
+    <div className="grid gap-3 sm:grid-cols-2">
+      {resenasDelProducto.map((resena) => (
+        <article
+          key={resena.id}
+          className="rounded-xs border border-slate-200 bg-white p-4"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-amber-500">
+              {[1, 2, 3, 4, 5].map((estrella) =>
+                estrella <= resena.estrellas ? "★" : "☆"
+              )}
+            </span>
+
+            {resena.compraVerificada && (
+              <span className="text-[10px] font-medium text-emerald-700">
+                Compra verificada
+              </span>
+            )}
+          </div>
+
+          <p className="mt-3 text-xs leading-5 text-slate-600">
+            “{resena.texto}”
+          </p>
+        </article>
+      ))}
+    </div>
+  </section>
+)}
 
           </section>
         </div>     
