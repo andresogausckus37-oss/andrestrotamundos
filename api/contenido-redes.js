@@ -610,6 +610,322 @@ async function publicarCarruselThreads({ publicacion, productoId }) {
 }
 
 // =========================================================
+// THREADS CARRUSEL PROGRAMADO: CONTENEDORES POR ETAPAS
+// Esperar FINISHED y persistir cada ID. No reintentar envíos ambiguos.
+// =========================================================
+const PAUSA_THREADS_CARRUSEL_MS = 5 * 60 * 1000;
+const MAX_REVISIONES_THREADS_CARRUSEL = 12;
+const BLOQUEO_THREADS_CONSULTA_MS = 3 * 60 * 1000;
+const ALERTA_ENVIO_THREADS_MS = 15 * 60 * 1000;
+
+async function iniciarCarruselThreadsProgramado({ db, documentoId, posicion, publicacion }) {
+  const imagenes = Array.isArray(publicacion?.imagenes) && publicacion.imagenes.length === 3
+    ? publicacion.imagenes : publicacion?.imagenesFeed;
+  const texto = String(publicacion?.texto || publicacion?.textoCompleto || "").trim();
+  const url = String(publicacion?.urlProducto || "").trim();
+  if (!Array.isArray(imagenes) || imagenes.length !== 3 ||
+      new Set(imagenes).size !== 3 ||
+      !imagenes.every((imagen) => typeof imagen === "string" && /^https:\/\//i.test(imagen))) {
+    throw new Error("Threads Carrusel necesita tres imágenes HTTPS distintas.");
+  }
+  if (!/^https:\/\//i.test(url) || !texto.includes(url) ||
+      !texto || Array.from(texto).length > 500) {
+    throw new Error("Threads Carrusel necesita el texto completo con URL y hasta 500 caracteres.");
+  }
+  const campo = `calendario.${posicion}`;
+  const ahora = new Date();
+  const resultado = await db.collection("contenido_redes").updateOne(
+    { _id: documentoId, [`${campo}.estado`]: "publicando", [`${campo}.threadsEtapa`]: null },
+    { $set: {
+      [`${campo}.estado`]: "procesando_threads",
+      [`${campo}.threadsEtapa`]: "crear_hijos",
+      [`${campo}.threadsImagenes`]: imagenes,
+      [`${campo}.threadsTexto`]: texto,
+      [`${campo}.threadsHijos`]: [],
+      [`${campo}.threadsRevisiones`]: 0,
+      [`${campo}.threadsProximaRevisionEn`]: ahora,
+      actualizadoEn: ahora,
+    }, $unset: { [`${campo}.procesandoDesde`]: "" } }
+  );
+  if (resultado.modifiedCount !== 1) {
+    throw new Error("No se pudo iniciar el carrusel de forma segura. Revisá el estado antes de reintentar.");
+  }
+  return { ok: true, estado: "procesando_threads", mensaje: "Carrusel registrado; el cron creará sus imágenes y esperará a Meta." };
+}
+
+async function continuarCarruselThreadsProgramado({ db, productoId, fecha, hora, indice }) {
+  const coleccion = db.collection("contenido_redes");
+  const documento = await coleccion.findOne({ productoId, estado: "programado" });
+  const posicion = documento?.calendario?.findIndex((pieza) =>
+    pieza.red === "threads" && pieza.tipo === "carrusel" &&
+    pieza.fecha === fecha && pieza.hora === hora && Number(pieza.indice) === Number(indice)
+  ) ?? -1;
+  if (posicion < 0) return { ok: false, error: "No se encontró el carrusel programado." };
+  const pieza = documento.calendario[posicion];
+  const campo = `calendario.${posicion}`;
+  // Si un Worker terminó durante una llamada POST, no repetir el POST:
+  // el resultado de Meta podría haber sido exitoso aunque faltó guardarlo.
+  if (pieza.threadsEnviando &&
+      ["procesando_threads", "publicando"].includes(pieza.estado) &&
+      pieza.threadsEnvioDesde &&
+      new Date(pieza.threadsEnvioDesde).getTime() <= Date.now() - ALERTA_ENVIO_THREADS_MS) {
+    const mensaje = "Threads quedó con un envío de resultado incierto. Revisá la cuenta antes de realizar otra publicación; el cron no lo repetirá.";
+    await coleccion.updateOne(
+      { _id: documento._id, [`${campo}.estado`]: pieza.estado, [`${campo}.threadsEnviando`]: pieza.threadsEnviando },
+      { $set: { [`${campo}.estado`]: "error", [`${campo}.ultimoError`]: mensaje, [`${campo}.ultimoErrorEn`]: new Date(), actualizadoEn: new Date() } }
+    );
+    return { ok: false, estado: "error", error: mensaje };
+  }
+  if (pieza.estado !== "procesando_threads" || pieza.threadsEnviando) {
+    return { ok: false, error: "El carrusel ya está procesado o tiene un envío pendiente de revisión." };
+  }
+  const filtro = (etapa) => ({
+    _id: documento._id,
+    [`${campo}.estado`]: "procesando_threads",
+    [`${campo}.threadsEtapa`]: etapa,
+    [`${campo}.threadsEnviando`]: null,
+  });
+  const actualizar = async (etapa, cambios, quitar = {}) => coleccion.updateOne(
+    filtro(etapa),
+    { $set: { ...cambios, actualizadoEn: new Date() }, $unset: quitar }
+  );
+  const integracion = await db.collection("integraciones").findOne({ proveedor: "threads", conectado: true });
+  if (!integracion?.accessToken || !integracion?.userId) {
+    return { ok: false, error: "Threads no está conectado. No se enviaron nuevas imágenes." };
+  }
+  const token = integracion.accessToken;
+  const enviar = async (parametros) => {
+    const respuesta = await fetch(`${THREADS_API}/me/threads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ ...parametros, access_token: token }).toString(),
+    });
+    const datos = await leerJsonSeguro(respuesta);
+    if (!respuesta.ok || !datos?.id) throw new Error(datos?.error?.message || "Threads no devolvió el ID del contenedor.");
+    return String(datos.id);
+  };
+  const marcarError = async (mensaje, etapa = pieza.threadsEtapa) => {
+    await coleccion.updateOne(
+      { _id: documento._id, [`${campo}.estado`]: { $in: ["procesando_threads", "publicando"] } },
+      { $set: {
+        [`${campo}.estado`]: "error",
+        [`${campo}.ultimoError`]: String(mensaje),
+        [`${campo}.ultimoErrorEn`]: new Date(),
+        [`${campo}.threadsEtapa`]: etapa,
+        actualizadoEn: new Date(),
+      } }
+    );
+    return { ok: false, estado: "error", error: String(mensaje) };
+  };
+  const reclamarEnvio = async (etapa, tipoEnvio) => {
+    const respuesta = await actualizar(etapa, {
+      [`${campo}.threadsEnviando`]: tipoEnvio,
+      [`${campo}.threadsEnvioDesde`]: new Date(),
+    });
+    return respuesta.modifiedCount === 1;
+  };
+
+  if (pieza.threadsEtapa === "crear_hijos") {
+    let hijos = [...(pieza.threadsHijos || [])];
+    for (let i = hijos.length; i < 3; i += 1) {
+      // El índice ausente es parte del reclamo: un cron con una copia vieja
+      // del documento no debe volver a crear un hijo ya guardado.
+      const reclamoHijo = await coleccion.updateOne(
+        { ...filtro("crear_hijos"), [`${campo}.threadsHijos.${i}`]: null },
+        { $set: {
+          [`${campo}.threadsEnviando`]: `hijo_${i}`,
+          [`${campo}.threadsEnvioDesde`]: new Date(),
+          actualizadoEn: new Date(),
+        } }
+      );
+      if (reclamoHijo.modifiedCount !== 1) {
+        return { ok: true, estado: "procesando_threads", mensaje: "Otro proceso está preparando las imágenes." };
+      }
+      try {
+        const id = await enviar({ media_type: "IMAGE", image_url: pieza.threadsImagenes[i], is_carousel_item: "true" });
+        hijos.push(id);
+        const guardado = await coleccion.updateOne(
+          { _id: documento._id, [`${campo}.estado`]: "procesando_threads", [`${campo}.threadsEnviando`]: `hijo_${i}` },
+          { $set: { [`${campo}.threadsHijos`]: hijos, actualizadoEn: new Date() },
+            $unset: { [`${campo}.threadsEnviando`]: "", [`${campo}.threadsEnvioDesde`]: "" } }
+        );
+        if (guardado.modifiedCount !== 1) throw new Error("No se pudo registrar el ID de una imagen en MongoDB.");
+      } catch (error) {
+        return marcarError(`Revisá Threads antes de reintentar el carrusel: ${error.message}`);
+      }
+    }
+    await actualizar("crear_hijos", {
+      [`${campo}.threadsEtapa`]: "verificar_hijos",
+      [`${campo}.threadsProximaRevisionEn`]: new Date(Date.now() + PAUSA_THREADS_CARRUSEL_MS),
+    });
+    return { ok: true, estado: "procesando_threads", mensaje: "Threads recibió las tres imágenes. Se comprobará su estado." };
+  }
+
+  if (pieza.threadsEtapa === "verificar_hijos" || pieza.threadsEtapa === "verificar_padre") {
+    const etapa = pieza.threadsEtapa;
+    const ahora = new Date();
+    const desde = new Date(ahora.getTime() - BLOQUEO_THREADS_CONSULTA_MS);
+    const candado = await coleccion.updateOne({
+      ...filtro(etapa),
+      $or: [
+        { [`${campo}.threadsConsultaDesde`]: null },
+        { [`${campo}.threadsConsultaDesde`]: { $lt: desde } },
+      ],
+    }, { $set: { [`${campo}.threadsConsultaDesde`]: ahora, actualizadoEn: ahora } });
+    if (candado.modifiedCount !== 1) {
+      return { ok: true, estado: "procesando_threads", mensaje: "Otro proceso está revisando Threads." };
+    }
+    const revisiones = (Number(pieza.threadsRevisiones) || 0) + 1;
+    try {
+      const ids = etapa === "verificar_hijos" ? pieza.threadsHijos : [pieza.threadsPadreId];
+      if (!ids?.length || ids.some((id) => !id)) throw new Error("Faltan los IDs guardados de Threads.");
+      let listo = true;
+      for (const id of ids) {
+        const parametros = new URLSearchParams({ fields: "id,status,error_message", access_token: token });
+        const respuesta = await fetch(`${THREADS_API}/${id}?${parametros.toString()}`);
+        const datos = await leerJsonSeguro(respuesta);
+        if (!respuesta.ok) throw new Error(datos?.error?.message || "No se pudo consultar un contenedor de Threads.");
+        const estado = String(datos?.status || "");
+        if (estado === "ERROR" || estado === "EXPIRED") {
+          throw new Error(datos?.error_message || `El contenedor ${id} quedó en estado ${estado}.`);
+        }
+        if (estado !== "FINISHED") listo = false;
+      }
+      if (listo) {
+        await coleccion.updateOne(
+          { _id: documento._id, [`${campo}.estado`]: "procesando_threads", [`${campo}.threadsEtapa`]: etapa, [`${campo}.threadsConsultaDesde`]: ahora },
+          { $set: {
+            [`${campo}.threadsEtapa`]: etapa === "verificar_hijos" ? "crear_padre" : "publicar",
+            [`${campo}.threadsRevisiones`]: 0,
+            [`${campo}.threadsProximaRevisionEn`]: new Date(),
+            actualizadoEn: new Date(),
+          }, $unset: { [`${campo}.threadsConsultaDesde`]: "" } }
+        );
+        return { ok: true, estado: "procesando_threads", mensaje: "Contenedores listos; el cron continuará con el carrusel." };
+      }
+      if (revisiones >= MAX_REVISIONES_THREADS_CARRUSEL) {
+        return marcarError("Threads no terminó de procesar el carrusel tras 12 verificaciones. Revisá manualmente.");
+      }
+      await coleccion.updateOne(
+        { _id: documento._id, [`${campo}.estado`]: "procesando_threads", [`${campo}.threadsEtapa`]: etapa, [`${campo}.threadsConsultaDesde`]: ahora },
+        { $set: {
+          [`${campo}.threadsRevisiones`]: revisiones,
+          [`${campo}.threadsProximaRevisionEn`]: new Date(Date.now() + PAUSA_THREADS_CARRUSEL_MS),
+          actualizadoEn: new Date(),
+        }, $unset: { [`${campo}.threadsConsultaDesde`]: "" } }
+      );
+      return { ok: true, estado: "procesando_threads", mensaje: "Threads sigue procesando las imágenes; se revisarán en otro ciclo." };
+    } catch (error) {
+      // No se recrean contenedores a causa de una consulta fallida.
+      if (revisiones >= MAX_REVISIONES_THREADS_CARRUSEL) return marcarError(error.message);
+      await coleccion.updateOne(
+        { _id: documento._id, [`${campo}.estado`]: "procesando_threads", [`${campo}.threadsEtapa`]: etapa, [`${campo}.threadsConsultaDesde`]: ahora },
+        { $set: {
+          [`${campo}.threadsRevisiones`]: revisiones,
+          [`${campo}.ultimoError`]: `Consulta de Threads: ${error.message}`,
+          [`${campo}.threadsProximaRevisionEn`]: new Date(Date.now() + PAUSA_THREADS_CARRUSEL_MS),
+          actualizadoEn: new Date(),
+        }, $unset: { [`${campo}.threadsConsultaDesde`]: "" } }
+      );
+      return { ok: true, estado: "procesando_threads", mensaje: "No se pudo consultar Threads; se volverá a consultar sin recrear el contenido." };
+    }
+  }
+
+  if (pieza.threadsEtapa === "crear_padre") {
+    // Tampoco crear dos padres si otro proceso ya guardó el ID.
+    const reclamoPadre = await coleccion.updateOne(
+      { ...filtro("crear_padre"), [`${campo}.threadsPadreId`]: null },
+      { $set: {
+        [`${campo}.threadsEnviando`]: "padre",
+        [`${campo}.threadsEnvioDesde`]: new Date(),
+        actualizadoEn: new Date(),
+      } }
+    );
+    if (reclamoPadre.modifiedCount !== 1) {
+      return { ok: true, estado: "procesando_threads", mensaje: "Otro proceso está creando el carrusel." };
+    }
+    try {
+      const id = await enviar({ media_type: "CAROUSEL", children: pieza.threadsHijos.join(","), text: pieza.threadsTexto });
+      const guardado = await coleccion.updateOne(
+        { _id: documento._id, [`${campo}.estado`]: "procesando_threads", [`${campo}.threadsEnviando`]: "padre" },
+        { $set: {
+          [`${campo}.threadsPadreId`]: id,
+          [`${campo}.threadsEtapa`]: "verificar_padre",
+          [`${campo}.threadsRevisiones`]: 0,
+          [`${campo}.threadsProximaRevisionEn`]: new Date(Date.now() + PAUSA_THREADS_CARRUSEL_MS),
+          actualizadoEn: new Date(),
+        }, $unset: { [`${campo}.threadsEnviando`]: "", [`${campo}.threadsEnvioDesde`]: "" } }
+      );
+      if (guardado.modifiedCount !== 1) throw new Error("No se pudo guardar el contenedor principal en MongoDB.");
+      return { ok: true, estado: "procesando_threads", mensaje: "Threads recibió el carrusel. Falta verificarlo y publicarlo." };
+    } catch (error) {
+      return marcarError(`Revisá Threads antes de crear otro carrusel: ${error.message}`);
+    }
+  }
+
+  if (pieza.threadsEtapa === "publicar") {
+    if (!(await reclamarEnvio("publicar", "publicacion"))) {
+      return { ok: true, estado: "procesando_threads", mensaje: "El carrusel ya fue tomado para publicación." };
+    }
+    const envioReclamado = await coleccion.updateOne(
+      { _id: documento._id, [`${campo}.estado`]: "procesando_threads", [`${campo}.threadsEnviando`]: "publicacion" },
+      { $set: { [`${campo}.estado`]: "publicando", actualizadoEn: new Date() } }
+    );
+    if (envioReclamado.modifiedCount !== 1) {
+      return { ok: false, error: "No se pudo bloquear el envío. Se requiere revisión manual." };
+    }
+    try {
+      const respuesta = await fetch(`${THREADS_API}/me/threads_publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ creation_id: pieza.threadsPadreId, access_token: token }).toString(),
+      });
+      const publicado = await leerJsonSeguro(respuesta);
+      if (!respuesta.ok || !publicado?.id) {
+        throw new Error(publicado?.error?.message || "Meta no devolvió un ID de publicación.");
+      }
+      const publicacionId = String(publicado.id);
+      const publicadoEn = new Date();
+      await coleccion.updateOne(
+        { _id: documento._id, [`${campo}.estado`]: "publicando", [`${campo}.threadsEnviando`]: "publicacion" },
+        { $set: {
+          [`${campo}.estado`]: "publicado",
+          [`${campo}.publicacionId`]: publicacionId,
+          [`${campo}.publicadoEn`]: publicadoEn,
+          [`${campo}.threadsEtapa`]: "publicado",
+          actualizadoEn: publicadoEn,
+        }, $unset: {
+          [`${campo}.threadsEnviando`]: "", [`${campo}.threadsEnvioDesde`]: "",
+          [`${campo}.procesandoDesde`]: "", [`${campo}.ultimoError`]: "",
+          [`${campo}.ultimoErrorEn`]: "", [`${campo}.imagenesIntentadas`]: "",
+        } }
+      );
+      try {
+        await db.collection("publicaciones_redes").insertOne({
+          proveedor: "threads", tipo: "carrusel", productoId, publicacionId,
+          imagenes: pieza.threadsImagenes, texto: pieza.threadsTexto,
+          estado: "publicado", publicadoEn, creadoEn: publicadoEn,
+        });
+      } catch (errorRegistro) {
+        console.error("Carrusel Threads publicado; no se guardó el historial:", errorRegistro);
+      }
+      const actualizado = await coleccion.findOne({ _id: documento._id });
+      if (actualizado?.calendario?.length && actualizado.calendario.every((item) => item.estado === "publicado")) {
+        await coleccion.updateOne(
+          { _id: documento._id, estado: "programado" },
+          { $set: { estado: "publicado", publicadoEn, actualizadoEn: publicadoEn } }
+        );
+      }
+      return { ok: true, estado: "publicado", publicacionId };
+    } catch (error) {
+      return marcarError(`Revisá Threads: la publicación puede haberse enviado. No reintentes automáticamente. ${error.message}`, "envio_indeterminado");
+    }
+  }
+
+  return { ok: false, error: "El carrusel está en una etapa no reconocida. No se reintentará." };
+}
+
+// =========================================================
 // INSTAGRAM - PUBLICACIÓN
 // =========================================================
 
@@ -3194,6 +3510,13 @@ if (!formatosPermitidos.includes(`${pieza.red}:${pieza.tipo}`)) {
       return res.status(202).json(resultado);
     }
 
+    if (red === "threads" && tipo === "carrusel") {
+      const resultado = await iniciarCarruselThreadsProgramado({
+        db, documentoId: documento._id, posicion, publicacion: pieza.publicacion,
+      });
+      return res.status(202).json(resultado);
+    }
+
     const resultado =
       await ejecutarPublicacionPieza({
         req,
@@ -3446,8 +3769,26 @@ async function ejecutarPublicacionesPendientes(
           pieza.estado === "procesando_instagram" &&
           pieza.igContenedorId &&
           ["esperando", "listo"].includes(pieza.igEtapa);
-        if (!esReelEnCurso && pieza.estado !== "programado") return;
-        if (esReelEnCurso) {
+        const esCarruselThreadsEnCurso =
+          pieza.red === "threads" && pieza.tipo === "carrusel" &&
+          pieza.estado === "procesando_threads" &&
+          !pieza.threadsEnviando &&
+          ["crear_hijos", "verificar_hijos", "crear_padre", "verificar_padre", "publicar"].includes(pieza.threadsEtapa);
+        const esCarruselThreadsAtascado =
+          pieza.red === "threads" && pieza.tipo === "carrusel" &&
+          ["procesando_threads", "publicando"].includes(pieza.estado) &&
+          Boolean(pieza.threadsEnviando && pieza.threadsEnvioDesde) &&
+          new Date(pieza.threadsEnvioDesde).getTime() <= Date.now() - ALERTA_ENVIO_THREADS_MS;
+        if (!esReelEnCurso && !esCarruselThreadsEnCurso && !esCarruselThreadsAtascado && pieza.estado !== "programado") return;
+        if (esCarruselThreadsAtascado) {
+          // Se registrará un error para revisión manual, SIN contactar a Meta.
+        } else if (esCarruselThreadsEnCurso) {
+          const proxima = pieza.threadsProximaRevisionEn ? new Date(pieza.threadsProximaRevisionEn) : null;
+          if (proxima && proxima.getTime() > Date.now()) return;
+          const bloqueado = pieza.threadsConsultaDesde &&
+            new Date(pieza.threadsConsultaDesde).getTime() > Date.now() - BLOQUEO_THREADS_CONSULTA_MS;
+          if (bloqueado) return;
+        } else if (esReelEnCurso) {
           const proxima = pieza.igProximaConsultaEn ? new Date(pieza.igProximaConsultaEn) : null;
           if (proxima && proxima.getTime() > Date.now()) return;
           const bloqueado = pieza.igConsultaDesde &&
@@ -3484,6 +3825,7 @@ if (!Number.isFinite(fechaProgramada.getTime())) {
           tipo: pieza.tipo,
           indice: pieza.indice,
           continuarReel: Boolean(esReelEnCurso),
+          continuarCarruselThreads: Boolean(esCarruselThreadsEnCurso || esCarruselThreadsAtascado),
           intentosPublicacion:
             Number(pieza.intentosPublicacion) || 0,
           ultimoIntentoEn:
@@ -3494,8 +3836,10 @@ if (!Number.isFinite(fechaProgramada.getTime())) {
   }
 
   pendientes.sort((a, b) => {
-    // Primero terminar Reels cuyo contenedor ya existe, sin crear otro.
-    if (a.continuarReel !== b.continuarReel) return a.continuarReel ? -1 : 1;
+    // Priorizar contenedores ya creados sobre nuevas publicaciones.
+    const continuandoA = a.continuarReel || a.continuarCarruselThreads;
+    const continuandoB = b.continuarReel || b.continuarCarruselThreads;
+    if (continuandoA !== continuandoB) return continuandoA ? -1 : 1;
     const diferenciaIntentos =
       (a.intentosPublicacion || 0) -
       (b.intentosPublicacion || 0);
@@ -3529,7 +3873,16 @@ if (!Number.isFinite(fechaProgramada.getTime())) {
       },
     };
 
-    if (pieza.continuarReel) {
+    if (pieza.continuarCarruselThreads) {
+      respuesta = await continuarCarruselThreadsProgramado({
+        db,
+        productoId: pieza.productoId,
+        fecha: pieza.fecha,
+        hora: pieza.hora,
+        indice: pieza.indice,
+      });
+      estadoHttp = respuesta.ok ? 200 : 502;
+    } else if (pieza.continuarReel) {
       respuesta = await continuarReelInstagramProgramado({
         db,
         productoId: pieza.productoId,

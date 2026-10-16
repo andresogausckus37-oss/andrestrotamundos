@@ -3569,9 +3569,19 @@ const urlProducto = productoId
                                   ) : horarioYaPasoArgentina(pieza) ? (
                                     <div className="mt-1 space-y-0.5">
                                       <p className="text-[9px] font-semibold text-amber-600">
-                                        {Number(pieza.intentosPublicacion) > 0
-                                          ? `Intentos registrados: ${pieza.intentosPublicacion}`
-                                          : "Pendiente · esperando al cron"}
+                                        {pieza.red === "threads" &&
+                                        pieza.tipo === "carrusel" &&
+                                        pieza.estado === "procesando_threads"
+                                          ? ({
+                                              crear_hijos: "Threads · preparando las tres imágenes",
+                                              verificar_hijos: "Threads · esperando el procesamiento de imágenes",
+                                              crear_padre: "Threads · armando el carrusel",
+                                              verificar_padre: "Threads · esperando el carrusel",
+                                              publicar: "Threads · listo para publicación",
+                                            }[pieza.threadsEtapa] || "Threads · procesando carrusel")
+                                          : Number(pieza.intentosPublicacion) > 0
+                                            ? `Intentos registrados: ${pieza.intentosPublicacion}`
+                                            : "Pendiente · esperando al cron"}
                                       </p>
 
                                       {formatearHoraDiagnostico(
@@ -3593,7 +3603,10 @@ const urlProducto = productoId
                                       {Array.isArray(pieza.imagenesIntentadas) &&
                                         pieza.imagenesIntentadas.length > 0 && (
                                           <p className="text-[9px] text-slate-400">
-                                            Imágenes registradas: {pieza.imagenesIntentadas.length}
+                                            {pieza.red === "threads" && pieza.tipo === "carrusel"
+                                              ? "URLs de imágenes preparadas: "
+                                              : "Imágenes registradas: "}
+                                            {pieza.imagenesIntentadas.length}
                                           </p>
                                         )}
                                     </div>
