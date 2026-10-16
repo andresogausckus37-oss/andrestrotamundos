@@ -4,9 +4,9 @@ export const resenasProductos = [
   // =========================================================
 
   {
-    productoId: "50-laberintos-para-ninos",
+    productoId: "maquina-patillera-profesional-oryx-para-pelo-y-barba",
     texto:
-      "Muy lindo producto. Llegó en buenas condiciones y la calidad es excelente.",
+      "Tenia una y se me rompió asique tuve que comprar otra. es buenísima, sa la re banca! recomendable.",
     estrellas: 5,
     compraVerificada: true,
   },
