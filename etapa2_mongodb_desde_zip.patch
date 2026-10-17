@@ -1,0 +1,311 @@
+--- a/worker.js
++++ b/worker.js
+@@ -183,6 +183,294 @@
+ }
+ 
+ // =========================================================
++// PEDIDOS DE PUBLICACIONES · ETAPA 2: MONGODB, SIN COBROS ACTIVOS
++// Aislado de los pedidos de la tienda y del cron de Mega Bazar.
++// Precios validados en el servidor; la vista previa NO sube archivos.
++// =========================================================
++const PLAN_PUBLICACIONES = Object.freeze({
++  id: "comunidad-semanal",
++  nombre: "Comunidad Semanal",
++  contenidos: 4,
++  duracionDias: 7,
++});
++
++// Los precios del Worker son la fuente de verdad; no usar precioMostrado.
++const PRECIOS_PUBLICACIONES = Object.freeze({
++  ARS: Object.freeze({ 1: 15000, 2: 25000 }),
++  USD: Object.freeze({ 1: 15, 2: 25 }),
++});
++
++// Identificadores IANA admitidos en el configurador (América y España).
++const ZONAS_PUBLICACIONES = new Set([
++  "America/Argentina/Buenos_Aires", "America/Belize", "America/La_Paz",
++  "America/Noronha", "America/Manaus", "America/Rio_Branco",
++  "America/Sao_Paulo", "America/Coyhaique", "Pacific/Easter",
++  "America/Punta_Arenas", "America/Santiago", "America/Bogota",
++  "America/Costa_Rica", "America/Havana", "Pacific/Galapagos",
++  "America/Guayaquil", "America/El_Salvador", "Atlantic/Canary",
++  "Europe/Madrid", "America/Anchorage", "America/Chicago",
++  "America/Denver", "America/New_York", "Pacific/Honolulu",
++  "America/Los_Angeles", "America/Phoenix", "America/Guatemala",
++  "America/Port-au-Prince", "America/Tegucigalpa", "America/Tijuana",
++  "America/Cancun", "America/Chihuahua", "America/Ciudad_Juarez",
++  "America/Matamoros", "America/Mazatlan", "America/Mexico_City",
++  "America/Hermosillo", "America/Managua", "America/Panama",
++  "America/Asuncion", "America/Lima", "America/Puerto_Rico",
++  "America/Santo_Domingo", "America/Montevideo", "America/Caracas",
++]);
++const DIAS_PUBLICACIONES = new Set([
++  "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo",
++]);
++const HORAS_PUBLICACIONES = new Set([
++  "09:00", "10:00", "12:00", "14:00", "17:00", "18:00", "19:00", "20:00", "21:00",
++]);
++
++function respuestaServicio(datos, estado = 200) {
++  return Response.json(datos, {
++    status: estado,
++    headers: { "Cache-Control": "no-store" },
++  });
++}
++
++async function leerJsonServicio(request) {
++  if (!/^application\/json(?:;|$)/i.test(request.headers.get("content-type") || "")) {
++    return { error: "El pedido debe enviarse como JSON.", estado: 415 };
++  }
++  const lector = request.body?.getReader();
++  if (!lector) return { error: "Falta la configuración del pedido.", estado: 400 };
++  const decoder = new TextDecoder();
++  let texto = "", bytes = 0;
++  try {
++    while (true) {
++      const { done, value } = await lector.read();
++      if (done) break;
++      bytes += value.byteLength;
++      if (bytes > 64 * 1024) {
++        await lector.cancel();
++        return { error: "El pedido supera el tamaño permitido.", estado: 413 };
++      }
++      texto += decoder.decode(value, { stream: true });
++    }
++    texto += decoder.decode();
++    const datos = JSON.parse(texto);
++    if (!datos || typeof datos !== "object" || Array.isArray(datos)) {
++      return { error: "Formato del pedido inválido.", estado: 400 };
++    }
++    return { datos };
++  } catch {
++    return { error: "No se pudo leer el JSON del pedido.", estado: 400 };
++  }
++}
++
++function textoServicio(valor, maximo) {
++  return typeof valor === "string" && valor.trim().length <= maximo
++    ? valor.trim()
++    : null;
++}
++
++function urlServicio(valor, maximo, soloHttps = false) {
++  const texto = textoServicio(valor, maximo);
++  if (texto === null) return null;
++  if (!texto) return "";
++  try {
++    const url = new URL(texto);
++    if ((soloHttps ? url.protocol !== "https:" : !["http:", "https:"].includes(url.protocol)) ||
++        url.username || url.password || !url.hostname) return null;
++    return url.toString();
++  } catch {
++    return null;
++  }
++}
++
++// Los datos recibidos se copian campo por campo: no se persisten claves extra.
++function validarConfiguracionServicio(datos) {
++  if (datos.planId !== PLAN_PUBLICACIONES.id) {
++    return { error: "El plan solicitado no existe." };
++  }
++  const redes = datos.redes;
++  if (!Array.isArray(redes) || redes.length < 1 || redes.length > 2 ||
++      new Set(redes).size !== redes.length ||
++      !redes.every((red) => red === "instagram" || red === "facebook")) {
++    return { error: "Seleccioná Instagram, Facebook o ambas redes." };
++  }
++  if (!ZONAS_PUBLICACIONES.has(datos.zonaHoraria)) {
++    return { error: "Zona horaria no admitida." };
++  }
++
++  const n = datos.negocio;
++  if (!n || typeof n !== "object" || Array.isArray(n)) {
++    return { error: "Faltan los datos del emprendimiento." };
++  }
++  const negocio = {
++    nombre: textoServicio(n.nombre, 120),
++    rubro: textoServicio(n.rubro ?? "", 100),
++    contacto: textoServicio(n.contacto, 120),
++    email: textoServicio(n.email, 160),
++    url: urlServicio(n.url ?? "", 300),
++    whatsapp: textoServicio(n.whatsapp ?? "", 50),
++    publico: textoServicio(n.publico ?? "", 180),
++    tono: n.tono ?? "cercano",
++  };
++  if (!negocio.nombre || !negocio.contacto || !negocio.email ||
++      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(negocio.email) ||
++      Object.values(negocio).some((valor) => valor === null) ||
++      !["cercano", "profesional", "informal", "promocional"].includes(negocio.tono)) {
++    return { error: "Revisá los datos del emprendimiento y el correo electrónico." };
++  }
++  if (negocio.whatsapp && !/^[+\d()\s.-]{5,50}$/.test(negocio.whatsapp)) {
++    return { error: "El número de WhatsApp no es válido." };
++  }
++
++  if (!Array.isArray(datos.publicaciones) || datos.publicaciones.length !== PLAN_PUBLICACIONES.contenidos) {
++    return { error: "El plan incluye exactamente cuatro contenidos." };
++  }
++  const publicaciones = datos.publicaciones.map((p, indice) => {
++    if (!p || typeof p !== "object" || Array.isArray(p) ||
++        p.id !== `contenido-${indice + 1}` ||
++        !["reel", "carrusel", "imagen"].includes(p.tipo) ||
++        !DIAS_PUBLICACIONES.has(p.dia) || !HORAS_PUBLICACIONES.has(p.hora)) return null;
++    if (!(p.tipo === "reel" ? ["9:16"] : ["4:5", "1:1"]).includes(p.formato)) return null;
++
++    const descripcion = textoServicio(p.descripcion ?? "", 1500);
++    const ctaInstagram = textoServicio(p.ctaInstagram ?? "", 100);
++    const ctaFacebook = textoServicio(p.ctaFacebook ?? "", 100);
++    const urlFacebook = urlServicio(p.urlFacebook ?? "", 500, true);
++    const hashtags = textoServicio(p.hashtags ?? "", 240);
++    if ([descripcion, ctaInstagram, ctaFacebook, urlFacebook, hashtags].some((v) => v === null)) return null;
++
++    const archivos = p.archivosSeleccionados ?? [];
++    if (!Array.isArray(archivos) || archivos.length > (p.tipo === "carrusel" ? 10 : 1)) return null;
++    const metadatos = archivos.map((archivo) => {
++      if (!archivo || typeof archivo !== "object" || Array.isArray(archivo)) return null;
++      const nombre = textoServicio(archivo.nombre, 180);
++      const tipo = textoServicio(archivo.tipo, 80);
++      const limite = p.tipo === "reel" ? 150 * 1024 * 1024 : 20 * 1024 * 1024;
++      if (!nombre || tipo === null || !Number.isSafeInteger(archivo.tamano) ||
++          archivo.tamano <= 0 || archivo.tamano > limite) return null;
++      if (p.tipo === "reel" && tipo !== "video/mp4" && !/\.mp4$/i.test(nombre)) return null;
++      if (p.tipo !== "reel" && !["image/jpeg", "image/png", "image/webp", ""].includes(tipo) &&
++          !/\.(jpe?g|png|webp)$/i.test(nombre)) return null;
++      return { nombre, tipo, tamano: archivo.tamano, estado: "pendiente_subida" };
++    });
++    if (metadatos.some((archivo) => !archivo)) return null;
++    return {
++      id: p.id, tipo: p.tipo, formato: p.formato,
++      diaPreferido: p.dia, horaLocalPreferida: p.hora,
++      descripcion, ctaInstagram, ctaFacebook, urlFacebook, hashtags,
++      archivos: metadatos,
++      fechaHoraDefinitiva: null,
++      estado: "pendiente_preparacion",
++    };
++  });
++  if (publicaciones.some((publicacion) => !publicacion)) {
++    return { error: "Revisá los datos de las cuatro publicaciones." };
++  }
++  return { configuracion: {
++    redes: [...redes], zonaHoraria: datos.zonaHoraria, negocio, publicaciones,
++  } };
++}
++
++// Para abrir pedidos públicos se requiere Turnstile; Admin puede probar
++// la escritura con su sesión existente. Esta verificación NO confirma pagos.
++async function validarAccesoCrearServicio(request, env, datos) {
++  if (adminAutorizadoWorker(request, env)) return { ok: true };
++  if (!env.SERVICIO_TURNSTILE_SECRET) {
++    return { error: "Aún no está habilitada la validación de pedidos públicos.", estado: 503 };
++  }
++  const token = textoServicio(datos.turnstileToken, 2048);
++  if (!token) return { error: "Completá la verificación de seguridad.", estado: 403 };
++  try {
++    const formulario = new URLSearchParams({
++      secret: env.SERVICIO_TURNSTILE_SECRET,
++      response: token,
++    });
++    const ip = request.headers.get("CF-Connecting-IP");
++    if (ip) formulario.set("remoteip", ip);
++    const respuesta = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
++      method: "POST", body: formulario,
++    });
++    if (!respuesta.ok) return { error: "No se pudo completar la verificación de seguridad.", estado: 503 };
++    const verificacion = await respuesta.json();
++    return verificacion.success
++      ? { ok: true }
++      : { error: "Verificación de seguridad inválida o vencida.", estado: 403 };
++  } catch {
++    return { error: "No se pudo comprobar la verificación de seguridad.", estado: 503 };
++  }
++}
++
++async function apiPedidosPublicaciones(request, env, ruta) {
++  if (ruta === "/api/servicios/publicaciones/plan") {
++    if (request.method !== "GET") return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
++    return respuestaServicio({
++      ok: true, plan: PLAN_PUBLICACIONES,
++      precios: PRECIOS_PUBLICACIONES,
++      mediosPago: { ARS: "transferencia", USD: "paypal" },
++      pedidosHabilitados: String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() === "true" &&
++        Boolean(env?.SERVICIO_TURNSTILE_SECRET),
++      cobrosHabilitados: false,
++    });
++  }
++  if (request.method !== "POST") {
++    return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
++  }
++  if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() !== "true") {
++    return respuestaServicio({ ok: false, error: "La contratación de publicaciones aún no está habilitada." }, 503);
++  }
++  const lectura = await leerJsonServicio(request);
++  if (lectura.error) return respuestaServicio({ ok: false, error: lectura.error }, lectura.estado);
++  const datos = lectura.datos;
++  if (!["ARS", "USD"].includes(datos.moneda)) {
++    return respuestaServicio({ ok: false, error: "Moneda no admitida." }, 400);
++  }
++  const validacion = validarConfiguracionServicio(datos);
++  if (validacion.error) return respuestaServicio({ ok: false, error: validacion.error }, 400);
++  const acceso = await validarAccesoCrearServicio(request, env, datos);
++  if (acceso.error) return respuestaServicio({ ok: false, error: acceso.error }, acceso.estado);
++
++  const precio = PRECIOS_PUBLICACIONES[datos.moneda][validacion.configuracion.redes.length];
++  const metodoPago = datos.moneda === "ARS" ? "transferencia" : "paypal";
++  const estado = datos.moneda === "ARS" ? "pendiente_comprobante" : "pendiente_paypal";
++  let cliente;
++  try {
++    sincronizarEntorno(env);
++    const { MongoClient } = await import("mongodb");
++    cliente = new MongoClient(env.MONGODB_URI);
++    await cliente.connect();
++    const coleccion = cliente.db("andres_imprimibles").collection("pedidos_servicios");
++    const fecha = new Date();
++    const pedidoId = `SER-${crypto.randomUUID()}`;
++    await coleccion.insertOne({
++      pedidoId, tipo: "publicaciones", planId: PLAN_PUBLICACIONES.id,
++      nombrePlan: PLAN_PUBLICACIONES.nombre, contenidos: PLAN_PUBLICACIONES.contenidos,
++      duracionDias: PLAN_PUBLICACIONES.duracionDias,
++      moneda: datos.moneda, precio, metodoPago,
++      cantidadPublicaciones: PLAN_PUBLICACIONES.contenidos * validacion.configuracion.redes.length,
++      ...validacion.configuracion,
++      modalidadCalendario: "periodo_flexible_7_dias_consecutivos",
++      criterioInicio: "primera_publicacion_confirmada_tras_pago_cuentas_y_aprobacion",
++      fechaInicioServicio: null, fechaFinServicio: null,
++      estado, estadoPago: "pendiente", estadoCuentas: "pendiente_vinculacion",
++      estadoContenidos: "pendiente_carga", estadoServicio: "sin_activar",
++      archivosSubidos: false, comprobante: null,
++      paypalOrderId: null, paypalCaptureId: null,
++      creadoEn: fecha, actualizadoEn: fecha, pagadoEn: null, activadoEn: null,
++      historialEstados: [{ estado, fecha }],
++    });
++    return respuestaServicio({
++      ok: true, pedidoId, planId: PLAN_PUBLICACIONES.id,
++      moneda: datos.moneda, precio, metodoPago, estado,
++      pagoHabilitado: false,
++    }, 201);
++  } catch (error) {
++    console.error("Error guardando pedido de publicaciones en MongoDB:", error);
++    return respuestaServicio({ ok: false, error: "No se pudo guardar el pedido de publicaciones." }, 500);
++  } finally {
++    if (cliente) await cliente.close().catch((error) => console.error("MongoDB close:", error));
++  }
++}
++
++// =========================================================
+ // FACEBOOK STORY: imagen original y JPEG final desde React/Canvas.
+ // Ambas rutas requieren la sesión de Admin. Sin Cloudflare Images.
+ // =========================================================
+@@ -574,6 +862,13 @@
+   }
+ }
+ 
++if (
++  url.pathname === "/api/servicios/publicaciones/plan" ||
++  url.pathname === "/api/servicios/publicaciones/pedidos"
++) {
++  return apiPedidosPublicaciones(request, env, url.pathname);
++}
++
+ if (url.pathname === "/api/visitas") {
+   try {
+     return await ejecutarHandlerGenerico(

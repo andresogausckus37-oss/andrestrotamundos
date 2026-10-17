@@ -39,6 +39,12 @@ const PLAN = {
   },
 };
 
+// Clave pública del widget Turnstile, inyectada por Vite durante la compilación.
+// La clave privada permanece exclusivamente en los secretos de Cloudflare.
+const TURNSTILE_SITE_KEY = String(import.meta.env.VITE_SERVICIO_TURNSTILE_SITE_KEY || "").trim();
+const API_PLAN = "/api/servicios/publicaciones/plan";
+const API_PEDIDOS = "/api/servicios/publicaciones/pedidos";
+
 const REDES = [
   { id: "instagram", nombre: "Instagram", disponible: true },
   { id: "facebook", nombre: "Facebook", disponible: true },
@@ -227,6 +233,92 @@ function datosParaDescargar({ redes, contenidos, negocio, moneda, zonaHoraria })
   };
 }
 
+// Protección anti-bot sin nuevas dependencias ni cambios al Worker.
+// El widget se crea solo cuando el Worker acepta pedidos públicos.
+function VerificacionHumana({ clave, onToken }) {
+  const contenedorRef = useRef(null);
+  const [errorWidget, setErrorWidget] = useState("");
+
+  useEffect(() => {
+    let montado = true;
+    let widgetId = null;
+
+    function mostrarWidget() {
+      if (!montado || !contenedorRef.current || widgetId !== null || !window.turnstile) return;
+      try {
+        widgetId = window.turnstile.render(contenedorRef.current, {
+          sitekey: clave,
+          callback: (token) => { if (montado) onToken(token); },
+          "expired-callback": () => { if (montado) onToken(""); },
+          "error-callback": () => { if (montado) onToken(""); },
+        });
+      } catch {
+        if (montado) setErrorWidget("No se pudo mostrar la verificación. Recargá la página para intentarlo nuevamente.");
+      }
+    }
+
+    let script = document.getElementById("turnstile-servicio-publicaciones");
+    if (!script) {
+      script = document.createElement("script");
+      script.id = "turnstile-servicio-publicaciones";
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+    if (window.turnstile) mostrarWidget();
+    else script.addEventListener("load", mostrarWidget);
+    const errorCarga = () => { if (montado) setErrorWidget("No se pudo cargar la verificación. Revisá tu conexión."); };
+    script.addEventListener("error", errorCarga);
+
+    return () => {
+      montado = false;
+      script.removeEventListener("load", mostrarWidget);
+      script.removeEventListener("error", errorCarga);
+      if (widgetId !== null && window.turnstile) {
+        try { window.turnstile.remove(widgetId); } catch { /* Widget ya retirado. */ }
+      }
+    };
+  }, [clave, onToken]);
+
+  return (
+    <div>
+      <div ref={contenedorRef} aria-label="Verificación de seguridad" />
+      {errorWidget && <p role="alert" className="mt-2 text-xs text-red-700">{errorWidget}</p>}
+    </div>
+  );
+}
+
+// Mantiene la misma validación esencial que el Worker antes de enviar datos.
+// El servidor vuelve a validar cada campo y decide el importe definitivo.
+function verificarFormularioPedido({ negocio, contenidos }) {
+  if (!negocio.nombre.trim() || !negocio.contacto.trim()) {
+    return "Completá el nombre del emprendimiento y el nombre de contacto.";
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(negocio.email.trim())) {
+    return "Ingresá un correo electrónico válido para identificar el pedido.";
+  }
+  if (negocio.whatsapp.trim() && !/^[+\d()\s.-]{5,50}$/.test(negocio.whatsapp.trim())) {
+    return "Revisá el número de WhatsApp; usá números y el código de país.";
+  }
+  const urlValida = (valor, soloHttps = false) => {
+    if (!valor.trim()) return true;
+    try {
+      const url = new URL(valor.trim());
+      return (soloHttps ? url.protocol === "https:" : ["http:", "https:"].includes(url.protocol)) &&
+        !url.username && !url.password && Boolean(url.hostname);
+    } catch { return false; }
+  };
+  if (!urlValida(negocio.url)) return "Revisá la dirección web de tu emprendimiento (incluí https://).";
+  if (contenidos.some((p) => !urlValida(p.urlFacebook, true))) {
+    return "Las URL de Facebook deben comenzar con https:// y ser válidas.";
+  }
+  if (contenidos.some((p) => p.archivos.some(({ archivo }) => !archivo.size))) {
+    return "Uno de los archivos seleccionados está vacío. Quitalo de la vista previa.";
+  }
+  return "";
+}
+
 export default function ConfiguradorPublicaciones() {
   const [redes, setRedes] = useState(["instagram", "facebook"]);
   const [contenidos, setContenidos] = useState(crearContenidos);
@@ -239,6 +331,16 @@ export default function ConfiguradorPublicaciones() {
     nombre: "", rubro: "", contacto: "", email: "", url: "", whatsapp: "", publico: "", tono: "cercano",
   });
   const [errorArchivo, setErrorArchivo] = useState("");
+  const [planServidor, setPlanServidor] = useState(null);
+  const [estadoPlan, setEstadoPlan] = useState("cargando");
+  const [errorPlan, setErrorPlan] = useState("");
+  const [revisionPlan, setRevisionPlan] = useState(0);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [revisionTurnstile, setRevisionTurnstile] = useState(0);
+  const [creandoPedido, setCreandoPedido] = useState(false);
+  const [errorPedido, setErrorPedido] = useState("");
+  const [pedidoCreado, setPedidoCreado] = useState(null);
+  const enviandoRef = useRef(false);
   const urlsLocales = useRef(new Set());
   const vistaRef = useRef(null);
 
@@ -247,6 +349,35 @@ export default function ConfiguradorPublicaciones() {
     urlsLocales.current.clear();
   }, []);
 
+  // Obtiene importe y disponibilidad reales; si la consulta falla, la vista
+  // previa se conserva pero no se permite registrar un pedido.
+  useEffect(() => {
+    const controller = new AbortController();
+    setEstadoPlan("cargando");
+    setErrorPlan("");
+    fetch(API_PLAN, { method: "GET", headers: { Accept: "application/json" }, cache: "no-store", signal: controller.signal })
+      .then(async (respuesta) => {
+        if (!respuesta.ok) throw new Error("No se pudo consultar el plan del servidor.");
+        const datos = await respuesta.json();
+        const preciosValidos = ["ARS", "USD"].every((m) =>
+          [1, 2].every((n) => Number.isFinite(datos.precios?.[m]?.[n]) && datos.precios[m][n] > 0)
+        );
+        if (!datos.ok || datos.plan?.id !== PLAN.id ||
+            datos.plan?.contenidos !== PLAN.contenidos ||
+            datos.plan?.duracionDias !== PLAN.duracionDias || !preciosValidos) {
+          throw new Error("El plan disponible no coincide con el configurador.");
+        }
+        setPlanServidor(datos);
+        setEstadoPlan("listo");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setPlanServidor(null);
+        setEstadoPlan("error");
+        setErrorPlan(error?.message || "No pudimos consultar los precios del servidor.");
+      });
+    return () => controller.abort();
+  }, [revisionPlan]);
 
   const idiomaArgentino = zonaHoraria.startsWith("America/Argentina/");
   const t = (argentino, neutro) => idiomaArgentino ? argentino : neutro;
@@ -254,7 +385,9 @@ export default function ConfiguradorPublicaciones() {
   const indice = contenidos.findIndex((p) => p.id === contenido.id);
   const vistaActual = redes.includes(redVista) ? redVista : redes[0];
   const totalPublicaciones = PLAN.contenidos * redes.length;
-  const precio = PLAN.precios[moneda][redes.length];
+  const precio = planServidor?.precios?.[moneda]?.[redes.length] ?? PLAN.precios[moneda][redes.length];
+  const precioConfirmado = estadoPlan === "listo";
+  const pedidosDisponibles = precioConfirmado && planServidor?.pedidosHabilitados === true && Boolean(TURNSTILE_SITE_KEY);
   const medioPago = moneda === "ARS" ? "Transferencia bancaria" : "PayPal";
   const archivosVista = contenido.archivos;
   const archivoActivo = archivosVista[imagenActiva] || archivosVista[0];
@@ -338,8 +471,56 @@ export default function ConfiguradorPublicaciones() {
     setErrorArchivo("");
   }
 
+  async function crearPedido() {
+    if (enviandoRef.current || pedidoCreado || !pedidosDisponibles || !turnstileToken) return;
+    const errorValidacion = verificarFormularioPedido({ negocio, contenidos });
+    if (errorValidacion) {
+      setErrorPedido(errorValidacion);
+      return;
+    }
+    enviandoRef.current = true;
+    setCreandoPedido(true);
+    setErrorPedido("");
+    try {
+      const configuracion = datosParaDescargar({ redes, contenidos, negocio, moneda, zonaHoraria });
+      // Nunca enviamos archivos, URLs blob: ni un precio editable desde el navegador.
+      const { precioMostrado, aviso, ...datosPedido } = configuracion;
+      const respuesta = await fetch(API_PEDIDOS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ ...datosPedido, turnstileToken }),
+      });
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok || datos.ok !== true || typeof datos.pedidoId !== "string") {
+        throw new Error(datos.error || "No se pudo registrar el pedido. Intentá nuevamente.");
+      }
+      setPedidoCreado({
+        id: datos.pedidoId,
+        moneda: datos.moneda,
+        precio: datos.precio,
+        metodoPago: datos.metodoPago,
+        estado: datos.estado,
+        pagoHabilitado: datos.pagoHabilitado === true,
+      });
+    } catch (error) {
+      setErrorPedido(error?.message || "No se pudo comunicar con el servidor.");
+      // El token Turnstile tiene un solo uso, incluso si falla el guardado.
+      setTurnstileToken("");
+      setRevisionTurnstile((n) => n + 1);
+    } finally {
+      enviandoRef.current = false;
+      setCreandoPedido(false);
+    }
+  }
+
   function descargarConfiguracion() {
     const datos = datosParaDescargar({ redes, contenidos, negocio, moneda, zonaHoraria });
+    datos.precioMostrado = {
+      monto: precio,
+      moneda,
+      sujetoAConfirmacion: !precioConfirmado,
+    };
     const url = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 2)], { type: "application/json;charset=utf-8" }));
     const enlace = document.createElement("a");
     enlace.href = url;
@@ -637,18 +818,62 @@ export default function ConfiguradorPublicaciones() {
                   : "El pago se realizará mediante PayPal. La activación requiere la confirmación del pago y la aprobación del contenido."}
               </p>
               <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
-                <div><p className="text-sm text-slate-600">Total por semana</p><p className="mt-0.5 text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"} · {totalPublicaciones} publicaciones</p></div>
+                <div><p className="text-sm text-slate-600">{precioConfirmado ? "Total por semana" : "Importe orientativo"}</p><p className="mt-0.5 text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"} · {totalPublicaciones} publicaciones</p></div>
                 <p className="text-xl font-medium text-slate-900">{precioFormateado(precio, moneda)}</p>
               </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <button type="button" disabled aria-disabled="true" className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-md bg-slate-300 px-3 py-3 text-sm font-medium text-white">
-                  <LockKeyhole size={16} /> Contratación próximamente
+              {!precioConfirmado && (
+                <div className="mt-3 text-xs leading-5 text-slate-600" role="status">
+                  {estadoPlan === "cargando" ? "Consultando el precio actualizado..." : (
+                    <span>
+                      {errorPlan} El importe mostrado es orientativo. {" "}
+                      <button type="button" onClick={() => setRevisionPlan((n) => n + 1)} className="font-medium text-orange-700 underline underline-offset-2">Reintentar</button>
+                    </span>
+                  )}
+                </div>
+              )}
+              {pedidosDisponibles && !pedidoCreado && (
+                <div className="mt-5 border-t border-slate-100 pt-4">
+                  <p className="mb-2 text-sm font-medium text-slate-800">Verificación de seguridad</p>
+                  <VerificacionHumana key={revisionTurnstile} clave={TURNSTILE_SITE_KEY} onToken={setTurnstileToken} />
+                </div>
+              )}
+              {pedidoCreado ? (
+                <div className="mt-5 rounded-md border border-orange-200 bg-orange-50 p-4" role="status" aria-live="polite">
+                  <div className="flex items-center gap-2 text-sm font-medium text-orange-900"><CircleCheck size={18} /> Pedido registrado</div>
+                  <p className="mt-2 break-all text-sm font-medium text-slate-900">Código: {pedidoCreado.id}</p>
+                  <p className="mt-1 text-xs text-slate-700">Importe validado: {precioFormateado(pedidoCreado.precio, pedidoCreado.moneda)} · {pedidoCreado.metodoPago === "paypal" ? "PayPal" : "Transferencia"}</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-700">Guardá el código. Todavía no se habilitaron los cobros ni la subida definitiva de archivos; crear el pedido no confirma un pago ni activa publicaciones.</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Las modificaciones que hagas ahora en la pantalla no cambiarán el pedido ya registrado.</p>
+                </div>
+              ) : (
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <button type="button" onClick={crearPedido}
+                    disabled={!pedidosDisponibles || !turnstileToken || creandoPedido}
+                    className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-medium transition",
+                      pedidosDisponibles && turnstileToken && !creandoPedido
+                        ? "bg-orange-600 text-white hover:bg-orange-700"
+                        : "cursor-not-allowed bg-slate-300 text-white")}
+                  >
+                    {creandoPedido ? "Registrando pedido..." : pedidosDisponibles ? (
+                      <><ShieldCheck size={16} /> Registrar pedido</>
+                    ) : <><LockKeyhole size={16} /> Contratación próximamente</>}
+                  </button>
+                  <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50">
+                    <Download size={16} /> Guardar configuración
+                  </button>
+                </div>
+              )}
+              {pedidoCreado && (
+                <button type="button" onClick={descargarConfiguracion} className="mt-3 inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-50">
+                  <Download size={15} /> Guardar una copia de la configuración
                 </button>
-                <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50">
-                  <Download size={16} /> Guardar configuración
-                </button>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">{t("Podés revisar todos tus contenidos sin pagar. El importe se confirmará al contratar.", "Puedes revisar todos tus contenidos sin pagar. El importe se confirmará al contratar.")}</p>
+              )}
+              {errorPedido && <p className="mt-3 text-xs leading-5 text-red-700" role="alert">{errorPedido}</p>}
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                {pedidosDisponibles
+                  ? "Registrar un pedido no realiza ningún cobro. El pago y la activación estarán disponibles en una etapa posterior."
+                  : "Podés revisar todos tus contenidos y guardar la configuración sin pagar. La contratación se habilitará próximamente."}
+              </p>
             </section>
           </div>
 
