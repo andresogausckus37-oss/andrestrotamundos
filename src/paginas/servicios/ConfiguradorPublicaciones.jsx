@@ -57,7 +57,7 @@ const HORARIOS = ["09:00", "10:00", "12:00", "14:00", "17:00", "18:00", "19:00",
 // zonas con reglas horarias distintas (incluidos los cambios estacionales).
 // Los identificadores IANA se guardan sin convertirlos a la hora de Argentina.
 const ZONAS_DISPONIBLES = [
-  { pais: "Argentina", zonas: [["America/Argentina/Buenos_Aires", "Buenos Aires (todo el país)"]] },
+  { pais: "Argentina", zonas: [["America/Argentina/Buenos_Aires", "Buenos Aires"]] },
   { pais: "Belice", zonas: [["America/Belize", "Belmopán"]] },
   { pais: "Bolivia", zonas: [["America/La_Paz", "La Paz"]] },
   { pais: "Brasil", zonas: [
@@ -148,7 +148,9 @@ function crearContenidos() {
     hora,
     formato: tipo === "reel" ? "9:16" : "4:5",
     descripcion: "",
-    cta: "",
+    ctaInstagram: "",
+    ctaFacebook: "",
+    urlFacebook: "",
     hashtags: "",
     archivos: [],
   }));
@@ -197,12 +199,13 @@ function TituloSeccion({ numero, titulo, descripcion }) {
 
 function datosParaDescargar({ redes, contenidos, negocio, moneda, zonaHoraria }) {
   return {
-    version: 2,
+    version: 3,
     planId: PLAN.id,
     planNombre: PLAN.nombre,
     duracionDias: PLAN.duracionDias,
-    inicioSemana: "lunes",
-    criterioInicio: "lunes_siguiente_a_aprobacion_del_pago_contenidos_y_cuentas",
+    modalidadCalendario: "periodo_flexible_7_dias_consecutivos",
+    criterioInicio: "primera_publicacion_confirmada_tras_verificacion_del_pago_vinculacion_y_aprobacion_de_materiales",
+    criterioFechas: "dias_y_horas_preferidos_a_confirmar_dentro_del_periodo_desde_el_primer_contenido",
     redes,
     moneda,
     zonaHoraria,
@@ -348,6 +351,8 @@ export default function ConfiguradorPublicaciones() {
   }
 
   const textoVista = contenido.descripcion.trim();
+  const ctaVista = vistaActual === "instagram" ? contenido.ctaInstagram : contenido.ctaFacebook;
+  const urlVistaFacebook = vistaActual === "facebook" ? contenido.urlFacebook.trim() : "";
   const nombreVista = negocio.nombre.trim() || "Tu emprendimiento";
   const usuarioVista = nombreVista.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "tu_emprendimiento";
 
@@ -370,7 +375,7 @@ export default function ConfiguradorPublicaciones() {
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_350px] lg:gap-9">
           <div className="min-w-0 space-y-8 sm:space-y-10">
             <section className={TARJETA} aria-labelledby="config-plan">
-              <div id="config-plan"><TituloSeccion numero="01" titulo="Plan y redes" descripcion="Cuatro contenidos originales durante una semana, de lunes a domingo." /></div>
+              <div id="config-plan"><TituloSeccion numero="01" titulo="Plan y redes" descripcion="Cuatro contenidos originales en un período flexible de siete días consecutivos." /></div>
               <div className="mb-7 grid grid-cols-3 gap-3 rounded-md border border-slate-200 bg-white px-3 py-4 sm:px-4 sm:py-5">
                 {[[PLAN.contenidos, "Contenidos"], [PLAN.duracionDias, "Días"], [totalPublicaciones, "Publicaciones"]].map(([numero, descripcion]) => (
                   <div key={descripcion} className="text-center">
@@ -409,19 +414,20 @@ export default function ConfiguradorPublicaciones() {
               <div className="mt-8 border-t border-slate-100 pt-6">
                 <Campo titulo="Zona horaria de tus publicaciones" ayuda="Cada publicación respeta la hora local de la zona elegida, sin usar automáticamente la hora de Argentina.">
                   <select id="zona-horaria" aria-label="Zona horaria de tus publicaciones" className={INPUT} value={zonaHoraria} onChange={(e) => setZonaHoraria(e.target.value)}>
-                    {ZONAS_DISPONIBLES.map(({ pais, zonas }) => (
-                      <optgroup key={pais} label={pais}>
-                        {[...zonas].sort((a, b) => a[1].localeCompare(b[1], "es", { sensitivity: "base" })).map(([id, ciudad]) => (
-                          <option key={id} value={id}>{pais} · {ciudad}</option>
-                        ))}
-                      </optgroup>
-                    ))}
+                    {ZONAS_DISPONIBLES.flatMap(({ pais, zonas }) =>
+                      [...zonas].sort((a, b) => a[1].localeCompare(b[1], "es", { sensitivity: "base" })).map(([id, ciudad]) => (
+                        <option key={id} value={id}>{pais} · {ciudad}</option>
+                      ))
+                    )}
                   </select>
                 </Campo>
               </div>
               <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-600">
                 <CalendarDays size={15} className="mt-0.5 shrink-0 text-orange-700" />
-                La semana comienza un lunes. La fecha de inicio se confirma después del pago, la entrega y aprobación del contenido y la conexión de las cuentas. Se toma el lunes siguiente a completar esos pasos.
+                {t(
+                  "No necesitás esperar al lunes. Tras verificar el pago, vincular las cuentas y aprobar los contenidos, acordamos la primera fecha disponible. Desde esa primera publicación se cuentan siete días consecutivos, respetando tu zona horaria.",
+                  "No necesitas esperar al lunes. Tras verificar el pago, vincular las cuentas y aprobar los contenidos, acordamos la primera fecha disponible. Desde esa primera publicación se cuentan siete días consecutivos, respetando tu zona horaria."
+                )}
               </p>
             </section>
 
@@ -464,7 +470,7 @@ export default function ConfiguradorPublicaciones() {
                     {TIPOS.find((t) => t.id === contenido.tipo)?.formatos.map((f) => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </Campo>
-                <Campo titulo="Día de publicación">
+                <Campo titulo="Día preferido de publicación">
                   <select aria-label={`Día del contenido ${indice + 1}`} className={INPUT} value={contenido.dia} onChange={(e) => actualizarContenido(contenido.id, { dia: e.target.value })}>
                     {DIAS.map((dia) => <option key={dia} value={dia}>{dia}</option>)}
                   </select>
@@ -475,7 +481,7 @@ export default function ConfiguradorPublicaciones() {
                   </select>
                 </Campo>
               </div>
-              <p className="mt-2 text-xs text-slate-500">Los horarios se interpretan en la zona horaria elegida y son orientativos hasta confirmar el calendario.</p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">Los días y horarios son preferencias. Tras la aprobación organizamos las cuatro publicaciones dentro de siete días consecutivos, desde la primera fecha confirmada, según tu zona horaria.</p>
               {contenidos.some((p) => p.id !== contenido.id && p.dia === contenido.dia && p.hora === contenido.hora) && (
                 <p className="mt-2 text-xs text-amber-700" role="status">Otro contenido tiene el mismo día y horario. {t("Podés mantenerlos o elegir horas diferentes.", "Puedes mantenerlos o elegir horas diferentes.")}</p>
               )}
@@ -514,19 +520,54 @@ export default function ConfiguradorPublicaciones() {
                   <textarea className={INPUT} rows={3} maxLength={1500} value={contenido.descripcion} onChange={(e) => actualizarContenido(contenido.id, { descripcion: e.target.value })} placeholder="Ej.: Queremos contar cómo elaboramos nuestros productos..." />
                 </Campo>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <Campo titulo={t("¿Qué querés que haga quien lo vea? (opcional)", "¿Qué quieres que haga quien lo vea? (opcional)")}>
-                    <input className={INPUT} maxLength={100} list="cta-sugerencias" value={contenido.cta} onChange={(e) => actualizarContenido(contenido.id, { cta: e.target.value })} placeholder={t("Ej.: Consultanos por WhatsApp", "Ej.: Consúltanos por WhatsApp")} />
-                  </Campo>
-                  <Campo titulo="Hashtags (opcional)">
-                    <input className={INPUT} maxLength={240} value={contenido.hashtags} onChange={(e) => actualizarContenido(contenido.id, { hashtags: e.target.value })} placeholder="#MiNegocio #Comunidad" />
-                  </Campo>
+                  {redes.includes("instagram") && (
+                    <div>
+                      <Campo titulo={<span className="inline-flex items-center gap-2"><LogoRed red="instagram" size={19} /> CTA para Instagram (opcional)</span>}
+                        ayuda={t(
+                          "En Instagram los enlaces del texto no suelen ser clicables. Usá indicaciones como ‘Enlace en nuestra bio’ o ‘Escribinos por mensaje’.",
+                          "En Instagram los enlaces del texto no suelen ser clicables. Usa indicaciones como ‘Enlace en nuestra biografía’ o ‘Escríbenos por mensaje’."
+                        )}>
+                        <input className={INPUT} maxLength={100} list={`cta-instagram-${contenido.id}`} value={contenido.ctaInstagram}
+                          onChange={(e) => actualizarContenido(contenido.id, { ctaInstagram: e.target.value })}
+                          placeholder={t("Ej.: Enlace en nuestra bio", "Ej.: Enlace en nuestra biografía")} />
+                      </Campo>
+                      <datalist id={`cta-instagram-${contenido.id}`}>
+                        <option value={t("Enlace en nuestra bio", "Enlace en nuestra biografía")} />
+                        <option value={t("Escribinos por mensaje privado", "Escríbenos por mensaje privado")} />
+                        <option value={t("Conocé más en nuestro perfil", "Conoce más en nuestro perfil")} />
+                        <option value={t("Mirá nuestros productos en el perfil", "Mira nuestros productos en el perfil")} />
+                        <option value={t("Dejanos tu opinión", "Déjanos tu opinión")} />
+                      </datalist>
+                    </div>
+                  )}
+                  {redes.includes("facebook") && (
+                    <div className="space-y-4">
+                      <Campo titulo={<span className="inline-flex items-center gap-2"><LogoRed red="facebook" size={19} /> CTA para Facebook (opcional)</span>}>
+                        <input className={INPUT} maxLength={100} list={`cta-facebook-${contenido.id}`} value={contenido.ctaFacebook}
+                          onChange={(e) => actualizarContenido(contenido.id, { ctaFacebook: e.target.value })}
+                          placeholder={t("Ej.: Visitá nuestra tienda", "Ej.: Visita nuestra tienda")} />
+                      </Campo>
+                      <datalist id={`cta-facebook-${contenido.id}`}>
+                        <option value={t("Visitá nuestra tienda", "Visita nuestra tienda")} />
+                        <option value={t("Escribinos por WhatsApp", "Escríbenos por WhatsApp")} />
+                        <option value={t("Conocé más", "Conoce más")} />
+                        <option value={t("Envianos un mensaje", "Envíanos un mensaje")} />
+                        <option value={t("Dejanos tu opinión", "Déjanos tu opinión")} />
+                      </datalist>
+                      <Campo titulo="URL para Facebook (opcional)" ayuda={t(
+                        "Pegá el enlace completo (https://...), por ejemplo tu tienda o https://wa.me/... Se verá debajo del CTA en la vista previa.",
+                        "Pega el enlace completo (https://...), por ejemplo tu tienda o https://wa.me/... Se verá debajo del CTA en la vista previa."
+                      )}>
+                        <input className={INPUT} type="url" inputMode="url" maxLength={500} value={contenido.urlFacebook}
+                          onChange={(e) => actualizarContenido(contenido.id, { urlFacebook: e.target.value })}
+                          placeholder="https://..." />
+                      </Campo>
+                    </div>
+                  )}
                 </div>
-                <datalist id="cta-sugerencias">
-                  <option value={t("Consultanos por WhatsApp", "Consúltanos por WhatsApp")} />
-                  <option value={t("Conocé más", "Conoce más")} />
-                  <option value={t("Visitá nuestra tienda", "Visita nuestra tienda")} />
-                  <option value={t("Dejanos tu opinión", "Déjanos tu opinión")} />
-                </datalist>
+                <Campo titulo="Hashtags (opcional)">
+                  <input className={INPUT} maxLength={240} value={contenido.hashtags} onChange={(e) => actualizarContenido(contenido.id, { hashtags: e.target.value })} placeholder="#MiNegocio #Comunidad" />
+                </Campo>
               </div>
             </section>
 
@@ -684,7 +725,8 @@ export default function ConfiguradorPublicaciones() {
                 <p className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
                   {textoVista || t("Acá vas a ver la idea de tu publicación.", "Aquí verás la idea de tu publicación.")}
                 </p>
-                {contenido.cta.trim() && <p className="mt-2 text-sm font-medium text-slate-800">{contenido.cta}</p>}
+                {ctaVista.trim() && <p className="mt-2 text-sm font-medium text-slate-800">{ctaVista}</p>}
+                {urlVistaFacebook && <p className="mt-1 break-all text-sm text-orange-700 underline underline-offset-2">{urlVistaFacebook}</p>}
                 {contenido.hashtags.trim() && <p className="mt-2 break-words text-sm text-orange-700">{contenido.hashtags}</p>}
               </div>
             </div>
@@ -696,7 +738,7 @@ export default function ConfiguradorPublicaciones() {
                 <div className="flex justify-between gap-3"><span className="text-slate-600">Publicaciones</span><span className="font-medium">{totalPublicaciones}</span></div>
                 <div className="flex justify-between gap-3"><span className="text-slate-600">Contenidos con archivos</span><span className="font-medium">{contenidosConArchivos}/4</span></div>
                 <div className="flex justify-between gap-3"><span className="text-slate-600">Contenidos con ideas</span><span className="font-medium">{contenidosConIdea}/4</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-600">Semana de trabajo</span><span className="font-medium">Lunes a domingo</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-600">Período de publicaciones</span><span className="text-right font-medium">7 días desde el primer contenido</span></div>
               </div>
               <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-3">
                 <span className="text-sm text-slate-600">Total semanal</span>
