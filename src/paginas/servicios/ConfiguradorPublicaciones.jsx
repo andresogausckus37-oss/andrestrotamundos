@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -53,24 +53,68 @@ const TIPOS = [
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const HORARIOS = ["09:00", "10:00", "12:00", "14:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
-const ZONAS_FRECUENTES = [
-  ["America/Argentina/Buenos_Aires", "Argentina · Buenos Aires"],
-  ["America/Argentina/Cordoba", "Argentina · Córdoba"],
-  ["America/Bogota", "Colombia · Bogotá"],
-  ["America/Mexico_City", "México · Ciudad de México"],
-  ["America/Santiago", "Chile · Santiago"],
-  ["America/Lima", "Perú · Lima"],
-  ["America/Montevideo", "Uruguay · Montevideo"],
-  ["America/Asuncion", "Paraguay · Asunción"],
-  ["America/La_Paz", "Bolivia · La Paz"],
-  ["America/Caracas", "Venezuela · Caracas"],
-  ["America/Guayaquil", "Ecuador · Guayaquil"],
-  ["America/New_York", "Estados Unidos · Nueva York"],
-  ["America/Los_Angeles", "Estados Unidos · Los Ángeles"],
-  ["America/Sao_Paulo", "Brasil · São Paulo"],
-  ["Europe/Madrid", "España · Madrid"],
-  ["Europe/London", "Reino Unido · Londres"],
-];
+// Países de América y España. Se ofrecen varias ciudades solamente si existen
+// zonas con reglas horarias distintas (incluidos los cambios estacionales).
+// Los identificadores IANA se guardan sin convertirlos a la hora de Argentina.
+const ZONAS_DISPONIBLES = [
+  { pais: "Argentina", zonas: [["America/Argentina/Buenos_Aires", "Buenos Aires (todo el país)"]] },
+  { pais: "Belice", zonas: [["America/Belize", "Belmopán"]] },
+  { pais: "Bolivia", zonas: [["America/La_Paz", "La Paz"]] },
+  { pais: "Brasil", zonas: [
+    ["America/Noronha", "Fernando de Noronha"],
+    ["America/Manaus", "Manaos"],
+    ["America/Rio_Branco", "Rio Branco"],
+    ["America/Sao_Paulo", "São Paulo (Brasilia y la mayor parte del país)"],
+  ] },
+  { pais: "Chile", zonas: [
+    ["America/Coyhaique", "Aysén / Coyhaique"],
+    ["Pacific/Easter", "Isla de Pascua (Rapa Nui)"],
+    ["America/Punta_Arenas", "Magallanes / Punta Arenas"],
+    ["America/Santiago", "Santiago (zona central)"],
+  ] },
+  { pais: "Colombia", zonas: [["America/Bogota", "Bogotá"]] },
+  { pais: "Costa Rica", zonas: [["America/Costa_Rica", "San José"]] },
+  { pais: "Cuba", zonas: [["America/Havana", "La Habana"]] },
+  { pais: "Ecuador", zonas: [
+    ["Pacific/Galapagos", "Islas Galápagos"],
+    ["America/Guayaquil", "Quito / Guayaquil (continental)"],
+  ] },
+  { pais: "El Salvador", zonas: [["America/El_Salvador", "San Salvador"]] },
+  { pais: "España", zonas: [
+    ["Atlantic/Canary", "Islas Canarias"],
+    ["Europe/Madrid", "Madrid (península y Baleares)"],
+  ] },
+  { pais: "Estados Unidos", zonas: [
+    ["America/Anchorage", "Alaska"],
+    ["America/Chicago", "Central (Chicago / Dallas)"],
+    ["America/Denver", "Montaña (Denver)"],
+    ["America/New_York", "Este (Nueva York / Miami)"],
+    ["Pacific/Honolulu", "Hawái"],
+    ["America/Los_Angeles", "Pacífico (Los Ángeles)"],
+    ["America/Phoenix", "Arizona (Phoenix, sin horario de verano)"],
+  ] },
+  { pais: "Guatemala", zonas: [["America/Guatemala", "Ciudad de Guatemala"]] },
+  { pais: "Haití", zonas: [["America/Port-au-Prince", "Puerto Príncipe"]] },
+  { pais: "Honduras", zonas: [["America/Tegucigalpa", "Tegucigalpa"]] },
+  { pais: "México", zonas: [
+    ["America/Tijuana", "Baja California (Tijuana)"],
+    ["America/Cancun", "Cancún (Quintana Roo)"],
+    ["America/Chihuahua", "Chihuahua (interior)"],
+    ["America/Ciudad_Juarez", "Ciudad Juárez (frontera)"],
+    ["America/Matamoros", "Frontera noreste (Matamoros)"],
+    ["America/Mazatlan", "Pacífico (Mazatlán / Sinaloa)"],
+    ["America/Mexico_City", "Zona centro (Ciudad de México)"],
+    ["America/Hermosillo", "Sonora (Hermosillo)"],
+  ] },
+  { pais: "Nicaragua", zonas: [["America/Managua", "Managua"]] },
+  { pais: "Panamá", zonas: [["America/Panama", "Ciudad de Panamá"]] },
+  { pais: "Paraguay", zonas: [["America/Asuncion", "Asunción"]] },
+  { pais: "Perú", zonas: [["America/Lima", "Lima"]] },
+  { pais: "Puerto Rico", zonas: [["America/Puerto_Rico", "San Juan"]] },
+  { pais: "República Dominicana", zonas: [["America/Santo_Domingo", "Santo Domingo"]] },
+  { pais: "Uruguay", zonas: [["America/Montevideo", "Montevideo"]] },
+  { pais: "Venezuela", zonas: [["America/Caracas", "Caracas"]] },
+].sort((a, b) => a.pais.localeCompare(b.pais, "es", { sensitivity: "base" }));
 
 const CONFIGURACION_INICIAL = [
   ["reel", "Lunes", "18:00"],
@@ -79,8 +123,9 @@ const CONFIGURACION_INICIAL = [
   ["reel", "Domingo", "18:00"],
 ];
 const RESOLUCIONES = { "9:16": "1080 × 1920", "4:5": "1080 × 1350", "1:1": "1080 × 1080" };
-const INPUT = "w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none transition focus:border-[#285861] focus:ring-2 focus:ring-[#285861]/10";
-const BOTON_ACTIVO = "border-[#285861] bg-[#EFF5F3] text-[#285861]";
+const INPUT = "w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
+const BOTON_ACTIVO = "border-orange-500 bg-orange-50 text-orange-800";
+const TARJETA = "rounded-md border border-slate-200 bg-white p-5 shadow-sm sm:p-7";
 const BOTON_NORMAL = "border-slate-200 bg-white text-slate-700 hover:border-slate-400";
 
 function clases(...clasesLista) {
@@ -138,13 +183,13 @@ function Campo({ titulo, ayuda, children }) {
 
 function TituloSeccion({ numero, titulo, descripcion }) {
   return (
-    <div className="mb-4 flex items-start gap-3">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#EFF5F3] text-xs font-medium text-[#285861]">
+    <div className="mb-6 flex items-start gap-3.5 border-b border-slate-100 pb-5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-orange-50 text-sm font-medium text-orange-700">
         {numero}
       </span>
-      <div>
-        <h2 className="text-base font-medium leading-7 text-slate-900">{titulo}</h2>
-        {descripcion && <p className="mt-0.5 text-xs leading-5 text-slate-500">{descripcion}</p>}
+      <div className="min-w-0 pt-0.5">
+        <h2 className="text-lg font-medium leading-7 text-slate-900">{titulo}</h2>
+        {descripcion && <p className="mt-1 text-sm leading-6 text-slate-500">{descripcion}</p>}
       </div>
     </div>
   );
@@ -199,15 +244,9 @@ export default function ConfiguradorPublicaciones() {
     urlsLocales.current.clear();
   }, []);
 
-  const todasLasZonas = useMemo(() => {
-    let disponibles = [];
-    try {
-      if (typeof Intl.supportedValuesOf === "function") disponibles = Intl.supportedValuesOf("timeZone");
-    } catch { /* Intencionalmente vacío. */ }
-    const frecuentes = new Set(ZONAS_FRECUENTES.map(([id]) => id));
-    return disponibles.filter((id) => !frecuentes.has(id));
-  }, []);
 
+  const idiomaArgentino = zonaHoraria.startsWith("America/Argentina/");
+  const t = (argentino, neutro) => idiomaArgentino ? argentino : neutro;
   const contenido = contenidos.find((p) => p.id === seleccion) || contenidos[0];
   const indice = contenidos.findIndex((p) => p.id === contenido.id);
   const vistaActual = redes.includes(redVista) ? redVista : redes[0];
@@ -233,7 +272,10 @@ export default function ConfiguradorPublicaciones() {
   function cambiarTipo(id, tipo) {
     const siguiente = TIPOS.find((op) => op.id === tipo);
     if (!siguiente || tipo === contenido.tipo) return;
-    if (contenido.archivos.length && !window.confirm("Al cambiar el formato se quitarán los archivos de esta vista previa. ¿Querés continuar?")) return;
+    if (contenido.archivos.length && !window.confirm(t(
+      "Al cambiar el formato se quitarán los archivos de esta vista previa. ¿Querés continuar?",
+      "Al cambiar el formato se quitarán los archivos de esta vista previa. ¿Quieres continuar?"
+    ))) return;
     liberarArchivos(contenido.archivos);
     actualizarContenido(id, { tipo, formato: siguiente.formatos[0], archivos: [] });
     setImagenActiva(0);
@@ -262,8 +304,8 @@ export default function ConfiguradorPublicaciones() {
 
     if (validos.length !== candidatos.length) {
       setErrorArchivo(contenido.tipo === "reel"
-        ? "Seleccioná un video MP4 de hasta 150 MB."
-        : "Seleccioná imágenes JPG, PNG o WebP de hasta 20 MB cada una.");
+        ? t("Seleccioná un video MP4 de hasta 150 MB.", "Selecciona un video MP4 de hasta 150 MB.")
+        : t("Seleccioná imágenes JPG, PNG o WebP de hasta 20 MB cada una.", "Selecciona imágenes JPG, PNG o WebP de hasta 20 MB cada una."));
     } else {
       setErrorArchivo("");
     }
@@ -310,23 +352,26 @@ export default function ConfiguradorPublicaciones() {
   const usuarioVista = nombreVista.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "tu_emprendimiento";
 
   return (
-    <main className="min-h-screen bg-[#FCFDFC] px-4 pb-16 pt-6 font-normal text-slate-900 sm:px-5 sm:pt-8">
+    <main className="min-h-screen bg-slate-100 px-4 pb-20 pt-7 font-normal text-slate-900 sm:px-6 sm:pt-10">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-6 max-w-3xl border-b border-slate-200 pb-6">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-md bg-[#EFF5F3] px-2.5 py-1.5 text-xs font-medium text-[#285861]">
+        <header className={clases(TARJETA, "mb-8 sm:mb-10")}>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-md bg-orange-50 px-2.5 py-1.5 text-xs font-medium text-orange-700">
             <CalendarDays size={14} /> Plan semanal de 7 días
           </div>
-          <h1 className="text-xl font-medium tracking-tight text-slate-900 sm:text-2xl">Configurá tus publicaciones</h1>
+          <h1 className="text-2xl font-medium tracking-tight text-slate-900 sm:text-[28px]">{t("Configurá tus publicaciones", "Configura tus publicaciones")}</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Elegí las redes, prepará tus ideas y definí los días y horarios. Podés revisar las publicaciones antes de contratar. Nosotros nos encargamos de preparar el contenido final y gestionar la programación.
+            {t(
+              "Elegí las redes, prepará tus ideas y definí los días y horarios. Podés revisar las publicaciones antes de contratar. Nosotros nos encargamos de preparar el contenido final y gestionar la programación.",
+              "Elige las redes, prepara tus ideas y define los días y horarios. Puedes revisar las publicaciones antes de contratar. Nosotros nos encargamos de preparar el contenido final y gestionar la programación."
+            )}
           </p>
         </header>
 
-        <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_350px] lg:gap-10">
-          <div className="min-w-0">
-            <section className="border-b border-slate-200 pb-6" aria-labelledby="config-plan">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_350px] lg:gap-9">
+          <div className="min-w-0 space-y-8 sm:space-y-10">
+            <section className={TARJETA} aria-labelledby="config-plan">
               <div id="config-plan"><TituloSeccion numero="01" titulo="Plan y redes" descripcion="Cuatro contenidos originales durante una semana, de lunes a domingo." /></div>
-              <div className="mb-5 grid grid-cols-3 gap-2 rounded-md border border-slate-200 bg-white px-3 py-3 sm:px-4">
+              <div className="mb-7 grid grid-cols-3 gap-3 rounded-md border border-slate-200 bg-white px-3 py-4 sm:px-4 sm:py-5">
                 {[[PLAN.contenidos, "Contenidos"], [PLAN.duracionDias, "Días"], [totalPublicaciones, "Publicaciones"]].map(([numero, descripcion]) => (
                   <div key={descripcion} className="text-center">
                     <p className="text-lg font-medium leading-6 text-slate-900">{numero}</p>
@@ -335,8 +380,8 @@ export default function ConfiguradorPublicaciones() {
                 ))}
               </div>
 
-              <h3 className="mb-2 text-sm font-medium">Elegí dónde querés publicar</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <h3 className="mb-3 text-base font-medium">{t("Elegí dónde querés publicar", "Elige dónde quieres publicar")}</h3>
+              <div className="grid grid-cols-3 gap-3">
                 {REDES.map((red) => {
                   const activa = redes.includes(red.id);
                   return (
@@ -351,7 +396,7 @@ export default function ConfiguradorPublicaciones() {
                         !red.disponible ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : activa ? BOTON_ACTIVO : BOTON_NORMAL
                       )}
                     >
-                      {activa && <Check size={13} className="absolute right-2 top-2 text-[#285861]" aria-hidden="true" />}
+                      {activa && <Check size={13} className="absolute right-2 top-2 text-orange-700" aria-hidden="true" />}
                       <LogoRed red={red.id} size={24} className={!red.disponible ? "opacity-50" : ""} />
                       <span>{red.nombre}</span>
                       {!red.disponible && <span className="text-[10px] font-normal text-slate-500">Pronto</span>}
@@ -361,27 +406,28 @@ export default function ConfiguradorPublicaciones() {
               </div>
               <p className="mt-2 text-xs leading-5 text-slate-500">Una red incluye 4 publicaciones; las dos redes, 8. Cada contenido se prepara para las redes que elijas.</p>
 
-              <div className="mt-5">
-                <Campo titulo="Zona horaria de tus publicaciones" ayuda="Los horarios se respetan en esta zona, aunque sean distintos de la hora de Argentina.">
+              <div className="mt-8 border-t border-slate-100 pt-6">
+                <Campo titulo="Zona horaria de tus publicaciones" ayuda="Cada publicación respeta la hora local de la zona elegida, sin usar automáticamente la hora de Argentina.">
                   <select id="zona-horaria" aria-label="Zona horaria de tus publicaciones" className={INPUT} value={zonaHoraria} onChange={(e) => setZonaHoraria(e.target.value)}>
-                    <optgroup label="Zonas frecuentes">
-                      {ZONAS_FRECUENTES.map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
-                    </optgroup>
-                    {todasLasZonas.length > 0 && <optgroup label="Otras zonas horarias">
-                      {todasLasZonas.map((id) => <option key={id} value={id}>{id.replaceAll("_", " ")}</option>)}
-                    </optgroup>}
+                    {ZONAS_DISPONIBLES.map(({ pais, zonas }) => (
+                      <optgroup key={pais} label={pais}>
+                        {[...zonas].sort((a, b) => a[1].localeCompare(b[1], "es", { sensitivity: "base" })).map(([id, ciudad]) => (
+                          <option key={id} value={id}>{pais} · {ciudad}</option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </Campo>
               </div>
               <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-600">
-                <CalendarDays size={15} className="mt-0.5 shrink-0 text-[#285861]" />
+                <CalendarDays size={15} className="mt-0.5 shrink-0 text-orange-700" />
                 La semana comienza un lunes. La fecha de inicio se confirma después del pago, la entrega y aprobación del contenido y la conexión de las cuentas. Se toma el lunes siguiente a completar esos pasos.
               </p>
             </section>
 
-            <section className="border-b border-slate-200 py-6" aria-labelledby="config-contenidos">
-              <div id="config-contenidos"><TituloSeccion numero="02" titulo="Tus cuatro contenidos" descripcion="Personalizá cada contenido. Podés cambiar el formato, el día y la hora." /></div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Seleccionar contenido">
+            <section className={TARJETA} aria-labelledby="config-contenidos">
+              <div id="config-contenidos"><TituloSeccion numero="02" titulo="Tus cuatro contenidos" descripcion={t("Personalizá cada contenido. Podés cambiar el formato, el día y la hora.", "Personaliza cada contenido. Puedes cambiar el formato, el día y la hora.")} /></div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="group" aria-label="Seleccionar contenido">
                 {contenidos.map((p, i) => {
                   const Icono = TIPOS.find((t) => t.id === p.tipo)?.icono || FileImage;
                   return (
@@ -392,21 +438,21 @@ export default function ConfiguradorPublicaciones() {
                     >
                       <Icono size={17} className="shrink-0" />
                       <span className="min-w-0"><span className="block text-xs font-medium">Contenido {i + 1}</span><span className="block text-[11px] font-normal capitalize opacity-75">{p.tipo}</span></span>
-                      {p.archivos.length > 0 && <CircleCheck size={13} className="ml-auto shrink-0 text-emerald-600" />}
+                      {p.archivos.length > 0 && <CircleCheck size={13} className="ml-auto shrink-0 text-orange-600" />}
                     </button>
                   );
                 })}
               </div>
 
-              <div className="mt-5 flex items-center justify-between gap-3">
+              <div className="mt-7 flex items-center justify-between gap-3 border-t border-slate-100 pt-6">
                 <h3 className="text-sm font-medium">Contenido {indice + 1}</h3>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"}</span>
                   <button type="button" onClick={() => vistaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    className="text-xs font-medium text-[#285861] underline underline-offset-2 lg:hidden">Ver vista previa</button>
+                    className="text-xs font-medium text-orange-700 underline underline-offset-2 lg:hidden">Ver vista previa</button>
                 </div>
               </div>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid gap-5 sm:grid-cols-2">
                 <Campo titulo="Tipo de publicación">
                   <select aria-label={`Tipo de publicación del contenido ${indice + 1}`} className={INPUT} value={contenido.tipo} onChange={(e) => cambiarTipo(contenido.id, e.target.value)}>
                     {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
@@ -429,17 +475,17 @@ export default function ConfiguradorPublicaciones() {
                   </select>
                 </Campo>
               </div>
-              <p className="mt-2 text-xs text-slate-500">Los horarios son orientativos hasta confirmar el calendario de la semana.</p>
+              <p className="mt-2 text-xs text-slate-500">Los horarios se interpretan en la zona horaria elegida y son orientativos hasta confirmar el calendario.</p>
               {contenidos.some((p) => p.id !== contenido.id && p.dia === contenido.dia && p.hora === contenido.hora) && (
-                <p className="mt-2 text-xs text-amber-700" role="status">Otro contenido tiene el mismo día y horario. Podés mantenerlos o elegir horas diferentes.</p>
+                <p className="mt-2 text-xs text-amber-700" role="status">Otro contenido tiene el mismo día y horario. {t("Podés mantenerlos o elegir horas diferentes.", "Puedes mantenerlos o elegir horas diferentes.")}</p>
               )}
 
-              <div className="mt-5">
-                <label className="mb-1.5 block text-sm font-medium">
+              <div className="mt-7 border-t border-slate-100 pt-6">
+                <label className="mb-2 block text-sm font-medium">
                   {contenido.tipo === "reel" ? "Video del reel" : contenido.tipo === "carrusel" ? "Imágenes del carrusel (2 a 10)" : "Imagen de la publicación"}
                 </label>
-                <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-md border border-dashed border-slate-300 bg-white px-4 py-4 text-center transition hover:border-[#285861]">
-                  <CloudUpload size={21} className="text-[#285861]" />
+                <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-md border border-dashed border-slate-300 bg-white px-4 py-4 text-center transition hover:border-orange-500">
+                  <CloudUpload size={21} className="text-orange-700" />
                   <span className="text-sm font-medium text-slate-800">
                     {contenido.archivos.length === 0 ? "Seleccionar archivos para la vista previa" : contenido.tipo === "carrusel" && contenido.archivos.length < 10 ? "Agregar imágenes" : "Reemplazar archivos"}
                   </span>
@@ -460,33 +506,33 @@ export default function ConfiguradorPublicaciones() {
                     ))}
                   </div>
                 )}
-                {contenido.tipo === "carrusel" && <p className="mt-2 text-xs text-slate-500">{contenido.archivos.length}/10 imágenes seleccionadas. Podés verlas una por una en la vista previa.</p>}
+                {contenido.tipo === "carrusel" && <p className="mt-2 text-xs text-slate-500">{contenido.archivos.length}/10 imágenes seleccionadas. {t("Podés verlas una por una en la vista previa.", "Puedes verlas una por una en la vista previa.")}</p>}
               </div>
 
-              <div className="mt-5 space-y-4">
-                <Campo titulo="¿Qué querés comunicar?" ayuda="Contanos tu idea. Nosotros preparamos el texto final y lo enviamos para tu aprobación.">
+              <div className="mt-7 space-y-5 border-t border-slate-100 pt-6">
+                <Campo titulo={t("¿Qué querés comunicar?", "¿Qué quieres comunicar?")} ayuda={t("Contanos tu idea. Nosotros preparamos el texto final y lo enviamos para tu aprobación.", "Cuéntanos tu idea. Nosotros preparamos el texto final y lo enviamos para tu aprobación.")}>
                   <textarea className={INPUT} rows={3} maxLength={1500} value={contenido.descripcion} onChange={(e) => actualizarContenido(contenido.id, { descripcion: e.target.value })} placeholder="Ej.: Queremos contar cómo elaboramos nuestros productos..." />
                 </Campo>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Campo titulo="¿Qué querés que haga quien lo vea? (opcional)">
-                    <input className={INPUT} maxLength={100} list="cta-sugerencias" value={contenido.cta} onChange={(e) => actualizarContenido(contenido.id, { cta: e.target.value })} placeholder="Ej.: Consultanos por WhatsApp" />
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Campo titulo={t("¿Qué querés que haga quien lo vea? (opcional)", "¿Qué quieres que haga quien lo vea? (opcional)")}>
+                    <input className={INPUT} maxLength={100} list="cta-sugerencias" value={contenido.cta} onChange={(e) => actualizarContenido(contenido.id, { cta: e.target.value })} placeholder={t("Ej.: Consultanos por WhatsApp", "Ej.: Consúltanos por WhatsApp")} />
                   </Campo>
                   <Campo titulo="Hashtags (opcional)">
                     <input className={INPUT} maxLength={240} value={contenido.hashtags} onChange={(e) => actualizarContenido(contenido.id, { hashtags: e.target.value })} placeholder="#MiNegocio #Comunidad" />
                   </Campo>
                 </div>
                 <datalist id="cta-sugerencias">
-                  <option value="Consultanos por WhatsApp" />
-                  <option value="Conocé más" />
-                  <option value="Visitá nuestra tienda" />
-                  <option value="Dejanos tu opinión" />
+                  <option value={t("Consultanos por WhatsApp", "Consúltanos por WhatsApp")} />
+                  <option value={t("Conocé más", "Conoce más")} />
+                  <option value={t("Visitá nuestra tienda", "Visita nuestra tienda")} />
+                  <option value={t("Dejanos tu opinión", "Déjanos tu opinión")} />
                 </datalist>
               </div>
             </section>
 
-            <section className="border-b border-slate-200 py-6" aria-labelledby="config-negocio">
+            <section className={TARJETA} aria-labelledby="config-negocio">
               <div id="config-negocio"><TituloSeccion numero="03" titulo="Datos de tu emprendimiento" descripcion="Información para identificar tu negocio y preparar las publicaciones." /></div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-5 sm:grid-cols-2">
                 <Campo titulo="Nombre del emprendimiento">
                   <input className={INPUT} value={negocio.nombre} maxLength={120} onChange={(e) => setNegocio({ ...negocio, nombre: e.target.value })} placeholder="Ej.: Panadería del Centro" />
                 </Campo>
@@ -517,8 +563,8 @@ export default function ConfiguradorPublicaciones() {
                   </select>
                 </Campo>
               </div>
-              <div className="mt-5 flex items-start gap-3 rounded-md border border-slate-200 bg-white p-3">
-                <ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#285861]" />
+              <div className="mt-7 flex items-start gap-3 rounded-md border border-slate-200 bg-white p-4">
+                <ShieldCheck size={18} className="mt-0.5 shrink-0 text-orange-700" />
                 <div>
                   <p className="text-sm font-medium">Conexión segura después del pago</p>
                   <p className="mt-1 text-xs leading-5 text-slate-600">Para publicar en Instagram necesitás una cuenta profesional compatible; para Facebook, una página que puedas administrar. La autorización se realizará desde Meta, sin pedirte contraseñas.</p>
@@ -530,8 +576,8 @@ export default function ConfiguradorPublicaciones() {
               </div>
             </section>
 
-            <section className="py-6" aria-labelledby="config-pago">
-              <div id="config-pago"><TituloSeccion numero="04" titulo="Moneda y pago" descripcion="Revisá el importe correspondiente a las redes seleccionadas." /></div>
+            <section className={TARJETA} aria-labelledby="config-pago">
+              <div id="config-pago"><TituloSeccion numero="04" titulo="Moneda y pago" descripcion={t("Revisá el importe correspondiente a las redes seleccionadas.", "Revisa el importe correspondiente a las redes seleccionadas.")} /></div>
               <div className="grid grid-cols-2 gap-2" role="group" aria-label="Elegir moneda">
                 {["ARS", "USD"].map((m) => (
                   <button key={m} type="button" aria-pressed={moneda === m} onClick={() => setMoneda(m)}
@@ -541,7 +587,7 @@ export default function ConfiguradorPublicaciones() {
                 ))}
               </div>
               <div className="mt-4 flex items-center gap-2 text-sm text-slate-700">
-                {moneda === "ARS" ? <Wallet size={18} className="text-[#285861]" /> : <CreditCard size={18} className="text-[#285861]" />}
+                {moneda === "ARS" ? <Wallet size={18} className="text-orange-700" /> : <CreditCard size={18} className="text-orange-700" />}
                 <span>{medioPago}</span>
               </div>
               <p className="mt-1.5 text-xs leading-5 text-slate-500">
@@ -561,13 +607,13 @@ export default function ConfiguradorPublicaciones() {
                   <Download size={16} /> Guardar configuración
                 </button>
               </div>
-              <p className="mt-2 text-xs text-slate-500">Podés revisar todos tus contenidos sin pagar. El importe se confirmará al contratar.</p>
+              <p className="mt-3 text-xs leading-5 text-slate-500">{t("Podés revisar todos tus contenidos sin pagar. El importe se confirmará al contratar.", "Puedes revisar todos tus contenidos sin pagar. El importe se confirmará al contratar.")}</p>
             </section>
           </div>
 
-          <aside ref={vistaRef} className="min-w-0 scroll-mt-20 lg:sticky lg:top-24" aria-label="Vista previa de publicaciones">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-base font-medium">Vista previa</h2>
+          <aside ref={vistaRef} className={clases(TARJETA, "min-w-0 scroll-mt-20 lg:sticky lg:top-24")} aria-label="Vista previa de publicaciones">
+            <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <h2 className="text-lg font-medium">Vista previa</h2>
               <span className="text-xs text-slate-500">Contenido {indice + 1} de 4</span>
             </div>
             <div className="mb-3 grid grid-cols-4 gap-2 lg:hidden" role="group" aria-label="Ver cada contenido">
@@ -608,7 +654,7 @@ export default function ConfiguradorPublicaciones() {
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-slate-400">
                       <FileImage size={28} strokeWidth={1.5} />
-                      <p className="text-xs leading-5">Elegí {contenido.tipo === "reel" ? "un video" : "imágenes"} para ver tu publicación</p>
+                      <p className="text-xs leading-5">{t("Elegí", "Elige")} {contenido.tipo === "reel" ? "un video" : "imágenes"} para ver tu publicación</p>
                     </div>
                   )}
                   {contenido.tipo === "carrusel" && archivosVista.length > 1 && (
@@ -636,13 +682,13 @@ export default function ConfiguradorPublicaciones() {
               )}
               <div className="px-3 py-3">
                 <p className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
-                  {textoVista || "Acá vas a ver la idea de tu publicación."}
+                  {textoVista || t("Acá vas a ver la idea de tu publicación.", "Aquí verás la idea de tu publicación.")}
                 </p>
                 {contenido.cta.trim() && <p className="mt-2 text-sm font-medium text-slate-800">{contenido.cta}</p>}
-                {contenido.hashtags.trim() && <p className="mt-2 break-words text-sm text-[#285861]">{contenido.hashtags}</p>}
+                {contenido.hashtags.trim() && <p className="mt-2 break-words text-sm text-orange-700">{contenido.hashtags}</p>}
               </div>
             </div>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Simulación orientativa: la apariencia final puede variar según la red social.</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Simulación orientativa: la apariencia final puede variar según la red social. {t("Los textos finales se preparan para tu público.", "Los textos finales se adaptarán al español de tu público.")}</p>
             <div className="mt-5 border-t border-slate-200 pt-4">
               <h3 className="text-sm font-medium">Resumen semanal</h3>
               <div className="mt-3 space-y-2 text-xs">
