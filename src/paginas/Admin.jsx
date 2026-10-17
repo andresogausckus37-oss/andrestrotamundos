@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
 Check,
@@ -9,7 +9,7 @@ X,
 ZoomIn,
 } from "lucide-react";
 
-export default function Admin() {
+function AdminTienda() {
 const navigate = useNavigate();
 
 const [pedidos, setPedidos] = useState([]);
@@ -178,7 +178,7 @@ RENDER
 ========================= */
 
 return (
-<main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24">
+<main className="min-h-screen bg-slate-50 px-4 pb-16 pt-6">
 <div className="mx-auto max-w-5xl">
 
 {/* ENCABEZADO */}  
@@ -549,4 +549,268 @@ return (
 </main>
 
 );
+}
+
+/* PEDIDOS DE PUBLICACIONES — separados de los pedidos de productos.
+   Usa /api/admin/servicios/transferencias, ya protegido por la sesión Admin.
+   Los comprobantes permanecen privados en Cloudflare R2. */
+const ESTADOS_PUBLICACIONES = {
+  pendiente_comprobante: "Pendiente de comprobante",
+  verificando_comprobante: "Verificando comprobante",
+  verificando_pago: "Verificando pago",
+  completando_operacion: "Completando operación",
+};
+
+function fechaServicio(valor) {
+  if (!valor) return "—";
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return "—";
+  return new Intl.DateTimeFormat("es-AR", {
+    dateStyle: "short", timeStyle: "short",
+  }).format(fecha);
+}
+
+function precioServicio(valor) {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency", currency: "ARS", maximumFractionDigits: 0,
+  }).format(Number(valor) || 0);
+}
+
+function AdminServiciosTransferencias() {
+  const navigate = useNavigate();
+  const [pedidos, setPedidos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [procesando, setProcesando] = useState(null);
+  const [abriendo, setAbriendo] = useState(null);
+  const [comprobante, setComprobante] = useState(null);
+  const urlComprobanteRef = useRef(null);
+
+  const cargarPedidos = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true);
+    try {
+      const respuesta = await fetch("/api/admin/servicios/transferencias?accion=listar", {
+        credentials: "same-origin", cache: "no-store",
+      });
+      if (respuesta.status === 401) {
+        navigate("/admin/login");
+        return;
+      }
+      const datos = await respuesta.json();
+      if (!respuesta.ok || !datos.ok) {
+        throw new Error(datos.error || "No se pudieron consultar los pedidos de publicaciones.");
+      }
+      setPedidos(Array.isArray(datos.pedidos) ? datos.pedidos : []);
+      setError("");
+    } catch (err) {
+      setError(err.message || "No se pudieron consultar los pedidos de publicaciones.");
+    } finally {
+      if (!silencioso) setCargando(false);
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    cargarPedidos();
+    const intervalo = setInterval(() => cargarPedidos(true), 30000);
+    return () => clearInterval(intervalo);
+  }, [cargarPedidos]);
+
+  const cerrarComprobante = () => {
+    if (urlComprobanteRef.current) {
+      URL.revokeObjectURL(urlComprobanteRef.current);
+      urlComprobanteRef.current = null;
+    }
+    setComprobante(null);
+  };
+
+  useEffect(() => () => {
+    if (urlComprobanteRef.current) URL.revokeObjectURL(urlComprobanteRef.current);
+  }, []);
+
+  const abrirComprobante = async (pedidoId) => {
+    setError("");
+    setAbriendo(pedidoId);
+    try {
+      const respuesta = await fetch(
+        `/api/admin/servicios/transferencias?accion=comprobante&pedidoId=${encodeURIComponent(pedidoId)}`,
+        { credentials: "same-origin", cache: "no-store" }
+      );
+      if (respuesta.status === 401) {
+        navigate("/admin/login");
+        return;
+      }
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => ({}));
+        throw new Error(datos.error || "No se pudo obtener el comprobante.");
+      }
+      const tipo = (respuesta.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      if (!["application/pdf", "image/jpeg", "image/png"].includes(tipo)) {
+        throw new Error("El comprobante recibido no tiene un formato compatible.");
+      }
+      const archivo = await respuesta.blob();
+      if (!archivo.size) throw new Error("El comprobante está vacío.");
+      cerrarComprobante();
+      const url = URL.createObjectURL(archivo);
+      urlComprobanteRef.current = url;
+      setComprobante({ url, tipo, pedidoId });
+    } catch (err) {
+      setError(err.message || "No se pudo abrir el comprobante.");
+    } finally {
+      setAbriendo(null);
+    }
+  };
+
+  const avanzarEstado = async (pedido) => {
+    const confirmandoPago = pedido.estado === "verificando_pago";
+    const mensaje = confirmandoPago
+      ? `¿Confirmás que el dinero del pedido ${pedido.pedidoId} ingresó realmente a tu cuenta bancaria? Esta acción confirmará el pago, pero no activará las publicaciones.`
+      : `¿Pasar el pedido ${pedido.pedidoId} a «Verificando pago»?`;
+    if (!window.confirm(mensaje)) return;
+
+    setProcesando(pedido.pedidoId);
+    setError("");
+    try {
+      const respuesta = await fetch("/api/admin/servicios/transferencias?accion=avanzar", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pedidoId: pedido.pedidoId }),
+      });
+      if (respuesta.status === 401) {
+        navigate("/admin/login");
+        return;
+      }
+      const datos = await respuesta.json();
+      if (!respuesta.ok || !datos.ok) {
+        throw new Error(datos.error || "No se pudo actualizar el estado.");
+      }
+      await cargarPedidos(true);
+    } catch (err) {
+      setError(err.message || "No se pudo actualizar el estado.");
+    } finally {
+      setProcesando(null);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-6">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-slate-500">Administración · Servicios</p>
+            <h1 className="mt-1 text-xl font-medium text-slate-900">Transferencias de publicaciones</h1>
+            <p className="mt-1 text-xs text-slate-500">
+              {pedidos.length} pedido{pedidos.length === 1 ? "" : "s"} · Ordenados del más reciente al más antiguo
+            </p>
+          </div>
+          <button type="button" onClick={() => cargarPedidos()} disabled={cargando}
+            className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">
+            <RefreshCw size={14} /> Actualizar
+          </button>
+        </div>
+
+        <p className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-3 text-xs leading-relaxed text-slate-700">
+          Confirmá el ingreso del dinero en tu cuenta antes de aprobar el pago. Aprobar una transferencia
+          no activa ni programa contenidos automáticamente.
+        </p>
+
+        {error && <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        {cargando ? (
+          <p className="rounded-md bg-white p-5 text-sm text-slate-600">Cargando pedidos...</p>
+        ) : pedidos.length === 0 ? (
+          <div className="rounded-md border border-slate-200 bg-white p-6 text-center">
+            <FileCheck className="mx-auto text-slate-400" size={24} />
+            <p className="mt-3 text-sm font-medium text-slate-700">Todavía no hay transferencias de publicaciones.</p>
+            <p className="mt-1 text-xs text-slate-500">Los pedidos de prueba no se muestran en esta sección.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {pedidos.map((pedido) => {
+              const puedeVer = Boolean(pedido.comprobanteRecibido);
+              const puedeAvanzar = puedeVer && ["verificando_comprobante", "verificando_pago"].includes(pedido.estado);
+              return (
+                <section key={pedido.pedidoId} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-medium text-slate-900">{pedido.negocio?.nombre || "Negocio sin nombre"}</h2>
+                      <p className="mt-1 break-all text-xs text-slate-500">{pedido.negocio?.email || "Sin correo"}</p>
+                    </div>
+                    <span className="rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-800">
+                      {ESTADOS_PUBLICACIONES[pedido.estado] || pedido.estado || "Sin estado"}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-3">
+                    <div><p className="text-xs text-slate-500">Importe</p>
+                      <p className="mt-1 text-sm font-medium text-slate-900">{precioServicio(pedido.precio)}</p></div>
+                    <div><p className="text-xs text-slate-500">Fecha del pedido</p>
+                      <p className="mt-1 text-sm text-slate-800">{fechaServicio(pedido.creadoEn)}</p></div>
+                    <div><p className="text-xs text-slate-500">Comprobante</p>
+                      <p className="mt-1 text-sm text-slate-800">{puedeVer ? "Recibido" : "Pendiente de carga"}</p></div>
+                  </div>
+                  <p className="mt-3 break-all text-xs text-slate-500">Pedido: {pedido.pedidoId}</p>
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                    <button type="button" onClick={() => abrirComprobante(pedido.pedidoId)}
+                      disabled={!puedeVer || abriendo === pedido.pedidoId}
+                      className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+                      {abriendo === pedido.pedidoId ? <Loader2 size={14} className="animate-spin" /> : <ZoomIn size={14} />}
+                      {abriendo === pedido.pedidoId ? "Abriendo..." : "Ver comprobante"}
+                    </button>
+                    {puedeAvanzar && (
+                      <button type="button" onClick={() => avanzarEstado(pedido)}
+                        disabled={procesando === pedido.pedidoId}
+                        className="inline-flex items-center gap-2 rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50">
+                        {procesando === pedido.pedidoId ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                        {pedido.estado === "verificando_comprobante" ? "Marcar verificando pago" : "Confirmar pago recibido"}
+                      </button>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {comprobante && (
+        <div role="dialog" aria-modal="true" aria-label={`Comprobante de ${comprobante.pedidoId}`}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+          onClick={cerrarComprobante}>
+          <div className="relative flex h-[85vh] w-full max-w-4xl flex-col rounded-md bg-white p-3" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-xs font-medium text-slate-700">{comprobante.pedidoId}</p>
+              <button type="button" onClick={cerrarComprobante} aria-label="Cerrar comprobante"
+                className="rounded-md p-2 text-slate-600 hover:bg-slate-100"><X size={18}/></button>
+            </div>
+            {comprobante.tipo === "application/pdf" ? (
+              <iframe src={comprobante.url} title="Comprobante en PDF" className="min-h-0 w-full flex-1 rounded-md border border-slate-200" />
+            ) : (
+              <img src={comprobante.url} alt="Comprobante bancario" className="min-h-0 w-full flex-1 object-contain" />
+            )}
+            <a href={comprobante.url} download={`comprobante-${comprobante.pedidoId}.${comprobante.tipo === "application/pdf" ? "pdf" : comprobante.tipo === "image/png" ? "png" : "jpg"}`}
+              className="mt-3 self-start text-xs font-medium text-orange-700 underline">Descargar comprobante</a>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
+
+export default function Admin() {
+  const [seccion, setSeccion] = useState("tienda");
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <nav aria-label="Secciones de pedidos" className="mx-auto flex max-w-5xl flex-wrap gap-2 px-4 pt-24">
+        <button type="button" onClick={() => setSeccion("tienda")}
+          aria-current={seccion === "tienda" ? "page" : undefined}
+          className={`rounded-md px-4 py-2 text-xs font-medium ${seccion === "tienda" ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}`}>
+          Pedidos de la tienda
+        </button>
+        <button type="button" onClick={() => setSeccion("publicaciones")}
+          aria-current={seccion === "publicaciones" ? "page" : undefined}
+          className={`rounded-md px-4 py-2 text-xs font-medium ${seccion === "publicaciones" ? "bg-orange-600 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}`}>
+          Publicaciones · Transferencias
+        </button>
+      </nav>
+      {seccion === "tienda" ? <AdminTienda /> : <AdminServiciosTransferencias />}
+    </div>
+  );
 }
