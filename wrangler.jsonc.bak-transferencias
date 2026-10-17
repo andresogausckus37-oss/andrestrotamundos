@@ -1,0 +1,45 @@
+
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "andrestrotamundos",
+  "main": "worker.js",
+
+  "keep_vars": true,
+
+  "vars": {
+    "FACEBOOK_PAGE_ID": "1312632228596581"
+  },
+
+  "images": { "binding": "IMAGES" },
+
+
+  "ai": {
+    "binding": "AI"
+  },
+
+  "compatibility_date": "2026-10-09",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "r2_buckets": [
+    {
+      "binding": "PRODUCTOS_R2",
+      "bucket_name": "andrestrotamundos-productos"
+    }
+  ],
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/tienda/*",
+      "/compartir/*",
+      "/compartir-facebook/*"
+    ]
+  },
+
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  }
+}

@@ -400,21 +400,27 @@ async function validarAccesoCrearServicio(request, env, datos) {
 }
 
 async function apiPedidosPublicaciones(request, env, ruta) {
+  // El Site Key es público y puede viajar en la respuesta del plan.
+  // La Secret Key nunca se devuelve al navegador.
+  const turnstileSiteKey = String(env?.SERVICIO_TURNSTILE_SITE_KEY ?? "").trim();
+  const turnstilePreparado = Boolean(turnstileSiteKey && env?.SERVICIO_TURNSTILE_SECRET);
   if (ruta === "/api/servicios/publicaciones/plan") {
     if (request.method !== "GET") return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
     return respuestaServicio({
       ok: true, plan: PLAN_PUBLICACIONES,
       precios: PRECIOS_PUBLICACIONES,
       mediosPago: { ARS: "transferencia", USD: "paypal" },
+      turnstileSiteKey: turnstileSiteKey,
       pedidosHabilitados: String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() === "true" &&
-        Boolean(env?.SERVICIO_TURNSTILE_SECRET),
+        turnstilePreparado,
+      transferenciasHabilitadas: transferenciasServiciosHabilitadas(env) && Boolean(cuentaTransferenciaServicio(env)) && Boolean(bucketComprobantesServicio(env)),
       cobrosHabilitados: false,
     });
   }
   if (request.method !== "POST") {
     return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
   }
-  if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() !== "true") {
+  if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() !== "true" || !turnstilePreparado) {
     return respuestaServicio({ ok: false, error: "La contratación de publicaciones aún no está habilitada." }, 503);
   }
   const lectura = await leerJsonServicio(request);
@@ -440,8 +446,10 @@ async function apiPedidosPublicaciones(request, env, ruta) {
     const coleccion = cliente.db("andres_imprimibles").collection("pedidos_servicios");
     const fecha = new Date();
     const pedidoId = `SER-${crypto.randomUUID()}`;
+    const tokenAcceso = crypto.randomBytes(32).toString("hex");
+    const tokenAccesoHash = crypto.createHash("sha256").update(tokenAcceso).digest("hex");
     await coleccion.insertOne({
-      pedidoId, tipo: "publicaciones", planId: PLAN_PUBLICACIONES.id,
+      pedidoId, tokenAccesoHash, tipo: "publicaciones", planId: PLAN_PUBLICACIONES.id,
       nombrePlan: PLAN_PUBLICACIONES.nombre, contenidos: PLAN_PUBLICACIONES.contenidos,
       duracionDias: PLAN_PUBLICACIONES.duracionDias,
       moneda: datos.moneda, precio, metodoPago,
@@ -458,7 +466,7 @@ async function apiPedidosPublicaciones(request, env, ruta) {
       historialEstados: [{ estado, fecha }],
     });
     return respuestaServicio({
-      ok: true, pedidoId, planId: PLAN_PUBLICACIONES.id,
+      ok: true, pedidoId, tokenAcceso, planId: PLAN_PUBLICACIONES.id,
       moneda: datos.moneda, precio, metodoPago, estado,
       pagoHabilitado: false,
     }, 201);
@@ -467,6 +475,245 @@ async function apiPedidosPublicaciones(request, env, ruta) {
     return respuestaServicio({ ok: false, error: "No se pudo guardar el pedido de publicaciones." }, 500);
   } finally {
     if (cliente) await cliente.close().catch((error) => console.error("MongoDB close:", error));
+  }
+}
+
+// =========================================================
+// TRANSFERENCIAS DE PUBLICACIONES · ETAPA 2
+// Independientes de "pedidos" (tienda). NO procesa cobros automáticos.
+// Comprobantes únicamente en un bucket R2 PRIVADO.
+// =========================================================
+const ESTADOS_TRANSFERENCIA_SERVICIO = Object.freeze({
+  ESPERANDO: "pendiente_comprobante",
+  COMPROBANTE: "verificando_comprobante",
+  VERIFICANDO: "verificando_pago",
+  COMPLETANDO: "completando_operacion",
+});
+
+function transferenciasServiciosHabilitadas(env) {
+  return String(env?.SERVICIO_TRANSFERENCIAS_HABILITADAS ?? "").toLowerCase() === "true";
+}
+
+function cuentaTransferenciaServicio(env) {
+  const titular = String(env?.SERVICIO_TRANSFERENCIA_TITULAR ?? "").trim();
+  const entidad = String(env?.SERVICIO_TRANSFERENCIA_ENTIDAD ?? "").trim();
+  const alias = String(env?.SERVICIO_TRANSFERENCIA_ALIAS ?? "").trim();
+  const cbuCvu = String(env?.SERVICIO_TRANSFERENCIA_CBU_CVU ?? "").replace(/\s/g, "");
+  if (!titular || titular.length > 120 || !entidad || entidad.length > 80 ||
+      !/^[\w.-]{6,60}$/.test(alias) || !/^\d{22}$/.test(cbuCvu)) return null;
+  return { titular, entidad, alias, cbuCvu };
+}
+
+function pedidoServicioIdValido(valor) {
+  return typeof valor === "string" && /^SER-[a-f0-9-]{36}$/i.test(valor);
+}
+
+function tokenClienteServicio(request) {
+  const autorizacion = request.headers.get("authorization") || "";
+  const match = /^Bearer ([a-f0-9]{64})$/i.exec(autorizacion);
+  return match?.[1] || null;
+}
+
+function clienteServicioAutorizado(request, pedido) {
+  const token = tokenClienteServicio(request);
+  const hashGuardado = pedido?.tokenAccesoHash;
+  if (!token || typeof hashGuardado !== "string" || !/^[a-f0-9]{64}$/i.test(hashGuardado)) return false;
+  const calculado = crypto.createHash("sha256").update(token).digest("hex");
+  return crypto.timingSafeEqual(Buffer.from(calculado, "hex"), Buffer.from(hashGuardado, "hex"));
+}
+
+async function conColeccionServicios(env, accion) {
+  sincronizarEntorno(env);
+  if (!env?.MONGODB_URI) throw new Error("MongoDB no configurado.");
+  const { MongoClient } = await import("mongodb");
+  const cliente = new MongoClient(env.MONGODB_URI);
+  try {
+    await cliente.connect();
+    return await accion(cliente.db("andres_imprimibles").collection("pedidos_servicios"));
+  } finally {
+    await cliente.close().catch(() => {});
+  }
+}
+
+function bucketComprobantesServicio(env) {
+  // Nunca usar PRODUCTOS_R2: su contenido puede estar expuesto públicamente.
+  const bucket = env?.SERVICIOS_COMPROBANTES_R2;
+  return bucket?.put && bucket?.get ? bucket : null;
+}
+
+async function leerArchivoComprobanteServicio(request, maxBytes) {
+  const declarado = Number(request.headers.get("content-length") || 0);
+  if (declarado > maxBytes) return null;
+  if (!request.body) return null;
+  const lector = request.body.getReader();
+  let total = 0;
+  const partes = [];
+  while (true) {
+    const { done, value } = await lector.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) { await lector.cancel(); return null; }
+    partes.push(value);
+  }
+  if (total < 100) return null;
+  const resultado = new Uint8Array(total);
+  let posicion = 0;
+  for (const parte of partes) { resultado.set(parte, posicion); posicion += parte.byteLength; }
+  return resultado;
+}
+
+function tipoComprobanteServicio(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { tipo: "image/jpeg", extension: "jpg" };
+  }
+  if ([137, 80, 78, 71, 13, 10, 26, 10].every((b, i) => bytes[i] === b)) {
+    return { tipo: "image/png", extension: "png" };
+  }
+  if (bytes[0] === 37 && bytes[1] === 80 && bytes[2] === 68 && bytes[3] === 70 && bytes[4] === 45) {
+    return { tipo: "application/pdf", extension: "pdf" };
+  }
+  return null;
+}
+
+async function apiTransferenciaServicio(request, env, ruta) {
+  if (!transferenciasServiciosHabilitadas(env)) {
+    return respuestaServicio({ ok: false, error: "Las transferencias de publicaciones aún no están habilitadas." }, 503);
+  }
+  const cuenta = cuentaTransferenciaServicio(env);
+  if (!cuenta) return respuestaServicio({ ok: false, error: "La cuenta bancaria todavía no está configurada." }, 503);
+
+  const subir = ruta.endsWith("/comprobante");
+  if (request.method !== (subir ? "POST" : "GET")) {
+    return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
+  }
+  const pedidoId = new URL(request.url).searchParams.get("pedidoId");
+  if (!pedidoServicioIdValido(pedidoId)) return respuestaServicio({ ok: false, error: "Identificador de pedido inválido." }, 400);
+  try {
+    return await conColeccionServicios(env, async (coleccion) => {
+      const pedido = await coleccion.findOne({ pedidoId, tipo: "publicaciones", metodoPago: "transferencia", moneda: "ARS" });
+      if (!pedido || !clienteServicioAutorizado(request, pedido)) {
+        return respuestaServicio({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
+      }
+      if (!subir) {
+        return respuestaServicio({
+          ok: true, pedidoId, moneda: "ARS", precio: pedido.precio,
+          estado: pedido.estado, cuenta,
+          comprobanteRecibido: Boolean(pedido.comprobante),
+        });
+      }
+      if (pedido.estado !== ESTADOS_TRANSFERENCIA_SERVICIO.ESPERANDO) {
+        return respuestaServicio({ ok: false, error: "Este pedido ya tiene un comprobante o no admite nuevas cargas." }, 409);
+      }
+      const bucket = bucketComprobantesServicio(env);
+      if (!bucket) return respuestaServicio({ ok: false, error: "El almacenamiento privado de comprobantes no está preparado." }, 503);
+      if (!/^(image\/jpeg|image\/png|application\/pdf)(?:;|$)/i.test(request.headers.get("content-type") || "")) {
+        return respuestaServicio({ ok: false, error: "Adjuntá una imagen JPG/PNG o un PDF." }, 415);
+      }
+      const bytes = await leerArchivoComprobanteServicio(request, 8 * 1024 * 1024);
+      if (!bytes) return respuestaServicio({ ok: false, error: "El comprobante debe ocupar entre 100 bytes y 8 MB." }, 413);
+      const formato = tipoComprobanteServicio(bytes);
+      if (!formato) return respuestaServicio({ ok: false, error: "El comprobante no es un JPG, PNG o PDF válido." }, 415);
+      const fecha = new Date();
+      const clave = `comprobantes/publicaciones/${pedidoId}/${crypto.randomUUID()}.${formato.extension}`;
+      await bucket.put(clave, bytes, { httpMetadata: { contentType: formato.tipo } });
+      try {
+        const resultado = await coleccion.updateOne(
+          { _id: pedido._id, estado: ESTADOS_TRANSFERENCIA_SERVICIO.ESPERANDO, comprobante: null },
+          {
+            $set: {
+              comprobante: { r2Key: clave, tipo: formato.tipo, tamano: bytes.byteLength, subidoEn: fecha },
+              estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE,
+              estadoPago: "verificando_comprobante", actualizadoEn: fecha,
+            },
+            $push: { historialEstados: { estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE, fecha } },
+          }
+        );
+        if (resultado.modifiedCount !== 1) {
+          await bucket.delete(clave);
+          return respuestaServicio({ ok: false, error: "El pedido cambió de estado. Actualizá la página." }, 409);
+        }
+      } catch (error) { await bucket.delete(clave).catch(() => {}); throw error; }
+      return respuestaServicio({ ok: true, pedidoId, estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE }, 201);
+    });
+  } catch (error) {
+    console.error("Error en transferencia de publicaciones:", error);
+    return respuestaServicio({ ok: false, error: "No se pudo procesar la transferencia del servicio." }, 500);
+  }
+}
+
+async function apiAdminTransferenciasServicio(request, env) {
+  if (!adminAutorizadoWorker(request, env)) return respuestaServicio({ ok: false, error: "No autorizado." }, 401);
+  const url = new URL(request.url);
+  const accion = url.searchParams.get("accion") || "listar";
+  if (!((accion === "listar" || accion === "comprobante") && request.method === "GET") &&
+      !(accion === "avanzar" && request.method === "POST")) {
+    return respuestaServicio({ ok: false, error: "Método o acción no permitidos." }, 405);
+  }
+  // La sesión admin usa cookies; para mutaciones, exigir mismo origen como defensa CSRF.
+  if (accion === "avanzar" && request.headers.get("origin") !== url.origin) {
+    return respuestaServicio({ ok: false, error: "Origen no autorizado." }, 403);
+  }
+  try {
+    return await conColeccionServicios(env, async (coleccion) => {
+      if (accion === "listar") {
+        const pedidos = await coleccion.find({ tipo: "publicaciones", metodoPago: "transferencia", pedidoId: /^SER-/ })
+          .sort({ creadoEn: -1 }).limit(100)
+          .project({ _id: 0, pedidoId: 1, precio: 1, moneda: 1, estado: 1, creadoEn: 1,
+            "negocio.nombre": 1, "negocio.email": 1, comprobante: 1 }).toArray();
+        return respuestaServicio({ ok: true, pedidos: pedidos.map((p) => ({
+          pedidoId: p.pedidoId, precio: p.precio, moneda: p.moneda, estado: p.estado,
+          creadoEn: p.creadoEn, negocio: p.negocio,
+          comprobanteRecibido: Boolean(p.comprobante),
+        })) });
+      }
+      let pedidoId;
+      if (accion === "comprobante") pedidoId = url.searchParams.get("pedidoId");
+      else {
+        const lectura = await leerJsonServicio(request);
+        if (lectura.error) return respuestaServicio({ ok: false, error: lectura.error }, lectura.estado);
+        pedidoId = lectura.datos.pedidoId;
+      }
+      if (!pedidoServicioIdValido(pedidoId)) return respuestaServicio({ ok: false, error: "Pedido inválido." }, 400);
+      const pedido = await coleccion.findOne({ pedidoId, tipo: "publicaciones", metodoPago: "transferencia" });
+      if (!pedido) return respuestaServicio({ ok: false, error: "Pedido no encontrado." }, 404);
+      if (accion === "comprobante") {
+        if (!pedido.comprobante?.r2Key) return respuestaServicio({ ok: false, error: "El pedido no tiene comprobante." }, 404);
+        const bucket = bucketComprobantesServicio(env);
+        if (!bucket) return respuestaServicio({ ok: false, error: "Bucket privado no disponible." }, 503);
+        const objeto = await bucket.get(pedido.comprobante.r2Key);
+        if (!objeto) return respuestaServicio({ ok: false, error: "No se encontró el comprobante." }, 404);
+        return new Response(objeto.body, { headers: {
+          "Content-Type": pedido.comprobante.tipo,
+          "Content-Disposition": `inline; filename="comprobante-${pedidoId}.${pedido.comprobante.tipo === "application/pdf" ? "pdf" : pedido.comprobante.tipo === "image/png" ? "png" : "jpg"}"`,
+          "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+        } });
+      }
+      let proximo, estadoPago;
+      if (pedido.estado === ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE) {
+        proximo = ESTADOS_TRANSFERENCIA_SERVICIO.VERIFICANDO;
+        estadoPago = "verificando";
+      } else if (pedido.estado === ESTADOS_TRANSFERENCIA_SERVICIO.VERIFICANDO) {
+        proximo = ESTADOS_TRANSFERENCIA_SERVICIO.COMPLETANDO;
+        estadoPago = "confirmado";
+      } else {
+        return respuestaServicio({ ok: false, error: "Este pedido no admite avanzar de estado." }, 409);
+      }
+      const fecha = new Date();
+      const cambios = { estado: proximo, estadoPago, actualizadoEn: fecha };
+      if (proximo === ESTADOS_TRANSFERENCIA_SERVICIO.COMPLETANDO) cambios.pagadoEn = fecha;
+      const resultado = await coleccion.updateOne(
+        { _id: pedido._id, estado: pedido.estado, "comprobante.r2Key": { $exists: true } },
+        { $set: cambios, $push: { historialEstados: { estado: proximo, fecha } } }
+      );
+      if (resultado.modifiedCount !== 1) {
+        return respuestaServicio({ ok: false, error: "El estado cambió. Actualizá el panel." }, 409);
+      }
+      // Pago confirmado != servicio activado. El contenido requiere aprobación posterior.
+      return respuestaServicio({ ok: true, pedidoId, estado: proximo, estadoPago, servicioActivado: false });
+    });
+  } catch (error) {
+    console.error("Error en administración de transferencias de servicios:", error);
+    return respuestaServicio({ ok: false, error: "No se pudo completar la operación." }, 500);
   }
 }
 
@@ -860,6 +1107,14 @@ if (url.pathname === "/api/admin/pedidos") {
       { status: 500 }
     );
   }
+}
+
+if (url.pathname === "/api/servicios/publicaciones/transferencia" ||
+    url.pathname === "/api/servicios/publicaciones/transferencia/comprobante") {
+  return apiTransferenciaServicio(request, env, url.pathname);
+}
+if (url.pathname === "/api/admin/servicios/transferencias") {
+  return apiAdminTransferenciasServicio(request, env);
 }
 
 if (

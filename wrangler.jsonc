@@ -24,6 +24,10 @@
     {
       "binding": "PRODUCTOS_R2",
       "bucket_name": "andrestrotamundos-productos"
+    },
+    {
+      "binding": "SERVICIOS_COMPROBANTES_R2",
+      "bucket_name": "andrestrotamundos-comprobantes"
     }
   ],
 

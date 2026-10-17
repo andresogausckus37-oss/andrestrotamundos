@@ -39,11 +39,12 @@ const PLAN = {
   },
 };
 
-// Clave pública del widget Turnstile, inyectada por Vite durante la compilación.
-// La clave privada permanece exclusivamente en los secretos de Cloudflare.
-const TURNSTILE_SITE_KEY = String(import.meta.env.VITE_SERVICIO_TURNSTILE_SITE_KEY || "").trim();
+// Turnstile obtiene su clave pública de Cloudflare mediante GET /plan.
+// La clave privada permanece exclusivamente en los secretos del Worker.
 const API_PLAN = "/api/servicios/publicaciones/plan";
 const API_PEDIDOS = "/api/servicios/publicaciones/pedidos";
+const API_TRANSFERENCIA = "/api/servicios/publicaciones/transferencia";
+const PEDIDO_PENDIENTE_STORAGE = "pedido-publicaciones-transferencia-v1";
 
 const REDES = [
   { id: "instagram", nombre: "Instagram", disponible: true },
@@ -289,6 +290,155 @@ function VerificacionHumana({ clave, onToken }) {
   );
 }
 
+// La cuenta y el importe se consultan al Worker usando un acceso limitado al pedido.
+// No hay datos bancarios fijos en el frontend ni una pasarela automática de cobro.
+function TransferenciaPedidoServicio({ pedido, habilitada }) {
+  const [detalle, setDetalle] = useState(null);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
+  const [archivo, setArchivo] = useState(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [aviso, setAviso] = useState("");
+  const [copiado, setCopiado] = useState("");
+
+  useEffect(() => {
+    if (!habilitada || !pedido?.id || !pedido?.tokenAcceso) return;
+    const controller = new AbortController();
+    setCargando(true);
+    setError("");
+    fetch(`${API_TRANSFERENCIA}?pedidoId=${encodeURIComponent(pedido.id)}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${pedido.tokenAcceso}`, Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (respuesta) => {
+        const datos = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok || datos.ok !== true) {
+          throw new Error(datos.error || "No se pudieron consultar los datos de la transferencia.");
+        }
+        if (datos.pedidoId !== pedido.id || datos.moneda !== "ARS") {
+          throw new Error("La información de la transferencia no coincide con el pedido.");
+        }
+        setDetalle(datos);
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) setError(err?.message || "No se pudo consultar la transferencia.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setCargando(false); });
+    return () => controller.abort();
+  }, [pedido?.id, pedido?.tokenAcceso, habilitada]);
+
+  async function copiarDato(texto, campo) {
+    if (!texto || !navigator.clipboard?.writeText) {
+      setAviso("Podés seleccionar y copiar el dato bancario manualmente.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(campo);
+      setAviso("");
+    } catch {
+      setAviso("No se pudo copiar automáticamente. Seleccioná el dato para copiarlo.");
+    }
+  }
+
+  async function enviarComprobante(evento) {
+    evento.preventDefault();
+    if (!detalle || detalle.estado !== "pendiente_comprobante" || subiendo || !archivo) return;
+    if (archivo.size < 100 || archivo.size > 8 * 1024 * 1024 ||
+        !["image/jpeg", "image/png", "application/pdf"].includes(archivo.type)) {
+      setError("Adjuntá un comprobante JPG, PNG o PDF de hasta 8 MB.");
+      return;
+    }
+    setSubiendo(true);
+    setError("");
+    setAviso("");
+    try {
+      const respuesta = await fetch(`${API_TRANSFERENCIA}/comprobante?pedidoId=${encodeURIComponent(pedido.id)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${pedido.tokenAcceso}`, "Content-Type": archivo.type, Accept: "application/json" },
+        body: archivo,
+        cache: "no-store",
+      });
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok || datos.ok !== true) {
+        throw new Error(datos.error || "No se pudo enviar el comprobante.");
+      }
+      setDetalle((anterior) => ({ ...anterior, estado: datos.estado, comprobanteRecibido: true }));
+      setArchivo(null);
+      setAviso("Recibimos el comprobante. Revisaremos la transferencia antes de confirmar el pago.");
+    } catch (err) {
+      setError(err?.message || "No se pudo enviar el comprobante. Volvé a intentarlo.");
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
+  const estados = {
+    pendiente_comprobante: "Pendiente de comprobante",
+    verificando_comprobante: "Verificando comprobante",
+    verificando_pago: "Verificando pago",
+    completando_operacion: "Completando operación",
+  };
+
+  if (!habilitada) return (
+    <p className="mt-3 text-xs leading-5 text-slate-600">
+      La transferencia bancaria se habilitará próximamente. Este pedido no confirma un pago ni activa publicaciones.
+    </p>
+  );
+  if (!pedido?.tokenAcceso) return (
+    <p className="mt-3 text-xs leading-5 text-red-700" role="alert">
+      No está disponible el acceso seguro al pedido. Conservá el código y contactanos antes de transferir.
+    </p>
+  );
+
+  return (
+    <div className="mt-5 border-t border-orange-200 pt-4">
+      <h3 className="text-sm font-medium text-slate-900">Transferencia bancaria</h3>
+      {cargando && <p className="mt-2 text-xs text-slate-600" role="status">Consultando los datos bancarios...</p>}
+      {detalle && (
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-slate-700">Importe a transferir: <span className="font-medium">{precioFormateado(detalle.precio, "ARS")}</span></p>
+          <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+            {[
+              ["Titular", detalle.cuenta?.titular],
+              ["Banco o entidad", detalle.cuenta?.entidad],
+              ["Alias", detalle.cuenta?.alias],
+              ["CBU/CVU", detalle.cuenta?.cbuCvu],
+            ].map(([nombre, valor]) => (
+              <div key={nombre} className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                <div className="min-w-0">
+                  <p className="text-[11px] text-slate-500">{nombre}</p>
+                  <p className="select-text break-all text-sm font-medium text-slate-900">{valor || "No disponible"}</p>
+                </div>
+                {valor && <button type="button" onClick={() => copiarDato(valor, nombre)} className="shrink-0 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" aria-label={`Copiar ${nombre}`}>
+                  {copiado === nombre ? "Copiado" : "Copiar"}
+                </button>}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-600">Estado: <span className="font-medium text-slate-800">{estados[detalle.estado] || detalle.estado}</span></p>
+          {detalle.estado === "pendiente_comprobante" ? (
+            <form onSubmit={enviarComprobante} className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
+              <label className="block text-sm font-medium text-slate-800" htmlFor="comprobante-servicio">Adjuntá el comprobante de transferencia</label>
+              <input id="comprobante-servicio" type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:font-medium file:text-orange-800" onChange={(e) => { setArchivo(e.target.files?.[0] || null); setError(""); }} />
+              <p className="text-xs text-slate-500">JPG, PNG o PDF, hasta 8 MB. La confirmación del pago es manual.</p>
+              <button type="submit" disabled={!archivo || subiendo} className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium", archivo && !subiendo ? "bg-orange-600 text-white hover:bg-orange-700" : "cursor-not-allowed bg-slate-300 text-white")}>
+                <CloudUpload size={16} /> {subiendo ? "Enviando comprobante..." : "Enviar comprobante"}
+              </button>
+            </form>
+          ) : (
+            <p className="text-xs leading-5 text-slate-700">El comprobante está registrado. La aprobación del pago y la preparación del contenido se realizan por separado.</p>
+          )}
+        </div>
+      )}
+      {error && <p className="mt-3 text-xs leading-5 text-red-700" role="alert">{error}</p>}
+      {aviso && <p className="mt-3 text-xs leading-5 text-slate-700" role="status">{aviso}</p>}
+    </div>
+  );
+}
+
 // Mantiene la misma validación esencial que el Worker antes de enviar datos.
 // El servidor vuelve a validar cada campo y decide el importe definitivo.
 function verificarFormularioPedido({ negocio, contenidos }) {
@@ -339,7 +489,14 @@ export default function ConfiguradorPublicaciones() {
   const [revisionTurnstile, setRevisionTurnstile] = useState(0);
   const [creandoPedido, setCreandoPedido] = useState(false);
   const [errorPedido, setErrorPedido] = useState("");
-  const [pedidoCreado, setPedidoCreado] = useState(null);
+  const [pedidoCreado, setPedidoCreado] = useState(() => {
+    try {
+      const guardado = JSON.parse(sessionStorage.getItem(PEDIDO_PENDIENTE_STORAGE) || "null");
+      return /^SER-[a-f0-9-]{36}$/i.test(guardado?.id || "") &&
+        /^[a-f0-9]{64}$/i.test(guardado?.tokenAcceso || "") &&
+        guardado?.moneda === "ARS" ? guardado : null;
+    } catch { return null; }
+  });
   const enviandoRef = useRef(false);
   const urlsLocales = useRef(new Set());
   const vistaRef = useRef(null);
@@ -387,7 +544,12 @@ export default function ConfiguradorPublicaciones() {
   const totalPublicaciones = PLAN.contenidos * redes.length;
   const precio = planServidor?.precios?.[moneda]?.[redes.length] ?? PLAN.precios[moneda][redes.length];
   const precioConfirmado = estadoPlan === "listo";
-  const pedidosDisponibles = precioConfirmado && planServidor?.pedidosHabilitados === true && Boolean(TURNSTILE_SITE_KEY);
+  const turnstileSiteKey = typeof planServidor?.turnstileSiteKey === "string" ? planServidor.turnstileSiteKey.trim() : "";
+  const transferenciasDisponibles = planServidor?.transferenciasHabilitadas === true;
+  // El registro público continúa cerrado hasta que el Worker habilite pedidos.
+  // USD no puede contratarse hasta implementar y verificar PayPal Checkout.
+  const pedidosDisponibles = precioConfirmado && planServidor?.pedidosHabilitados === true &&
+    Boolean(turnstileSiteKey) && moneda === "ARS" && transferenciasDisponibles;
   const medioPago = moneda === "ARS" ? "Transferencia bancaria" : "PayPal";
   const archivosVista = contenido.archivos;
   const archivoActivo = archivosVista[imagenActiva] || archivosVista[0];
@@ -495,14 +657,21 @@ export default function ConfiguradorPublicaciones() {
       if (!respuesta.ok || datos.ok !== true || typeof datos.pedidoId !== "string") {
         throw new Error(datos.error || "No se pudo registrar el pedido. Intentá nuevamente.");
       }
-      setPedidoCreado({
+      const pedido = {
         id: datos.pedidoId,
+        tokenAcceso: /^[a-f0-9]{64}$/i.test(datos.tokenAcceso || "") ? datos.tokenAcceso : null,
         moneda: datos.moneda,
         precio: datos.precio,
         metodoPago: datos.metodoPago,
         estado: datos.estado,
         pagoHabilitado: datos.pagoHabilitado === true,
-      });
+      };
+      setPedidoCreado(pedido);
+      // Solo permanece durante la sesión del navegador. Nunca incluir el token
+      // en URLs, registros de consola ni archivos públicos.
+      if (pedido.tokenAcceso && pedido.moneda === "ARS") {
+        try { sessionStorage.setItem(PEDIDO_PENDIENTE_STORAGE, JSON.stringify(pedido)); } catch { /* Almacenamiento no disponible */ }
+      }
     } catch (error) {
       setErrorPedido(error?.message || "No se pudo comunicar con el servidor.");
       // El token Turnstile tiene un solo uso, incluso si falla el guardado.
@@ -834,7 +1003,7 @@ export default function ConfiguradorPublicaciones() {
               {pedidosDisponibles && !pedidoCreado && (
                 <div className="mt-5 border-t border-slate-100 pt-4">
                   <p className="mb-2 text-sm font-medium text-slate-800">Verificación de seguridad</p>
-                  <VerificacionHumana key={revisionTurnstile} clave={TURNSTILE_SITE_KEY} onToken={setTurnstileToken} />
+                  <VerificacionHumana key={`${turnstileSiteKey}-${revisionTurnstile}`} clave={turnstileSiteKey} onToken={setTurnstileToken} />
                 </div>
               )}
               {pedidoCreado ? (
@@ -842,8 +1011,9 @@ export default function ConfiguradorPublicaciones() {
                   <div className="flex items-center gap-2 text-sm font-medium text-orange-900"><CircleCheck size={18} /> Pedido registrado</div>
                   <p className="mt-2 break-all text-sm font-medium text-slate-900">Código: {pedidoCreado.id}</p>
                   <p className="mt-1 text-xs text-slate-700">Importe validado: {precioFormateado(pedidoCreado.precio, pedidoCreado.moneda)} · {pedidoCreado.metodoPago === "paypal" ? "PayPal" : "Transferencia"}</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-700">Guardá el código. Todavía no se habilitaron los cobros ni la subida definitiva de archivos; crear el pedido no confirma un pago ni activa publicaciones.</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">Las modificaciones que hagas ahora en la pantalla no cambiarán el pedido ya registrado.</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-700">Guardá el código de pedido. La carga definitiva de publicaciones y la conexión de redes se habilitarán después de confirmar el pago.</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Las modificaciones que hagas ahora en la pantalla no cambiarán el pedido ya registrado. Mantené esta pestaña abierta hasta adjuntar el comprobante.</p>
+                  {pedidoCreado.moneda === "ARS" && <TransferenciaPedidoServicio pedido={pedidoCreado} habilitada={transferenciasDisponibles} />}
                 </div>
               ) : (
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -855,8 +1025,8 @@ export default function ConfiguradorPublicaciones() {
                         : "cursor-not-allowed bg-slate-300 text-white")}
                   >
                     {creandoPedido ? "Registrando pedido..." : pedidosDisponibles ? (
-                      <><ShieldCheck size={16} /> Registrar pedido</>
-                    ) : <><LockKeyhole size={16} /> Contratación próximamente</>}
+                      <><ShieldCheck size={16} /> Continuar con transferencia</>
+                    ) : <><LockKeyhole size={16} /> {moneda === "USD" ? "PayPal próximamente" : "Contratación próximamente"}</>}
                   </button>
                   <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50">
                     <Download size={16} /> Guardar configuración
@@ -871,7 +1041,7 @@ export default function ConfiguradorPublicaciones() {
               {errorPedido && <p className="mt-3 text-xs leading-5 text-red-700" role="alert">{errorPedido}</p>}
               <p className="mt-3 text-xs leading-5 text-slate-500">
                 {pedidosDisponibles
-                  ? "Registrar un pedido no realiza ningún cobro. El pago y la activación estarán disponibles en una etapa posterior."
+                  ? "Primero registramos el pedido con el precio oficial. Después podrás transferir y adjuntar el comprobante para verificación manual."
                   : "Podés revisar todos tus contenidos y guardar la configuración sin pagar. La contratación se habilitará próximamente."}
               </p>
             </section>
