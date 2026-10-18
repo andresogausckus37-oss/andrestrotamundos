@@ -1,0 +1,35 @@
+  exigir(precios.ARS?.[1] === 15000 && precios.ARS?.[2] === 25000, "Precios ARS: $15.000 y $25.000");
+  exigir(precios.USD?.[1] === 15 && precios.USD?.[2] === 25, "Precios USD en el catálogo: 15 y 25 (cobros aún cerrados)");
+  exigir(typeof plan.data.turnstileSiteKey === "string" && plan.data.turnstileSiteKey.length > 0,
+    "Clave pública de Turnstile disponible (no se muestra)");
+  exigir(plan.data.proteccionesPreparadas === true, "Limitadores nativos disponibles en el Worker");
+  exigir(plan.data.cobrosHabilitados === false, "PayPal/cobros online deshabilitados");
+  exigir(plan.data.pedidosHabilitados === false, "Creación pública de pedidos DESHABILITADA");
+  const esperaTransferencias = MODO === "--transferencias";
+  exigir(plan.data.transferenciasHabilitadas === esperaTransferencias,
+    `Transferencias: ${noSi(plan.data.transferenciasHabilitadas)} (esperado: ${esperaTransferencias ? "SÍ" : "NO"})`);
+
+  const admin = await consultar("/api/admin/servicios/transferencias?accion=listar");
+  exigir(admin.status === 401, "Listado Admin rechaza solicitudes sin sesión (HTTP 401)");
+
+  // Pedido inexistente y sin clave: jamás se consultan comprobantes reales ni datos bancarios.
+  const idFicticio = `SER-${randomUUID()}`;
+  const transferencia = await consultar(`/api/servicios/publicaciones/transferencia?pedidoId=${idFicticio}`);
+  const estadoEsperado = esperaTransferencias ? 404 : 503;
+  exigir(transferencia.status === estadoEsperado,
+    `Consulta anónima de pedido inexistente bloqueada (HTTP ${transferencia.status}, esperado ${estadoEsperado})`);
+  exigir(!Object.hasOwn(transferencia.data, "cuenta"), "Sin exposición de datos bancarios");
+} catch (error) {
+  problemas.push(error?.message || String(error));
+  console.error("ERROR de comprobación:", error?.message || String(error));
+}
+
+if (problemas.length) {
+  console.error(`\nREVISAR: ${problemas.length} comprobación(es) no pasaron. No cambies los interruptores.`);
+  process.exitCode = 1;
+} else {
+  console.log("\nCORRECTO: comprobaciones sin escrituras completadas.");
+  console.log(MODO === "--cerrado"
+    ? "SIGUIENTE: habilitar solamente SERVICIO_TRANSFERENCIAS_HABILITADAS para la prueba escalonada, dejando SERVICIO_PEDIDOS_HABILITADOS=false."
+    : "SIGUIENTE: conservar SERVICIO_PEDIDOS_HABILITADOS=false y revisar el flujo pospago antes de abrir ventas.");
+}

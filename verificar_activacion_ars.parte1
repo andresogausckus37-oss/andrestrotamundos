@@ -1,0 +1,59 @@
+/**
+ * Etapa 2 · Preflight sin escrituras para transferencias de publicaciones.
+ * Uso:
+ *   node verificar_activacion_ars.mjs --cerrado
+ *   node verificar_activacion_ars.mjs --transferencias
+ * Opcional: URL del Worker como segundo argumento.
+ *
+ * Solo realiza GET; no crea pedidos, no carga archivos, no marca pagos.
+ * No imprime datos bancarios ni claves Turnstile.
+ */
+import { randomUUID } from "node:crypto";
+
+const MODO = process.argv[2] || "--cerrado";
+if (!["--cerrado", "--transferencias"].includes(MODO)) {
+  console.error("Uso: node verificar_activacion_ars.mjs --cerrado|--transferencias [URL_WORKER]");
+  process.exit(2);
+}
+const ORIGEN_PREDETERMINADO = "https://andrestrotamundos.andresogausckus37.workers.dev";
+let base;
+try {
+  base = new URL(process.argv[3] || ORIGEN_PREDETERMINADO);
+  if (!/^https?:$/.test(base.protocol) || base.username || base.password || base.search || base.hash) {
+    throw new Error("URL inválida");
+  }
+} catch {
+  console.error("ERROR: URL del Worker no válida.");
+  process.exit(2);
+}
+const problemas = [];
+async function consultar(ruta) {
+  const url = new URL(ruta, base);
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    redirect: "manual",
+    signal: AbortSignal.timeout(12000),
+  });
+  const body = await response.text();
+  let data;
+  try { data = JSON.parse(body); }
+  catch { data = null; }
+  if (!data || typeof data !== "object") {
+    throw new Error(`${url.pathname} devolvió contenido no JSON (HTTP ${response.status}).`);
+  }
+  return { status: response.status, data };
+}
+function exigir(condicion, descripcion) {
+  console.log(`${condicion ? "OK" : "ERROR"}: ${descripcion}`);
+  if (!condicion) problemas.push(descripcion);
+}
+function noSi(valor) { return valor === true ? "SÍ" : "NO"; }
+
+try {
+  console.log(`Comprobación ${MODO} · ${base.origin}`);
+  const plan = await consultar("/api/servicios/publicaciones/plan");
+  exigir(plan.status === 200 && plan.data.ok === true, "API del plan responde HTTP 200");
+  exigir(plan.data.plan?.id === "comunidad-semanal" && plan.data.plan?.contenidos === 4 && plan.data.plan?.duracionDias === 7,
+    "Plan Comunidad Semanal (4 contenidos / 7 días)");
+  const precios = plan.data.precios || {};

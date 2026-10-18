@@ -31,6 +31,24 @@
     }
   ],
 
+  "ratelimits": [
+    {
+      "name": "SERVICIO_LIMITE_PEDIDOS",
+      "namespace_id": "2718101",
+      "simple": { "limit": 6, "period": 60 }
+    },
+    {
+      "name": "SERVICIO_LIMITE_CONSULTAS",
+      "namespace_id": "2718102",
+      "simple": { "limit": 60, "period": 60 }
+    },
+    {
+      "name": "SERVICIO_LIMITE_COMPROBANTES",
+      "namespace_id": "2718103",
+      "simple": { "limit": 6, "period": 60 }
+    }
+  ],
+
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

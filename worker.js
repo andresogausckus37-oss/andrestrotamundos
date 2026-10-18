@@ -372,6 +372,43 @@ function validarConfiguracionServicio(datos) {
 
 // Para abrir pedidos públicos se requiere Turnstile; Admin puede probar
 // la escritura con su sesión existente. Esta verificación NO confirma pagos.
+// Limitadores nativos de Cloudflare Workers. Protegen las rutas de servicios;
+// los pedidos de la tienda y el calendario automatico no utilizan estos bindings.
+function limitadoresServicioPreparados(env) {
+  return [
+    env?.SERVICIO_LIMITE_PEDIDOS,
+    env?.SERVICIO_LIMITE_CONSULTAS,
+    env?.SERVICIO_LIMITE_COMPROBANTES,
+  ].every((binding) => typeof binding?.limit === "function");
+}
+
+async function comprobarLimiteServicio(request, env, nombreBinding) {
+  const limitador = env?.[nombreBinding];
+  if (typeof limitador?.limit !== "function") {
+    return respuestaServicio({ ok: false, error: "La proteccion de solicitudes aun no esta configurada." }, 503);
+  }
+  // Creacion publica sin sesion: usar IP de Cloudflare (no X-Forwarded-For).
+  // El limite es aproximado; usuarios que comparten IP pueden verse afectados.
+  const ip = request.headers.get("CF-Connecting-IP")?.trim();
+  if (!ip) {
+    return respuestaServicio({ ok: false, error: "No se pudo verificar el origen de la solicitud." }, 403);
+  }
+  const clave = crypto.createHash("sha256").update(ip).digest("hex");
+  try {
+    const resultado = await limitador.limit({ key: clave });
+    if (!resultado?.success) {
+      return respuestaServicio({
+        ok: false,
+        error: "Se realizaron demasiadas solicitudes. Espera un minuto e intenta nuevamente.",
+      }, 429);
+    }
+    return null;
+  } catch (error) {
+    console.error("Error del limitador de servicios:", error);
+    return respuestaServicio({ ok: false, error: "La proteccion de solicitudes no esta disponible." }, 503);
+  }
+}
+
 async function validarAccesoCrearServicio(request, env, datos) {
   if (adminAutorizadoWorker(request, env)) return { ok: true };
   if (!env.SERVICIO_TURNSTILE_SECRET) {
@@ -391,9 +428,12 @@ async function validarAccesoCrearServicio(request, env, datos) {
     });
     if (!respuesta.ok) return { error: "No se pudo completar la verificación de seguridad.", estado: 503 };
     const verificacion = await respuesta.json();
-    return verificacion.success
+    // El token debe haberse emitido para el mismo dominio de este sitio.
+    const hostnameEsperado = new URL(request.url).hostname.toLowerCase();
+    const hostnameVerificado = String(verificacion.hostname ?? "").toLowerCase();
+    return verificacion.success && hostnameVerificado === hostnameEsperado
       ? { ok: true }
-      : { error: "Verificación de seguridad inválida o vencida.", estado: 403 };
+      : { error: "Verificación de seguridad inválida, vencida o de otro dominio.", estado: 403 };
   } catch {
     return { error: "No se pudo comprobar la verificación de seguridad.", estado: 503 };
   }
@@ -404,6 +444,9 @@ async function apiPedidosPublicaciones(request, env, ruta) {
   // La Secret Key nunca se devuelve al navegador.
   const turnstileSiteKey = String(env?.SERVICIO_TURNSTILE_SITE_KEY ?? "").trim();
   const turnstilePreparado = Boolean(turnstileSiteKey && env?.SERVICIO_TURNSTILE_SECRET);
+  const proteccionesPreparadas = limitadoresServicioPreparados(env);
+  const transferenciaPreparada = transferenciasServiciosHabilitadas(env) &&
+    Boolean(cuentaTransferenciaServicio(env)) && Boolean(bucketComprobantesServicio(env));
   if (ruta === "/api/servicios/publicaciones/plan") {
     if (request.method !== "GET") return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
     return respuestaServicio({
@@ -411,23 +454,28 @@ async function apiPedidosPublicaciones(request, env, ruta) {
       precios: PRECIOS_PUBLICACIONES,
       mediosPago: { ARS: "transferencia", USD: "paypal" },
       turnstileSiteKey: turnstileSiteKey,
+      proteccionesPreparadas,
       pedidosHabilitados: String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() === "true" &&
-        turnstilePreparado,
-      transferenciasHabilitadas: transferenciasServiciosHabilitadas(env) && Boolean(cuentaTransferenciaServicio(env)) && Boolean(bucketComprobantesServicio(env)),
+        turnstilePreparado && transferenciaPreparada && proteccionesPreparadas,
+      transferenciasHabilitadas: transferenciaPreparada && proteccionesPreparadas,
       cobrosHabilitados: false,
     });
   }
   if (request.method !== "POST") {
     return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
   }
-  if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() !== "true" || !turnstilePreparado) {
+  if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() !== "true" ||
+      !turnstilePreparado || !transferenciaPreparada || !proteccionesPreparadas) {
     return respuestaServicio({ ok: false, error: "La contratación de publicaciones aún no está habilitada." }, 503);
   }
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_PEDIDOS");
+  if (exceso) return exceso;
   const lectura = await leerJsonServicio(request);
   if (lectura.error) return respuestaServicio({ ok: false, error: lectura.error }, lectura.estado);
   const datos = lectura.datos;
-  if (!["ARS", "USD"].includes(datos.moneda)) {
-    return respuestaServicio({ ok: false, error: "Moneda no admitida." }, 400);
+  // La contratacion inicial es solo por transferencia ARS; PayPal aun no esta integrado.
+  if (datos.moneda !== "ARS") {
+    return respuestaServicio({ ok: false, error: "Por ahora solo se admiten contrataciones en ARS." }, 400);
   }
   const validacion = validarConfiguracionServicio(datos);
   if (validacion.error) return respuestaServicio({ ok: false, error: validacion.error }, 400);
@@ -588,6 +636,9 @@ async function apiTransferenciaServicio(request, env, ruta) {
   }
   const pedidoId = new URL(request.url).searchParams.get("pedidoId");
   if (!pedidoServicioIdValido(pedidoId)) return respuestaServicio({ ok: false, error: "Identificador de pedido inválido." }, 400);
+  const exceso = await comprobarLimiteServicio(request, env,
+    subir ? "SERVICIO_LIMITE_COMPROBANTES" : "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
   try {
     return await conColeccionServicios(env, async (coleccion) => {
       const pedido = await coleccion.findOne({ pedidoId, tipo: "publicaciones", metodoPago: "transferencia", moneda: "ARS" });
