@@ -641,29 +641,112 @@ async function apiTransferenciaServicio(request, env, ruta) {
   }
 }
 
+// Documento ficticio y claramente identificado para verificar la lectura privada desde Admin.
+// Nunca representa una transferencia real ni un comprobante aportado por un cliente.
+function comprobantePdfPruebaServicio(pedidoId) {
+  const encoder = new TextEncoder();
+  const contenido = [
+    "BT /F1 25 Tf 50 735 Td (PRUEBA - NO ES UN PAGO) Tj ET",
+    "BT /F1 13 Tf 50 698 Td (Archivo ficticio para verificar Cloudflare R2.) Tj ET",
+    "BT /F1 12 Tf 50 672 Td (No acredita transferencias ni autoriza servicios.) Tj ET",
+    `BT /F1 10 Tf 50 640 Td (Pedido: ${pedidoId}) Tj ET`,
+  ].join("\n") + "\n";
+  const objetos = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${encoder.encode(contenido).length} >>\nstream\n${contenido}endstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (let i = 0; i < objetos.length; i++) {
+    offsets.push(encoder.encode(pdf).length);
+    pdf += `${i + 1} 0 obj\n${objetos[i]}\nendobj\n`;
+  }
+  const inicioXref = encoder.encode(pdf).length;
+  pdf += `xref\n0 ${objetos.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets.slice(1)) pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objetos.length + 1} /Root 1 0 R >>\nstartxref\n${inicioXref}\n%%EOF\n`;
+  return encoder.encode(pdf);
+}
+
 async function apiAdminTransferenciasServicio(request, env) {
   if (!adminAutorizadoWorker(request, env)) return respuestaServicio({ ok: false, error: "No autorizado." }, 401);
   const url = new URL(request.url);
   const accion = url.searchParams.get("accion") || "listar";
   if (!((accion === "listar" || accion === "comprobante") && request.method === "GET") &&
-      !(accion === "avanzar" && request.method === "POST")) {
+      !(["avanzar", "crearPrueba", "eliminarPrueba"].includes(accion) && request.method === "POST")) {
     return respuestaServicio({ ok: false, error: "Método o acción no permitidos." }, 405);
   }
   // La sesión admin usa cookies; para mutaciones, exigir mismo origen como defensa CSRF.
-  if (accion === "avanzar" && request.headers.get("origin") !== url.origin) {
+  if (["avanzar", "crearPrueba", "eliminarPrueba"].includes(accion) && request.headers.get("origin") !== url.origin) {
     return respuestaServicio({ ok: false, error: "Origen no autorizado." }, 403);
   }
   try {
     return await conColeccionServicios(env, async (coleccion) => {
+      if (accion === "crearPrueba") {
+        // Probar MongoDB + R2 sin habilitar ninguno de los flujos públicos.
+        if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() === "true" ||
+            transferenciasServiciosHabilitadas(env)) {
+          return respuestaServicio({ ok: false, error: "Desactivá los pedidos y transferencias públicos antes de realizar esta prueba." }, 409);
+        }
+        const bucket = bucketComprobantesServicio(env);
+        if (!bucket?.delete) return respuestaServicio({ ok: false, error: "No se encontró el bucket privado de comprobantes." }, 503);
+        if (!cuentaTransferenciaServicio(env)) {
+          return respuestaServicio({ ok: false, error: "Comprobá la configuración bancaria en Cloudflare." }, 503);
+        }
+        const fecha = new Date();
+        const pedidoId = `SER-${crypto.randomUUID()}`;
+        const clave = `comprobantes/publicaciones/${pedidoId}/PRUEBA-NO-ES-PAGO.pdf`;
+        const bytes = comprobantePdfPruebaServicio(pedidoId);
+        await bucket.put(clave, bytes, { httpMetadata: { contentType: "application/pdf" } });
+        try {
+          const objeto = await bucket.get(clave);
+          if (!objeto || objeto.size !== bytes.byteLength) throw new Error("La lectura de R2 no coincide con el archivo de prueba.");
+          await coleccion.insertOne({
+            pedidoId, tipo: "publicaciones", modoPrueba: true,
+            planId: PLAN_PUBLICACIONES.id, nombrePlan: PLAN_PUBLICACIONES.nombre,
+            contenidos: PLAN_PUBLICACIONES.contenidos, duracionDias: PLAN_PUBLICACIONES.duracionDias,
+            moneda: "ARS", precio: PRECIOS_PUBLICACIONES.ARS[1],
+            metodoPago: "transferencia", redes: ["instagram"],
+            negocio: { nombre: "PRUEBA TECNICA - SIN PAGO", email: "prueba@example.invalid" },
+            estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE,
+            estadoPago: "prueba_sin_pago", estadoServicio: "sin_activar",
+            comprobante: { r2Key: clave, tipo: "application/pdf", tamano: bytes.byteLength, subidoEn: fecha },
+            creadoEn: fecha, actualizadoEn: fecha, pagadoEn: null, activadoEn: null,
+            historialEstados: [{ estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE, fecha }],
+          });
+        } catch (error) {
+          await bucket.delete(clave).catch(() => {});
+          throw error;
+        }
+        return respuestaServicio({ ok: true, pedidoId, modoPrueba: true, estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE }, 201);
+      }
+      if (accion === "eliminarPrueba") {
+        const lectura = await leerJsonServicio(request);
+        if (lectura.error) return respuestaServicio({ ok: false, error: lectura.error }, lectura.estado);
+        const pedidoId = lectura.datos.pedidoId;
+        if (!pedidoServicioIdValido(pedidoId)) return respuestaServicio({ ok: false, error: "Identificador inválido." }, 400);
+        // La eliminación se limita estrictamente a los pedidos técnicos.
+        const pedido = await coleccion.findOne({ pedidoId, modoPrueba: true, tipo: "publicaciones" });
+        if (!pedido) return respuestaServicio({ ok: false, error: "Pedido de prueba no encontrado." }, 404);
+        const bucket = bucketComprobantesServicio(env);
+        if (!bucket?.delete) return respuestaServicio({ ok: false, error: "Bucket privado no disponible." }, 503);
+        if (pedido.comprobante?.r2Key) await bucket.delete(pedido.comprobante.r2Key);
+        const resultado = await coleccion.deleteOne({ _id: pedido._id, modoPrueba: true });
+        if (resultado.deletedCount !== 1) return respuestaServicio({ ok: false, error: "No se pudo eliminar el documento de prueba." }, 409);
+        return respuestaServicio({ ok: true, pedidoId, eliminado: true });
+      }
       if (accion === "listar") {
         const pedidos = await coleccion.find({ tipo: "publicaciones", metodoPago: "transferencia", pedidoId: /^SER-/ })
           .sort({ creadoEn: -1 }).limit(100)
           .project({ _id: 0, pedidoId: 1, precio: 1, moneda: 1, estado: 1, creadoEn: 1,
-            "negocio.nombre": 1, "negocio.email": 1, comprobante: 1 }).toArray();
+            "negocio.nombre": 1, "negocio.email": 1, comprobante: 1, modoPrueba: 1 }).toArray();
         return respuestaServicio({ ok: true, pedidos: pedidos.map((p) => ({
           pedidoId: p.pedidoId, precio: p.precio, moneda: p.moneda, estado: p.estado,
           creadoEn: p.creadoEn, negocio: p.negocio,
-          comprobanteRecibido: Boolean(p.comprobante),
+          comprobanteRecibido: Boolean(p.comprobante), modoPrueba: p.modoPrueba === true,
         })) });
       }
       let pedidoId;
@@ -688,10 +771,13 @@ async function apiAdminTransferenciasServicio(request, env) {
           "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
         } });
       }
+      if (pedido.modoPrueba === true && pedido.estado !== ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE) {
+        return respuestaServicio({ ok: false, error: "Los pedidos de prueba nunca pueden confirmarse como pagos recibidos." }, 409);
+      }
       let proximo, estadoPago;
       if (pedido.estado === ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE) {
         proximo = ESTADOS_TRANSFERENCIA_SERVICIO.VERIFICANDO;
-        estadoPago = "verificando";
+        estadoPago = pedido.modoPrueba === true ? "prueba_sin_pago" : "verificando";
       } else if (pedido.estado === ESTADOS_TRANSFERENCIA_SERVICIO.VERIFICANDO) {
         proximo = ESTADOS_TRANSFERENCIA_SERVICIO.COMPLETANDO;
         estadoPago = "confirmado";
