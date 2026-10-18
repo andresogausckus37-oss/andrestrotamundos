@@ -583,6 +583,8 @@ function AdminServiciosTransferencias() {
   const [error, setError] = useState("");
   const [procesando, setProcesando] = useState(null);
   const [probando, setProbando] = useState(false);
+  const [creandoPruebaCarga, setCreandoPruebaCarga] = useState(false);
+  const [subiendoPrueba, setSubiendoPrueba] = useState(null);
   const [eliminando, setEliminando] = useState(null);
   const [avisoPrueba, setAvisoPrueba] = useState("");
   const [abriendo, setAbriendo] = useState(null);
@@ -682,6 +684,53 @@ function AdminServiciosTransferencias() {
     } finally { setProbando(false); }
   };
 
+  const crearPruebaCarga = async () => {
+    if (!window.confirm("¿Crear un pedido de ensayo SIN comprobante para probar la carga de un archivo ficticio? No se realizará ningún cobro.")) return;
+    setCreandoPruebaCarga(true);
+    setError("");
+    setAvisoPrueba("");
+    try {
+      const respuesta = await fetch("/api/admin/servicios/transferencias?accion=crearPruebaCarga", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" }, body: "{}",
+      });
+      if (respuesta.status === 401) { navigate("/admin/login"); return; }
+      const datos = await respuesta.json();
+      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || "No se pudo crear el pedido de ensayo.");
+      setAvisoPrueba(`Pedido ${datos.pedidoId} preparado. Subí un PDF o imagen FICTICIA desde su botón «Subir archivo de prueba».`);
+      await cargarPedidos(true);
+    } catch (err) { setError(err.message || "No se pudo preparar la prueba de subida."); }
+    finally { setCreandoPruebaCarga(false); }
+  };
+
+  const subirArchivoPrueba = async (pedidoId, archivo) => {
+    if (!archivo) return;
+    if (!["application/pdf", "image/png", "image/jpeg"].includes(archivo.type) ||
+        archivo.size < 100 || archivo.size > 8 * 1024 * 1024) {
+      setError("Seleccioná un PDF, JPG o PNG ficticio de entre 100 bytes y 8 MB.");
+      return;
+    }
+    if (!window.confirm("¿Subir este archivo al bucket R2 PRIVADO como prueba? Usá solo un archivo ficticio, sin datos bancarios ni personales reales.")) return;
+    setSubiendoPrueba(pedidoId);
+    setError("");
+    setAvisoPrueba("");
+    try {
+      // La misma ruta y las mismas comprobaciones de formato/tamaño que usa el cliente.
+      // El parámetro pruebaAdmin solo autoriza órdenes técnicas desde la sesión Admin.
+      const ruta = `/api/servicios/publicaciones/transferencia/comprobante?pedidoId=${encodeURIComponent(pedidoId)}&pruebaAdmin=1`;
+      const respuesta = await fetch(ruta, {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": archivo.type }, body: archivo,
+      });
+      if (respuesta.status === 401) { navigate("/admin/login"); return; }
+      const datos = await respuesta.json();
+      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || "La subida a R2 falló.");
+      setAvisoPrueba(`Comprobante ficticio subido para ${pedidoId}. Revisalo en «Ver comprobante» y después eliminá el pedido de prueba.`);
+      await cargarPedidos(true);
+    } catch (err) { setError(err.message || "No se pudo subir el archivo de prueba."); }
+    finally { setSubiendoPrueba(null); }
+  };
+
   const eliminarPrueba = async (pedidoId) => {
     if (!window.confirm(`¿Eliminar el pedido técnico ${pedidoId} y su archivo ficticio de R2? Esta acción no afecta otros pedidos.`)) return;
     setEliminando(pedidoId);
@@ -751,6 +800,11 @@ function AdminServiciosTransferencias() {
               {probando ? <Loader2 size={14} className="animate-spin" /> : <FileCheck size={14} />}
               {probando ? "Creando prueba..." : "Probar MongoDB + R2"}
             </button>
+            <button type="button" onClick={crearPruebaCarga} disabled={creandoPruebaCarga || probando}
+              className="inline-flex items-center gap-2 rounded-md border border-orange-300 bg-white px-3 py-2 text-xs font-medium text-orange-800 hover:bg-orange-50 disabled:opacity-50">
+              {creandoPruebaCarga ? <Loader2 size={14} className="animate-spin" /> : <FileCheck size={14} />}
+              {creandoPruebaCarga ? "Preparando..." : "Probar subida desde formulario"}
+            </button>
             <button type="button" onClick={() => cargarPedidos()} disabled={cargando}
               className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">
               <RefreshCw size={14} /> Actualizar
@@ -807,6 +861,14 @@ function AdminServiciosTransferencias() {
                       {abriendo === pedido.pedidoId ? <Loader2 size={14} className="animate-spin" /> : <ZoomIn size={14} />}
                       {abriendo === pedido.pedidoId ? "Abriendo..." : "Ver comprobante"}
                     </button>
+                    {pedido.modoPrueba && pedido.estado === "pendiente_comprobante" && (
+                      <label className={`inline-flex cursor-pointer items-center gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-800 ${subiendoPrueba === pedido.pedidoId ? "opacity-50" : "hover:bg-orange-100"}`}>
+                        {subiendoPrueba === pedido.pedidoId ? "Subiendo..." : "Subir archivo de prueba"}
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                          className="sr-only" disabled={subiendoPrueba !== null}
+                          onChange={(e) => { const archivo = e.target.files?.[0]; e.target.value = ""; subirArchivoPrueba(pedido.pedidoId, archivo); }} />
+                      </label>
+                    )}
                     {pedido.modoPrueba && (
                       <button type="button" onClick={() => eliminarPrueba(pedido.pedidoId)}
                         disabled={eliminando === pedido.pedidoId}

@@ -1,0 +1,192 @@
+--- a/worker.js
++++ b/worker.js
+@@ -576,22 +576,37 @@
+ }
+ 
+ async function apiTransferenciaServicio(request, env, ruta) {
+-  if (!transferenciasServiciosHabilitadas(env)) {
++  // Excepción exclusivamente para ensayar una subida desde Admin sobre un pedido
++  // ficticio. Requiere sesión Admin y mismo origen; nunca admite pedidos reales.
++  const url = new URL(request.url);
++  const subir = ruta.endsWith("/comprobante");
++  const solicitadoComoPrueba = url.searchParams.get("pruebaAdmin") === "1";
++  const pruebaAdminAutorizada = solicitadoComoPrueba && subir &&
++    request.method === "POST" && adminAutorizadoWorker(request, env) &&
++    String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() !== "true" &&
++    !transferenciasServiciosHabilitadas(env) &&
++    request.headers.get("origin") === url.origin;
++  if (solicitadoComoPrueba && !pruebaAdminAutorizada) {
++    return respuestaServicio({ ok: false, error: "Acceso de prueba no autorizado." }, 403);
++  }
++  if (!transferenciasServiciosHabilitadas(env) && !pruebaAdminAutorizada) {
+     return respuestaServicio({ ok: false, error: "Las transferencias de publicaciones aún no están habilitadas." }, 503);
+   }
+   const cuenta = cuentaTransferenciaServicio(env);
+   if (!cuenta) return respuestaServicio({ ok: false, error: "La cuenta bancaria todavía no está configurada." }, 503);
+ 
+-  const subir = ruta.endsWith("/comprobante");
+   if (request.method !== (subir ? "POST" : "GET")) {
+     return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
+   }
+-  const pedidoId = new URL(request.url).searchParams.get("pedidoId");
++  const pedidoId = url.searchParams.get("pedidoId");
+   if (!pedidoServicioIdValido(pedidoId)) return respuestaServicio({ ok: false, error: "Identificador de pedido inválido." }, 400);
+   try {
+     return await conColeccionServicios(env, async (coleccion) => {
+       const pedido = await coleccion.findOne({ pedidoId, tipo: "publicaciones", metodoPago: "transferencia", moneda: "ARS" });
+-      if (!pedido || !clienteServicioAutorizado(request, pedido)) {
++      const accesoValido = pruebaAdminAutorizada
++        ? pedido?.modoPrueba === true
++        : pedido?.modoPrueba !== true && clienteServicioAutorizado(request, pedido);
++      if (!pedido || !accesoValido) {
+         return respuestaServicio({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
+       }
+       if (!subir) {
+@@ -623,7 +638,8 @@
+             $set: {
+               comprobante: { r2Key: clave, tipo: formato.tipo, tamano: bytes.byteLength, subidoEn: fecha },
+               estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE,
+-              estadoPago: "verificando_comprobante", actualizadoEn: fecha,
++              estadoPago: pedido.modoPrueba === true ? "prueba_sin_pago" : "verificando_comprobante",
++              actualizadoEn: fecha,
+             },
+             $push: { historialEstados: { estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE, fecha } },
+           }
+@@ -676,15 +692,43 @@
+   const url = new URL(request.url);
+   const accion = url.searchParams.get("accion") || "listar";
+   if (!((accion === "listar" || accion === "comprobante") && request.method === "GET") &&
+-      !(["avanzar", "crearPrueba", "eliminarPrueba"].includes(accion) && request.method === "POST")) {
++      !(["avanzar", "crearPrueba", "crearPruebaCarga", "eliminarPrueba"].includes(accion) && request.method === "POST")) {
+     return respuestaServicio({ ok: false, error: "Método o acción no permitidos." }, 405);
+   }
+   // La sesión admin usa cookies; para mutaciones, exigir mismo origen como defensa CSRF.
+-  if (["avanzar", "crearPrueba", "eliminarPrueba"].includes(accion) && request.headers.get("origin") !== url.origin) {
++  if (["avanzar", "crearPrueba", "crearPruebaCarga", "eliminarPrueba"].includes(accion) && request.headers.get("origin") !== url.origin) {
+     return respuestaServicio({ ok: false, error: "Origen no autorizado." }, 403);
+   }
+   try {
+     return await conColeccionServicios(env, async (coleccion) => {
++      if (accion === "crearPruebaCarga") {
++        // Una orden de prueba vacía que usa la MISMA ruta de subida que el cliente.
++        // Jamás se puede confirmar como pagada ni activar el servicio.
++        if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() === "true" ||
++            transferenciasServiciosHabilitadas(env)) {
++          return respuestaServicio({ ok: false, error: "Esta prueba requiere pedidos y transferencias públicos deshabilitados." }, 409);
++        }
++        if (!cuentaTransferenciaServicio(env) || !bucketComprobantesServicio(env)?.put) {
++          return respuestaServicio({ ok: false, error: "Faltan los datos bancarios o el bucket R2 privado." }, 503);
++        }
++        const fecha = new Date();
++        const pedidoId = `SER-${crypto.randomUUID()}`;
++        await coleccion.insertOne({
++          pedidoId, tipo: "publicaciones", modoPrueba: true,
++          planId: PLAN_PUBLICACIONES.id, nombrePlan: PLAN_PUBLICACIONES.nombre,
++          contenidos: PLAN_PUBLICACIONES.contenidos, duracionDias: PLAN_PUBLICACIONES.duracionDias,
++          moneda: "ARS", precio: PRECIOS_PUBLICACIONES.ARS[1],
++          metodoPago: "transferencia", redes: ["instagram"],
++          negocio: { nombre: "PRUEBA DE CARGA - SIN PAGO", email: "prueba@example.invalid" },
++          estado: ESTADOS_TRANSFERENCIA_SERVICIO.ESPERANDO,
++          estadoPago: "prueba_sin_pago", estadoServicio: "sin_activar",
++          comprobante: null, creadoEn: fecha, actualizadoEn: fecha,
++          pagadoEn: null, activadoEn: null,
++          historialEstados: [{ estado: ESTADOS_TRANSFERENCIA_SERVICIO.ESPERANDO, fecha }],
++        });
++        return respuestaServicio({ ok: true, pedidoId, modoPrueba: true,
++          estado: ESTADOS_TRANSFERENCIA_SERVICIO.ESPERANDO }, 201);
++      }
+       if (accion === "crearPrueba") {
+         // Probar MongoDB + R2 sin habilitar ninguno de los flujos públicos.
+         if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() === "true" ||
+--- a/src/paginas/Admin.jsx
++++ b/src/paginas/Admin.jsx
+@@ -583,6 +583,8 @@
+   const [error, setError] = useState("");
+   const [procesando, setProcesando] = useState(null);
+   const [probando, setProbando] = useState(false);
++  const [creandoPruebaCarga, setCreandoPruebaCarga] = useState(false);
++  const [subiendoPrueba, setSubiendoPrueba] = useState(null);
+   const [eliminando, setEliminando] = useState(null);
+   const [avisoPrueba, setAvisoPrueba] = useState("");
+   const [abriendo, setAbriendo] = useState(null);
+@@ -682,6 +684,53 @@
+     } finally { setProbando(false); }
+   };
+ 
++  const crearPruebaCarga = async () => {
++    if (!window.confirm("¿Crear un pedido de ensayo SIN comprobante para probar la carga de un archivo ficticio? No se realizará ningún cobro.")) return;
++    setCreandoPruebaCarga(true);
++    setError("");
++    setAvisoPrueba("");
++    try {
++      const respuesta = await fetch("/api/admin/servicios/transferencias?accion=crearPruebaCarga", {
++        method: "POST", credentials: "same-origin",
++        headers: { "Content-Type": "application/json" }, body: "{}",
++      });
++      if (respuesta.status === 401) { navigate("/admin/login"); return; }
++      const datos = await respuesta.json();
++      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || "No se pudo crear el pedido de ensayo.");
++      setAvisoPrueba(`Pedido ${datos.pedidoId} preparado. Subí un PDF o imagen FICTICIA desde su botón «Subir archivo de prueba».`);
++      await cargarPedidos(true);
++    } catch (err) { setError(err.message || "No se pudo preparar la prueba de subida."); }
++    finally { setCreandoPruebaCarga(false); }
++  };
++
++  const subirArchivoPrueba = async (pedidoId, archivo) => {
++    if (!archivo) return;
++    if (!["application/pdf", "image/png", "image/jpeg"].includes(archivo.type) ||
++        archivo.size < 100 || archivo.size > 8 * 1024 * 1024) {
++      setError("Seleccioná un PDF, JPG o PNG ficticio de entre 100 bytes y 8 MB.");
++      return;
++    }
++    if (!window.confirm("¿Subir este archivo al bucket R2 PRIVADO como prueba? Usá solo un archivo ficticio, sin datos bancarios ni personales reales.")) return;
++    setSubiendoPrueba(pedidoId);
++    setError("");
++    setAvisoPrueba("");
++    try {
++      // La misma ruta y las mismas comprobaciones de formato/tamaño que usa el cliente.
++      // El parámetro pruebaAdmin solo autoriza órdenes técnicas desde la sesión Admin.
++      const ruta = `/api/servicios/publicaciones/transferencia/comprobante?pedidoId=${encodeURIComponent(pedidoId)}&pruebaAdmin=1`;
++      const respuesta = await fetch(ruta, {
++        method: "POST", credentials: "same-origin",
++        headers: { "Content-Type": archivo.type }, body: archivo,
++      });
++      if (respuesta.status === 401) { navigate("/admin/login"); return; }
++      const datos = await respuesta.json();
++      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || "La subida a R2 falló.");
++      setAvisoPrueba(`Comprobante ficticio subido para ${pedidoId}. Revisalo en «Ver comprobante» y después eliminá el pedido de prueba.`);
++      await cargarPedidos(true);
++    } catch (err) { setError(err.message || "No se pudo subir el archivo de prueba."); }
++    finally { setSubiendoPrueba(null); }
++  };
++
+   const eliminarPrueba = async (pedidoId) => {
+     if (!window.confirm(`¿Eliminar el pedido técnico ${pedidoId} y su archivo ficticio de R2? Esta acción no afecta otros pedidos.`)) return;
+     setEliminando(pedidoId);
+@@ -750,6 +799,11 @@
+               className="inline-flex items-center gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-800 hover:bg-orange-100 disabled:opacity-50">
+               {probando ? <Loader2 size={14} className="animate-spin" /> : <FileCheck size={14} />}
+               {probando ? "Creando prueba..." : "Probar MongoDB + R2"}
++            </button>
++            <button type="button" onClick={crearPruebaCarga} disabled={creandoPruebaCarga || probando}
++              className="inline-flex items-center gap-2 rounded-md border border-orange-300 bg-white px-3 py-2 text-xs font-medium text-orange-800 hover:bg-orange-50 disabled:opacity-50">
++              {creandoPruebaCarga ? <Loader2 size={14} className="animate-spin" /> : <FileCheck size={14} />}
++              {creandoPruebaCarga ? "Preparando..." : "Probar subida desde formulario"}
+             </button>
+             <button type="button" onClick={() => cargarPedidos()} disabled={cargando}
+               className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">
+@@ -807,6 +861,14 @@
+                       {abriendo === pedido.pedidoId ? <Loader2 size={14} className="animate-spin" /> : <ZoomIn size={14} />}
+                       {abriendo === pedido.pedidoId ? "Abriendo..." : "Ver comprobante"}
+                     </button>
++                    {pedido.modoPrueba && pedido.estado === "pendiente_comprobante" && (
++                      <label className={`inline-flex cursor-pointer items-center gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-800 ${subiendoPrueba === pedido.pedidoId ? "opacity-50" : "hover:bg-orange-100"}`}>
++                        {subiendoPrueba === pedido.pedidoId ? "Subiendo..." : "Subir archivo de prueba"}
++                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
++                          className="sr-only" disabled={subiendoPrueba !== null}
++                          onChange={(e) => { const archivo = e.target.files?.[0]; e.target.value = ""; subirArchivoPrueba(pedido.pedidoId, archivo); }} />
++                      </label>
++                    )}
+                     {pedido.modoPrueba && (
+                       <button type="button" onClick={() => eliminarPrueba(pedido.pedidoId)}
+                         disabled={eliminando === pedido.pedidoId}

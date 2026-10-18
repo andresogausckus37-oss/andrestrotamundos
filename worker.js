@@ -576,22 +576,37 @@ function tipoComprobanteServicio(bytes) {
 }
 
 async function apiTransferenciaServicio(request, env, ruta) {
-  if (!transferenciasServiciosHabilitadas(env)) {
+  // Excepción exclusivamente para ensayar una subida desde Admin sobre un pedido
+  // ficticio. Requiere sesión Admin y mismo origen; nunca admite pedidos reales.
+  const url = new URL(request.url);
+  const subir = ruta.endsWith("/comprobante");
+  const solicitadoComoPrueba = url.searchParams.get("pruebaAdmin") === "1";
+  const pruebaAdminAutorizada = solicitadoComoPrueba && subir &&
+    request.method === "POST" && adminAutorizadoWorker(request, env) &&
+    String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() !== "true" &&
+    !transferenciasServiciosHabilitadas(env) &&
+    request.headers.get("origin") === url.origin;
+  if (solicitadoComoPrueba && !pruebaAdminAutorizada) {
+    return respuestaServicio({ ok: false, error: "Acceso de prueba no autorizado." }, 403);
+  }
+  if (!transferenciasServiciosHabilitadas(env) && !pruebaAdminAutorizada) {
     return respuestaServicio({ ok: false, error: "Las transferencias de publicaciones aún no están habilitadas." }, 503);
   }
   const cuenta = cuentaTransferenciaServicio(env);
   if (!cuenta) return respuestaServicio({ ok: false, error: "La cuenta bancaria todavía no está configurada." }, 503);
 
-  const subir = ruta.endsWith("/comprobante");
   if (request.method !== (subir ? "POST" : "GET")) {
     return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
   }
-  const pedidoId = new URL(request.url).searchParams.get("pedidoId");
+  const pedidoId = url.searchParams.get("pedidoId");
   if (!pedidoServicioIdValido(pedidoId)) return respuestaServicio({ ok: false, error: "Identificador de pedido inválido." }, 400);
   try {
     return await conColeccionServicios(env, async (coleccion) => {
       const pedido = await coleccion.findOne({ pedidoId, tipo: "publicaciones", metodoPago: "transferencia", moneda: "ARS" });
-      if (!pedido || !clienteServicioAutorizado(request, pedido)) {
+      const accesoValido = pruebaAdminAutorizada
+        ? pedido?.modoPrueba === true
+        : pedido?.modoPrueba !== true && clienteServicioAutorizado(request, pedido);
+      if (!pedido || !accesoValido) {
         return respuestaServicio({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
       }
       if (!subir) {
@@ -623,7 +638,8 @@ async function apiTransferenciaServicio(request, env, ruta) {
             $set: {
               comprobante: { r2Key: clave, tipo: formato.tipo, tamano: bytes.byteLength, subidoEn: fecha },
               estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE,
-              estadoPago: "verificando_comprobante", actualizadoEn: fecha,
+              estadoPago: pedido.modoPrueba === true ? "prueba_sin_pago" : "verificando_comprobante",
+              actualizadoEn: fecha,
             },
             $push: { historialEstados: { estado: ESTADOS_TRANSFERENCIA_SERVICIO.COMPROBANTE, fecha } },
           }
@@ -676,15 +692,43 @@ async function apiAdminTransferenciasServicio(request, env) {
   const url = new URL(request.url);
   const accion = url.searchParams.get("accion") || "listar";
   if (!((accion === "listar" || accion === "comprobante") && request.method === "GET") &&
-      !(["avanzar", "crearPrueba", "eliminarPrueba"].includes(accion) && request.method === "POST")) {
+      !(["avanzar", "crearPrueba", "crearPruebaCarga", "eliminarPrueba"].includes(accion) && request.method === "POST")) {
     return respuestaServicio({ ok: false, error: "Método o acción no permitidos." }, 405);
   }
   // La sesión admin usa cookies; para mutaciones, exigir mismo origen como defensa CSRF.
-  if (["avanzar", "crearPrueba", "eliminarPrueba"].includes(accion) && request.headers.get("origin") !== url.origin) {
+  if (["avanzar", "crearPrueba", "crearPruebaCarga", "eliminarPrueba"].includes(accion) && request.headers.get("origin") !== url.origin) {
     return respuestaServicio({ ok: false, error: "Origen no autorizado." }, 403);
   }
   try {
     return await conColeccionServicios(env, async (coleccion) => {
+      if (accion === "crearPruebaCarga") {
+        // Una orden de prueba vacía que usa la MISMA ruta de subida que el cliente.
+        // Jamás se puede confirmar como pagada ni activar el servicio.
+        if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() === "true" ||
+            transferenciasServiciosHabilitadas(env)) {
+          return respuestaServicio({ ok: false, error: "Esta prueba requiere pedidos y transferencias públicos deshabilitados." }, 409);
+        }
+        if (!cuentaTransferenciaServicio(env) || !bucketComprobantesServicio(env)?.put) {
+          return respuestaServicio({ ok: false, error: "Faltan los datos bancarios o el bucket R2 privado." }, 503);
+        }
+        const fecha = new Date();
+        const pedidoId = `SER-${crypto.randomUUID()}`;
+        await coleccion.insertOne({
+          pedidoId, tipo: "publicaciones", modoPrueba: true,
+          planId: PLAN_PUBLICACIONES.id, nombrePlan: PLAN_PUBLICACIONES.nombre,
+          contenidos: PLAN_PUBLICACIONES.contenidos, duracionDias: PLAN_PUBLICACIONES.duracionDias,
+          moneda: "ARS", precio: PRECIOS_PUBLICACIONES.ARS[1],
+          metodoPago: "transferencia", redes: ["instagram"],
+          negocio: { nombre: "PRUEBA DE CARGA - SIN PAGO", email: "prueba@example.invalid" },
+          estado: ESTADOS_TRANSFERENCIA_SERVICIO.ESPERANDO,
+          estadoPago: "prueba_sin_pago", estadoServicio: "sin_activar",
+          comprobante: null, creadoEn: fecha, actualizadoEn: fecha,
+          pagadoEn: null, activadoEn: null,
+          historialEstados: [{ estado: ESTADOS_TRANSFERENCIA_SERVICIO.ESPERANDO, fecha }],
+        });
+        return respuestaServicio({ ok: true, pedidoId, modoPrueba: true,
+          estado: ESTADOS_TRANSFERENCIA_SERVICIO.ESPERANDO }, 201);
+      }
       if (accion === "crearPrueba") {
         // Probar MongoDB + R2 sin habilitar ninguno de los flujos públicos.
         if (String(env?.SERVICIO_PEDIDOS_HABILITADOS ?? "").toLowerCase() === "true" ||
