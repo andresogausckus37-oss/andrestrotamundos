@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import ConexionFacebookPedido from "./ConexionFacebookPedido";
+import ArchivosPedido from "./ArchivosPedido";
 import {
   CalendarDays,
   Check,
@@ -1163,6 +1165,8 @@ export default function ConfiguradorPublicaciones() {
                     {avisoAcceso && <p className="mt-2 text-xs text-slate-700" role="status">{avisoAcceso}</p>}
                   </div>
                   {pedidoCreado.moneda === "ARS" && <TransferenciaPedidoServicio pedido={pedidoCreado} habilitada={transferenciasDisponibles} />}
+                  {pedidoCreado.tokenAcceso && <ConexionFacebookPedido key={pedidoCreado.id} pedido={pedidoCreado} />}
+                  {pedidoCreado.tokenAcceso && <ArchivosPedido key={`archivos-${pedidoCreado.id}`} pedido={pedidoCreado} />}
                   <button type="button" onClick={comenzarNuevoPedido} className="mt-4 text-xs font-medium text-orange-700 underline underline-offset-2">Configurar otro pedido</button>
                 </div>
               ) : (

@@ -3,6 +3,8 @@ import handlerAdminLogin from "./api/admin/login.js";
 import handlerAdminPedidos from "./api/admin/pedidos.js";
 import handlerVisitas from "./api/visitas.js";
 import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
+import { ejecutarConexionMetaPedido } from "./api/servicios/meta-pedidos.js";
+import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
 import crypto from "crypto";
 
 const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
@@ -1168,6 +1170,28 @@ if (url.pathname === "/api/servicios/publicaciones/transferencia" ||
 if (url.pathname === "/api/admin/servicios/meta/iniciar" ||
     url.pathname === "/api/servicios/meta/callback") {
   return ejecutarPruebaConexionMeta(request, env, adminAutorizadoWorker(request, env));
+}
+
+// Meta de clientes: acceso Bearer por pedido y retorno OAuth separado de Admin.
+if (url.pathname.startsWith("/api/servicios/meta/pedidos/")) {
+  if (url.pathname !== "/api/servicios/meta/pedidos/callback") {
+    const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+    if (exceso) return exceso;
+  }
+  return ejecutarConexionMetaPedido(request, env);
+}
+
+// Multimedia del servicio: colección y bucket privados, sin vínculos con Mega Bazar.
+if (url.pathname.startsWith("/api/servicios/publicaciones/archivos/")) {
+  // Los videos se envían en partes: limitar inicio/consultas, no cada bloque.
+  if (!url.pathname.endsWith("/parte") && !url.pathname.endsWith("/finalizar") && !url.pathname.endsWith("/cancelar")) {
+    const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+    if (exceso) return exceso;
+  }
+  return ejecutarArchivosPedido(request, env);
+}
+if (url.pathname === "/api/admin/servicios/publicaciones/archivos") {
+  return ejecutarAdminArchivosPedido(request, env, adminAutorizadoWorker(request, env));
 }
 
 if (url.pathname === "/api/admin/servicios/transferencias") {
