@@ -582,11 +582,6 @@ function AdminServiciosTransferencias() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [procesando, setProcesando] = useState(null);
-  const [probando, setProbando] = useState(false);
-  const [creandoPruebaCarga, setCreandoPruebaCarga] = useState(false);
-  const [subiendoPrueba, setSubiendoPrueba] = useState(null);
-  const [eliminando, setEliminando] = useState(null);
-  const [avisoPrueba, setAvisoPrueba] = useState("");
   const [abriendo, setAbriendo] = useState(null);
   const [comprobante, setComprobante] = useState(null);
   const urlComprobanteRef = useRef(null);
@@ -665,93 +660,7 @@ function AdminServiciosTransferencias() {
     }
   };
 
-  const crearPrueba = async () => {
-    if (!window.confirm("¿Crear un pedido técnico ficticio y un PDF de prueba en el bucket privado? No se realizará ninguna transferencia ni se confirmará ningún pago.")) return;
-    setProbando(true);
-    setError("");
-    setAvisoPrueba("");
-    try {
-      const respuesta = await fetch("/api/admin/servicios/transferencias?accion=crearPrueba", {
-        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}",
-      });
-      if (respuesta.status === 401) { navigate("/admin/login"); return; }
-      const datos = await respuesta.json();
-      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || "Falló la prueba de MongoDB y R2.");
-      setAvisoPrueba(`Pedido ${datos.pedidoId} creado. Abrí el comprobante PDF en la lista para comprobar R2.`);
-      await cargarPedidos(true);
-    } catch (err) {
-      setError(err.message || "No se pudo crear el pedido técnico.");
-    } finally { setProbando(false); }
-  };
-
-  const crearPruebaCarga = async () => {
-    if (!window.confirm("¿Crear un pedido de ensayo SIN comprobante para probar la carga de un archivo ficticio? No se realizará ningún cobro.")) return;
-    setCreandoPruebaCarga(true);
-    setError("");
-    setAvisoPrueba("");
-    try {
-      const respuesta = await fetch("/api/admin/servicios/transferencias?accion=crearPruebaCarga", {
-        method: "POST", credentials: "same-origin",
-        headers: { "Content-Type": "application/json" }, body: "{}",
-      });
-      if (respuesta.status === 401) { navigate("/admin/login"); return; }
-      const datos = await respuesta.json();
-      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || "No se pudo crear el pedido de ensayo.");
-      setAvisoPrueba(`Pedido ${datos.pedidoId} preparado. Subí un PDF o imagen FICTICIA desde su botón «Subir archivo de prueba».`);
-      await cargarPedidos(true);
-    } catch (err) { setError(err.message || "No se pudo preparar la prueba de subida."); }
-    finally { setCreandoPruebaCarga(false); }
-  };
-
-  const subirArchivoPrueba = async (pedidoId, archivo) => {
-    if (!archivo) return;
-    if (!["application/pdf", "image/png", "image/jpeg"].includes(archivo.type) ||
-        archivo.size < 100 || archivo.size > 8 * 1024 * 1024) {
-      setError("Seleccioná un PDF, JPG o PNG ficticio de entre 100 bytes y 8 MB.");
-      return;
-    }
-    if (!window.confirm("¿Subir este archivo al bucket R2 PRIVADO como prueba? Usá solo un archivo ficticio, sin datos bancarios ni personales reales.")) return;
-    setSubiendoPrueba(pedidoId);
-    setError("");
-    setAvisoPrueba("");
-    try {
-      // La misma ruta y las mismas comprobaciones de formato/tamaño que usa el cliente.
-      // El parámetro pruebaAdmin solo autoriza órdenes técnicas desde la sesión Admin.
-      const ruta = `/api/servicios/publicaciones/transferencia/comprobante?pedidoId=${encodeURIComponent(pedidoId)}&pruebaAdmin=1`;
-      const respuesta = await fetch(ruta, {
-        method: "POST", credentials: "same-origin",
-        headers: { "Content-Type": archivo.type }, body: archivo,
-      });
-      if (respuesta.status === 401) { navigate("/admin/login"); return; }
-      const datos = await respuesta.json();
-      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || "La subida a R2 falló.");
-      setAvisoPrueba(`Comprobante ficticio subido para ${pedidoId}. Revisalo en «Ver comprobante» y después eliminá el pedido de prueba.`);
-      await cargarPedidos(true);
-    } catch (err) { setError(err.message || "No se pudo subir el archivo de prueba."); }
-    finally { setSubiendoPrueba(null); }
-  };
-
-  const eliminarPrueba = async (pedidoId) => {
-    if (!window.confirm(`¿Eliminar el pedido técnico ${pedidoId} y su archivo ficticio de R2? Esta acción no afecta otros pedidos.`)) return;
-    setEliminando(pedidoId);
-    setError("");
-    try {
-      const respuesta = await fetch("/api/admin/servicios/transferencias?accion=eliminarPrueba", {
-        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pedidoId }),
-      });
-      if (respuesta.status === 401) { navigate("/admin/login"); return; }
-      const datos = await respuesta.json();
-      if (!respuesta.ok || !datos.ok) throw new Error(datos.error || "No se pudo eliminar el pedido técnico.");
-      cerrarComprobante();
-      setAvisoPrueba("El pedido técnico y el comprobante de prueba se eliminaron.");
-      await cargarPedidos(true);
-    } catch (err) { setError(err.message || "No se pudo eliminar el pedido de prueba."); }
-    finally { setEliminando(null); }
-  };
-
   const avanzarEstado = async (pedido) => {
-    if (pedido.modoPrueba && pedido.estado === "verificando_pago") return;
     const confirmandoPago = pedido.estado === "verificando_pago";
     const mensaje = confirmandoPago
       ? `¿Confirmás que el dinero del pedido ${pedido.pedidoId} ingresó realmente a tu cuenta bancaria? Esta acción confirmará el pago, pero no activará las publicaciones.`
@@ -794,22 +703,10 @@ function AdminServiciosTransferencias() {
               {pedidos.length} pedido{pedidos.length === 1 ? "" : "s"} · Ordenados del más reciente al más antiguo
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={crearPrueba} disabled={probando}
-              className="inline-flex items-center gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-800 hover:bg-orange-100 disabled:opacity-50">
-              {probando ? <Loader2 size={14} className="animate-spin" /> : <FileCheck size={14} />}
-              {probando ? "Creando prueba..." : "Probar MongoDB + R2"}
-            </button>
-            <button type="button" onClick={crearPruebaCarga} disabled={creandoPruebaCarga || probando}
-              className="inline-flex items-center gap-2 rounded-md border border-orange-300 bg-white px-3 py-2 text-xs font-medium text-orange-800 hover:bg-orange-50 disabled:opacity-50">
-              {creandoPruebaCarga ? <Loader2 size={14} className="animate-spin" /> : <FileCheck size={14} />}
-              {creandoPruebaCarga ? "Preparando..." : "Probar subida desde formulario"}
-            </button>
-            <button type="button" onClick={() => cargarPedidos()} disabled={cargando}
-              className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">
-              <RefreshCw size={14} /> Actualizar
-            </button>
-          </div>
+          <button type="button" onClick={() => cargarPedidos()} disabled={cargando}
+            className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">
+            <RefreshCw size={14} /> Actualizar
+          </button>
         </div>
 
         <p className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-3 text-xs leading-relaxed text-slate-700">
@@ -817,7 +714,6 @@ function AdminServiciosTransferencias() {
           no activa ni programa contenidos automáticamente.
         </p>
 
-        {avisoPrueba && <div role="status" className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900">{avisoPrueba}</div>}
         {error && <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         {cargando ? (
           <p className="rounded-md bg-white p-5 text-sm text-slate-600">Cargando pedidos...</p>
@@ -825,20 +721,18 @@ function AdminServiciosTransferencias() {
           <div className="rounded-md border border-slate-200 bg-white p-6 text-center">
             <FileCheck className="mx-auto text-slate-400" size={24} />
             <p className="mt-3 text-sm font-medium text-slate-700">Todavía no hay transferencias de publicaciones.</p>
-            <p className="mt-1 text-xs text-slate-500">Podés usar «Probar MongoDB + R2» para crear una orden técnica sin recibir pagos.</p>
+            <p className="mt-1 text-xs text-slate-500">Los pedidos de prueba no se muestran en esta sección.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {pedidos.map((pedido) => {
               const puedeVer = Boolean(pedido.comprobanteRecibido);
-              const puedeAvanzar = puedeVer && ["verificando_comprobante", "verificando_pago"].includes(pedido.estado) &&
-                !(pedido.modoPrueba && pedido.estado === "verificando_pago");
+              const puedeAvanzar = puedeVer && ["verificando_comprobante", "verificando_pago"].includes(pedido.estado);
               return (
                 <section key={pedido.pedidoId} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h2 className="text-sm font-medium text-slate-900">{pedido.negocio?.nombre || "Negocio sin nombre"}</h2>
-                      {pedido.modoPrueba && <span className="mt-1 inline-flex rounded-md border border-orange-300 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-900">PRUEBA · NO PAGADO</span>}
                       <p className="mt-1 break-all text-xs text-slate-500">{pedido.negocio?.email || "Sin correo"}</p>
                     </div>
                     <span className="rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-800">
@@ -861,21 +755,6 @@ function AdminServiciosTransferencias() {
                       {abriendo === pedido.pedidoId ? <Loader2 size={14} className="animate-spin" /> : <ZoomIn size={14} />}
                       {abriendo === pedido.pedidoId ? "Abriendo..." : "Ver comprobante"}
                     </button>
-                    {pedido.modoPrueba && pedido.estado === "pendiente_comprobante" && (
-                      <label className={`inline-flex cursor-pointer items-center gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-800 ${subiendoPrueba === pedido.pedidoId ? "opacity-50" : "hover:bg-orange-100"}`}>
-                        {subiendoPrueba === pedido.pedidoId ? "Subiendo..." : "Subir archivo de prueba"}
-                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                          className="sr-only" disabled={subiendoPrueba !== null}
-                          onChange={(e) => { const archivo = e.target.files?.[0]; e.target.value = ""; subirArchivoPrueba(pedido.pedidoId, archivo); }} />
-                      </label>
-                    )}
-                    {pedido.modoPrueba && (
-                      <button type="button" onClick={() => eliminarPrueba(pedido.pedidoId)}
-                        disabled={eliminando === pedido.pedidoId}
-                        className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50">
-                        {eliminando === pedido.pedidoId ? "Eliminando..." : "Eliminar prueba"}
-                      </button>
-                    )}
                     {puedeAvanzar && (
                       <button type="button" onClick={() => avanzarEstado(pedido)}
                         disabled={procesando === pedido.pedidoId}
