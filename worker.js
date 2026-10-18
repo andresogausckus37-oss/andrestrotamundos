@@ -2,6 +2,7 @@ import handlerContenidoRedes from "./api/contenido-redes.js";
 import handlerAdminLogin from "./api/admin/login.js";
 import handlerAdminPedidos from "./api/admin/pedidos.js";
 import handlerVisitas from "./api/visitas.js";
+import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
 import crypto from "crypto";
 
 const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
@@ -1164,6 +1165,11 @@ if (url.pathname === "/api/servicios/publicaciones/transferencia" ||
     url.pathname === "/api/servicios/publicaciones/transferencia/comprobante") {
   return apiTransferenciaServicio(request, env, url.pathname);
 }
+if (url.pathname === "/api/admin/servicios/meta/iniciar" ||
+    url.pathname === "/api/servicios/meta/callback") {
+  return ejecutarPruebaConexionMeta(request, env, adminAutorizadoWorker(request, env));
+}
+
 if (url.pathname === "/api/admin/servicios/transferencias") {
   return apiAdminTransferenciasServicio(request, env);
 }

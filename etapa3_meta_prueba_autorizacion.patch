@@ -1,0 +1,178 @@
+--- a/worker.js
++++ b/worker.js
+@@ -2,6 +2,7 @@
+ import handlerAdminLogin from "./api/admin/login.js";
+ import handlerAdminPedidos from "./api/admin/pedidos.js";
+ import handlerVisitas from "./api/visitas.js";
++import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
+ import crypto from "crypto";
+ 
+ const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
+@@ -1164,6 +1165,11 @@
+     url.pathname === "/api/servicios/publicaciones/transferencia/comprobante") {
+   return apiTransferenciaServicio(request, env, url.pathname);
+ }
++if (url.pathname === "/api/admin/servicios/meta/iniciar" ||
++    url.pathname === "/api/servicios/meta/callback") {
++  return ejecutarPruebaConexionMeta(request, env, adminAutorizadoWorker(request, env));
++}
++
+ if (url.pathname === "/api/admin/servicios/transferencias") {
+   return apiAdminTransferenciasServicio(request, env);
+ }
+--- /dev/null
++++ b/api/servicios/meta-conexion.js
+@@ -0,0 +1,153 @@
++// Autorizacion de prueba de Meta Pages. No guarda tokens ni publica contenido.
++// Se usa exclusivamente desde la sesion de administrador existente.
++import crypto from "node:crypto";
++
++const VERSION_META = "v26.0";
++const URI_RETORNO = "https://andrestrotamundos.andresogausckus37.workers.dev/api/servicios/meta/callback";
++const COOKIE_ESTADO = "__Host-redes_piloto_meta_estado";
++const RUTA_INICIAR = "/api/admin/servicios/meta/iniciar";
++const PERMISOS = "pages_show_list,pages_read_engagement,pages_manage_posts";
++
++function paginaHtml(titulo, contenido, estado = 200) {
++  const documento = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapar(titulo)}</title><style>body{margin:0;background:#f5f5f5;color:#242424;font:16px system-ui,-apple-system,sans-serif}main{max-width:660px;margin:40px auto;padding:24px;background:white;border:1px solid #e5e5e5;border-radius:8px}h1{font-size:22px;font-weight:600}h2{font-size:17px;font-weight:600}p,li{line-height:1.55}section{border:1px solid #e5e5e5;border-radius:8px;padding:12px 16px;margin:12px 0}a{color:#bf5b12}.nota{color:#666;font-size:14px}code{overflow-wrap:anywhere}</style></head><body><main><h1>${escapar(titulo)}</h1>${contenido}<p><a href="/admin">Volver a Administración</a></p></main></body></html>`;
++  return new Response(documento, {
++    status: estado,
++    headers: {
++      "Content-Type": "text/html; charset=utf-8",
++      "Cache-Control": "no-store, max-age=0",
++      "Pragma": "no-cache",
++      "Referrer-Policy": "no-referrer",
++      "X-Content-Type-Options": "nosniff",
++      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
++    },
++  });
++}
++
++function escapar(valor) {
++  return String(valor).replace(/[&<>"']/g, caracter => ({
++    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
++  })[caracter]);
++}
++
++function cookieEstado(request) {
++  const cookies = request.headers.get("cookie") || "";
++  const parte = cookies.split(";").map(s => s.trim()).find(s => s.startsWith(`${COOKIE_ESTADO}=`));
++  return parte ? parte.slice(COOKIE_ESTADO.length + 1) : "";
++}
++
++function establecerCookie(respuesta, valor, borrar = false) {
++  respuesta.headers.set("Set-Cookie", `${COOKIE_ESTADO}=${valor}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${borrar ? 0 : 600}`);
++  return respuesta;
++}
++
++function iguales(a, b) {
++  if (!/^[a-f0-9]{64}$/.test(a) || !/^[a-f0-9]{64}$/.test(b)) return false;
++  return crypto.timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
++}
++
++function textoSeguroMeta(error) {
++  const codigo = Number(error?.code);
++  return Number.isInteger(codigo) && codigo > 0 && codigo < 100000
++    ? `Meta rechazó la solicitud (código ${codigo}). Revisá la app y los permisos.`
++    : "Meta rechazó la solicitud. Revisá la configuración de la aplicación.";
++}
++
++async function leerRespuestaMeta(respuesta) {
++  let json;
++  try { json = await respuesta.json(); }
++  catch { throw new Error("RESPUESTA_INVALIDA"); }
++  if (!respuesta.ok || json?.error) {
++    const error = new Error("ERROR_META");
++    error.codigoMeta = json?.error?.code;
++    throw error;
++  }
++  return json;
++}
++
++export async function ejecutarPruebaConexionMeta(request, env, adminAutorizado) {
++  const url = new URL(request.url);
++  if (request.method !== "GET") {
++    return paginaHtml("Método no permitido", "<p>Esta acción requiere una solicitud GET.</p>", 405);
++  }
++  if (!adminAutorizado) {
++    return paginaHtml("Acceso no autorizado", "<p>Iniciá sesión en Administración antes de conectar la página.</p>", 401);
++  }
++
++  const appId = String(env?.SERVICIO_META_APP_ID ?? "").trim();
++  const appSecret = String(env?.SERVICIO_META_APP_SECRET ?? "").trim();
++  const configId = String(env?.SERVICIO_META_CONFIG_ID ?? "").trim();
++  if (!/^\d{5,30}$/.test(appId) || !appSecret || (configId && !/^\d{5,30}$/.test(configId))) {
++    return paginaHtml("Configuración pendiente", "<p>Configurá SERVICIO_META_APP_ID y SERVICIO_META_APP_SECRET en Cloudflare.</p>", 503);
++  }
++
++  // Evita iniciar el OAuth en un dominio distinto del URI registrado en Meta.
++  if (url.origin !== new URL(URI_RETORNO).origin) {
++    return paginaHtml("Dominio no permitido", "<p>Realizá esta prueba desde el dominio workers.dev configurado en Meta.</p>", 403);
++  }
++
++  if (url.pathname === RUTA_INICIAR) {
++    const estado = crypto.randomBytes(32).toString("hex");
++    const destino = new URL(`https://www.facebook.com/${VERSION_META}/dialog/oauth`);
++    destino.searchParams.set("client_id", appId);
++    destino.searchParams.set("redirect_uri", URI_RETORNO);
++    destino.searchParams.set("response_type", "code");
++    if (configId) {
++      // Facebook Login for Business asigna permisos mediante una configuracion.
++      destino.searchParams.set("config_id", configId);
++      destino.searchParams.set("override_default_response_type", "true");
++    } else {
++      destino.searchParams.set("scope", PERMISOS);
++    }
++    destino.searchParams.set("state", estado);
++    return establecerCookie(new Response(null, {
++      status: 302,
++      headers: { Location: destino.toString(), "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" },
++    }), estado);
++  }
++
++  const estado = url.searchParams.get("state") || "";
++  const guardado = cookieEstado(request);
++  const respondido = (titulo, cuerpo, status) =>
++    establecerCookie(paginaHtml(titulo, cuerpo, status), "", true);
++  if (!iguales(estado, guardado)) {
++    return respondido("Autorización vencida", "<p>La verificación de seguridad no coincide o venció. Volvé a iniciar el proceso.</p>", 403);
++  }
++  if (url.searchParams.has("error")) {
++    return respondido("Autorización cancelada", "<p>Meta no concedió la autorización. Podés intentarlo nuevamente.</p>", 400);
++  }
++  const codigo = url.searchParams.get("code") || "";
++  if (!codigo || codigo.length > 4000) {
++    return respondido("Código inválido", "<p>Meta no devolvió un código de autorización válido.</p>", 400);
++  }
++
++  try {
++    const parametros = new URLSearchParams({
++      client_id: appId, client_secret: appSecret,
++      redirect_uri: URI_RETORNO, code: codigo,
++    });
++    const token = await leerRespuestaMeta(await fetch(
++      `https://graph.facebook.com/${VERSION_META}/oauth/access_token`,
++      { method: "POST", body: parametros, headers: { "Content-Type": "application/x-www-form-urlencoded" } },
++    ));
++    if (!token?.access_token || typeof token.access_token !== "string") throw new Error("TOKEN_INVALIDO");
++
++    const paginasUrl = new URL(`https://graph.facebook.com/${VERSION_META}/me/accounts`);
++    paginasUrl.searchParams.set("fields", "id,name,tasks");
++    paginasUrl.searchParams.set("limit", "100");
++    const listado = await leerRespuestaMeta(await fetch(paginasUrl, {
++      headers: { Authorization: `Bearer ${token.access_token}` },
++    }));
++    const paginas = Array.isArray(listado.data) ? listado.data : [];
++    const tarjetas = paginas.length
++      ? paginas.map(pagina => `<section><h2>${escapar(pagina.name || "Página sin nombre")}</h2><p>ID: <code>${escapar(pagina.id || "No disponible")}</code></p><p class="nota">Tareas que informa Meta: ${escapar(Array.isArray(pagina.tasks) ? pagina.tasks.join(", ") : "No informadas")}</p></section>`).join("")
++      : "<p>La autorización terminó, pero Meta no devolvió páginas. Revisá los activos asignados y los permisos de esta app.</p>";
++    return respondido("Resultado de la conexión con Meta",
++      `<p>Meta respondió correctamente. Se encontraron <strong>${paginas.length}</strong> página(s) accesibles. Buscá <strong>Redes en Piloto</strong> en el listado.</p>${tarjetas}<p class="nota">Prueba de solo lectura: no guardamos tokens, no vinculamos todavía ninguna página a un pedido y no publicamos contenido. Mega Bazar no se modifica.</p>`,
++      200);
++  } catch (error) {
++    // Nunca registrar códigos de OAuth, tokens, secretos ni respuestas completas de Meta.
++    const mensaje = error?.message === "ERROR_META" ? textoSeguroMeta({ code: error.codigoMeta })
++      : "No fue posible terminar el intercambio de autorización con Meta.";
++    return respondido("No se pudo verificar Meta", `<p>${escapar(mensaje)}</p><p>Revisá la configuración de Facebook Login y los permisos de la aplicación.</p>`, 502);
++  }
++}
