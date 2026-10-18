@@ -46,6 +46,55 @@ const API_PEDIDOS = "/api/servicios/publicaciones/pedidos";
 const API_TRANSFERENCIA = "/api/servicios/publicaciones/transferencia";
 const PEDIDO_PENDIENTE_STORAGE = "pedido-publicaciones-transferencia-v1";
 
+// El número de pedido NO es una contraseña. La clave se entrega una sola vez
+// al crear la orden y el servidor guarda únicamente su hash SHA-256.
+const ID_PEDIDO_SERVICIO = /^SER-[a-f0-9-]{36}$/i;
+const CLAVE_PEDIDO_SERVICIO = /^[a-f0-9]{64}$/i;
+
+function credencialesPedidoValidas(id, clave) {
+  return ID_PEDIDO_SERVICIO.test(id || "") && CLAVE_PEDIDO_SERVICIO.test(clave || "");
+}
+
+// El fragmento (#) nunca viaja en la petición HTTP al servidor. Se elimina
+// de la barra de direcciones apenas se abre un enlace privado.
+function leerEnlacePrivadoServicio(valor) {
+  try {
+    const hash = valor.trim().startsWith("#")
+      ? valor.trim()
+      : new URL(valor.trim()).hash;
+    const parametros = new URLSearchParams(hash.replace(/^#/, ""));
+    const id = parametros.get("pedido");
+    const tokenAcceso = parametros.get("clave");
+    return credencialesPedidoValidas(id, tokenAcceso) ? { id, tokenAcceso } : null;
+  } catch { return null; }
+}
+
+function enlacePrivadoServicio(pedido) {
+  if (!credencialesPedidoValidas(pedido?.id, pedido?.tokenAcceso)) return "";
+  return `${window.location.origin}${window.location.pathname}${window.location.search}` +
+    `#pedido=${encodeURIComponent(pedido.id)}&clave=${encodeURIComponent(pedido.tokenAcceso)}`;
+}
+
+// Toda recuperación se verifica contra la API, nunca alcanza con tener un ID.
+async function consultarPedidoServicio(id, tokenAcceso) {
+  if (!credencialesPedidoValidas(id, tokenAcceso)) {
+    throw new Error("Revisá el código de pedido y la clave privada de acceso.");
+  }
+  const respuesta = await fetch(`${API_TRANSFERENCIA}?pedidoId=${encodeURIComponent(id)}`, {
+    method: "GET", cache: "no-store",
+    headers: { Authorization: `Bearer ${tokenAcceso}`, Accept: "application/json" },
+  });
+  const datos = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok || datos.ok !== true || datos.pedidoId !== id ||
+      datos.moneda !== "ARS" || !Number.isFinite(datos.precio)) {
+    throw new Error("No pudimos acceder al pedido. Verificá la clave o intentá nuevamente más tarde.");
+  }
+  return {
+    id, tokenAcceso, moneda: "ARS", precio: datos.precio,
+    metodoPago: "transferencia", estado: datos.estado, pagoHabilitado: true,
+  };
+}
+
 const REDES = [
   { id: "instagram", nombre: "Instagram", disponible: true },
   { id: "facebook", nombre: "Facebook", disponible: true },
@@ -489,17 +538,53 @@ export default function ConfiguradorPublicaciones() {
   const [revisionTurnstile, setRevisionTurnstile] = useState(0);
   const [creandoPedido, setCreandoPedido] = useState(false);
   const [errorPedido, setErrorPedido] = useState("");
+  const [mostrarRecuperacion, setMostrarRecuperacion] = useState(false);
+  const [codigoRecuperacion, setCodigoRecuperacion] = useState("");
+  const [claveRecuperacion, setClaveRecuperacion] = useState("");
+  const [recuperandoPedido, setRecuperandoPedido] = useState(false);
+  const [errorRecuperacion, setErrorRecuperacion] = useState("");
+  const [avisoAcceso, setAvisoAcceso] = useState("");
+  const enlaceLeidoRef = useRef(false);
   const [pedidoCreado, setPedidoCreado] = useState(() => {
     try {
       const guardado = JSON.parse(sessionStorage.getItem(PEDIDO_PENDIENTE_STORAGE) || "null");
-      return /^SER-[a-f0-9-]{36}$/i.test(guardado?.id || "") &&
-        /^[a-f0-9]{64}$/i.test(guardado?.tokenAcceso || "") &&
+      return credencialesPedidoValidas(guardado?.id, guardado?.tokenAcceso) &&
         guardado?.moneda === "ARS" ? guardado : null;
     } catch { return null; }
   });
   const enviandoRef = useRef(false);
   const urlsLocales = useRef(new Set());
   const vistaRef = useRef(null);
+
+  // Abrir un enlace privado verifica sus credenciales y repone el pedido.
+  // La clave no queda en la URL, y sólo se conserva en sessionStorage.
+  useEffect(() => {
+    if (enlaceLeidoRef.current) return;
+    enlaceLeidoRef.current = true;
+    const hash = window.location.hash;
+    if (!hash.includes("pedido=") || !hash.includes("clave=")) return;
+    const credenciales = leerEnlacePrivadoServicio(hash);
+    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+    // Un enlace explícito tiene prioridad sobre un pedido de otra sesión.
+    setPedidoCreado(null);
+    setMostrarRecuperacion(true);
+    if (!credenciales) {
+      setErrorRecuperacion("El enlace privado no tiene un formato válido.");
+      return;
+    }
+    setCodigoRecuperacion(credenciales.id);
+    setClaveRecuperacion(credenciales.tokenAcceso);
+    setRecuperandoPedido(true);
+    consultarPedidoServicio(credenciales.id, credenciales.tokenAcceso)
+      .then((pedido) => {
+        setPedidoCreado(pedido);
+        try { sessionStorage.setItem(PEDIDO_PENDIENTE_STORAGE, JSON.stringify(pedido)); } catch { /* Sesión no disponible */ }
+        setErrorRecuperacion("");
+        setClaveRecuperacion("");
+      })
+      .catch((error) => setErrorRecuperacion(error?.message || "No pudimos recuperar el pedido."))
+      .finally(() => setRecuperandoPedido(false));
+  }, []);
 
   useEffect(() => () => {
     urlsLocales.current.forEach((url) => URL.revokeObjectURL(url));
@@ -681,6 +766,55 @@ export default function ConfiguradorPublicaciones() {
       enviandoRef.current = false;
       setCreandoPedido(false);
     }
+  }
+
+  async function recuperarPedido(evento) {
+    evento.preventDefault();
+    if (recuperandoPedido) return;
+    const enlace = leerEnlacePrivadoServicio(claveRecuperacion);
+    const id = enlace?.id || codigoRecuperacion.trim();
+    const tokenAcceso = enlace?.tokenAcceso || claveRecuperacion.trim();
+    if (!credencialesPedidoValidas(id, tokenAcceso)) {
+      setErrorRecuperacion("Ingresá un código de pedido y su clave privada, o pegá el enlace privado completo.");
+      return;
+    }
+    setRecuperandoPedido(true);
+    setErrorRecuperacion("");
+    try {
+      const pedido = await consultarPedidoServicio(id, tokenAcceso);
+      setPedidoCreado(pedido);
+      setCodigoRecuperacion(id);
+      setClaveRecuperacion("");
+      try { sessionStorage.setItem(PEDIDO_PENDIENTE_STORAGE, JSON.stringify(pedido)); } catch { /* Sesión no disponible */ }
+    } catch (error) {
+      setErrorRecuperacion(error?.message || "No se pudo recuperar el pedido.");
+    } finally {
+      setRecuperandoPedido(false);
+    }
+  }
+
+  async function copiarAccesoServicio(tipo) {
+    const valor = tipo === "enlace" ? enlacePrivadoServicio(pedidoCreado) : pedidoCreado?.tokenAcceso;
+    if (!valor) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Portapapeles no disponible");
+      await navigator.clipboard.writeText(valor);
+      setAvisoAcceso(tipo === "enlace" ? "Enlace privado copiado." : "Clave privada copiada.");
+    } catch {
+      // Alternativa para navegadores que bloquean el portapapeles.
+      window.prompt("Copiá y guardá este acceso privado:", valor);
+      setAvisoAcceso("Guardá este acceso antes de cerrar la página.");
+    }
+  }
+
+  function comenzarNuevoPedido() {
+    if (!window.confirm("¿Querés comenzar otra contratación? Antes guardá el acceso privado de tu pedido actual.")) return;
+    try { sessionStorage.removeItem(PEDIDO_PENDIENTE_STORAGE); } catch { /* Sesión no disponible */ }
+    setPedidoCreado(null);
+    setAvisoAcceso("");
+    setCodigoRecuperacion("");
+    setClaveRecuperacion("");
+    setMostrarRecuperacion(false);
   }
 
   function descargarConfiguracion() {
@@ -1011,9 +1145,25 @@ export default function ConfiguradorPublicaciones() {
                   <div className="flex items-center gap-2 text-sm font-medium text-orange-900"><CircleCheck size={18} /> Pedido registrado</div>
                   <p className="mt-2 break-all text-sm font-medium text-slate-900">Código: {pedidoCreado.id}</p>
                   <p className="mt-1 text-xs text-slate-700">Importe validado: {precioFormateado(pedidoCreado.precio, pedidoCreado.moneda)} · {pedidoCreado.metodoPago === "paypal" ? "PayPal" : "Transferencia"}</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-700">Guardá el código de pedido. La carga definitiva de publicaciones y la conexión de redes se habilitarán después de confirmar el pago.</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">Las modificaciones que hagas ahora en la pantalla no cambiarán el pedido ya registrado. Mantené esta pestaña abierta hasta adjuntar el comprobante.</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-700">La carga definitiva de publicaciones y la conexión de redes se habilitarán después de confirmar el pago.</p>
+                  <div className="mt-4 rounded-md border border-orange-200 bg-white p-3">
+                    <p className="text-sm font-medium text-slate-900">Guardá el acceso a tu pedido</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-600">Podrás volver otro día o desde otro dispositivo, sin tener que configurar ni pagar nuevamente. Este acceso es privado: no lo compartas con otras personas.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => copiarAccesoServicio("enlace")}
+                        className="rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700">
+                        Copiar enlace privado
+                      </button>
+                      <button type="button" onClick={() => copiarAccesoServicio("clave")}
+                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-50">
+                        Copiar clave de acceso
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-slate-600">Si guardás solamente la clave, también necesitarás el código de pedido que aparece arriba. Por seguridad, no enviamos estos datos por correo automáticamente.</p>
+                    {avisoAcceso && <p className="mt-2 text-xs text-slate-700" role="status">{avisoAcceso}</p>}
+                  </div>
                   {pedidoCreado.moneda === "ARS" && <TransferenciaPedidoServicio pedido={pedidoCreado} habilitada={transferenciasDisponibles} />}
+                  <button type="button" onClick={comenzarNuevoPedido} className="mt-4 text-xs font-medium text-orange-700 underline underline-offset-2">Configurar otro pedido</button>
                 </div>
               ) : (
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -1031,6 +1181,33 @@ export default function ConfiguradorPublicaciones() {
                   <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50">
                     <Download size={16} /> Guardar configuración
                   </button>
+                </div>
+              )}
+              {!pedidoCreado && (
+                <div className="mt-5 border-t border-slate-200 pt-4">
+                  <button type="button" onClick={() => { setMostrarRecuperacion((actual) => !actual); setErrorRecuperacion(""); }}
+                    className="text-sm font-medium text-orange-700 underline underline-offset-2">
+                    ¿Ya tenés un pedido? Recuperar acceso
+                  </button>
+                  {mostrarRecuperacion && (
+                    <form onSubmit={recuperarPedido} className="mt-3 space-y-3 rounded-md border border-slate-200 bg-white p-3">
+                      <p className="text-xs leading-5 text-slate-600">Pegá tu enlace privado completo o ingresá el código de pedido y la clave de acceso que guardaste.</p>
+                      <div>
+                        <label htmlFor="recuperar-pedido-codigo" className="mb-1 block text-xs font-medium text-slate-800">Código de pedido (si usás la clave)</label>
+                        <input id="recuperar-pedido-codigo" autoComplete="off" spellCheck={false} value={codigoRecuperacion}
+                          onChange={(e) => setCodigoRecuperacion(e.target.value)} placeholder="SER-..." className={INPUT} />
+                      </div>
+                      <div>
+                        <label htmlFor="recuperar-pedido-clave" className="mb-1 block text-xs font-medium text-slate-800">Enlace privado o clave de acceso</label>
+                        <input id="recuperar-pedido-clave" type="password" autoComplete="off" spellCheck={false} value={claveRecuperacion}
+                          onChange={(e) => setClaveRecuperacion(e.target.value)} placeholder="Pegá acá tu enlace o clave" className={INPUT} />
+                      </div>
+                      <button type="submit" disabled={recuperandoPedido} className={clases("rounded-md px-3 py-2.5 text-sm font-medium", recuperandoPedido ? "bg-slate-300 text-white" : "bg-orange-600 text-white hover:bg-orange-700")}>
+                        {recuperandoPedido ? "Verificando acceso..." : "Abrir mi pedido"}
+                      </button>
+                      {errorRecuperacion && <p role="alert" className="text-xs leading-5 text-red-700">{errorRecuperacion}</p>}
+                    </form>
+                  )}
                 </div>
               )}
               {pedidoCreado && (
