@@ -4,6 +4,7 @@ import handlerAdminPedidos from "./api/admin/pedidos.js";
 import handlerVisitas from "./api/visitas.js";
 import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
 import { ejecutarConexionMetaPedido } from "./api/servicios/meta-pedidos.js";
+import { ejecutarAccesoClientes } from "./api/servicios/clientes-acceso.js";
 import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
 import crypto from "crypto";
 
@@ -1161,6 +1162,13 @@ if (url.pathname === "/api/admin/pedidos") {
       { status: 500 }
     );
   }
+}
+
+// Registro de clientes de Comunidad Semanal, aislado de Admin y de Mega Bazar.
+if (url.pathname.startsWith("/api/servicios/clientes/acceso/")) {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  return ejecutarAccesoClientes(request, env);
 }
 
 if (url.pathname === "/api/servicios/publicaciones/transferencia" ||
