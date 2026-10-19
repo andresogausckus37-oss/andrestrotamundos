@@ -23,7 +23,6 @@ import {
 } from "../utilidades/mercado";
 
 const CUOTAS_SIN_INTERES = 3;
-const DURACION_NUEVO_PRODUCTO_MS = 72 * 60 * 60 * 1000;
 
 const CATEGORIAS = [
   { id: "todos", nombre: "Todos" },
@@ -56,7 +55,6 @@ const Tienda = () => {
   const [error, setError] = useState("");
   const [categoriaActiva, setCategoriaActiva] = useState("todos");
   const [mostrarTodos, setMostrarTodos] = useState(false);
-  const [ahora, setAhora] = useState(() => Date.now());
   const [sliderActivo, setSliderActivo] = useState(true);
   const [sliderPausadoPorInteraccion, setSliderPausadoPorInteraccion] =
     useState(false);
@@ -108,14 +106,6 @@ const Tienda = () => {
     return () => {
       cancelado = true;
     };
-  }, []);
-
-  useEffect(() => {
-    const intervalo = window.setInterval(() => {
-      setAhora(Date.now());
-    }, 1000);
-
-    return () => window.clearInterval(intervalo);
   }, []);
 
   useEffect(() => {
@@ -311,31 +301,6 @@ const Tienda = () => {
     );
   };
 
-  const obtenerTiempoRestante = (finalizaEn) => {
-    if (!finalizaEn) return null;
-
-    const final = new Date(finalizaEn).getTime();
-
-    if (!Number.isFinite(final)) {
-      return null;
-    }
-
-    const diferencia = final - ahora;
-
-    if (diferencia <= 0) {
-      return null;
-    }
-
-    const totalSegundos = Math.floor(diferencia / 1000);
-
-    return {
-      dias: Math.floor(totalSegundos / 86400),
-      horas: Math.floor((totalSegundos % 86400) / 3600),
-      minutos: Math.floor((totalSegundos % 3600) / 60),
-      segundos: totalSegundos % 60,
-    };
-  };
-
   const irAProducto = (productoId) => {
     navigate(`/tienda/${productoId}`);
   };
@@ -347,7 +312,7 @@ const Tienda = () => {
           {Array.from({ length: 8 }).map((_, indice) => (
             <span key={indice} className="mx-8 inline-flex items-center gap-2">
               <Truck size={15} strokeWidth={2} aria-hidden="true" />
-              Envío gratis en compras mayores a $40.000
+              Envío gratis en compras desde $40.000
             </span>
           ))}
         </div>
@@ -560,60 +525,35 @@ const Tienda = () => {
                   producto.oferta?.precioARS
                 ) || 0;
 
-                const finalizaOferta =
-                  producto.ofertaLanzamiento?.finalizaEn;
-
-                const ofertaDentroDePlazo = finalizaOferta
-                  ? new Date(finalizaOferta).getTime() > ahora
-                  : true;
-
                 const tieneOferta =
                   producto.oferta?.activa === true &&
+                  precioNormal > 0 &&
                   precioOferta > 0 &&
-                  ofertaDentroDePlazo;
+                  precioOferta < precioNormal;
 
                 const precioFinal = tieneOferta
                   ? precioOferta
                   : precioNormal;
 
-                const descuento =
-                  tieneOferta && precioNormal > 0
-                    ? Math.round(
-                        ((precioNormal - precioFinal) /
-                          precioNormal) *
-                          100
-                      )
-                    : 0;
+                const ahorro = tieneOferta
+                  ? precioNormal - precioFinal
+                  : 0;
 
-                const tiempoRestante =
-                  tieneOferta && finalizaOferta
-                    ? obtenerTiempoRestante(finalizaOferta)
-                    : null;
-
-                const fechaCreacion = new Date(
-                  producto.creadoEn
-                ).getTime();
-
-                const esNuevoProducto =
-                  Number.isFinite(fechaCreacion) &&
-                  ahora >= fechaCreacion &&
-                  ahora - fechaCreacion <
-                    DURACION_NUEVO_PRODUCTO_MS;
+                const descuento = tieneOferta
+                  ? Math.round((ahorro / precioNormal) * 100)
+                  : 0;
 
                 const precioCuota =
                   precioFinal > 0
                     ? precioFinal / CUOTAS_SIN_INTERES
                     : 0;
 
+                const envioGratis = precioFinal >= 40000;
+
                 const nombreProducto =
                   typeof producto.nombre === "string"
                     ? producto.nombre
                     : producto.nombre?.es || "Producto";
-
-                const etiquetaOferta =
-                  typeof producto.oferta?.etiqueta === "string"
-                    ? producto.oferta.etiqueta
-                    : producto.oferta?.etiqueta?.es || "";
 
                 const imagenPortada =
                   producto.imagenes?.portada ||
@@ -633,14 +573,15 @@ const Tienda = () => {
                     >
                       <div className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden bg-[#F7FAFA]">
                         {descuento > 0 && (
-                          <span className="absolute left-2 top-2 z-10 rounded-xs bg-red-600 px-2 py-1 text-[9px] font-semibold text-white sm:text-[10px]">
+                          <span className="absolute left-2 top-2 z-10 bg-red-600 px-2 py-1 text-[9px] font-semibold text-white sm:text-[10px]">
                             {descuento}% OFF
                           </span>
                         )}
 
-                        {producto.envioGratis === true && (
-                          <span className="absolute right-2 top-2 z-10 rounded-xs bg-green-600 px-2 py-1 text-[9px] font-semibold text-white sm:text-[10px]">
-                            Envío gratis
+                        {envioGratis && (
+                          <span className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 bg-green-600 px-2 py-1 text-[9px] font-semibold text-white sm:text-[10px]">
+                            <Truck size={12} strokeWidth={2} aria-hidden="true" />
+                            GRATIS
                           </span>
                         )}
                         {imagenPortada ? (
@@ -660,25 +601,22 @@ const Tienda = () => {
                     </button>
 
                     <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-4">
-                      <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                        {esNuevoProducto && (
-                          <span className="inline-flex items-center rounded-xs border border-[#D9E6E7] bg-[#EEF5F5] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-[#285861] sm:px-2 sm:py-1 sm:text-[10px]">
-                            Nuevo producto
-                          </span>
-                        )}
+                      {(producto.disponibilidad === "sin-stock" ||
+                        producto.disponibilidad === "proximamente") && (
+                        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                          {producto.disponibilidad === "sin-stock" && (
+                            <span className="inline-flex items-center border border-red-200 bg-red-50 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-red-700 sm:px-2 sm:py-1 sm:text-[10px]">
+                              Sin stock
+                            </span>
+                          )}
 
-                        {producto.disponibilidad === "sin-stock" && (
-                          <span className="inline-flex items-center rounded-xs border border-red-200 bg-red-50 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-red-700 sm:px-2 sm:py-1 sm:text-[10px]">
-                            Sin stock
-                          </span>
-                        )}
-
-                        {producto.disponibilidad === "proximamente" && (
-                          <span className="inline-flex items-center rounded-xs border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-amber-700 sm:px-2 sm:py-1 sm:text-[10px]">
-                            Próximamente
-                          </span>
-                        )}
-                      </div>
+                          {producto.disponibilidad === "proximamente" && (
+                            <span className="inline-flex items-center border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-amber-700 sm:px-2 sm:py-1 sm:text-[10px]">
+                              Próximamente
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <h3 className="line-clamp-2 text-[14px] font-normal leading-5 text-[#263238] sm:text-[15px]">
                         {nombreProducto}
@@ -689,50 +627,21 @@ const Tienda = () => {
                       </div>
 
                       <div className="mt-auto pt-3">
-                        {tieneOferta ? (
-                          <>
-                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                              <p className="text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
-                                {formatearPrecio(precioFinal)}
-                              </p>
-
-                              <p className="text-xs font-normal text-slate-400 line-through sm:text-sm">
-                                {formatearPrecio(precioNormal)}
-                              </p>
-
-                            </div>
-
-                            {etiquetaOferta && (
-                              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-orange-700">
-                                {etiquetaOferta}
-                              </p>
-                            )}
-
-                            {tiempoRestante && (
-                              <div className="mt-2 inline-flex max-w-full items-center rounded-xs border border-orange-200 bg-orange-50 px-2 py-1">
-                                <span className="text-[10px] font-medium leading-4 text-black sm:text-[11px]">
-                                  Finaliza en{" "}
-                                  {tiempoRestante.dias > 0 &&
-                                    `${tiempoRestante.dias}d `}
-                                  {String(
-                                    tiempoRestante.horas
-                                  ).padStart(2, "0")}
-                                  h{" "}
-                                  {String(
-                                    tiempoRestante.minutos
-                                  ).padStart(2, "0")}
-                                  m{" "}
-                                  {String(
-                                    tiempoRestante.segundos
-                                  ).padStart(2, "0")}
-                                  s
-                                </span>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
+                        <div className="flex flex-nowrap items-baseline justify-between gap-x-1">
+                          <p className="whitespace-nowrap text-xl font-medium tracking-tight text-[#263238] sm:text-2xl">
                             {formatearPrecio(precioFinal)}
+                          </p>
+
+                          {tieneOferta && (
+                            <p className="shrink-0 whitespace-nowrap text-xs font-normal text-slate-400 line-through sm:text-sm">
+                              {formatearPrecio(precioNormal)}
+                            </p>
+                          )}
+                        </div>
+
+                        {ahorro > 0 && (
+                          <p className="mt-1 text-[11px] font-medium text-green-700 sm:text-xs">
+                            Ahorrás {formatearPrecio(ahorro)}
                           </p>
                         )}
 
@@ -750,7 +659,16 @@ const Tienda = () => {
                                   {CUOTAS_SIN_INTERES} x{" "}
                                   {formatearPrecio(precioCuota)}
                                 </span>{" "}
-                                sin interés
+                                sin interés con{" "}
+                                <a
+                                  href="https://www.mercadopago.com.ar/"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(evento) => evento.stopPropagation()}
+                                  className="font-medium text-[#285861] underline"
+                                >
+                                  Mercado Pago
+                                </a>
                               </p>
                             </div>
                           </div>

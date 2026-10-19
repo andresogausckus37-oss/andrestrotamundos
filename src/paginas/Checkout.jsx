@@ -15,7 +15,14 @@ const CAMPOS = [
 const DATOS_VACIOS = { nombre: "", email: "", telefono: "", direccion: "", localidad: "", provincia: "", codigoPostal: "" };
 const CLAVE_DATOS = "tienda_datos_checkout_v1";
 
-export default function Checkout({ modal = false, onClose = () => {}, onVolverTienda }) {
+
+export default function Checkout({
+  modal = false,
+  onClose = () => {},
+  onVolverTienda,
+  productoInicial = null,
+}) {
+
   const navigate = useNavigate();
   const articulos = useCarrito();
   const { subtotal, envio, total, faltante, porcentaje, cantidad } = resumenCarrito(articulos);

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+
 import {
   Check,
   CreditCard,
   Package,
   Ruler,
   ShoppingBag,
+  Truck,
 } from "lucide-react";
+
 
 import CalificacionProducto from "../componentes/CalificacionProducto";
 import { resenasProductos } from "../datos/resenasProductos";
@@ -25,7 +28,7 @@ const DetalleProducto = () => {
   const [imagenActiva, setImagenActiva] = useState(0);
   const [varianteSeleccionada, setVarianteSeleccionada] =
     useState("");
-const [ahora, setAhora] = useState(() => Date.now());
+
   useEffect(() => {
     let cancelado = false;
 
@@ -96,14 +99,6 @@ const [ahora, setAhora] = useState(() => Date.now());
       cancelado = true;
     };
   }, [id]);
-
-  useEffect(() => {
-  const intervalo = setInterval(() => {
-    setAhora(Date.now());
-  }, 1000);
-
-  return () => clearInterval(intervalo);
-}, []);
   
 const imagenes = useMemo(() => {
   if (!producto) return [];
@@ -151,33 +146,28 @@ const imagenes = useMemo(() => {
       : [];
   }, [producto]);
 
-  const precioOferta =
-    Number(producto?.oferta?.precioARS) || 0;
-
-  const finalizaOferta =
-    producto?.ofertaLanzamiento?.finalizaEn;
-
-  const ofertaDentroDePlazo = finalizaOferta
-    ? new Date(finalizaOferta).getTime() > ahora
-    : true;
-
-  const ofertaActiva =
-    producto?.oferta?.activa === true &&
-    precioOferta > 0 &&
-    ofertaDentroDePlazo;
 
   const precioNormal = Number(producto?.precioARS) || 0;
 
+  const precioOferta =
+    Number(producto?.oferta?.precioARS) || 0;
+
+  const ofertaActiva =
+    producto?.oferta?.activa === true &&
+    precioNormal > 0 &&
+    precioOferta > 0 &&
+    precioOferta < precioNormal;
+
   const precioFinal = ofertaActiva
-    ? Number(producto?.oferta?.precioARS) || precioNormal
+    ? precioOferta
     : precioNormal;
 
   const ahorro = ofertaActiva
-    ? Math.max(0, precioNormal - precioFinal)
+    ? precioNormal - precioFinal
     : 0;
 
   const porcentajeDescuento =
-    ofertaActiva && precioNormal > 0
+    ofertaActiva
       ? Math.round((ahorro / precioNormal) * 100)
       : 0;
 
@@ -185,6 +175,7 @@ const imagenes = useMemo(() => {
     precioFinal > 0
       ? precioFinal / CUOTAS_SIN_INTERES
       : 0;
+
 
   const stock = Number(producto?.stock);
 
@@ -208,42 +199,6 @@ const imagenes = useMemo(() => {
       maximumFractionDigits: 0,
     }).format(Number(valor) || 0);
 
-  const obtenerTiempoRestante = (finalizaEn) => {
-  if (!finalizaEn) return null;
-
-  const final = new Date(finalizaEn).getTime();
-
-  if (!Number.isFinite(final)) {
-    return null;
-  }
-
-  const diferencia = final - ahora;
-
-  if (diferencia <= 0) {
-    return null;
-  }
-
-  const totalSegundos = Math.floor(
-    diferencia / 1000
-  );
-
-  return {
-    dias: Math.floor(totalSegundos / 86400),
-    horas: Math.floor(
-      (totalSegundos % 86400) / 3600
-    ),
-    minutos: Math.floor(
-      (totalSegundos % 3600) / 60
-    ),
-    segundos: totalSegundos % 60,
-  };
-};
-
-const tiempoRestante =
-  ofertaActiva && finalizaOferta
-    ? obtenerTiempoRestante(finalizaOferta)
-    : null;
-
   const comprar = () => {
     if (!disponible) return;
     if (variantes.length > 0 && !varianteSeleccionada) {
@@ -251,7 +206,11 @@ const tiempoRestante =
       return;
     }
     try {
-      agregarAlCarrito(producto, varianteSeleccionada);
+      
+
+agregarAlCarrito(producto, varianteSeleccionada);
+
+
       setModalAbierto(true);
     } catch (errorCarrito) {
       alert(errorCarrito.message);
@@ -410,19 +369,7 @@ const tiempoRestante =
                       </span>
                     )}
                   </div>
-
-                  {tiempoRestante && (
-  <div className="mt-3 inline-flex items-center rounded-md border border-orange-200 bg-orange-50 px-3 py-2">
-    <span className="text-xs font-medium text-black">
-      Finaliza en{" "}
-      {tiempoRestante.dias > 0 &&
-        `${tiempoRestante.dias}d `}
-      {String(tiempoRestante.horas).padStart(2, "0")}h{" "}
-      {String(tiempoRestante.minutos).padStart(2, "0")}m{" "}
-      {String(tiempoRestante.segundos).padStart(2, "0")}s
-    </span>
-  </div>
-)}
+                  
                 </>
               ) : (
                 <span className="text-3xl font-medium tracking-tight text-slate-950">
@@ -438,36 +385,43 @@ const tiempoRestante =
                     className="mt-0.5 shrink-0 text-[#285861]"
                   />
 
-                  <p className="text-sm font-normal leading-5 text-slate-600">
-                    Hasta{" "}
-                    <strong className="font-medium text-slate-800">
-                      {CUOTAS_SIN_INTERES} cuotas sin interés
-                    </strong>{" "}
-                    de {formatearPrecio(valorCuota)}.
+                  
+<p className="text-sm font-normal leading-5 text-slate-600">
+  <strong className="font-medium text-slate-800">
+    {CUOTAS_SIN_INTERES} cuotas sin interés
+  </strong>{" "}
+  de {formatearPrecio(valorCuota)}.
+
                   </p>
+                </div>
+              )}
+
+              {precioFinal >= 40000 && (
+                <div className="mt-3">
+                  <span className="inline-flex items-center gap-1 bg-green-600 px-2 py-1 text-[9px] font-semibold text-white sm:text-[10px]">
+                    <Truck
+                      size={12}
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
+                    GRATIS
+                  </span>
                 </div>
               )}
             </div>
 
-            <div className="mt-1 py-0">
-              {sinStock ? (
-                <EstadoProducto texto="Sin stock" />
-              ) : proximamente ? (
-                <EstadoProducto texto="Próximamente" />
-              ) : pausado ? (
-                <EstadoProducto texto="Producto temporalmente no disponible" />
-              ) : (
-                <div className="flex items-center gap-2 leading-4 text-sm font-normal text-emerald-700">
-                  <Check size={17} strokeWidth={2} />
-                  Disponible
-                  {Number.isFinite(stock) && stock > 0 && (
-                    <span className="font-normal text-slate-500">
-                      · {stock} en stock
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+            
+{(sinStock || proximamente || pausado) && (
+  <div className="mt-1 py-0">
+    {sinStock ? (
+      <EstadoProducto texto="Sin stock" />
+    ) : proximamente ? (
+      <EstadoProducto texto="Próximamente" />
+    ) : (
+      <EstadoProducto texto="Producto temporalmente no disponible" />
+    )}
+  </div>
+)}    
 
             <section className="mt-4 rounded-xs mb-10 border border-slate-200 bg-white p-3 sm:p-4">
   <h2 className="text-sm font-medium text-slate-900">

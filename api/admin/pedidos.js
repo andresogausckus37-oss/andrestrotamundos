@@ -372,13 +372,20 @@ const crearPedidoFisico = async (req, res) => {
     if (variantes.length && !variantes.includes(item.variante)) {
       return res.status(400).json({ error: `Variante inválida para ${item.productoId}.` });
     }
+
     const precioNormal = Number(producto.precioARS) || 0;
     const precioOferta = Number(producto.oferta?.precioARS) || 0;
-    const finalizaEn = producto.ofertaLanzamiento?.finalizaEn;
-    const ofertaVigente = finalizaEn
-      ? new Date(finalizaEn).getTime() > Date.now() : true;
-    const precioUnitario = producto.oferta?.activa === true &&
-      precioOferta > 0 && ofertaVigente ? precioOferta : precioNormal;
+
+    const ofertaActiva =
+      producto.oferta?.activa === true &&
+      precioNormal > 0 &&
+      precioOferta > 0 &&
+      precioOferta < precioNormal;
+
+    const precioUnitario = ofertaActiva
+      ? precioOferta
+      : precioNormal;
+
     if (!Number.isFinite(precioUnitario) || precioUnitario <= 0) {
       return res.status(400).json({ error: `Precio inválido para ${item.productoId}.` });
     }
@@ -514,58 +521,19 @@ const crearProducto = async (req, res) => {
     });
   }
 
+
   const fecha = new Date();
-  let ofertaLanzamiento =
-    producto?.ofertaLanzamiento;
-
-  if (
-    ofertaLanzamiento &&
-    typeof ofertaLanzamiento === "object" &&
-    !Array.isArray(ofertaLanzamiento) &&
-    ofertaLanzamiento.activa === true
-  ) {
-    const duracionDias = Number(
-      ofertaLanzamiento.duracionDias
-    );
-
-    if (
-      !Number.isInteger(duracionDias) ||
-      duracionDias < 1 ||
-      duracionDias > 30
-    ) {
-      return res.status(400).json({
-        error:
-          "La duración de la oferta debe ser de 1 a 30 días.",
-      });
-    }
-
-    ofertaLanzamiento = {
-      ...ofertaLanzamiento,
-      activa: true,
-      duracionDias,
-      iniciaEn: fecha,
-      finalizaEn: new Date(
-        fecha.getTime() +
-          duracionDias * 24 * 60 * 60 * 1000
-      ),
-    };
-  } else if (ofertaLanzamiento) {
-    ofertaLanzamiento = {
-      ...ofertaLanzamiento,
-      activa: false,
-    };
-  }
 
   const nuevoProducto = {
     ...producto,
     tipo: "fisico",
     precioARS,
-    ...(ofertaLanzamiento
-      ? { ofertaLanzamiento }
-      : {}),
     creadoEn: fecha,
     actualizadoEn: fecha,
   };
+
+  delete nuevoProducto.ofertaLanzamiento;
+
 
   const resultado = await productos.insertOne(
     nuevoProducto
@@ -851,55 +819,13 @@ const editarProducto = async (req, res) => {
     ...datosEditables
   } = cambios;
 
+
   const fecha = new Date();
 
-  let ofertaLanzamiento =
-    datosEditables.ofertaLanzamiento;
-
-  if (
-    ofertaLanzamiento &&
-    typeof ofertaLanzamiento === "object" &&
-    !Array.isArray(ofertaLanzamiento) &&
-    ofertaLanzamiento.activa === true
-  ) {
-    const duracionDias = Number(
-      ofertaLanzamiento.duracionDias
-    );
-
-    if (
-      !Number.isInteger(duracionDias) ||
-      duracionDias < 1 ||
-      duracionDias > 30
-    ) {
-      return res.status(400).json({
-        error:
-          "La duración de la oferta debe ser de 1 a 30 días.",
-      });
-    }
-
-    ofertaLanzamiento = {
-      ...ofertaLanzamiento,
-      activa: true,
-      duracionDias,
-      iniciaEn: fecha,
-      finalizaEn: new Date(
-        fecha.getTime() +
-          duracionDias * 24 * 60 * 60 * 1000
-      ),
-    };
-  } else if (ofertaLanzamiento) {
-    ofertaLanzamiento = {
-      ...ofertaLanzamiento,
-      activa: false,
-    };
-  }
+  delete datosEditables.ofertaLanzamiento;
 
   const productoActualizado = {
     ...datosEditables,
-
-    ...(ofertaLanzamiento
-      ? { ofertaLanzamiento }
-      : {}),
 
     id: productoActual.id,
     tipo: "fisico",
@@ -909,6 +835,7 @@ const editarProducto = async (req, res) => {
 
     actualizadoEn: fecha,
   };
+
 
   if (!productoActualizado.imagenes) {
     productoActualizado.imagenes =
@@ -923,10 +850,15 @@ const editarProducto = async (req, res) => {
       productoActual.videoReel || null;
   }
 
-  const resultado = await productos.updateOne(
-    { id: productoId },
-    { $set: productoActualizado }
-  );
+  
+const resultado = await productos.updateOne(
+  { id: productoId },
+  {
+    $set: productoActualizado,
+    $unset: { ofertaLanzamiento: "" },
+  }
+);
+
 
   if (resultado.matchedCount !== 1) {
     return res.status(404).json({

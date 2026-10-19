@@ -6,12 +6,20 @@ const EVENTO = "tienda:carrito";
 const UMBRAL = 40000;
 const ENVIO = 8000;
 const nombre = (p) => typeof p?.nombre === "string" ? p.nombre : p?.nombre?.es || "Producto";
+
 export const precioProducto = (p) => {
   const normal = Number(p?.precioARS) || 0;
   const oferta = Number(p?.oferta?.precioARS) || 0;
-  const fin = p?.ofertaLanzamiento?.finalizaEn;
-  return p?.oferta?.activa && oferta > 0 && (!fin || new Date(fin).getTime() > Date.now()) ? oferta : normal;
+
+  const ofertaActiva =
+    p?.oferta?.activa === true &&
+    normal > 0 &&
+    oferta > 0 &&
+    oferta < normal;
+
+  return ofertaActiva ? oferta : normal;
 };
+
 const leer = () => {
   try { const datos = JSON.parse(localStorage.getItem(CLAVE) || "[]"); return Array.isArray(datos) ? datos : []; }
   catch { return []; }
