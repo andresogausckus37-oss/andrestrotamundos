@@ -26,6 +26,7 @@ import PagoPendiente from "./paginas/PagoPendiente";
 import PagoFallido from "./paginas/PagoFallido";
 import Checkout from "./paginas/Checkout";
 import ConfiguradorPublicaciones from "./paginas/servicios/ConfiguradorPublicaciones";
+import LandingPublicaciones from "./paginas/servicios/LandingPublicaciones";
 
 import LoginAdmin from "./paginas/LoginAdmin";
 import Admin from "./paginas/Admin";
@@ -238,9 +239,13 @@ const ContenidoApp = () => {
           />
 
           <Route
-  path="/servicios/publicacion-automatica"
-  element={<ConfiguradorPublicaciones />}
-/>
+            path="/servicios/publicacion-automatica"
+            element={<LandingPublicaciones />}
+          />
+          <Route
+            path="/servicios/publicacion-automatica/configurar"
+            element={<ConfiguradorPublicaciones />}
+          />
 
           <Route
             path="/pago/exitoso"

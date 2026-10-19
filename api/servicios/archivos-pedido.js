@@ -91,7 +91,7 @@ async function buscarPedido(db, request, pedidoId, escritura = false) {
 }
 async function estadoArchivos(db, pedido) {
   const archivos = await db.collection("archivos_servicios").find({ pedidoId: pedido.pedidoId, estado: "subido" })
-    .project({ _id:0, contenidoId:1, posicion:1, nombre:1, tipo:1, tamano:1, revision:1, subidoEn:1 }).sort({ contenidoId:1, posicion:1 }).toArray();
+    .project({ _id:0, contenidoId:1, posicion:1, nombre:1, tipo:1, tamano:1, revision:1, motivoRevision:1, subidoEn:1 }).sort({ contenidoId:1, posicion:1 }).toArray();
   return { ok: true, pedidoId: pedido.pedidoId, habilitada: pedido.estadoPago === "confirmado" && Boolean(pedido.pagadoEn) && pedido.estadoServicio === "sin_activar" && pedido.estadoContenidos !== "aprobados", estadoContenidos: pedido.estadoContenidos || "pendiente_carga", publicaciones: publicacionesDelPedido(pedido), archivos };
 }
 async function actualizarEstado(db, pedidoId) {
@@ -104,7 +104,8 @@ async function actualizarEstado(db, pedidoId) {
     return n >= (p.tipo === "carrusel" ? 2 : 1) && n <= maxPosiciones(p.tipo);
   });
   const aprobados = completos && archivos.every(a => a.revision === "aprobado");
-  const nuevo = aprobados ? "aprobados" : completos ? "pendiente_revision" : archivos.length ? "en_preparacion" : "pendiente_carga";
+  const correcciones = archivos.some(a => a.revision === "rechazado");
+  const nuevo = correcciones ? "correccion_solicitada" : aprobados ? "aprobados" : completos ? "pendiente_revision" : archivos.length ? "en_preparacion" : "pendiente_carga";
   await pedidos.updateOne({ _id: pedido._id, estadoServicio: "sin_activar" }, { $set: { estadoContenidos: nuevo, archivosSubidos: completos, actualizadoEn: tiempo() } });
 }
 async function iniciar(request, env, db) {
@@ -187,7 +188,7 @@ async function finalizar(request, env, db) {
     const coleccion = db.collection("archivos_servicios");
     const anterior = await coleccion.findOne({ _id:carga._id });
     if (anterior?.revision === "aprobado") lanzar("No se puede reemplazar un archivo aprobado.", 409);
-    await coleccion.updateOne({ _id:carga._id }, { $set: { pedidoId:carga.pedidoId, contenidoId:carga.contenidoId, posicion:carga.posicion, nombre:carga.nombre, tipo:carga.tipo, tamano:carga.tamano, r2Key:carga.r2Key, estado:"subido", revision:"pendiente", subidoEn:tiempo() } }, { upsert:true });
+    await coleccion.updateOne({ _id:carga._id }, { $set: { pedidoId:carga.pedidoId, contenidoId:carga.contenidoId, posicion:carga.posicion, nombre:carga.nombre, tipo:carga.tipo, tamano:carga.tamano, r2Key:carga.r2Key, estado:"subido", revision:"pendiente", motivoRevision:"", revisadoEn:null, subidoEn:tiempo() } }, { upsert:true });
     await cargas.deleteOne({ _id:carga._id, cargaId:carga.cargaId });
     await actualizarEstado(db,carga.pedidoId);
     if (anterior?.r2Key && anterior.r2Key !== carga.r2Key) await r2.delete(anterior.r2Key).catch(() => {});
@@ -244,7 +245,38 @@ export async function ejecutarArchivosPedido(request, env) {
 }
 function escapar(s) { return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]); }
 function html(titulo, cuerpo, status=200) {
-  return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapar(titulo)}</title><style>body{margin:0;background:#f5f5f5;color:#252525;font:15px system-ui}main{max-width:800px;margin:24px auto;background:white;padding:24px;border-radius:10px}section{border:1px solid #ddd;border-radius:9px;padding:16px;margin:14px 0}input,button,select{padding:9px;margin:4px}img,video{max-width:100%;max-height:350px}a{color:#b85f12}small{color:#666}</style></head><body><main><h1>${escapar(titulo)}</h1>${cuerpo}<p><a href="/admin">Volver a Administración</a></p></main></body></html>`, {status,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff","Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; media-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"}});
+  return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapar(titulo)}</title><style>body{margin:0;background:#f5f5f5;color:#252525;font:15px system-ui}main{max-width:800px;margin:24px auto;background:white;padding:24px;border-radius:10px}section{border:1px solid #ddd;border-radius:9px;padding:16px;margin:14px 0}input,button,select,textarea{padding:9px;margin:4px}textarea{display:block;width:calc(100% - 28px);max-width:620px;min-height:80px;font:inherit}form{margin:12px 0}img,video{max-width:100%;max-height:350px}a{color:#b85f12}small{color:#666}</style></head><body><main><h1>${escapar(titulo)}</h1>${cuerpo}<p><a href="/admin">Volver a Administración</a></p></main></body></html>`, {status,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff","Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; media-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"}});
+}
+// Token antifalsificacion para formularios de revision de Administración.
+// Mantiene la proteccion CSRF aunque el navegador omita Origin en un POST.
+const DURACION_REVISION_SEGUNDOS = 30 * 60;
+function firmaRevision(env, pedidoId, contenidoId, posicion, marca) {
+  const clave = String(env?.ADMIN_PASSWORD ?? "");
+  if (!clave) return "";
+  const datos = `revision-archivos-v1\n${pedidoId}\n${contenidoId}\n${posicion}\n${marca}`;
+  return crypto.createHmac("sha256", clave).update(datos).digest("hex");
+}
+function tokenRevision(env, pedidoId, contenidoId, posicion) {
+  const marca = Math.floor(Date.now() / 1000);
+  return `${marca}.${firmaRevision(env, pedidoId, contenidoId, posicion, marca)}`;
+}
+function tokenRevisionValido(env, pedidoId, contenidoId, posicion, valor) {
+  const coincidencia = /^(\d{10,12})\.([a-f0-9]{64})$/.exec(String(valor || ""));
+  if (!coincidencia) return false;
+  const marca = Number(coincidencia[1]);
+  const ahora = Math.floor(Date.now() / 1000);
+  if (!Number.isSafeInteger(marca) || marca > ahora + 60 || ahora - marca > DURACION_REVISION_SEGUNDOS) return false;
+  const esperada = firmaRevision(env, pedidoId, contenidoId, posicion, marca);
+  return /^[a-f0-9]{64}$/.test(esperada) && crypto.timingSafeEqual(Buffer.from(coincidencia[2], "hex"), Buffer.from(esperada, "hex"));
+}
+function origenRevisionAceptable(request, url) {
+  const origen = request.headers.get("origin");
+  // Algunos navegadores aplican Referrer-Policy: no-referrer y envian Origin: null.
+  // En todos los casos se requiere tambien el token CSRF firmado.
+  if (origen && origen !== "null" && origen !== url.origin) return false;
+  const contexto = request.headers.get("sec-fetch-site");
+  if (contexto && contexto !== "same-origin") return false;
+  return true;
 }
 export async function ejecutarAdminArchivosPedido(request, env, autorizado) {
   if (!autorizado) return html("Acceso no autorizado","<p>Iniciá sesión en Administración.</p>",401);
@@ -290,24 +322,34 @@ export async function ejecutarAdminArchivosPedido(request, env, autorizado) {
           return `<section><h2>${escapar(p.id)} · ${escapar(p.tipo)}</h2><p>${escapar(p.descripcion || "Sin descripción")}</p>${lista.length ? lista.map(a => {
             const enlace = `${RUTA_ADMIN}?pedidoId=${encodeURIComponent(pedidoId)}&accion=ver&contenidoId=${encodeURIComponent(p.id)}&posicion=${a.posicion}`;
             const medio = a.tipo.startsWith("image/") ? `<img src="${escapar(enlace)}" alt="${escapar(a.nombre)}">` : `<video src="${escapar(enlace)}" controls preload="none"></video>`;
-            return `<div><p><strong>${escapar(a.nombre)}</strong> · ${Math.ceil(a.tamano/1024)} KB · ${escapar(a.revision)}</p>${medio}<form action="${RUTA_ADMIN}" method="post"><input type="hidden" name="pedidoId" value="${escapar(pedidoId)}"><input type="hidden" name="contenidoId" value="${escapar(p.id)}"><input type="hidden" name="posicion" value="${a.posicion}"><button name="revision" value="aprobado">Aprobar</button><button name="revision" value="rechazado">Solicitar reemplazo</button></form></div>`;
+            const csrf = tokenRevision(env, pedidoId, p.id, a.posicion);
+            const campos = `<input type="hidden" name="pedidoId" value="${escapar(pedidoId)}"><input type="hidden" name="contenidoId" value="${escapar(p.id)}"><input type="hidden" name="posicion" value="${a.posicion}"><input type="hidden" name="csrfRevision" value="${escapar(csrf)}">`;
+            const motivoAnterior = a.revision === "rechazado" && a.motivoRevision ? `<p><small>Motivo técnico: ${escapar(a.motivoRevision)}</small></p>` : "";
+            return `<div><p><strong>${escapar(a.nombre)}</strong> · ${Math.ceil(a.tamano/1024)} KB · ${a.revision === "rechazado" ? "Corrección solicitada" : escapar(a.revision)}</p>${motivoAnterior}${medio}` +
+              `<form action="${RUTA_ADMIN}" method="post">${campos}<button name="revision" value="aprobado">Aprobar técnicamente</button></form>` +
+              `<form action="${RUTA_ADMIN}" method="post">${campos}<label>Motivo técnico de la corrección (obligatorio, de 10 a 500 caracteres)<textarea name="motivoRevision" minlength="10" maxlength="500" required placeholder="Ej.: El archivo MP4 no puede reproducirse; volvé a exportarlo."></textarea></label><button name="revision" value="rechazado">Solicitar corrección</button></form></div>`;
           }).join("") : "<p><small>Todavía no hay archivos para este contenido.</small></p>"}</section>`;
         }).join("");
         return html("Revisión de contenidos",`<p>Pedido: <code>${escapar(pedidoId)}</code></p><p>Pago: <strong>${escapar(pedido.estadoPago)}</strong> · Contenidos: <strong>${escapar(pedido.estadoContenidos)}</strong></p>${tarjetas}<small>Aprobar archivos no activa ni programa publicaciones.</small>`);
       });
     }
     if (request.method === "POST") {
-      if (request.headers.get("origin") !== url.origin) return html("Origen no autorizado","<p>Volvé a abrir la pantalla de revisión.</p>",403);
+      if (!origenRevisionAceptable(request, url)) return html("Origen no autorizado","<p>Volvé a abrir la pantalla de revisión.</p>",403);
       if (Number(request.headers.get("content-length") || 0)>2048) return html("Solicitud grande","<p>Solicitud inválida.</p>",413);
       const cuerpo = await request.text();
       if (cuerpo.length > 2048) return html("Solicitud grande","<p>Solicitud inválida.</p>",413);
       const form = new URLSearchParams(cuerpo);
       const pid = form.get("pedidoId"), cid = form.get("contenidoId"), pos = validarPosicion(form.get("posicion")), revision = form.get("revision");
       if (!validarId(pid) || !validarContenido(cid) || pos===null || !["aprobado","rechazado"].includes(revision)) return html("Revisión inválida","<p>Datos incorrectos.</p>",400);
+      if (!tokenRevisionValido(env, pid, cid, pos, form.get("csrfRevision"))) return html("Revisión vencida","<p>Volvé a abrir la pantalla de revisión y repetí la acción.</p>",403);
+      const motivoRevision = typeof form.get("motivoRevision") === "string" ? form.get("motivoRevision").trim() : "";
+      if (revision === "rechazado" && (motivoRevision.length < 10 || motivoRevision.length > 500)) {
+        return html("Motivo necesario","<p>Explicá el problema técnico o de cumplimiento en 10 a 500 caracteres. No se revisan preferencias creativas.</p>",400);
+      }
       return await conDb(env, async db => {
         const pedido = await db.collection("pedidos_servicios").findOne({pedidoId:pid,tipo:"publicaciones"});
         if (!pedido || pedido.estadoPago !== "confirmado" || !pedido.pagadoEn || pedido.estadoServicio !== "sin_activar") return html("Pedido no habilitado","<p>Se requiere un pedido pagado y todavía no activado.</p>",403);
-        const result = await db.collection("archivos_servicios").updateOne({ _id:idArchivo(pid,cid,pos), pedidoId:pid, estado:"subido" },{ $set:{ revision, revisadoEn:tiempo() } });
+        const result = await db.collection("archivos_servicios").updateOne({ _id:idArchivo(pid,cid,pos), pedidoId:pid, estado:"subido" },{ $set:{ revision, motivoRevision: revision === "rechazado" ? motivoRevision : "", revisadoEn:tiempo() } });
         if (!result.matchedCount) return html("Archivo no encontrado","<p>El archivo ya no existe.</p>",404);
         await actualizarEstado(db,pid);
         return Response.redirect(`${url.origin}${RUTA_ADMIN}?pedidoId=${encodeURIComponent(pid)}`,303);

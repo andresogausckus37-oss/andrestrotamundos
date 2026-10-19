@@ -57,18 +57,25 @@ export default function ArchivosPedido({ pedido }) {
   async function recargar() { setRevision(x => x+1); }
   async function post(ruta, body) { return leer(await fetch(`${API}/${ruta}`, { method:"POST",headers:{...headers,"Content-Type":"application/json"}, body:JSON.stringify(body),cache:"no-store" })); }
 
-  async function cargarArchivos(contenido, elegidos) {
+  async function cargarArchivos(contenido, elegidos, posicionReemplazo = null) {
     if (!datos?.habilitada || procesando || !elegidos?.length) return;
     setError(""); setAviso(""); setProcesando(true); cancelado.current=false;
     const propios = datos.archivos.filter(a => a.contenidoId === contenido.id);
     const usados = new Set(propios.map(a => a.posicion));
     try {
       if (contenido.tipo !== "carrusel" && elegidos.length !== 1) throw new Error("Elegí un único archivo.");
-      if (contenido.tipo === "carrusel" && elegidos.length > maximo(contenido.tipo)-usados.size) throw new Error("El carrusel admite hasta 10 imágenes.");
+      if (posicionReemplazo !== null) {
+        const existente = propios.find(a => a.posicion === posicionReemplazo);
+        if (!existente || existente.revision !== "rechazado" || elegidos.length !== 1) {
+          throw new Error("Solo se puede sustituir un archivo con corrección solicitada.");
+        }
+      }
+      if (contenido.tipo === "carrusel" && posicionReemplazo === null && elegidos.length > maximo(contenido.tipo)-usados.size) throw new Error("El carrusel admite hasta 10 imágenes.");
       for (const archivo of elegidos) {
         comprobarArchivo(archivo,contenido.tipo);
         let posicion;
-        if (contenido.tipo === "carrusel") {
+        if (posicionReemplazo !== null) posicion = posicionReemplazo;
+        else if (contenido.tipo === "carrusel") {
           posicion = Array.from({length:10},(_,i)=>i).find(i => !usados.has(i));
         } else posicion = 0;
         if (posicion === undefined) throw new Error("No hay posiciones libres para agregar imágenes.");
@@ -94,7 +101,7 @@ export default function ArchivosPedido({ pedido }) {
         }
         setProgreso(0);
       }
-      setAviso("Archivos recibidos. Quedan pendientes de revisión administrativa.");
+      setAviso(posicionReemplazo !== null ? "Archivo corregido recibido. Se enviará nuevamente a revisión técnica." : "Archivos recibidos. Quedan pendientes de revisión técnica.");
       recargar();
     } catch(e) { setError(e.message || "No se pudo subir el archivo."); }
     finally { setProgreso(0);setAccion("");setProcesando(false); }
@@ -111,10 +118,10 @@ export default function ArchivosPedido({ pedido }) {
   return (
     <section className={CAJA} aria-label="Archivos definitivos de publicaciones">
       <div className="flex items-center gap-2 text-sm font-semibold text-slate-900"><CloudUpload size={18} className="text-orange-600" /> Carga definitiva de publicaciones</div>
-      <p className="mt-2 text-xs leading-5 text-slate-600">Después de confirmar el pago, subí los archivos de tus cuatro contenidos. Se almacenan de forma privada y se revisan antes de programarlos. Los materiales de la vista previa no se enviaron con el pedido.</p>
+      <p className="mt-2 text-xs leading-5 text-slate-600">Después de confirmar el pago, subí los archivos de tus cuatro contenidos. Se guardan de forma privada. La revisión comprueba requisitos técnicos y normas de las plataformas, sin evaluar tus elecciones creativas. Los archivos de la vista previa no se enviaron con el pedido.</p>
       {cargando ? <p className="mt-3 text-xs text-slate-600">Consultando el estado de los contenidos...</p> : datos && (
         <>
-          <p className="mt-3 text-xs font-medium text-slate-800">Estado: {datos.estadoContenidos === "aprobados" ? "Materiales aprobados" : datos.estadoContenidos === "pendiente_revision" ? "Listos para revisión" : datos.estadoContenidos === "en_preparacion" ? "Carga en preparación" : "Pendiente de carga"}</p>
+          <p className="mt-3 text-xs font-medium text-slate-800">Estado: {datos.estadoContenidos === "aprobados" ? "Materiales aprobados" : datos.estadoContenidos === "correccion_solicitada" ? "Hay archivos que necesitan una corrección técnica" : datos.estadoContenidos === "pendiente_revision" ? "Listos para revisión técnica" : datos.estadoContenidos === "en_preparacion" ? "Carga en preparación" : "Pendiente de carga"}</p>
           {!datos.habilitada && <div className="mt-3 flex gap-2 rounded-md bg-slate-50 p-3 text-xs leading-5 text-slate-700"><ShieldCheck className="shrink-0" size={17} /> La carga se habilita después de confirmar el pago y permanece cerrada una vez aprobados los materiales.</div>}
           <div className="mt-4 space-y-3">
             {datos.publicaciones.map((contenido, i) => {
@@ -127,14 +134,25 @@ export default function ArchivosPedido({ pedido }) {
                   <span className={`text-[11px] font-medium ${completo ? "text-emerald-700" : "text-slate-500"}`}>{propios.length}/{limite} archivos</span>
                 </div>
                 {!!contenido.descripcion && <p className="mt-2 line-clamp-2 text-xs text-slate-600">{contenido.descripcion}</p>}
-                {propios.map(a => <div key={a.posicion} className="mt-2 flex items-center gap-2 rounded-md bg-white p-2 text-xs">
-                  <CheckCircle2 size={15} className={a.revision === "aprobado" ? "text-emerald-600" : "text-orange-600"}/>
-                  <span className="min-w-0 flex-1 break-words text-slate-700">{a.nombre} · {a.revision === "aprobado" ? "Aprobado" : a.revision === "rechazado" ? "Reemplazo solicitado" : "En revisión"}</span>
-                  {datos.habilitada && a.revision !== "aprobado" && <button type="button" disabled={procesando} onClick={()=>eliminar(contenido.id,a.posicion)} className="rounded p-1 text-slate-600 hover:text-red-700" aria-label={`Eliminar ${a.nombre}`}><Trash2 size={15}/></button>}
+                {propios.map(a => <div key={a.posicion} className="mt-2 rounded-md bg-white p-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={15} className={a.revision === "aprobado" ? "shrink-0 text-emerald-600" : "shrink-0 text-orange-600"}/>
+                    <span className="min-w-0 flex-1 break-words text-slate-700">{a.nombre} · {a.revision === "aprobado" ? "Aprobado técnicamente" : a.revision === "rechazado" ? "Corrección solicitada" : "En revisión"}</span>
+                    {datos.habilitada && a.revision !== "aprobado" && <button type="button" disabled={procesando} onClick={()=>eliminar(contenido.id,a.posicion)} className="rounded p-1 text-slate-600 hover:text-red-700" aria-label={`Eliminar ${a.nombre}`}><Trash2 size={15}/></button>}
+                  </div>
+                  {a.revision === "rechazado" && <p className="mt-2 rounded bg-amber-50 p-2 leading-5 text-amber-900">Motivo técnico: {a.motivoRevision || "Consultá con Administración el motivo de la corrección."}</p>}
+                  {datos.habilitada && a.revision === "rechazado" && (
+                    <label className="mt-2 block font-medium text-orange-800">
+                      Reemplazar este archivo corregido
+                      <input type="file" accept={acepta(contenido.tipo)} disabled={procesando}
+                        onChange={e=>{const elegidos=Array.from(e.target.files||[]);e.target.value="";cargarArchivos(contenido,elegidos,a.posicion);}}
+                        className="mt-2 block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border-0 file:bg-orange-100 file:px-3 file:py-2 file:font-medium file:text-orange-800 disabled:opacity-50" />
+                    </label>
+                  )}
                 </div>)}
-                {datos.habilitada && (contenido.tipo !== "carrusel" || propios.length < 10) && (
+                {datos.habilitada && (contenido.tipo === "carrusel" ? propios.length < 10 : propios.length === 0) && (
                   <label className="mt-3 block text-xs font-medium text-orange-800">
-                    {contenido.tipo !== "carrusel" && propios.length ? "Reemplazar archivo" : "Seleccionar archivos"}
+                    Seleccionar archivos
                     <input type="file" accept={acepta(contenido.tipo)} multiple={contenido.tipo === "carrusel"} disabled={procesando}
                       onChange={e=>{const elegidos=Array.from(e.target.files||[]);e.target.value="";cargarArchivos(contenido,elegidos);}}
                       className="mt-2 block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border-0 file:bg-orange-100 file:px-3 file:py-2 file:font-medium file:text-orange-800 disabled:opacity-50" />
