@@ -26,13 +26,9 @@ const FORMULARIO_INICIAL = {
   precioARS: "",
   ofertaActiva: false,
   precioOfertaARS: "",
-  etiquetaOferta: "Oferta lanzamiento",
-  duracionOfertaDias: "3",
   ventaCruzadaId: "",
   destacado: false,
   categoria: "",
-  stock: "",
-  disponibilidad: "disponible",
   descripcion: "",
   descripcionLarga: "",
   marca: "",
@@ -240,17 +236,9 @@ export default function AdminEditarProducto() {
         precioARS: valorCampo(producto.precioARS),
         ofertaActiva: Boolean(producto.oferta?.activa),
         precioOfertaARS: valorCampo(producto.oferta?.precioARS),
-        etiquetaOferta: producto.oferta?.etiqueta || "Oferta lanzamiento",
-        duracionOfertaDias: valorCampo(
-          producto.oferta?.duracionDias ??
-            producto.ofertaLanzamiento?.duracionDias ??
-            3
-        ),
         ventaCruzadaId: producto.ventaCruzadaId || "",
         destacado: Boolean(producto.destacado),
         categoria: producto.categoria || "",
-        stock: valorCampo(producto.stock),
-        disponibilidad: producto.disponibilidad || "disponible",
         descripcion: producto.descripcion || "",
         descripcionLarga: producto.descripcionLarga || "",
         marca: producto.detalles?.marca || "",
@@ -466,11 +454,7 @@ export default function AdminEditarProducto() {
       destacado: formulario.destacado,
 
       categoria: formulario.categoria,
-      stock:
-        formulario.stock === ""
-          ? null
-          : Math.max(0, Number(formulario.stock) || 0),
-      disponibilidad: formulario.disponibilidad,
+      disponibilidad: "disponible",
 
       descripcion: formulario.descripcion.trim(),
       descripcionLarga: formulario.descripcionLarga.trim(),
@@ -485,17 +469,6 @@ export default function AdminEditarProducto() {
         precioARS: formulario.ofertaActiva
           ? Number(formulario.precioOfertaARS) || 0
           : 0,
-        etiqueta: formulario.ofertaActiva
-          ? formulario.etiquetaOferta.trim()
-          : "",
-        duracionDias: formulario.ofertaActiva
-          ? Number(formulario.duracionOfertaDias) || 3
-          : 0,
-      },
-
-      ofertaLanzamiento: {
-        activa: formulario.ofertaActiva,
-        duracionDias: Number(formulario.duracionOfertaDias) || 3,
       },
 
       detalles: {
@@ -642,9 +615,9 @@ export default function AdminEditarProducto() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6">
+    <main className="min-h-screen bg-slate-50 px-3 py-4 sm:px-4 sm:py-5">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-4">
           <h1 className="text-xl font-bold text-slate-900">
             Editar producto
           </h1>
@@ -654,40 +627,33 @@ export default function AdminEditarProducto() {
         </div>
 
         <Seccion titulo="Nombre e ID">
-          <Campo
-            titulo="Nombre del producto"
-            valor={formulario.nombre}
-            onChange={(v) => cambiar("nombre", v)}
-            placeholder="Ej. Parlante Bluetooth portátil"
-          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo
+              titulo="Nombre del producto"
+              valor={formulario.nombre}
+              onChange={(v) => cambiar("nombre", v)}
+              placeholder="Ej. Parlante Bluetooth portátil"
+            />
 
-          <Campo
-            titulo="ID"
-            valor={productoId || ""}
-            soloLectura
-            ayuda="El ID del producto no cambia durante la edición."
-          />
+            <Campo
+              titulo="ID"
+              valor={productoId || ""}
+              soloLectura
+              ayuda="El ID del producto no cambia durante la edición."
+            />
+          </div>
 
           {errorProductos && <Aviso tipo="error">{errorProductos}</Aviso>}
         </Seccion>
 
         <Seccion titulo="Precio en Argentina">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Campo
               titulo="Precio normal ARS"
               tipo="number"
               valor={formulario.precioARS}
               onChange={(v) => cambiar("precioARS", v)}
               placeholder="0"
-            />
-
-            <Campo
-              titulo="Duración de la oferta de lanzamiento"
-              tipo="number"
-              valor={formulario.duracionOfertaDias}
-              onChange={(v) => cambiar("duracionOfertaDias", v)}
-              ayuda="Cantidad de días."
-              placeholder="3"
             />
 
             <Check
@@ -698,19 +664,13 @@ export default function AdminEditarProducto() {
           </div>
 
           {formulario.ofertaActiva && (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="max-w-sm">
               <Campo
                 titulo="Precio oferta ARS"
                 tipo="number"
                 valor={formulario.precioOfertaARS}
                 onChange={(v) => cambiar("precioOfertaARS", v)}
                 placeholder="0"
-              />
-
-              <Campo
-                titulo="Etiqueta de oferta"
-                valor={formulario.etiquetaOferta}
-                onChange={(v) => cambiar("etiquetaOferta", v)}
               />
             </div>
           )}
@@ -726,7 +686,7 @@ export default function AdminEditarProducto() {
               value={formulario.ventaCruzadaId}
               onChange={(e) => cambiar("ventaCruzadaId", e.target.value)}
               disabled={cargandoProductos}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
             >
               <option value="">Sin venta cruzada</option>
               {productosDisponibles
@@ -746,8 +706,8 @@ export default function AdminEditarProducto() {
           />
         </Seccion>
 
-        <Seccion titulo="Categoría y disponibilidad">
-          <div className="grid gap-4 md:grid-cols-3">
+        <Seccion titulo="Categoría">
+          <div className="max-w-sm">
             <label className="block">
               <span className="mb-1.5 block text-xs font-bold text-slate-700">
                 Categoría
@@ -756,11 +716,12 @@ export default function AdminEditarProducto() {
               <select
                 value={formulario.categoria}
                 onChange={(e) => cambiar("categoria", e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
               >
                 <option value="">Seleccionar categoría</option>
                 <option value="tecnologia">Tecnología</option>
                 <option value="computacion">Computación</option>
+                <option value="electronica">Electrónica</option>
                 <option value="audio">Audio</option>
                 <option value="pesca">Pesca</option>
                 <option value="jardin">Jardín</option>
@@ -768,32 +729,6 @@ export default function AdminEditarProducto() {
                 <option value="ninos">Niños</option>
                 <option value="accesorios">Accesorios</option>
                 <option value="otros">Otros</option>
-              </select>
-            </label>
-
-            <Campo
-              titulo="Stock"
-              tipo="number"
-              valor={formulario.stock}
-              onChange={(v) => cambiar("stock", v)}
-              placeholder="Ej. 25"
-              ayuda="Opcional. Déjalo vacío si no quieres controlar unidades."
-            />
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-bold text-slate-700">
-                Disponibilidad
-              </span>
-
-              <select
-                value={formulario.disponibilidad}
-                onChange={(e) => cambiar("disponibilidad", e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-              >
-                <option value="disponible">Disponible</option>
-                <option value="sin-stock">Sin stock</option>
-                <option value="proximamente">Próximamente</option>
-                <option value="pausado">Pausado</option>
               </select>
             </label>
           </div>
@@ -804,19 +739,19 @@ export default function AdminEditarProducto() {
             titulo="Descripción corta"
             valor={formulario.descripcion}
             onChange={(v) => cambiar("descripcion", v)}
-            filas={4}
+            filas={3}
           />
 
           <Area
             titulo="Descripción larga"
             valor={formulario.descripcionLarga}
             onChange={(v) => cambiar("descripcionLarga", v)}
-            filas={8}
+            filas={5}
           />
         </Seccion>
 
         <Seccion titulo="Características del producto">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Campo
               titulo="Marca"
               valor={formulario.marca}
@@ -858,7 +793,7 @@ export default function AdminEditarProducto() {
             ayuda="Un color por línea."
             valor={formulario.colores}
             onChange={(v) => cambiar("colores", v)}
-            filas={4}
+            filas={3}
           />
 
           <Area
@@ -866,7 +801,7 @@ export default function AdminEditarProducto() {
             ayuda="Una opción por línea."
             valor={formulario.variantes}
             onChange={(v) => cambiar("variantes", v)}
-            filas={4}
+            filas={3}
           />
 
           <Area
@@ -874,7 +809,7 @@ export default function AdminEditarProducto() {
             ayuda="Una característica por línea."
             valor={formulario.caracteristicas}
             onChange={(v) => cambiar("caracteristicas", v)}
-            filas={6}
+            filas={4}
           />
 
           <Area
@@ -882,7 +817,7 @@ export default function AdminEditarProducto() {
             ayuda="Un elemento por línea."
             valor={formulario.contenidoPaquete}
             onChange={(v) => cambiar("contenidoPaquete", v)}
-            filas={5}
+            filas={3}
           />
         </Seccion>
 
@@ -896,7 +831,7 @@ export default function AdminEditarProducto() {
               Tienda / Feed — 4:5
             </h3>
 
-            <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="mt-2 grid max-w-[620px] grid-cols-2 gap-2 sm:grid-cols-4">
               {NOMBRES_IMAGENES.map((titulo, indice) => (
                 <ImagenProducto
                   key={titulo}
@@ -913,12 +848,12 @@ export default function AdminEditarProducto() {
             </div>
           </div>
 
-          <div className="border-t border-slate-200 pt-5">
+          <div className="border-t border-slate-200 pt-3">
             <h3 className="text-sm font-bold text-slate-900">
               Stories / Reels — 9:16
             </h3>
 
-            <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="mt-2 grid max-w-[620px] grid-cols-2 gap-2 sm:grid-cols-4">
               {NOMBRES_IMAGENES_VERTICAL.map((titulo, indice) => (
                 <ImagenProducto
                   key={titulo}
@@ -935,12 +870,12 @@ export default function AdminEditarProducto() {
             </div>
           </div>
 
-          <div className="border-t border-slate-200 pt-5">
+          <div className="border-t border-slate-200 pt-3">
             <h3 className="text-sm font-bold text-slate-900">
               Facebook — 900 × 630
             </h3>
 
-            <div className="mt-3 max-w-[360px]">
+            <div className="mt-2 max-w-[220px]">
               <ImagenProducto
                 titulo="Imagen principal Facebook"
                 imagen={imagenFacebook}
@@ -1007,12 +942,12 @@ export default function AdminEditarProducto() {
           )}
         </Seccion>
 
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
           <h2 className="text-sm font-bold text-slate-900">
             Ficha generada
           </h2>
 
-          <pre className="mt-4 max-h-[600px] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-4 text-[10px] text-slate-100">
+          <pre className="mt-3 max-h-[320px] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-3 text-[10px] text-slate-100">
             {JSON.stringify(productoFinal, null, 2)}
           </pre>
 
@@ -1025,7 +960,7 @@ export default function AdminEditarProducto() {
               cargando ||
               cargandoProductos
             }
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {guardando && <Loader2 size={17} className="animate-spin" />}
             {guardando ? "Guardando cambios..." : "Guardar cambios"}
@@ -1038,9 +973,9 @@ export default function AdminEditarProducto() {
 
 function Seccion({ titulo, children }) {
   return (
-    <section className="mb-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
       <h2 className="text-sm font-bold text-slate-900">{titulo}</h2>
-      <div className="mt-4 space-y-4">{children}</div>
+      <div className="mt-3 space-y-3">{children}</div>
     </section>
   );
 }
@@ -1066,7 +1001,7 @@ function Campo({
         readOnly={soloLectura}
         placeholder={placeholder}
         onChange={(e) => onChange?.(e.target.value)}
-        className={`w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 ${
+        className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 ${
           soloLectura ? "bg-slate-50" : "bg-white"
         }`}
       />
@@ -1097,7 +1032,7 @@ function Area({ titulo, ayuda, valor, onChange, filas = 5 }) {
         rows={filas}
         value={valor}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+        className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm leading-5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
       />
     </label>
   );
@@ -1105,7 +1040,7 @@ function Area({ titulo, ayuda, valor, onChange, filas = 5 }) {
 
 function Check({ titulo, marcado, onChange }) {
   return (
-    <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+    <label className="flex min-h-[40px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
       <input
         type="checkbox"
         checked={marcado}
@@ -1147,8 +1082,8 @@ function ImagenProducto({
         : "aspect-[4/5]";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <p className="mb-2 text-[11px] font-bold text-slate-700">{titulo}</p>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+      <p className="mb-1.5 text-[10px] font-bold text-slate-700">{titulo}</p>
 
       <div
         className={`${relacion} relative overflow-hidden rounded-lg border border-dashed border-slate-300 bg-white`}
@@ -1165,15 +1100,15 @@ function ImagenProducto({
               type="button"
               onClick={onEliminar}
               disabled={deshabilitado}
-              className="absolute right-2 top-2 rounded-md bg-white/90 p-1.5 text-slate-700 shadow disabled:opacity-40"
+              className="absolute right-1.5 top-1.5 rounded-md bg-white/90 p-1 text-slate-700 shadow disabled:opacity-40"
               title="Quitar imagen"
             >
-              <Trash2 size={15} />
+              <Trash2 size={14} />
             </button>
           </>
         ) : (
-          <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 p-3 text-center">
-            <Upload size={20} className="text-slate-400" />
+          <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-1 p-2 text-center">
+            <Upload size={16} className="text-slate-400" />
             <span className="text-[10px] font-semibold text-slate-500">
               Seleccionar imagen
             </span>
@@ -1194,7 +1129,7 @@ function ImagenProducto({
       </div>
 
       {imagen?.archivoOriginal?.name && (
-        <p className="mt-2 truncate text-[9px] text-slate-500">
+        <p className="mt-1.5 truncate text-[9px] text-slate-500">
           {imagen.archivoOriginal.name}
         </p>
       )}
