@@ -1,16 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowRight, Check, ChevronLeft, ChevronRight,
-  Clock3, CloudUpload, FileImage, Film, Heart, Images,
-  LockKeyhole, MessageCircle, MoreHorizontal, Send, ShieldCheck,
-  Sparkles, Trash2, UserRound, UserRoundPlus, X,
+  ArrowRight, Check, ChevronLeft, ChevronRight, CloudUpload,
+  FileImage, Film, Heart, Images, Mail, MessageCircle,
+  MoreHorizontal, Send, ThumbsUp, Trash2, UserRound, UserRoundPlus, X,
 } from "lucide-react";
 
 const RUTA_BASE = "/servicios/publicacion-automatica";
 const RUTA_CONFIGURADOR = `${RUTA_BASE}/configurar`;
-const ENTRADA = "w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
-const TARJETA = "rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-7";
+const API_SOLICITAR_CODIGO = "/api/servicios/clientes/acceso/solicitar";
+const API_VERIFICAR_CODIGO = "/api/servicios/clientes/acceso/verificar";
+
+// Los mismos logos utilizados en el configurador completo.
+const LOGOS = {
+  instagram: "https://i.postimg.cc/1tGRTnck/3840px-Instagram-logo-2022-svg.png",
+  facebook: "https://i.postimg.cc/rshTXS0k/Logo-de-Facebook.png",
+};
+
+const CAMPO = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
+const CAJA = "rounded-xl border border-slate-200 bg-white p-4 sm:p-5";
+const BOTON = "inline-flex min-h-9 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60";
 const TIPOS = {
   imagen: { nombre: "Imagen", icono: FileImage, formatos: ["4:5", "1:1"] },
   carrusel: { nombre: "Carrusel", icono: Images, formatos: ["4:5", "1:1"] },
@@ -31,19 +40,26 @@ function crearDemostracion() {
   }));
 }
 
-function IconoRed({ red }) {
-  if (red === "instagram") {
-    return <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 text-white"><span className="text-sm font-bold">◎</span></span>;
-  }
-  return <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1877F2] text-lg font-bold text-white">f</span>;
+function LogoRed({ red, size = 24 }) {
+  return (
+    <img
+      src={LOGOS[red]}
+      alt={red === "instagram" ? "Instagram" : "Facebook"}
+      loading="lazy"
+      width={size}
+      height={size}
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
+    />
+  );
 }
 
 function Campo({ etiqueta, children, nota }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-slate-800">{etiqueta}</span>
+      <span className="mb-1 block text-xs font-medium text-slate-800">{etiqueta}</span>
       {children}
-      {nota && <span className="mt-1 block text-xs leading-5 text-slate-500">{nota}</span>}
+      {nota && <span className="mt-1 block text-xs font-normal leading-4 text-slate-500">{nota}</span>}
     </label>
   );
 }
@@ -59,32 +75,22 @@ export default function LandingPublicaciones() {
   const [negocio, setNegocio] = useState("");
   const [mensajeArchivo, setMensajeArchivo] = useState("");
   const [modalRegistro, setModalRegistro] = useState(false);
-  const [precios, setPrecios] = useState(null);
+  const [email, setEmail] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [pasoRegistro, setPasoRegistro] = useState("email");
+  const [errorRegistro, setErrorRegistro] = useState("");
+  const [esperandoRegistro, setEsperandoRegistro] = useState(false);
   const urlsTemporales = useRef(new Set());
 
-  // Solo consulta el precio oficial del plan. No envía ninguna configuración.
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/servicios/publicaciones/plan", { signal: controller.signal, cache: "no-store" })
-      .then((r) => r.ok ? r.json() : null)
-      .then((datos) => {
-        if (datos?.ok && Number.isFinite(datos?.precios?.ARS?.[1]) && Number.isFinite(datos?.precios?.ARS?.[2])) {
-          setPrecios(datos.precios.ARS);
-        }
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
+  // La demostración no consulta precios anteriores ni envía datos o archivos.
+  // La prueba gratis y los nuevos importes requieren implementación en el backend.
 
-  // No se guarda nada en sessionStorage, localStorage, MongoDB ni R2.
-  // Todas las URL blob: se revocan al abandonar la demostración.
   useEffect(() => () => {
     for (const url of urlsTemporales.current) URL.revokeObjectURL(url);
     urlsTemporales.current.clear();
   }, []);
 
-  // Los enlaces privados anteriores usaban la landing como ruta.
-  // Se conservan y abren el configurador real con el fragmento intacto.
+  // Los enlaces privados antiguos continúan funcionando con el configurador real.
   if (location.hash.startsWith("#pedido=")) {
     return <Navigate replace to={{ pathname: RUTA_CONFIGURADOR, hash: location.hash }} />;
   }
@@ -138,28 +144,26 @@ export default function LandingPublicaciones() {
         : ["image/jpeg", "image/png", "image/webp"].includes(archivo.type);
       return tipoValido && archivo.size > 0 && archivo.size <= (esReel ? 150 : 20) * 1024 * 1024;
     });
-    if (validos.length !== candidatos.length) {
-      setMensajeArchivo(esReel ? "Seleccioná videos MP4 de hasta 150 MB." : "Seleccioná imágenes JPG, PNG o WebP de hasta 20 MB cada una.");
-    } else {
-      setMensajeArchivo("");
-    }
+    setMensajeArchivo(validos.length !== candidatos.length
+      ? esReel ? "Seleccioná videos MP4 de hasta 150 MB." : "Seleccioná imágenes JPG, PNG o WebP de hasta 20 MB."
+      : "");
     if (!validos.length) return;
 
     const esCarrusel = contenido.tipo === "carrusel";
     const anteriores = esCarrusel ? contenido.archivos : [];
     const disponibles = (esCarrusel ? 10 : 1) - anteriores.length;
-    if (disponibles === 0) {
-      setMensajeArchivo("El carrusel ya tiene diez imágenes. Quitá una para agregar otra.");
+    if (!disponibles) {
+      setMensajeArchivo("El carrusel admite diez imágenes como máximo. Quitá una para agregar otra.");
       return;
     }
     if (esCarrusel && validos.length > disponibles) setMensajeArchivo("Se permiten hasta diez imágenes por carrusel.");
-    const nuevas = validos.slice(0, disponibles).map((archivo) => {
+    const nuevos = validos.slice(0, disponibles).map((archivo) => {
       const url = URL.createObjectURL(archivo);
       urlsTemporales.current.add(url);
       return { url, nombre: archivo.name };
     });
     if (!esCarrusel) revocar(contenido.archivos);
-    actualizarContenido({ archivos: [...anteriores, ...nuevas] });
+    actualizarContenido({ archivos: [...anteriores, ...nuevos] });
     setImagenActual(0);
   }
 
@@ -171,178 +175,388 @@ export default function LandingPublicaciones() {
     setImagenActual(0);
   }
 
+  function abrirRegistro() {
+    setErrorRegistro("");
+    setModalRegistro(true);
+  }
+
+  // Estos endpoints serán implementados en el backend de registro por correo.
+  // La interfaz no declara cuentas creadas si el servidor no las confirma.
+  async function enviarCodigo(evento) {
+    evento.preventDefault();
+    const correo = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      setErrorRegistro("Ingresá un correo electrónico válido.");
+      return;
+    }
+    setEsperandoRegistro(true);
+    setErrorRegistro("");
+    try {
+      const respuesta = await fetch(API_SOLICITAR_CODIGO, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        credentials: "same-origin", cache: "no-store", body: JSON.stringify({ email: correo }),
+      });
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok || datos.ok !== true) throw new Error("No fue posible enviar el código. Intentá nuevamente más tarde.");
+      setEmail(correo);
+      setPasoRegistro("codigo");
+      setCodigo("");
+    } catch (error) {
+      setErrorRegistro(error.message || "No fue posible enviar el código.");
+    } finally {
+      setEsperandoRegistro(false);
+    }
+  }
+
+  async function verificarCodigo(evento) {
+    evento.preventDefault();
+    if (!/^\d{6}$/.test(codigo)) {
+      setErrorRegistro("Ingresá los seis dígitos recibidos por correo.");
+      return;
+    }
+    setEsperandoRegistro(true);
+    setErrorRegistro("");
+    try {
+      const respuesta = await fetch(API_VERIFICAR_CODIGO, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        credentials: "same-origin", cache: "no-store", body: JSON.stringify({ email, codigo }),
+      });
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok || datos.ok !== true) throw new Error("El código no pudo verificarse. Revisalo e intentá nuevamente.");
+      setModalRegistro(false);
+      navigate(RUTA_CONFIGURADOR);
+    } catch (error) {
+      setErrorRegistro(error.message || "No se pudo verificar el código.");
+    } finally {
+      setEsperandoRegistro(false);
+    }
+  }
+
+  const textoVistaPrevia = (
+    <div className="px-3 py-3">
+      <p className="whitespace-pre-wrap break-words text-sm font-normal leading-5 text-slate-700">
+        {contenido.copy.trim() || "Acá vas a ver la idea de tu publicación."}
+      </p>
+      {(redVisible === "instagram" ? contenido.ctaInstagram : contenido.ctaFacebook).trim() && (
+        <p className="mt-2 text-sm font-medium text-slate-800">
+          {redVisible === "instagram" ? contenido.ctaInstagram : contenido.ctaFacebook}
+        </p>
+      )}
+      {redVisible === "facebook" && contenido.urlFacebook.trim() && (
+        <p className="mt-1 break-all text-sm text-orange-700 underline underline-offset-2">{contenido.urlFacebook}</p>
+      )}
+      {contenido.hashtags.trim() && (
+        <p className="mt-2 break-words text-sm text-orange-700">{contenido.hashtags}</p>
+      )}
+    </div>
+  );
+
+  function botonesAcceso() {
+    return (
+      <div className="flex flex-wrap items-center gap-2.5">
+        <button type="button" onClick={abrirRegistro} className={`${BOTON} bg-orange-600 text-white hover:bg-orange-700`}>
+          <UserRoundPlus size={15} /> Registrarme
+        </button>
+        <button type="button" onClick={() => navigate(RUTA_CONFIGURADOR)} className={`${BOTON} border border-slate-300 bg-white text-slate-800 hover:border-slate-500`}>
+          <UserRound size={15} /> Seguir como invitado
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-slate-50 pb-20 font-normal text-slate-900">
-      <section className="border-b border-slate-200 bg-white px-4 py-14 sm:px-6 sm:py-20">
+    <main className="min-h-screen bg-[#f7f8fa] pb-16 font-normal text-slate-900" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+      <section className="px-4 pb-10 pt-10 sm:px-6 sm:pb-14 sm:pt-14">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-md bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700">
-            <Sparkles size={15} /> Comunidad Semanal
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
+            <div className="max-w-3xl">
+              <div className="mb-5 flex items-center gap-2">
+                <LogoRed red="instagram" size={23} />
+                <LogoRed red="facebook" size={23} />
+                <span className="ml-1 text-xs font-medium text-slate-600">Gestión automática de contenido en redes sociales</span>
+              </div>
+              <h1 className="max-w-3xl text-[30px] font-medium leading-[1.17] tracking-tight sm:text-[42px]">
+                Automatizá tus redes sociales y hacé crecer tu negocio
+              </h1>
+              <div className="mt-6 max-w-2xl space-y-4 text-sm font-normal leading-7 text-slate-600 sm:text-[15px]">
+                <p>¿Querés mantener tus redes sociales activas sin estar pendiente de cada publicación? Nuestro sistema automatiza tu contenido de Facebook e Instagram para que ahorres tiempo y te concentres en hacer crecer tu negocio.</p>
+                <p>Subí tus contenidos, elegí las redes sociales, el formato, los textos, hashtags, enlaces, días y horarios. ¡Nosotros nos encargamos del resto!</p>
+                <p>Ganás tiempo, mantenés tu presencia digital y generás más oportunidades para atraer clientes, llevar tráfico a tu web y potenciar tus ventas.</p>
+              </div>
+              <div className="mt-7">
+                <p className="mb-3 text-base font-medium text-slate-900">¡Empezá gratis y simplificá la gestión de tus redes!</p>
+                {botonesAcceso()}
+                <Link to={RUTA_CONFIGURADOR} className="mt-4 inline-flex text-xs font-medium text-slate-600 underline underline-offset-4 hover:text-orange-700">
+                  ¿Ya tenés un pedido? Recuperar acceso
+                </Link>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-medium text-orange-700">PRUEBA GRATUITA</span>
+                <span className="text-xs font-normal text-slate-500">Facebook + Instagram</span>
+              </div>
+              <p className="text-3xl font-medium tracking-tight text-slate-900">Probá <span className="text-orange-600">7 días gratis</span></p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">Subí hasta 4 contenidos y dejá que nuestro sistema los publique automáticamente en los días y horarios que elijas.</p>
+              <div className="my-5 border-t border-slate-100" />
+              <p className="text-sm font-medium text-slate-900">¿Querés ver cómo funciona antes de registrarte?</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Probá nuestro editor con vista previa y descubrí cómo se verán tus publicaciones en Facebook e Instagram.</p>
+              <a href="#demo" className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-orange-700 hover:text-orange-800">
+                Probar el editor <ArrowRight size={16} />
+              </a>
+            </div>
           </div>
-          <div className="max-w-3xl">
-            <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">Tus redes activas, incluso mientras dormís.</h1>
-            <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
-              Prepará tu contenido una vez y dejá que sus publicaciones sigan un calendario.
-              Nosotros nos encargamos de revisar los archivos, conectar tus redes de forma segura y organizar la programación.
+        </div>
+      </section>
+
+      <section id="demo" className="scroll-mt-20 px-4 py-8 sm:px-6 sm:py-10" aria-labelledby="demo-titulo">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-5 max-w-3xl">
+            <h2 id="demo-titulo" className="text-xl font-medium tracking-tight sm:text-2xl">Mirá cómo se verán tus publicaciones</h2>
+            <p className="mt-1.5 text-sm leading-5 text-slate-600">
+              Probá tus imágenes, videos, textos y enlaces en una vista previa de Instagram y Facebook.
             </p>
           </div>
-          <div className="mt-7 flex flex-wrap gap-3 text-sm text-slate-700">
-            <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">4 contenidos</span>
-            <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">7 días consecutivos</span>
-            <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">Instagram y Facebook</span>
-          </div>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <button type="button" onClick={() => setModalRegistro(true)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-orange-600 px-6 py-3 text-sm font-semibold text-white hover:bg-orange-700">
-              <UserRoundPlus size={18} /> Registrarme
-            </button>
-            <button type="button" onClick={() => navigate(RUTA_CONFIGURADOR)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 hover:border-slate-500">
-              <UserRound size={18} /> Seguir como invitado <ArrowRight size={17} />
-            </button>
-            <a href="#demo" className="inline-flex min-h-12 items-center justify-center rounded-md px-5 py-3 text-sm font-medium text-orange-700 hover:bg-orange-50">Probar vista previa</a>
-          </div>
-          <p className="mt-3 text-xs leading-5 text-slate-500">Probá la demostración sin registrarte, pagar ni conectar tus cuentas. El registro por correo se habilitará en la próxima etapa.</p>
-          <Link to={RUTA_CONFIGURADOR} className="mt-5 inline-flex text-sm font-medium text-slate-700 underline underline-offset-4 hover:text-orange-700">¿Ya tenés un pedido? Recuperar acceso</Link>
-        </div>
-      </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6" aria-labelledby="como-funciona">
-        <div className="mb-6 max-w-2xl">
-          <h2 id="como-funciona" className="text-2xl font-semibold tracking-tight">¿Cómo funciona?</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">Conocé el proceso antes de contratar. No necesitás tener experiencia programando publicaciones.</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            { icono: FileImage, titulo: "Preparás tus contenidos", descripcion: "Elegís imágenes, reels, carruseles, textos y llamadas a la acción." },
-            { icono: ShieldCheck, titulo: "Confirmás y vinculás tus redes", descripcion: "Registrás tu pedido, confirmamos el pago y conectás Facebook o Instagram de forma segura." },
-            { icono: Clock3, titulo: "Nos ocupamos de la programación", descripcion: "Verificamos los archivos y organizamos cuatro contenidos dentro de un período flexible de siete días." },
-          ].map(({ icono: Icono, titulo, descripcion }, indice) => (
-            <article key={titulo} className={TARJETA}>
-              <div className="mb-4 flex items-center justify-between"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-orange-50 text-orange-700"><Icono size={21} /></span><span className="text-xs text-slate-400">0{indice + 1}</span></div>
-              <h3 className="text-base font-semibold">{titulo}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{descripcion}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="demo" className="scroll-mt-24 border-y border-slate-200 bg-slate-100 px-4 py-14 sm:px-6" aria-labelledby="demo-titulo">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-7 max-w-3xl">
-            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-orange-700"><Sparkles size={17} /> Demostración interactiva</div>
-            <h2 id="demo-titulo" className="text-2xl font-semibold tracking-tight sm:text-3xl">Mirá cómo podría verse tu publicación</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Seleccioná una imagen o video y probá formatos, copy y CTA. Es una vista previa: no se registra ningún pedido ni se guarda esta configuración.</p>
-          </div>
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="space-y-6">
-              <div className={TARJETA}>
-                <h3 className="text-base font-semibold">Elegí dónde publicar</h3>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Una red: 4 publicaciones. Dos redes: 8 publicaciones a partir de los mismos cuatro contenidos.</p>
-                <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_350px]">
+            <div className="space-y-4">
+              <div className={CAJA}>
+                <h3 className="text-sm font-medium">Redes sociales</h3>
+                <p className="mt-1 text-xs text-slate-500">Cuatro contenidos para una red o para ambas redes.</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   {["instagram", "facebook"].map((red) => {
                     const activa = redes.includes(red);
-                    return <button key={red} type="button" aria-pressed={activa} onClick={() => alternarRed(red)} className={`flex items-center justify-center gap-2 rounded-md border p-3 text-sm font-medium transition ${activa ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}><IconoRed red={red} /> {red === "instagram" ? "Instagram" : "Facebook"}{activa && <Check size={14} />}</button>;
+                    return (
+                      <button key={red} type="button" aria-pressed={activa} onClick={() => alternarRed(red)}
+                        className={`flex min-h-10 items-center justify-center gap-2 rounded-md border px-2 py-1.5 text-sm font-medium transition ${activa ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 text-slate-700 hover:border-slate-400"}`}>
+                        <LogoRed red={red} size={21} /> {red === "instagram" ? "Instagram" : "Facebook"} {activa && <Check size={13} />}
+                      </button>
+                    );
                   })}
                 </div>
-                <div className="mt-4 flex items-center justify-between rounded-md bg-slate-50 p-3 text-sm">
+                <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
                   <span className="text-slate-600">{redes.length === 1 ? "4 publicaciones · 1 red" : "8 publicaciones · 2 redes"}</span>
-                  <strong className="font-semibold">{precios ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(precios[redes.length]) : "Precio al continuar"}</strong>
+                  <span className="text-base font-medium text-orange-700">$0</span>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">Precio informativo: el importe oficial se confirma al crear el pedido.</p>
               </div>
 
-              <div className={TARJETA}>
-                <h3 className="text-base font-semibold">Tus cuatro contenidos</h3>
-                <p className="mt-1 text-xs text-slate-500">Probá diferentes formatos para cada contenido.</p>
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Seleccionar contenido de prueba">
+              <div className={CAJA}>
+                <h3 className="text-sm font-medium">Tus cuatro contenidos</h3>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Elegir contenido">
                   {contenidos.map((item, indice) => {
                     const Icono = TIPOS[item.tipo].icono;
-                    return <button key={item.id} type="button" aria-pressed={seleccion === indice} onClick={() => { setSeleccion(indice); setImagenActual(0); setMensajeArchivo(""); }} className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-left text-xs transition ${seleccion === indice ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}><Icono size={17} /> <span>Contenido {indice + 1}</span></button>;
+                    return (
+                      <button key={item.id} type="button" aria-pressed={seleccion === indice}
+                        onClick={() => { setSeleccion(indice); setImagenActual(0); setMensajeArchivo(""); }}
+                        className={`flex items-center justify-center gap-1.5 rounded-md border px-2 py-2 text-xs font-medium transition ${seleccion === indice ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 text-slate-700 hover:border-slate-400"}`}>
+                        <Icono size={15} /> Contenido {indice + 1}
+                      </button>
+                    );
                   })}
                 </div>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <Campo etiqueta="Tipo de publicación">
-                    <select className={ENTRADA} value={contenido.tipo} onChange={(e) => cambiarTipo(e.target.value)}>
-                      <option value="imagen">Imagen</option><option value="carrusel">Carrusel</option><option value="reel">Reel</option><option disabled value="story">Stories (próximamente)</option>
+                    <select className={`${CAMPO} h-9`} value={contenido.tipo} onChange={(e) => cambiarTipo(e.target.value)}>
+                      <option value="imagen">Imagen</option>
+                      <option value="carrusel">Carrusel</option>
+                      <option value="reel">Reel</option>
+                      <option disabled value="story">Stories (próximamente)</option>
                     </select>
                   </Campo>
-                  <Campo etiqueta="Proporción" nota="9:16 para reels; 4:5 o 1:1 para imágenes y carruseles.">
-                    <select className={ENTRADA} value={contenido.formato} onChange={(e) => actualizarContenido({ formato: e.target.value })}>
+                  <Campo etiqueta="Proporción">
+                    <select className={`${CAMPO} h-9`} value={contenido.formato} onChange={(e) => actualizarContenido({ formato: e.target.value })}>
                       {TIPOS[contenido.tipo].formatos.map((formato) => <option key={formato} value={formato}>{formato}</option>)}
                     </select>
                   </Campo>
                 </div>
-                <div className="mt-5">
-                  <span className="mb-2 block text-sm font-medium">{contenido.tipo === "reel" ? "Video del reel" : contenido.tipo === "carrusel" ? "Imágenes del carrusel" : "Imagen de la publicación"}</span>
-                  <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center hover:border-orange-500">
-                    <CloudUpload className="text-orange-700" size={24} />
-                    <span className="text-sm font-medium text-slate-800">{contenido.archivos.length ? "Agregar o cambiar archivos" : "Seleccionar archivos para la vista previa"}</span>
-                    <span className="text-xs text-slate-500">{contenido.tipo === "reel" ? "MP4 · hasta 150 MB" : "JPG, PNG o WebP · hasta 20 MB por imagen"}</span>
-                    <input className="sr-only" type="file" accept={contenido.tipo === "reel" ? "video/mp4,.mp4" : "image/jpeg,image/png,image/webp"} multiple={contenido.tipo === "carrusel"} onChange={elegirArchivo} />
+                <div className="mt-3">
+                  <span className="mb-1 block text-xs font-medium text-slate-800">
+                    {contenido.tipo === "reel" ? "Video del reel" : contenido.tipo === "carrusel" ? "Imágenes del carrusel" : "Imagen de la publicación"}
+                  </span>
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-white px-3 py-3 text-center hover:border-orange-500">
+                    <CloudUpload size={19} className="text-orange-700" />
+                    <span className="text-xs font-medium">{contenido.archivos.length ? "Agregar o cambiar archivos" : "Elegir archivos"}</span>
+                    <span className="hidden text-xs text-slate-500 sm:inline">{contenido.tipo === "reel" ? "MP4 · 150 MB" : "JPG, PNG, WebP · 20 MB"}</span>
+                    <input className="sr-only" type="file" accept={contenido.tipo === "reel" ? "video/mp4,.mp4" : "image/jpeg,image/png,image/webp"}
+                      multiple={contenido.tipo === "carrusel"} onChange={elegirArchivo} />
                   </label>
-                  {mensajeArchivo && <p role="alert" className="mt-2 text-xs text-red-700">{mensajeArchivo}</p>}
-                  {contenido.archivos.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{contenido.archivos.map((archivo, indice) => <span key={archivo.url} className="inline-flex max-w-full items-center gap-2 rounded-md bg-slate-100 px-2 py-1 text-xs"><span className="max-w-32 truncate">{archivo.nombre}</span><button type="button" aria-label={`Quitar ${archivo.nombre}`} className="text-slate-500 hover:text-red-700" onClick={() => quitarArchivo(indice)}><Trash2 size={14} /></button></span>)}</div>}
-                  <p className="mt-2 text-xs leading-5 text-slate-500">El archivo solo existe en la memoria de esta pestaña. No se envía a nuestros servidores.</p>
+                  {mensajeArchivo && <p role="alert" className="mt-1.5 text-xs text-red-700">{mensajeArchivo}</p>}
+                  {contenido.archivos.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {contenido.archivos.map((archivo, indice) => (
+                        <span key={archivo.url} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1 text-xs">
+                          <span className="max-w-32 truncate">{archivo.nombre}</span>
+                          <button type="button" aria-label={`Quitar ${archivo.nombre}`} className="text-slate-500 hover:text-red-700" onClick={() => quitarArchivo(indice)}><Trash2 size={13} /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                <div className="mt-6 space-y-4 border-t border-slate-100 pt-5">
-                  <Campo etiqueta="Nombre del emprendimiento"><input className={ENTRADA} value={negocio} maxLength={120} onChange={(e) => setNegocio(e.target.value)} placeholder="Ej.: Mi emprendimiento" /></Campo>
-                  <Campo etiqueta="Copy o texto de la publicación"><textarea className={ENTRADA} rows={3} maxLength={1500} value={contenido.copy} onChange={(e) => actualizarContenido({ copy: e.target.value })} placeholder="Escribí el texto que aparecerá en la vista previa..." /></Campo>
-                  <details className="rounded-md border border-slate-200 bg-white p-4">
-                    <summary className="cursor-pointer text-sm font-medium text-slate-800">CTA, enlace y hashtags (opcionales)</summary>
-                    <div className="mt-4 space-y-4">
-                      {redes.includes("instagram") && <Campo etiqueta="CTA para Instagram"><input className={ENTRADA} maxLength={100} value={contenido.ctaInstagram} onChange={(e) => actualizarContenido({ ctaInstagram: e.target.value })} placeholder="Ej.: Enlace en nuestra bio" /></Campo>}
-                      {redes.includes("facebook") && <><Campo etiqueta="CTA para Facebook"><input className={ENTRADA} maxLength={100} value={contenido.ctaFacebook} onChange={(e) => actualizarContenido({ ctaFacebook: e.target.value })} placeholder="Ej.: Visitá nuestra tienda" /></Campo><Campo etiqueta="URL para Facebook"><input className={ENTRADA} maxLength={500} value={contenido.urlFacebook} onChange={(e) => actualizarContenido({ urlFacebook: e.target.value })} placeholder="https://..." /></Campo></>}
-                      <Campo etiqueta="Hashtags"><input className={ENTRADA} maxLength={240} value={contenido.hashtags} onChange={(e) => actualizarContenido({ hashtags: e.target.value })} placeholder="#MiNegocio #Comunidad" /></Campo>
+                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                  <Campo etiqueta="Nombre del emprendimiento">
+                    <input className={`${CAMPO} h-9`} maxLength={120} value={negocio} onChange={(e) => setNegocio(e.target.value)} placeholder="Ej.: Mi emprendimiento" />
+                  </Campo>
+                  <Campo etiqueta="Copy o texto de la publicación">
+                    <textarea className={CAMPO} rows={2} maxLength={1500} value={contenido.copy}
+                      onChange={(e) => actualizarContenido({ copy: e.target.value })} placeholder="Escribí el texto de tu publicación..." />
+                  </Campo>
+                  <details className="rounded-md border border-slate-200 bg-white p-3">
+                    <summary className="cursor-pointer text-xs font-medium text-slate-800">CTA, URL y hashtags (opcionales)</summary>
+                    <div className="mt-3 space-y-3">
+                      {redes.includes("instagram") && <Campo etiqueta="CTA para Instagram"><input className={`${CAMPO} h-9`} maxLength={100} value={contenido.ctaInstagram} onChange={(e) => actualizarContenido({ ctaInstagram: e.target.value })} placeholder="Enlace en nuestra bio" /></Campo>}
+                      {redes.includes("facebook") && <>
+                        <Campo etiqueta="CTA para Facebook"><input className={`${CAMPO} h-9`} maxLength={100} value={contenido.ctaFacebook} onChange={(e) => actualizarContenido({ ctaFacebook: e.target.value })} placeholder="Visitá nuestra tienda" /></Campo>
+                        <Campo etiqueta="URL para Facebook"><input className={`${CAMPO} h-9`} maxLength={500} value={contenido.urlFacebook} onChange={(e) => actualizarContenido({ urlFacebook: e.target.value })} placeholder="https://..." /></Campo>
+                      </>}
+                      <Campo etiqueta="Hashtags"><input className={`${CAMPO} h-9`} maxLength={240} value={contenido.hashtags} onChange={(e) => actualizarContenido({ hashtags: e.target.value })} placeholder="#MiNegocio #Novedades" /></Campo>
                     </div>
                   </details>
                 </div>
               </div>
             </div>
 
-            <aside className={`${TARJETA} lg:sticky lg:top-24`} aria-label="Vista previa demostrativa">
-              <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3"><h3 className="text-lg font-semibold">Vista previa</h3><span className="text-xs text-slate-500">{seleccion + 1} de 4</span></div>
-              <div className="mb-3 flex gap-2">
-                {redes.map((red) => <button key={red} type="button" aria-pressed={redVisible === red} onClick={() => setVistaRed(red)} className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs font-medium ${redVisible === red ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 text-slate-600"}`}><IconoRed red={red} /> {red === "instagram" ? "Instagram" : "Facebook"}</button>)}
+            <aside className={`${CAJA} lg:sticky lg:top-20`} aria-label="Vista previa demostrativa">
+              <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 className="text-sm font-medium">Vista previa</h3>
+                <span className="text-xs font-normal text-slate-500">Contenido {seleccion + 1} de 4</span>
+              </div>
+              <div className="mb-3 flex gap-2" role="group" aria-label="Ver publicación por red">
+                {redes.map((red) => (
+                  <button key={red} type="button" aria-pressed={redVisible === red} onClick={() => setVistaRed(red)}
+                    className={`flex min-h-9 flex-1 items-center justify-center gap-2 rounded-md border px-2 py-1 text-xs font-medium ${redVisible === red ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 text-slate-600"}`}>
+                    <LogoRed red={red} size={19} /> {red === "instagram" ? "Instagram" : "Facebook"}
+                  </button>
+                ))}
               </div>
               <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
-                <div className="flex items-center gap-2 p-3"><IconoRed red={redVisible} /><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{redVisible === "instagram" ? usuarioVisible : nombreVisible}</p><p className="text-[11px] text-slate-500">{redVisible === "instagram" ? "Publicación de Instagram" : "Página de Facebook · Público"}</p></div><MoreHorizontal size={18} className="text-slate-400" /></div>
-                <div className="bg-slate-50 px-3 py-3">
-                  <div className={`relative mx-auto overflow-hidden rounded-md bg-slate-100 ${contenido.formato === "9:16" ? "max-w-[210px]" : "max-w-[290px]"}`} style={{ aspectRatio: contenido.formato.replace(":", " / ") }}>
-                    {media ? (contenido.tipo === "reel" ? <video key={media.url} src={media.url} playsInline preload="metadata" controls className="h-full w-full object-contain" /> : <img src={media.url} alt={`Vista previa imagen ${imagenActual + 1}`} className="h-full w-full object-contain" />) : <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-slate-400"><FileImage size={30} strokeWidth={1.5} /><span className="text-xs leading-5">Seleccioná {contenido.tipo === "reel" ? "un video" : "una imagen"} para visualizar tu publicación</span></div>}
-                    {contenido.tipo === "carrusel" && contenido.archivos.length > 1 && <><button type="button" aria-label="Imagen anterior" onClick={() => setImagenActual((n) => (n - 1 + contenido.archivos.length) % contenido.archivos.length)} className="absolute left-1 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-2"><ChevronLeft size={16} /></button><button type="button" aria-label="Imagen siguiente" onClick={() => setImagenActual((n) => (n + 1) % contenido.archivos.length)} className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-2"><ChevronRight size={16} /></button><span className="absolute right-1 top-1 rounded bg-black/65 px-2 py-1 text-[10px] text-white">{imagenActual + 1}/{contenido.archivos.length}</span></>}
+                <div className="flex items-center gap-2 px-3 py-3">
+                  <LogoRed red={redVisible} size={27} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-slate-900">{redVisible === "instagram" ? usuarioVisible : nombreVisible}</p>
+                    <p className="text-[11px] font-normal text-slate-500">{redVisible === "instagram" ? "Publicación de Instagram" : "Página de Facebook · Público"}</p>
+                  </div>
+                  <MoreHorizontal size={19} className="text-slate-500" />
+                </div>
+                {redVisible === "facebook" && textoVistaPrevia}
+                <div className="bg-slate-50 px-3 py-2">
+                  <div className={`relative mx-auto overflow-hidden rounded-md bg-slate-100 ${contenido.formato === "9:16" ? "w-full max-w-[225px]" : "w-full max-w-[300px]"}`}
+                    style={{ aspectRatio: contenido.formato.replace(":", " / ") }}>
+                    {media ? (
+                      contenido.tipo === "reel"
+                        ? <video key={media.url} src={media.url} controls playsInline preload="metadata" className="h-full w-full object-contain" aria-label="Vista previa del video" />
+                        : <img src={media.url} alt={`Imagen ${imagenActual + 1} de la publicación`} className="h-full w-full object-contain" />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-slate-400">
+                        <FileImage size={28} strokeWidth={1.5} />
+                        <p className="text-xs leading-5">Elegí {contenido.tipo === "reel" ? "un video" : "imágenes"} para ver tu publicación</p>
+                      </div>
+                    )}
+                    {contenido.tipo === "carrusel" && contenido.archivos.length > 1 && <>
+                      <button type="button" aria-label="Imagen anterior" onClick={() => setImagenActual((i) => (i - 1 + contenido.archivos.length) % contenido.archivos.length)}
+                        className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-1.5 text-slate-800"><ChevronLeft size={16} /></button>
+                      <button type="button" aria-label="Imagen siguiente" onClick={() => setImagenActual((i) => (i + 1) % contenido.archivos.length)}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-1.5 text-slate-800"><ChevronRight size={16} /></button>
+                      <span className="absolute right-1.5 top-1.5 rounded-md bg-black/65 px-2 py-1 text-[10px] text-white">{imagenActual + 1}/{contenido.archivos.length}</span>
+                    </>}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 px-3 pt-3 text-slate-700">{redVisible === "instagram" ? <><Heart size={19} /><MessageCircle size={19} /><Send size={19} /></> : <span className="flex items-center gap-2 text-xs text-slate-500"><Heart size={16} /> Me gusta <MessageCircle size={16} /> Comentar <Send size={16} /> Compartir</span>}</div>
-                <div className="space-y-2 px-3 py-3 text-sm leading-5 text-slate-700">
-                  <p className="whitespace-pre-wrap break-words">{contenido.copy.trim() || "Acá vas a ver el texto de tu publicación."}</p>
-                  {(redVisible === "instagram" ? contenido.ctaInstagram : contenido.ctaFacebook).trim() && <p className="font-semibold">{redVisible === "instagram" ? contenido.ctaInstagram : contenido.ctaFacebook}</p>}
-                  {redVisible === "facebook" && contenido.urlFacebook.trim() && <p className="break-all text-orange-700 underline">{contenido.urlFacebook}</p>}
-                  {contenido.hashtags.trim() && <p className="break-words text-orange-700">{contenido.hashtags}</p>}
+                {redVisible === "instagram" ? (
+                  <div className="flex items-center gap-3 px-3 pt-3 text-slate-800" aria-label="Acciones orientativas de Instagram">
+                    <Heart size={19} /><MessageCircle size={19} /><Send size={19} />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-around border-b border-slate-100 px-3 py-2 text-xs text-slate-500" aria-label="Acciones orientativas de Facebook">
+                    <span className="inline-flex items-center gap-1"><ThumbsUp size={15} /> Me gusta</span>
+                    <span className="inline-flex items-center gap-1"><MessageCircle size={15} /> Comentar</span>
+                    <span className="inline-flex items-center gap-1"><Send size={15} /> Compartir</span>
+                  </div>
+                )}
+                {redVisible === "instagram" && textoVistaPrevia}
+              </div>
+              <p className="mt-2 text-xs font-normal leading-4 text-slate-500">Simulación orientativa: la apariencia final puede variar según la red social.</p>
+            </aside>
+          </div>
+
+          <div className="mt-8 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+            <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-medium text-slate-900">Tus primeros 7 días, gratis</h3>
+                <p className="mt-1 text-sm text-slate-600">Hasta 4 contenidos en Facebook e Instagram · 8 publicaciones en total al usar ambas redes.</p>
+              </div>
+              <p className="text-3xl font-medium text-orange-600">$0</p>
+            </div>
+            <h3 className="mt-5 text-sm font-medium text-slate-900">Al finalizar la prueba gratuita</h3>
+            <p className="mt-1 text-xs text-slate-500">Precios previstos para una semana adicional de servicio.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-900">1 red <span className="font-normal text-slate-500">· 1 semana</span></p>
+                  <div className="text-right">
+                    <p className="text-base font-medium text-slate-900">$10.000 ARS</p>
+                    <p className="text-xs text-slate-600">USD 10</p>
+                  </div>
                 </div>
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">Simulación orientativa: la apariencia puede variar según la plataforma.</p>
-              <div className="mt-5 rounded-md bg-orange-50 p-4"><p className="text-sm font-semibold text-orange-900">¿Te gustó cómo se ve?</p><p className="mt-1 text-xs leading-5 text-orange-800">Cuando continúes, completarás tu configuración real desde cero. Nada de esta prueba se guardará.</p><button type="button" onClick={() => navigate(RUTA_CONFIGURADOR)} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-orange-600 px-4 py-3 text-sm font-semibold text-white hover:bg-orange-700">Continuar como invitado <ArrowRight size={17} /></button><button type="button" onClick={() => setModalRegistro(true)} className="mt-2 w-full rounded-md border border-orange-200 bg-white px-4 py-2.5 text-sm font-semibold text-orange-800 hover:border-orange-400">Registrarme</button></div>
-            </aside>
+              <div className="rounded-lg border border-slate-200 px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-900">2 redes <span className="font-normal text-slate-500">· 1 semana</span></p>
+                  <div className="text-right">
+                    <p className="text-base font-medium text-slate-900">$15.000 ARS</p>
+                    <p className="text-xs text-slate-600">USD 15</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="mt-4 text-xs font-normal leading-5 text-slate-500">
+              Te avisaremos por correo cuando esté por finalizar tu prueba. Si querés continuar, podrás contratar una semana desde tu panel o el configurador. No se realizará ningún cobro automático.
+            </p>
+          </div>
+
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-xl text-sm font-medium text-slate-800">¡Empezá gratis y simplificá la gestión de tus redes!</p>
+            {botonesAcceso()}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="grid gap-6 rounded-lg border border-slate-200 bg-white p-6 sm:grid-cols-[1fr_auto] sm:items-center sm:p-8">
-          <div><div className="mb-2 flex items-center gap-2 text-orange-700"><LockKeyhole size={19} /><span className="text-sm font-semibold">Sin compromisos durante la demostración</span></div><h2 className="text-xl font-semibold">Probá primero. Decidí después.</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">La vista previa no realiza publicaciones, no solicita permisos de tus cuentas y no guarda tus archivos. El registro por correo con código y el panel del cliente estarán disponibles en una próxima etapa.</p></div>
-          <Link to={RUTA_CONFIGURADOR} className="inline-flex items-center justify-center gap-2 rounded-md bg-orange-600 px-5 py-3 text-sm font-semibold text-white hover:bg-orange-700">Seguir como invitado <ArrowRight size={17} /></Link>
+      {modalRegistro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-5" role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setModalRegistro(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="registro-titulo" className="w-full max-w-sm rounded-lg bg-white p-5 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2"><Mail size={19} className="text-orange-700" /><h2 id="registro-titulo" className="text-base font-medium">Acceso con correo electrónico</h2></div>
+              <button type="button" aria-label="Cerrar registro" onClick={() => setModalRegistro(false)} className="rounded-md p-1 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+            </div>
+            {pasoRegistro === "email" ? (
+              <form onSubmit={enviarCodigo} className="mt-4 space-y-3">
+                <p className="text-sm text-slate-600">Ingresá tu correo para recibir un código de verificación de seis dígitos.</p>
+                <Campo etiqueta="Correo electrónico">
+                  <input className={`${CAMPO} h-9`} type="email" autoComplete="email" inputMode="email" required maxLength={160}
+                    value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" />
+                </Campo>
+                {errorRegistro && <p role="alert" className="text-xs text-red-700">{errorRegistro}</p>}
+                <button type="submit" disabled={esperandoRegistro} className={`${BOTON} w-full bg-orange-600 text-white hover:bg-orange-700`}>
+                  {esperandoRegistro ? "Enviando..." : "Enviar código"}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={verificarCodigo} className="mt-4 space-y-3">
+                <p className="text-sm text-slate-600">Ingresá el código enviado a <span className="font-medium">{email}</span>.</p>
+                <Campo etiqueta="Código de seis dígitos">
+                  <input className={`${CAMPO} h-9 tracking-widest`} inputMode="numeric" pattern="[0-9]{6}" autoComplete="one-time-code" required maxLength={6}
+                    value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" />
+                </Campo>
+                {errorRegistro && <p role="alert" className="text-xs text-red-700">{errorRegistro}</p>}
+                <button type="submit" disabled={esperandoRegistro} className={`${BOTON} w-full bg-orange-600 text-white hover:bg-orange-700`}>
+                  {esperandoRegistro ? "Verificando..." : "Verificar y continuar"}
+                </button>
+                <button type="button" onClick={() => { setPasoRegistro("email"); setCodigo(""); setErrorRegistro(""); }} className="text-xs font-medium text-slate-600 underline underline-offset-4">Cambiar correo</button>
+              </form>
+            )}
+          </div>
         </div>
-      </section>
-
-      {modalRegistro && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-5" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setModalRegistro(false); }}>
-        <div role="dialog" aria-modal="true" aria-labelledby="registro-titulo" className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-          <div className="flex items-center justify-between gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-md bg-orange-50 text-orange-700"><UserRoundPlus size={23} /></span><button type="button" aria-label="Cerrar aviso de registro" onClick={() => setModalRegistro(false)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div>
-          <h2 id="registro-titulo" className="mt-4 text-xl font-semibold">Registro por correo en preparación</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">Estamos implementando el acceso mediante un código de verificación enviado a tu correo, sin contraseña. Todavía no se pueden crear cuentas.</p>
-          <p className="mt-2 text-sm leading-6 text-slate-600">Mientras tanto, podés configurar tu servicio como invitado y recuperar tu pedido con un enlace privado.</p>
-          <button type="button" onClick={() => navigate(RUTA_CONFIGURADOR)} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-orange-600 px-4 py-3 text-sm font-semibold text-white hover:bg-orange-700">Seguir como invitado <ArrowRight size={17} /></button>
-          <button type="button" onClick={() => setModalRegistro(false)} className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">Volver a la demostración</button>
-        </div>
-      </div>}
+      )}
     </main>
   );
 }
