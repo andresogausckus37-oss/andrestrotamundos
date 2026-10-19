@@ -31,8 +31,11 @@ const CATEGORIAS = [
   { id: "auto", nombre: "Auto" },
   { id: "bazar", nombre: "Bazar" },
   { id: "computacion", nombre: "Computación" },
-  { id: "cuidado-personal", nombre: "Cuidado personal" },
-  { id: "electrodomesticos-pequenos", nombre: "Electrodomésticos pequeños" },
+  
+{ id: "cuidado-personal", nombre: "Cuidado personal" },
+{ id: "electronica", nombre: "Electrónica" },
+{ id: "electrodomesticos-pequenos", nombre: "Electrodomésticos pequeños" },
+
   { id: "herramientas", nombre: "Herramientas" },
   { id: "hogar", nombre: "Hogar" },
   { id: "jardin", nombre: "Jardín" },
