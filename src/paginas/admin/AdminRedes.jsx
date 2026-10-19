@@ -4,12 +4,9 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Image,
   Loader2,
-  MessageCircle,
   Pencil,
   Save,
-  RefreshCw,
   Sparkles,
 } from "lucide-react";
 
@@ -144,20 +141,19 @@ function PublicacionEditable({
       </button>
 
       {videoUrl && (
-  <div className="mb-3">
-    <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
-      Video Reel
-    </p>
-
-    <video
-      src={videoUrl}
-      controls
-      playsInline
-      preload="metadata"
-      className={`${claseAspecto} ${anchoVista} rounded-lg border border-slate-200 bg-black object-contain`}
-    />
-  </div>
-)}
+        <div className="mx-3 mb-3 flex flex-col items-center justify-center rounded-lg border border-slate-100 bg-slate-50 p-3">
+          <p className="mb-2 text-[10px] font-medium text-slate-500">Vista previa del Reel</p>
+          <video
+            src={videoUrl}
+            controls
+            controlsList="nodownload noplaybackrate nofullscreen"
+            disablePictureInPicture
+            playsInline
+            preload="metadata"
+            className={`video-admin-simple ${claseAspecto} ${anchoVista} rounded-lg bg-black object-contain`}
+          />
+        </div>
+      )}
 
       {abierta && (
         <div className="border-t border-slate-100 p-3">
@@ -417,18 +413,36 @@ function VistaPreviaRedes({ recursos = [], tipo = "", urlProducto = "" }) {
     );
   }
   if (!visibles.length) return <p className="text-xs text-amber-700">Recurso multimedia no disponible</p>;
-  return <div className="flex flex-wrap gap-2">{visibles.map((url, i) => video ?
-    <video key={url} src={url} controls playsInline preload="metadata" className="h-32 w-24 rounded-lg bg-black object-contain" /> :
-    <img key={url} src={url} alt={`Vista previa ${i + 1}`} loading="lazy" 
-      
-      className={
-  tipo === "story_pagina"
-    ? "w-24 aspect-[9/16] rounded-lg border border-slate-200 bg-slate-100 object-contain"
-    : tipo === "post"
-      ? "w-44 aspect-[10/7] rounded-lg border border-slate-200 bg-white object-contain"
-      : "h-32 w-24 rounded-lg border border-slate-200 object-cover"
-    } />
-  )}</div>;
+  return (
+    <div className="flex w-full flex-wrap items-center justify-center gap-2">
+      {visibles.map((url, i) => video ? (
+        <video
+          key={url}
+          src={url}
+          controls
+          controlsList="nodownload noplaybackrate nofullscreen"
+          disablePictureInPicture
+          playsInline
+          preload="metadata"
+          className="video-admin-simple aspect-[9/16] w-[104px] max-w-full rounded-lg bg-black object-contain"
+        />
+      ) : (
+        <img
+          key={url}
+          src={url}
+          alt={`Vista previa ${i + 1}`}
+          loading="lazy"
+          className={
+            tipo === "story_pagina"
+              ? "aspect-[9/16] w-24 max-w-full rounded-lg border border-slate-200 bg-slate-100 object-contain"
+              : tipo === "post"
+                ? "aspect-[10/7] w-44 max-w-full rounded-lg border border-slate-200 bg-white object-contain"
+                : "h-32 w-24 max-w-full rounded-lg border border-slate-200 object-cover"
+          }
+        />
+      ))}
+    </div>
+  );
 }
 
 // Facebook Story pausada: ocultarla de los calendarios sin borrar su implementación.
@@ -595,12 +609,6 @@ export default function AdminRedes() {
 
   const [producto3Id, setProducto3Id] = useState("");
 
-  const [productoPruebaId, setProductoPruebaId] = useState("");
-
-const [textoPrueba, setTextoPrueba] = useState("");
-const [idPruebaReel, setIdPruebaReel] = useState("");
-const [publicandoPrueba, setPublicandoPrueba] = useState(false);
-const [resultadoPrueba, setResultadoPrueba] = useState("");
 
   const [
     cargandoProductos,
@@ -898,41 +906,6 @@ const [mensajeGrupoFacebook, setMensajeGrupoFacebook] = useState("");
   useEffect(() => {
     cargarCalendario();
   }, []);
-
-  const publicarReelAhora = async (item, pieza) => {
-  if (!window.confirm("¿Publicar este Reel ahora en la página de Facebook?")) return;
-
-  try {
-    const respuesta = await fetch(
-      "/api/contenido-redes?accion=publicar-programado",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productoId: item.productoId,
-          fecha: pieza.fecha,
-          hora: pieza.hora,
-          red: pieza.red,
-          tipo: pieza.tipo,
-          indice: pieza.indice,
-          reintentar: pieza.estado === "error",
-        }),
-      }
-    );
-
-    const datos = await leerRespuestaApi(respuesta);
-
-    if (!respuesta.ok || !datos.ok) {
-      throw new Error(datos.error || "No se pudo publicar.");
-    }
-
-    alert("Reel publicado correctamente.");
-    await cargarCalendario();
-  } catch (error) {
-    alert(`Error: ${error.message}`);
-    await cargarCalendario();
-  }
-};
 
   const [reintentandoThreadsId, setReintentandoThreadsId] = useState("");
 
@@ -2554,64 +2527,6 @@ const urlProducto = productoId
   }
 };
 
-  const ejecutarPruebaReelFacebook = async () => {
-    
-    if (publicandoPrueba || !productoPruebaId) {
-      alert("Seleccioná un producto.");
-      return;
-    }
-
-  if (
-    !window.confirm(
-      "¿Publicar este Reel REAL en la página de Facebook? Esta acción no se puede deshacer."
-    )
-  ) {
-    return;
-  }
-
-  const clave =
-    idPruebaReel ||
-    `reel-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-  setIdPruebaReel(clave);
-  setPublicandoPrueba(true);
-  setResultadoPrueba("");
-
-  try {
-    const respuesta = await fetch(
-      "/api/contenido-redes?accion=probar-reel-facebook",
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productoId: productoPruebaId,
-          
-          texto: textoPrueba.trim(),
-          idPrueba: clave,
-          confirmar: "PUBLICAR_REEL_FACEBOOK",
-        }),
-      }
-    );
-
-    const datos = await respuesta.json();
-
-    if (!respuesta.ok) {
-      throw new Error(datos.error || "No se pudo completar la prueba.");
-    }
-
-    setResultadoPrueba(
-      `Publicado correctamente. ID de Facebook: ${datos.publicacionId}`
-    );
-  } catch (error) {
-    setResultadoPrueba(
-      `${error.message}. Revisá Facebook antes de intentar otra prueba.`
-    );
-  } finally {
-    setPublicandoPrueba(false);
-  }
-};
-
   const confirmarCompartidoFacebook = async (item, pieza) => {
   const clave = `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.indice}`;
 
@@ -2699,181 +2614,43 @@ const urlProducto = productoId
 };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-3 pb-10 pt-20">
-      <div className="mx-auto max-w-5xl">
+    <main className="min-h-screen bg-slate-50/70 px-3 pb-12 pt-20 sm:px-5">
+      <style>{`
+        /* Controles nativos: reproducción / pausa, sin menú de tres puntos (WebKit/Chromium). */
+        .video-admin-simple::-webkit-media-controls-overflow-button { display: none !important; }
+        .video-admin-simple::-webkit-media-controls-timeline { display: none !important; }
+        .video-admin-simple::-webkit-media-controls-current-time-display { display: none !important; }
+        .video-admin-simple::-webkit-media-controls-time-remaining-display { display: none !important; }
+        .video-admin-simple::-webkit-media-controls-mute-button { display: none !important; }
+        .video-admin-simple::-webkit-media-controls-volume-slider { display: none !important; }
+        .video-admin-simple::-webkit-media-controls-fullscreen-button { display: none !important; }
+        .video-admin-simple::-webkit-media-controls-toggle-closed-captions-button { display: none !important; }
+      `}</style>
+      <div className="mx-auto max-w-6xl space-y-4">
         {/* ENCABEZADO */}
-
-        <div className="mb-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Administración
+        <header className="mb-1 border-b border-slate-200 pb-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Administración / Marketing
           </p>
-
-          <h1 className="text-xl font-bold text-slate-900">
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
             Contenido y redes
           </h1>
-
-          <p className="mt-1 text-xs text-slate-500">
-            Genera, revisa y edita el
-            contenido antes de aprobarlo.
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            Seleccioná productos, revisá los borradores y organizá las publicaciones semanales.
           </p>
-        </div>
-
-        {/* PRUEBA INDIVIDUAL FACEBOOK REEL */}
-<section className="mb-4 rounded-xl border border-amber-200 bg-white p-3">
-  <h2 className="text-sm font-bold text-slate-900">
-    Prueba de Reel de Facebook
-  </h2>
-
-  <p className="mt-1 text-xs text-amber-700">
-    Publicación real. No afecta el calendario semanal.
-  </p>
-
-  <div className="mt-3 space-y-2">
-    <select
-      value={productoPruebaId}
-      onChange={(e) => setProductoPruebaId(e.target.value)}
-      disabled={Boolean(idPruebaReel)}
-      className="w-full rounded-lg border border-slate-200 p-2 text-xs"
-    >
-      <option value="">Seleccionar producto</option>
-      {productosDigitales.map((producto) => (
-        <option key={producto.id} value={producto.id}>
-          {producto.nombre}
-        </option>
-      ))}
-    </select>
-
-    <textarea
-      value={textoPrueba}
-      onChange={(e) => setTextoPrueba(e.target.value)}
-      disabled={Boolean(idPruebaReel)}
-      placeholder="Descripción del Reel"
-      rows={3}
-      className="w-full rounded-lg border border-slate-200 p-2 text-xs"
-    />
-
-    <button
-      type="button"
-      onClick={ejecutarPruebaReelFacebook}
-      disabled={publicandoPrueba || Boolean(idPruebaReel)}
-      className="w-full rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300"
-    >
-      {publicandoPrueba
-        ? "Publicando..."
-        : "Publicar Reel de prueba"}
-    </button>
-
-    {idPruebaReel && (
-      <p className="text-xs text-slate-600">
-        Identificador de prueba: {idPruebaReel}
-      </p>
-    )}
-
-    {resultadoPrueba && (
-      <p className="text-xs text-slate-700">
-        {resultadoPrueba}
-      </p>
-    )}
-  </div>
-</section>
-
-                {/* GRUPOS DE FACEBOOK */}
-
-        <section className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-          <h2 className="text-sm font-bold text-slate-900">
-            Grupos de Facebook
-          </h2>
-
-          <p className="mt-1 text-xs text-slate-500">
-            Agrega los grupos donde compartirás el contenido.
-          </p>
-
-          <div className="mt-3 space-y-2">
-            <input
-              type="text"
-              value={nombreGrupoFacebook}
-              onChange={(event) =>
-                setNombreGrupoFacebook(event.target.value)
-              }
-              placeholder="Nombre del grupo"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400"
-            />
-
-            <input
-              type="url"
-              value={urlGrupoFacebook}
-              onChange={(event) =>
-                setUrlGrupoFacebook(event.target.value)
-              }
-              placeholder="URL del grupo de Facebook"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400"
-            />
-
-            <button
-              type="button"
-              onClick={guardarGrupoFacebook}
-              disabled={guardandoGrupoFacebook}
-              className="w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300"
-            >
-              {guardandoGrupoFacebook
-                ? "Guardando..."
-                : "Agregar grupo"}
-            </button>
-
-            {mensajeGrupoFacebook && (
-              <p className="text-xs text-slate-600">
-                {mensajeGrupoFacebook}
-              </p>
-            )}
-          </div>
-
-          {destinosCompartir.filter(
-            (destino) =>
-              destino.plataforma === "facebook" &&
-              destino.tipo === "grupo"
-          ).length > 0 && (
-            <div className="mt-3 space-y-2">
-              {destinosCompartir
-                .filter(
-                  (destino) =>
-                    destino.plataforma === "facebook" &&
-                    destino.tipo === "grupo"
-                )
-                .map((destino) => (
-                  <div
-                    key={String(destino._id)}
-                    className="rounded-lg bg-slate-50 px-3 py-2"
-                  >
-                    <p className="text-xs font-bold text-slate-800">
-                      {destino.nombre}
-                    </p>
-
-                    <p className="mt-0.5 truncate text-[10px] text-slate-500">
-                      {destino.url}
-                    </p>
-                  </div>
-                ))}
-            </div>
-          )}
-        </section>
+        </header>
 
         {/* PRODUCTOS */}
 
-        <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
           <div className="flex items-center gap-2">
-            <Sparkles
-              size={18}
-              className="text-violet-600"
-            />
-
-            <h2 className="text-sm font-bold text-slate-900">
-              Productos de la semana
-            </h2>
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-50">
+              <Sparkles size={15} className="text-violet-600" />
+            </div>
+            <h2 className="text-sm font-semibold text-slate-900">Preparar contenido</h2>
           </div>
-
           <p className="mt-2 text-xs text-slate-500">
-            Seleccioná tres productos para preparar su contenido
-            para preparar su contenido.
+            Elegí hasta tres productos para generar los borradores de la semana.
           </p>
 
           {cargandoProductos ? (
@@ -2886,7 +2663,7 @@ const urlProducto = productoId
               Cargando productos...
             </div>
           ) : (
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
               {/* PRODUCTO 1 */}
 
               <div>
@@ -3000,7 +2777,7 @@ const urlProducto = productoId
               generando ||
               cargandoProductos
             }
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-violet-600 px-3 py-2 text-[11px] font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 sm:w-auto"
           >
             {generando ? (
               <>
@@ -3021,10 +2798,93 @@ const urlProducto = productoId
           </button>
         </section>
 
+        {/* CONFIGURACIÓN DE DESTINOS */}
+                {/* GRUPOS DE FACEBOOK */}
+
+        <details className="group rounded-xl border border-slate-200 bg-white">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Grupos de Facebook</h2>
+              <p className="mt-1 text-[11px] text-slate-500">Administrá los destinos para compartir manualmente.</p>
+            </div>
+            <ChevronDown size={16} className="shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="border-t border-slate-100 p-4">
+          <div className="grid gap-2 sm:grid-cols-[1fr_1.3fr_auto] sm:items-start">
+            <input
+              type="text"
+              value={nombreGrupoFacebook}
+              onChange={(event) =>
+                setNombreGrupoFacebook(event.target.value)
+              }
+              placeholder="Nombre del grupo"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400"
+            />
+
+            <input
+              type="url"
+              value={urlGrupoFacebook}
+              onChange={(event) =>
+                setUrlGrupoFacebook(event.target.value)
+              }
+              placeholder="URL del grupo de Facebook"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400"
+            />
+
+            <button
+              type="button"
+              onClick={guardarGrupoFacebook}
+              disabled={guardandoGrupoFacebook}
+              className="w-full rounded-md bg-slate-900 px-3 py-2 text-[11px] font-medium text-white transition hover:bg-slate-700 disabled:bg-slate-300 sm:w-auto"
+            >
+              {guardandoGrupoFacebook
+                ? "Guardando..."
+                : "Agregar grupo"}
+            </button>
+
+            {mensajeGrupoFacebook && (
+              <p className="text-xs text-slate-600">
+                {mensajeGrupoFacebook}
+              </p>
+            )}
+          </div>
+
+          {destinosCompartir.filter(
+            (destino) =>
+              destino.plataforma === "facebook" &&
+              destino.tipo === "grupo"
+          ).length > 0 && (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {destinosCompartir
+                .filter(
+                  (destino) =>
+                    destino.plataforma === "facebook" &&
+                    destino.tipo === "grupo"
+                )
+                .map((destino) => (
+                  <div
+                    key={String(destino._id)}
+                    className="min-w-0 rounded-md border border-slate-100 bg-slate-50 px-3 py-2"
+                  >
+                    <p className="text-xs font-bold text-slate-800">
+                      {destino.nombre}
+                    </p>
+
+                    <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                      {destino.url}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          )}
+          </div>
+        </details>
+
+
         {/* CONTENIDOS */}
 
         {cargandoBorradores && (
-          <div className="mt-6 flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-5 text-xs text-slate-500 shadow-sm">
+          <div className="mt-6 flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-5 text-xs text-slate-500 shadow-none">
             <Loader2
               size={16}
               className="animate-spin"
@@ -3036,7 +2896,14 @@ const urlProducto = productoId
 
         {!cargandoBorradores &&
           contenidos.length > 0 && (
-          <div className="mt-3 space-y-3">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Borradores para revisar</h2>
+                <p className="text-[11px] text-slate-500">Editá cada pieza antes de guardar o aprobar el contenido.</p>
+              </div>
+              <span className="rounded-md bg-white px-2 py-1 text-[10px] font-medium text-slate-500">{contenidos.length} productos</span>
+            </div>
             {contenidos.map(
               (
                 item,
@@ -3048,13 +2915,13 @@ const urlProducto = productoId
                 return (
                   <section
                     key={item.productoId}
-                    className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                    className="overflow-hidden rounded-xl border border-slate-200 bg-white"
                   >
                     {/* CABECERA PRODUCTO */}
 
-                    <div className="border-b border-slate-200 p-3.5">
+                    <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-violet-50">
                           <Pencil
                             size={17}
                             className="text-violet-600"
@@ -3080,9 +2947,9 @@ const urlProducto = productoId
                             </span>
                           </div>
 
-                          <h2 className="mt-0.5 text-base font-bold text-slate-900">
+                          <h3 className="mt-0.5 text-base font-semibold text-slate-900">
                             {item.nombre}
-                          </h2>
+                          </h3>
 
                           <p className="mt-1 text-xs text-slate-500">
                             Revisa y modifica
@@ -3094,62 +2961,90 @@ const urlProducto = productoId
                       </div>
 
                       {/* RESUMEN DEL CALENDARIO VIGENTE */}
-                      <div className="mt-3 rounded-lg bg-slate-50 p-3">
-                        <p className="text-sm font-bold text-slate-900">
-                          {contenido.calendario?.length || 0} piezas por producto
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-slate-50 px-3 py-2">
+                        <p className="text-[11px] font-semibold text-slate-800">
+                          {contenido.calendario?.length || 0} publicaciones
                         </p>
-                        <p className="text-xs text-slate-500">
-                          
-                          Instagram 2 · Threads 3 · Fan Page 2 · Grupos Facebook 2 · WhatsApp 1
+                        <p className="text-[10px] text-slate-500">
+                          Instagram · Threads · Facebook · WhatsApp
                         </p>
                       </div>
                     </div>
 
                     {/* PUBLICACIONES DEL CALENDARIO NUEVO */}
-                    <div className="space-y-3 p-3">
+                    <div className="space-y-3 bg-slate-50/40 p-3 sm:p-4">
                       {(contenido.calendario || []).map((pieza) => (
-                        <div key={pieza.id} className="rounded-xl border border-slate-200 p-3 space-y-2">
-                          <p className="text-xs font-bold uppercase text-slate-700">
-                            {pieza.dia === "dia1" ? "Día 1" : "Día 2"} · {pieza.hora} · {pieza.red} · {pieza.variante || pieza.tipo}
-                          </p>
-                          <textarea
-                            className="w-full rounded-lg border border-slate-200 p-2 text-sm"
-                            rows={5}
-                            value={pieza.textoCompleto || ""}
-                            onChange={(event) => {
-                              const textoCompleto = event.target.value;
-                              actualizarContenido(indiceProducto, (actual) => ({
-                                ...actual,
-                                calendario: actual.calendario.map((p) =>
-                                  p.id === pieza.id ? { ...p, textoCompleto } : p
-                                ),
-                              }));
-                            }}
-                          />
-                          <div className="flex flex-wrap gap-2">
-                            <button type="button" className="rounded-lg bg-slate-900 px-3 py-2 text-xs text-white"
-                              onClick={() => navigator.clipboard.writeText(pieza.textoCompleto || "")}
-                            >Copiar texto completo</button>
-                            <VistaPreviaRedes
-                              recursos={[
-                                pieza.videoUrl,
-                                pieza.video,
-                                pieza.recurso,
-                                pieza.imagenes,
-                                pieza.imagenesFeed,
-                                pieza.imagen,
-                              ]}
-                              tipo={pieza.variante || pieza.tipo}
-                              urlProducto={pieza.urlProducto || ""}
-                            />
-                            {pieza.vistaPreviaEnlace && pieza.urlProducto && (
-                              <a href={pieza.urlProducto} target="_blank" rel="noreferrer"
-                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
-                              >Abrir enlace del producto</a>
-                            )}
+                        <div key={pieza.id} className="rounded-lg border border-slate-200 bg-white p-3 sm:p-4">
+                          <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-700">
+                              {pieza.dia === "dia1" ? "Día 1" : "Día 2"} · {pieza.hora}
+                            </span>
+                            <span className="text-[11px] font-medium capitalize text-slate-700">{pieza.red}</span>
+                            <span className="text-[10px] text-slate-400">{pieza.variante || pieza.tipo}</span>
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_184px] md:items-stretch">
+                            <div className="flex min-w-0 flex-col">
+                              <label className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                                Texto de la publicación
+                              </label>
+                              <textarea
+                                className="min-h-[160px] w-full flex-1 resize-y rounded-md border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                                rows={6}
+                                value={pieza.textoCompleto || ""}
+                                onChange={(event) => {
+                                  const textoCompleto = event.target.value;
+                                  actualizarContenido(indiceProducto, (actual) => ({
+                                    ...actual,
+                                    calendario: actual.calendario.map((p) =>
+                                      p.id === pieza.id ? { ...p, textoCompleto } : p
+                                    ),
+                                  }));
+                                }}
+                              />
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-medium text-slate-700 transition hover:bg-slate-50"
+                                  onClick={() => navigator.clipboard.writeText(pieza.textoCompleto || "")}
+                                >
+                                  Copiar texto
+                                </button>
+                                {pieza.vistaPreviaEnlace && pieza.urlProducto && (
+                                  <a
+                                    href={pieza.urlProducto}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex rounded-md px-2 py-1.5 text-[10px] font-medium text-violet-700 hover:bg-violet-50"
+                                  >
+                                    Abrir producto
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex min-h-[170px] flex-col items-center justify-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-3">
+                              <p className="self-start text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                                Vista previa
+                              </p>
+                              <div className="flex w-full flex-1 items-center justify-center">
+                                <VistaPreviaRedes
+                                  recursos={[
+                                    pieza.videoUrl,
+                                    pieza.video,
+                                    pieza.recurso,
+                                    pieza.imagenes,
+                                    pieza.imagenesFeed,
+                                    pieza.imagen,
+                                  ]}
+                                  tipo={pieza.variante || pieza.tipo}
+                                  urlProducto={pieza.urlProducto || ""}
+                                />
+                              </div>
+                            </div>
                           </div>
                           {!pieza.publicacionAutomatica && (
-                            <p className="text-xs text-amber-700">Publicación semiautomática: adjuntá el recurso al compartir. Copiar el texto no adjunta imágenes.</p>
+                            <p className="mt-3 text-[10px] leading-relaxed text-amber-700">
+                              Publicación semiautomática: adjuntá el recurso manualmente al compartir. Copiar el texto no adjunta imágenes.
+                            </p>
                           )}
                         </div>
                       ))}
@@ -3157,11 +3052,11 @@ const urlProducto = productoId
 
 {/* GUARDAR BORRADOR */}
 
-<div className="rounded-xl border border-violet-200 bg-violet-50 p-2.5">
+<div className="border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
   <div className="flex items-start gap-3">
     <Save
-      size={17}
-      className="mt-0.5 shrink-0 text-violet-600"
+      size={16}
+      className="mt-0.5 shrink-0 text-slate-500"
     />
 
     <div className="min-w-0 flex-1">
@@ -3169,15 +3064,13 @@ const urlProducto = productoId
         Guardar revisión
       </p>
 
-      <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-        Guarda este contenido como
-        borrador. Todavía no se
-        publicará ni entrará al
-        calendario.
+      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+        Guardá los cambios o aprobá el borrador para incluirlo en la programación.
       </p>
     </div>
   </div>
 
+  <div className="mt-3 flex flex-wrap gap-2">
   <button
     type="button"
     onClick={() =>
@@ -3187,7 +3080,7 @@ const urlProducto = productoId
       guardandoId ===
       item.productoId
     }
-    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
+    className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-violet-600 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300 sm:w-auto"
   >
     {guardandoId ===
     item.productoId ? (
@@ -3219,7 +3112,7 @@ const urlProducto = productoId
     guardandoId ===
       item.productoId
   }
-  className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+  className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto"
 >
   {aprobandoId ===
   item.productoId ? (
@@ -3239,6 +3132,7 @@ const urlProducto = productoId
     </>
   )}
 </button>
+  </div>
 
   {mensajesGuardado[
     item.productoId
@@ -3277,11 +3171,11 @@ const urlProducto = productoId
 
         {/* CALENDARIO */}
 
-        <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
           <div className="flex items-center gap-2">
             <CalendarDays size={17} className="text-violet-600" />
             <div>
-              <h2 className="text-sm font-bold text-slate-900">Calendario</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Calendario semanal</h2>
               <p className="text-[10px] text-slate-500">
                 Semana programada · Hora Argentina
               </p>
@@ -3313,7 +3207,7 @@ const urlProducto = productoId
                       type="button"
                       onClick={() => programarAprobado(item)}
                       disabled={programandoId === item.productoId}
-                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-violet-600 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300 sm:w-auto"
                     >
                       {programandoId === item.productoId ? (
                         <>
@@ -3359,31 +3253,7 @@ const urlProducto = productoId
                         {calendario.length} piezas
                       </span>
                     </div>
-
-                    <button
-  type="button"
-  disabled={true}
-  title="Regeneración deshabilitada para proteger las publicaciones existentes"
-  className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[10px] font-bold text-white disabled:bg-violet-300"
->
-  {regenerandoId ===
-  item.productoId ? (
-    <>
-      <Loader2
-        size={14}
-        className="animate-spin"
-      />
-
-      Regenerando...
-    </>
-  ) : (
-    <>
-      <RefreshCw size={14} />
-
-      Regeneración temporalmente deshabilitada
-    </>
-  )}
-</button>
+                    <p className="mb-2 text-[10px] text-slate-400">Regeneración no disponible por el momento.</p>
 
                     <div className="grid gap-2 md:grid-cols-3">
                       {[...new Set(calendario.map((pieza) => pieza.fecha))]
@@ -3486,7 +3356,7 @@ const urlProducto = productoId
                                         alert("No se pudo copiar el texto.");
                                       }
                                     }}
-                                    className="mt-1.5 w-full rounded-md border border-violet-200 px-2 py-1.5 text-[10px] font-semibold text-violet-700"
+                                    className="mt-1.5 inline-flex w-full justify-center rounded-md border border-violet-200 px-2.5 py-1.5 text-[10px] font-medium sm:w-auto text-violet-700"
                                   >
                                     {pieza.red === "whatsapp"
                                       ? "Compartir en WhatsApp"
@@ -3495,30 +3365,6 @@ const urlProducto = productoId
 
                                   )}
 
-                                  {pieza.red === "facebook" &&
-  pieza.tipo === "reel_pagina" &&
-  (
-    pieza.estado === "programado" ||
-    (
-      pieza.estado === "error" &&
-      Number(pieza.intentosPublicacion) === 1 &&
-      !pieza.publicacionId &&
-      !pieza.publicadoEn &&
-      !pieza.procesandoDesde &&
-      String(pieza.ultimoError || "").includes(
-        "Faltan FACEBOOK_PAGE_ID o FACEBOOK_PAGE_ACCESS_TOKEN"
-      )
-    )
-  ) &&
-  pieza.publicacionAutomatica !== false && (
-    <button
-      type="button"
-      onClick={() => publicarReelAhora(item, pieza)}
-      className="mt-2 w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white"
-    >
-      Publicar Reel ahora
-    </button>
-  )}
                                   {pieza.red === "threads" &&
                                     pieza.estado === "error" &&
                                     Number(pieza.intentosPublicacion) === 2 &&
@@ -3532,7 +3378,7 @@ const urlProducto = productoId
                                         type="button"
                                         disabled={Boolean(reintentandoThreadsId)}
                                         onClick={() => reintentarThreads(item, pieza)}
-                                        className="mt-2 w-full rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                                        className="mt-2 inline-flex w-full justify-center rounded-md bg-red-600 px-2.5 py-1.5 text-[10px] font-medium sm:w-auto text-white disabled:opacity-50"
                                       >
                                         {reintentandoThreadsId ===
                                         `${item.productoId}|${pieza.fecha}|${pieza.hora}|${pieza.indice}`
@@ -3554,11 +3400,21 @@ const urlProducto = productoId
                                     urlProducto={pieza.publicacion?.urlProducto || ""}
                                   />
 
+                                  {pieza.red === "facebook" && pieza.tipo === "grupos_video" &&
+                                    (pieza.publicacion?.videoUrl || pieza.publicacion?.video) && (
+                                      <a
+                                        href={pieza.publicacion.videoUrl || pieza.publicacion.video}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="mt-1 inline-flex text-[10px] font-medium text-violet-700 underline"
+                                      >
+                                        Abrir MP4
+                                      </a>
+                                    )}
                                   {pieza.red === "facebook" && pieza.tipo === "grupos_video" && (
                                     <p className="text-[10px] text-slate-600">
-                                      Guardá el MP4 desde los controles del video y adjuntalo manualmente
-                                      al publicar en el grupo. El botón Compartir copia el texto y abre el grupo;
-                                      Facebook no adjunta el archivo automáticamente.
+                                      Abrí el MP4 en una pestaña para guardarlo y adjuntalo manualmente al publicar.
+                                      Compartir copia el texto y abre el grupo; Facebook no adjunta el archivo automáticamente.
                                     </p>
                                   )}
 
@@ -3636,7 +3492,7 @@ const urlProducto = productoId
                                           onClick={() =>
   compartirEnGrupoFacebook(pieza, destino, item)
 }
-                                          className="mt-2 w-full rounded-md bg-red-600 px-2 py-1.5 text-[10px] font-bold text-white transition hover:bg-red-700"
+                                          className="mt-2 inline-flex w-full justify-center rounded-md bg-red-600 px-2.5 py-1.5 text-[10px] font-medium sm:w-auto text-white transition hover:bg-red-700"
                                         >
                                           Compartir en {destino.nombre}
                                         </button>
@@ -3652,7 +3508,7 @@ const urlProducto = productoId
       onClick={() =>
         descargarImagenesFacebook(pieza)
       }
-      className="mt-1.5 w-full rounded-md border border-violet-200 bg-violet-50 px-2 py-1.5 text-[10px] font-bold text-violet-700"
+      className="mt-1.5 inline-flex w-full justify-center rounded-md border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[10px] font-medium sm:w-auto text-violet-700"
     >
       Descargar imágenes
     </button>
@@ -3672,7 +3528,7 @@ const urlProducto = productoId
     `${item.productoId}-${pieza.fecha}-${pieza.hora}-${pieza.indice}`
     }
     
-    className={`mt-2 w-full rounded-md px-2 py-1.5 text-[10px] font-bold text-white transition ${
+    className={`mt-2 inline-flex w-full justify-center rounded-md px-2.5 py-1.5 text-[10px] font-medium sm:w-auto text-white transition ${
       pieza.compartidoManualFacebook?.estado ===
       "compartido"
         ? "bg-green-600 hover:bg-green-700"
@@ -3699,7 +3555,7 @@ const urlProducto = productoId
     onClick={() =>
       compartirEnWhatsapp(pieza, item)
     }
-    className="mt-2 w-full rounded-md bg-green-600 px-2 py-1.5 text-[10px] font-bold text-white transition hover:bg-green-700"
+    className="mt-2 inline-flex w-full justify-center rounded-md bg-green-600 px-2.5 py-1.5 text-[10px] font-medium sm:w-auto text-white transition hover:bg-green-700"
   >
     Compartir en WhatsApp
   </button>
@@ -3729,12 +3585,12 @@ const urlProducto = productoId
         {/* AVISO ETAPA ACTUAL */}
 
         {contenidos.length > 0 && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
-            <p className="text-xs font-semibold text-amber-900">
-              Etapa de revisión
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-xs font-semibold text-slate-800">
+              Acerca de los borradores
             </p>
 
-            <p className="mt-1 text-[11px] leading-relaxed text-amber-700">
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
               Los borradores guardados se
               recuperan automáticamente desde
               MongoDB cuando vuelves a esta
