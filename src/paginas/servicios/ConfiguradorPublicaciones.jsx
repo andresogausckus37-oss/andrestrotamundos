@@ -6,9 +6,9 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   CircleCheck,
   CloudUpload,
-  CreditCard,
   Download,
   FileImage,
   Film,
@@ -21,7 +21,6 @@ import {
   ShieldCheck,
   ThumbsUp,
   Trash2,
-  Wallet,
 } from "lucide-react";
 
 const LOGOS = {
@@ -198,9 +197,9 @@ const CONFIGURACION_INICIAL = [
   ["reel", "Domingo", "18:00"],
 ];
 const RESOLUCIONES = { "9:16": "1080 × 1920", "4:5": "1080 × 1350", "1:1": "1080 × 1080" };
-const INPUT = "w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
+const INPUT = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
 const BOTON_ACTIVO = "border-orange-500 bg-orange-50 text-orange-800";
-const TARJETA = "rounded-md border border-slate-200 bg-white p-5 shadow-sm sm:p-7";
+const TARJETA = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6";
 const BOTON_NORMAL = "border-slate-200 bg-white text-slate-700 hover:border-slate-400";
 
 function clases(...clasesLista) {
@@ -255,20 +254,6 @@ function Campo({ titulo, ayuda, children }) {
       {children}
       {ayuda && <span className="mt-1.5 block text-xs leading-5 text-slate-500">{ayuda}</span>}
     </label>
-  );
-}
-
-function TituloSeccion({ numero, titulo, descripcion }) {
-  return (
-    <div className="mb-6 flex items-start gap-3.5 border-b border-slate-100 pb-5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-orange-50 text-sm font-medium text-orange-700">
-        {numero}
-      </span>
-      <div className="min-w-0 pt-0.5">
-        <h2 className="text-lg font-medium leading-7 text-slate-900">{titulo}</h2>
-        {descripcion && <p className="mt-1 text-sm leading-6 text-slate-500">{descripcion}</p>}
-      </div>
-    </div>
   );
 }
 
@@ -537,8 +522,34 @@ function verificarFormularioPedido({ negocio, contenidos }) {
   return "";
 }
 
+const PASOS = [
+  { nombre: "Redes y horario", corto: "Redes" },
+  { nombre: "Contenidos y vista previa", corto: "Contenidos" },
+  { nombre: "Datos del negocio", corto: "Negocio" },
+  { nombre: "Confirmación", corto: "Confirmar" },
+];
+
+function BloqueDesplegable({ titulo, descripcion, abierto, alAlternar, children }) {
+  return (
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <button type="button" aria-expanded={abierto} onClick={alAlternar}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-slate-50 sm:px-5">
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-slate-900">{titulo}</span>
+          {descripcion && <span className="mt-0.5 block text-xs leading-5 text-slate-500">{descripcion}</span>}
+        </span>
+        <ChevronDown size={18} aria-hidden="true" className={clases("shrink-0 text-slate-500 transition-transform", abierto && "rotate-180")} />
+      </button>
+      {abierto && <div className="border-t border-slate-100 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">{children}</div>}
+    </section>
+  );
+}
+
 export default function ConfiguradorPublicaciones() {
   const [redes, setRedes] = useState(["instagram", "facebook"]);
+  const [pasoActivo, setPasoActivo] = useState(0);
+  const [desplegables, setDesplegables] = useState({ contenidos: true, textos: false, vista: true });
+  const [errorPaso, setErrorPaso] = useState("");
   const [contenidos, setContenidos] = useState(crearContenidos);
   const [seleccion, setSeleccion] = useState("contenido-1");
   const [imagenActiva, setImagenActiva] = useState(0);
@@ -652,6 +663,10 @@ export default function ConfiguradorPublicaciones() {
     return () => controlador.abort();
   }, []);
 
+  useEffect(() => {
+    if (pedidoCreado?.id) setPasoActivo(3);
+  }, [pedidoCreado?.id]);
+
   const idiomaArgentino = zonaHoraria.startsWith("America/Argentina/");
   const t = (argentino, neutro) => idiomaArgentino ? argentino : neutro;
   const contenido = contenidos.find((p) => p.id === seleccion) || contenidos[0];
@@ -675,6 +690,17 @@ export default function ConfiguradorPublicaciones() {
   const archivoActivo = archivosVista[imagenActiva] || archivosVista[0];
   const contenidosConArchivos = contenidos.filter((p) => p.archivos.length).length;
   const contenidosConIdea = contenidos.filter((p) => p.descripcion.trim()).length;
+
+  function irAlPaso(numero) {
+    if (numero < 0 || numero > 3) return;
+    if (numero > pasoActivo && pasoActivo === 2 && !pedidoCreado) {
+      const fallo = verificarFormularioPedido({ negocio, contenidos });
+      if (fallo) { setErrorPaso(fallo); return; }
+    }
+    setErrorPaso("");
+    setPasoActivo(numero);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function actualizarContenido(id, cambios) {
     setContenidos((anteriores) => anteriores.map((p) => p.id === id ? { ...p, ...cambios } : p));
@@ -848,6 +874,7 @@ export default function ConfiguradorPublicaciones() {
     if (!window.confirm("¿Querés comenzar otro pedido? Antes guardá el acceso privado del pedido actual.")) return;
     try { sessionStorage.removeItem(PEDIDO_PENDIENTE_STORAGE); } catch { /* Sesión no disponible */ }
     setPedidoCreado(null);
+    setPasoActivo(0);
     setAvisoAcceso("");
     setCodigoRecuperacion("");
     setClaveRecuperacion("");
@@ -878,83 +905,98 @@ export default function ConfiguradorPublicaciones() {
   const nombreVista = negocio.nombre.trim() || "Tu emprendimiento";
   const usuarioVista = nombreVista.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "tu_emprendimiento";
 
+  const leyendaVista = (
+    <div className="px-3 py-3">
+      <p className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
+        {textoVista || t("Acá vas a ver el texto de tu publicación.", "Aquí verás el texto de tu publicación.")}
+      </p>
+      {ctaVista.trim() && <p className="mt-1.5 text-sm font-medium text-slate-800">{ctaVista}</p>}
+      {urlVistaFacebook && <p className="mt-1 break-all text-xs text-orange-700 underline underline-offset-2">{urlVistaFacebook}</p>}
+      {contenido.hashtags.trim() && <p className="mt-1.5 break-words text-sm text-orange-700">{contenido.hashtags}</p>}
+    </div>
+  );
+
   return (
-    <main className="min-h-screen bg-slate-100 px-4 pb-20 pt-7 font-normal text-slate-900 sm:px-6 sm:pt-10">
-      <div className="mx-auto max-w-7xl">
-        <header className={clases(TARJETA, "mb-8 sm:mb-10")}>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-md bg-orange-50 px-2.5 py-1.5 text-xs font-medium text-orange-700">
-            <CalendarDays size={14} /> Plan semanal de 7 días
+    <main className="min-h-screen bg-slate-50 px-3 pb-20 pt-5 text-slate-900 sm:px-6 sm:pt-8">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-medium uppercase tracking-[0.12em] text-orange-700">Comunidad Semanal · Configurador</span>
+            <span className="text-xs font-medium text-slate-500">Paso {pasoActivo + 1} de {PASOS.length}</span>
           </div>
-          <h1 className="text-2xl font-medium tracking-tight text-slate-900 sm:text-[28px]">{t("Configurá tus publicaciones", "Configura tus publicaciones")}</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            {t(
-              "Elegí las redes, prepará tus ideas y definí los días y horarios. Podés revisar las publicaciones antes de contratar. Nosotros nos encargamos de preparar el contenido final y gestionar la programación.",
-              "Elige las redes, prepara tus ideas y define los días y horarios. Puedes revisar las publicaciones antes de contratar. Nosotros nos encargamos de preparar el contenido final y gestionar la programación."
-            )}
-          </p>
+          <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{PASOS[pasoActivo].nombre}</h1>
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="Progreso de configuración" aria-valuemin={1} aria-valuemax={4} aria-valuenow={pasoActivo + 1}>
+            <div className="h-full rounded-full bg-orange-600 transition-all duration-300" style={{ width: `${(pasoActivo + 1) * 25}%` }} />
+          </div>
+          <nav className="mt-3 grid grid-cols-4 gap-1.5 sm:gap-3" aria-label="Pasos del configurador">
+            {PASOS.map((paso, i) => (
+              <button type="button" key={paso.nombre} aria-current={pasoActivo === i ? "step" : undefined}
+                onClick={() => irAlPaso(i)} className={clases("flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 py-2 text-[11px] font-medium transition sm:justify-start sm:px-3 sm:text-xs",
+                  pasoActivo === i ? "border-orange-300 bg-orange-50 text-orange-800" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50")}>
+                <span className={clases("flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", pasoActivo === i ? "bg-orange-600 text-white" : i < pasoActivo ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500")}>
+                  {i < pasoActivo ? <Check size={12} /> : i + 1}
+                </span>
+                <span className="truncate sm:hidden">{paso.corto}</span>
+                <span className="hidden truncate sm:inline">{paso.nombre}</span>
+              </button>
+            ))}
+          </nav>
         </header>
 
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_350px] lg:gap-9">
-          <div className="min-w-0 space-y-8 sm:space-y-10">
-            <section className={TARJETA} aria-labelledby="config-plan">
-              <div id="config-plan"><TituloSeccion numero="01" titulo="Plan y redes" descripcion="Cuatro contenidos originales en un período flexible de siete días consecutivos." /></div>
-              <div className="mb-7 grid grid-cols-3 gap-3 rounded-md border border-slate-200 bg-white px-3 py-4 sm:px-4 sm:py-5">
-                {[[PLAN.contenidos, "Contenidos"], [PLAN.duracionDias, "Días"], [totalPublicaciones, "Publicaciones"]].map(([numero, descripcion]) => (
-                  <div key={descripcion} className="text-center">
-                    <p className="text-lg font-medium leading-6 text-slate-900">{numero}</p>
-                    <p className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">{descripcion}</p>
-                  </div>
-                ))}
-              </div>
+        {pasoActivo === 0 && (
+          <section className={TARJETA} aria-labelledby="paso-redes">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="paso-redes" className="text-base font-semibold">Elegí las redes</h2>
+              {!pedidoCreado && (
+                <button type="button" onClick={() => { setMostrarRecuperacion(true); setPasoActivo(3); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  className="text-xs font-medium text-orange-700 underline underline-offset-2">Ya tengo un pedido</button>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-slate-500">Seleccioná una o ambas cuentas para tus publicaciones.</p>
+            <div className="mt-4 grid grid-cols-3 gap-2 sm:max-w-xl">
+              {REDES.map((red) => {
+                const activa = redes.includes(red.id);
+                return (
+                  <button key={red.id} type="button" disabled={!red.disponible} aria-pressed={red.disponible ? activa : undefined}
+                    onClick={() => alternarRed(red.id)}
+                    className={clases("relative flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium transition",
+                      !red.disponible ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : activa ? BOTON_ACTIVO : BOTON_NORMAL)}>
+                    {activa && <Check size={13} className="absolute right-2 top-2 text-orange-700" />}
+                    <LogoRed red={red.id} size={23} className={!red.disponible ? "opacity-40" : ""} />
+                    <span>{red.nombre}</span>
+                    {!red.disponible && <span className="text-[10px] text-slate-500">Pronto</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-5 max-w-xl border-t border-slate-100 pt-5">
+              <Campo titulo="Zona horaria de las publicaciones" ayuda="El calendario respetará la hora local que selecciones.">
+                <select id="zona-horaria" aria-label="Zona horaria de las publicaciones" className={INPUT} value={zonaHoraria} onChange={(e) => setZonaHoraria(e.target.value)}>
+                  {ZONAS_DISPONIBLES.flatMap(({ pais, zonas }) =>
+                    [...zonas].sort((a, b) => a[1].localeCompare(b[1], "es", { sensitivity: "base" })).map(([id, ciudad]) => (
+                      <option key={id} value={id}>{pais} · {ciudad}</option>
+                    ))
+                  )}
+                </select>
+              </Campo>
+            </div>
+            <div className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <CalendarDays size={15} className="text-orange-700" />
+              <span>{redes.length} {redes.length === 1 ? "red seleccionada" : "redes seleccionadas"} · {totalPublicaciones} publicaciones previstas</span>
+            </div>
+          </section>
+        )}
 
-              <h3 className="mb-3 text-base font-medium">{t("Elegí dónde querés publicar", "Elige dónde quieres publicar")}</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {REDES.map((red) => {
-                  const activa = redes.includes(red.id);
-                  return (
-                    <button
-                      key={red.id}
-                      type="button"
-                      disabled={!red.disponible}
-                      aria-pressed={red.disponible ? activa : undefined}
-                      onClick={() => alternarRed(red.id)}
-                      className={clases(
-                        "relative flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-md border px-2 py-2.5 text-xs font-medium transition",
-                        !red.disponible ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : activa ? BOTON_ACTIVO : BOTON_NORMAL
-                      )}
-                    >
-                      {activa && <Check size={13} className="absolute right-2 top-2 text-orange-700" aria-hidden="true" />}
-                      <LogoRed red={red.id} size={24} className={!red.disponible ? "opacity-50" : ""} />
-                      <span>{red.nombre}</span>
-                      {!red.disponible && <span className="text-[10px] font-normal text-slate-500">Pronto</span>}
-                    </button>
-                  );
-                })}
+        {pasoActivo === 1 && (
+          <section aria-labelledby="paso-contenidos" className="space-y-4">
+            <div className={TARJETA}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 id="paso-contenidos" className="text-base font-semibold">Elegí el contenido que querés editar</h2>
+                  <p className="mt-1 text-xs text-slate-500">Cada contenido conserva sus propios archivos, textos y horarios.</p>
+                </div>
+                <span className="text-xs text-slate-500">{contenidosConArchivos} de 4 con archivos</span>
               </div>
-              <p className="mt-2 text-xs leading-5 text-slate-500">Una red incluye 4 publicaciones; las dos redes, 8. Cada contenido se prepara para las redes que elijas.</p>
-
-              <div className="mt-8 border-t border-slate-100 pt-6">
-                <Campo titulo="Zona horaria de tus publicaciones" ayuda="Cada publicación respeta la hora local de la zona elegida, sin usar automáticamente la hora de Argentina.">
-                  <select id="zona-horaria" aria-label="Zona horaria de tus publicaciones" className={INPUT} value={zonaHoraria} onChange={(e) => setZonaHoraria(e.target.value)}>
-                    {ZONAS_DISPONIBLES.flatMap(({ pais, zonas }) =>
-                      [...zonas].sort((a, b) => a[1].localeCompare(b[1], "es", { sensitivity: "base" })).map(([id, ciudad]) => (
-                        <option key={id} value={id}>{pais} · {ciudad}</option>
-                      ))
-                    )}
-                  </select>
-                </Campo>
-              </div>
-              <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-600">
-                <CalendarDays size={15} className="mt-0.5 shrink-0 text-orange-700" />
-                {t(
-                  "Podés preparar el pedido gratuito sin pagar. Los siete días comenzarán cuando habilitemos la activación, se vinculen las cuentas y se aprueben los contenidos. No hay publicaciones automáticas durante esta etapa de pruebas.",
-                  "Puedes preparar el pedido gratuito sin pagar. Los siete días comenzarán cuando habilitemos la activación, se vinculen las cuentas y se aprueben los contenidos. No hay publicaciones automáticas durante esta etapa de pruebas."
-                )}
-              </p>
-            </section>
-
-            <section className={TARJETA} aria-labelledby="config-contenidos">
-              <div id="config-contenidos"><TituloSeccion numero="02" titulo="Tus cuatro contenidos" descripcion={t("Personalizá cada contenido. Podés cambiar el formato, el día y la hora.", "Personaliza cada contenido. Puedes cambiar el formato, el día y la hora.")} /></div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="group" aria-label="Seleccionar contenido">
                 {contenidos.map((p, i) => {
                   const Icono = TIPOS.find((t) => t.id === p.tipo)?.icono || FileImage;
@@ -971,16 +1013,20 @@ export default function ConfiguradorPublicaciones() {
                   );
                 })}
               </div>
-
-              <div className="mt-7 flex items-center justify-between gap-3 border-t border-slate-100 pt-6">
+            </div>
+            <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(0,0.94fr)]">
+              <div className="min-w-0 space-y-4">
+                <BloqueDesplegable titulo="Contenidos" descripcion="Formato, archivos, día y hora" abierto={desplegables.contenidos}
+                  alAlternar={() => setDesplegables((a) => ({ ...a, contenidos: !a.contenidos }))}>
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-medium">Contenido {indice + 1}</h3>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"}</span>
-                  <button type="button" onClick={() => vistaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  <button type="button" onClick={() => { setDesplegables((a) => ({ ...a, vista: true })); requestAnimationFrame(() => vistaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })); }}
                     className="text-xs font-medium text-orange-700 underline underline-offset-2 lg:hidden">Ver vista previa</button>
                 </div>
               </div>
-              <div className="mt-4 grid gap-5 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Campo titulo="Tipo de publicación">
                   <select aria-label={`Tipo de publicación del contenido ${indice + 1}`} className={INPUT} value={contenido.tipo} onChange={(e) => cambiarTipo(contenido.id, e.target.value)}>
                     {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
@@ -1008,11 +1054,11 @@ export default function ConfiguradorPublicaciones() {
                 <p className="mt-2 text-xs text-amber-700" role="status">Otro contenido tiene el mismo día y horario. {t("Podés mantenerlos o elegir horas diferentes.", "Puedes mantenerlos o elegir horas diferentes.")}</p>
               )}
 
-              <div className="mt-7 border-t border-slate-100 pt-6">
+              <div className="mt-5 border-t border-slate-100 pt-4">
                 <label className="mb-2 block text-sm font-medium">
                   {contenido.tipo === "reel" ? "Video del reel" : contenido.tipo === "carrusel" ? "Imágenes del carrusel (2 a 10)" : "Imagen de la publicación"}
                 </label>
-                <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-md border border-dashed border-slate-300 bg-white px-4 py-4 text-center transition hover:border-orange-500">
+                <label className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-center transition hover:border-orange-500 hover:bg-orange-50/40">
                   <CloudUpload size={21} className="text-orange-700" />
                   <span className="text-sm font-medium text-slate-800">
                     {contenido.archivos.length === 0 ? "Seleccionar archivos para la vista previa" : contenido.tipo === "carrusel" && contenido.archivos.length < 10 ? "Agregar imágenes" : "Reemplazar archivos"}
@@ -1036,12 +1082,14 @@ export default function ConfiguradorPublicaciones() {
                 )}
                 {contenido.tipo === "carrusel" && <p className="mt-2 text-xs text-slate-500">{contenido.archivos.length}/10 imágenes seleccionadas. {t("Podés verlas una por una en la vista previa.", "Puedes verlas una por una en la vista previa.")}</p>}
               </div>
-
-              <div className="mt-7 space-y-5 border-t border-slate-100 pt-6">
+                </BloqueDesplegable>
+                <BloqueDesplegable titulo="Texto y detalles de la publicación" descripcion="Mensaje, llamadas a la acción, enlaces y hashtags" abierto={desplegables.textos}
+                  alAlternar={() => setDesplegables((a) => ({ ...a, textos: !a.textos }))}>
+                  <div className="space-y-4">
                 <Campo titulo={t("¿Qué querés comunicar?", "¿Qué quieres comunicar?")} ayuda={t("Contanos tu idea. Nosotros preparamos el texto final y lo enviamos para tu aprobación.", "Cuéntanos tu idea. Nosotros preparamos el texto final y lo enviamos para tu aprobación.")}>
                   <textarea className={INPUT} rows={3} maxLength={1500} value={contenido.descripcion} onChange={(e) => actualizarContenido(contenido.id, { descripcion: e.target.value })} placeholder="Ej.: Queremos contar cómo elaboramos nuestros productos..." />
                 </Campo>
-                <div className="grid gap-5 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2">
                   {redes.includes("instagram") && (
                     <div>
                       <Campo titulo={<span className="inline-flex items-center gap-2"><LogoRed red="instagram" size={19} /> CTA para Instagram (opcional)</span>}
@@ -1091,11 +1139,85 @@ export default function ConfiguradorPublicaciones() {
                   <input className={INPUT} maxLength={240} value={contenido.hashtags} onChange={(e) => actualizarContenido(contenido.id, { hashtags: e.target.value })} placeholder="#MiNegocio #Comunidad" />
                 </Campo>
               </div>
-            </section>
+                </BloqueDesplegable>
+              </div>
+              <div ref={vistaRef} className="min-w-0 scroll-mt-20 lg:sticky lg:top-5">
+                <BloqueDesplegable titulo="Vista previa" descripcion={`Contenido ${indice + 1} · Así se verá en cada red`} abierto={desplegables.vista}
+                  alAlternar={() => setDesplegables((a) => ({ ...a, vista: !a.vista }))}>
+                  <div className="mb-3 flex gap-2" role="group" aria-label="Vista previa por red">
+                    {redes.map((red) => (
+                      <button key={red} type="button" onClick={() => setRedVista(red)} aria-pressed={vistaActual === red}
+                        className={clases("inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition", vistaActual === red ? BOTON_ACTIVO : BOTON_NORMAL)}>
+                        <LogoRed red={red} size={17} /> {red === "instagram" ? "Instagram" : "Facebook"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <div className="flex items-center gap-2 px-3 py-2.5">
+                      <LogoRed red={vistaActual} size={26} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-slate-900">{vistaActual === "instagram" ? usuarioVista : nombreVista}</p>
+                        <p className="text-[11px] text-slate-500">{vistaActual === "instagram" ? "Instagram" : "Página de Facebook · Público"}</p>
+                      </div>
+                      <MoreHorizontal size={18} className="text-slate-400" />
+                    </div>
+                    {vistaActual === "facebook" && leyendaVista}
+                    <div className="bg-slate-50 px-2 py-3">
+                      <div className={clases("relative mx-auto overflow-hidden rounded-md bg-slate-100", contenido.formato === "9:16" ? "w-full max-w-[216px]" : "w-full max-w-[310px]")}
+                        style={{ aspectRatio: contenido.formato.replace(":", " / ") }}>
+                        {archivoActivo ? (contenido.tipo === "reel"
+                          ? <video key={archivoActivo.url} src={archivoActivo.url} controls playsInline preload="metadata" className="h-full w-full object-contain" aria-label="Vista previa del video" />
+                          : <img src={archivoActivo.url} alt={`Imagen ${imagenActiva + 1} de la publicación`} className="h-full w-full object-contain" />
+                        ) : (
+                          <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 text-center text-slate-400">
+                            <FileImage size={27} strokeWidth={1.5} />
+                            <p className="text-xs leading-5">{t("Elegí", "Elige")} {contenido.tipo === "reel" ? "un video" : "imágenes"} para ver la publicación</p>
+                          </div>
+                        )}
+                        {contenido.tipo === "carrusel" && archivosVista.length > 1 && (
+                          <>
+                            <button type="button" onClick={() => setImagenActiva((i) => (i - 1 + archivosVista.length) % archivosVista.length)} aria-label="Imagen anterior"
+                              className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-1.5 text-slate-800"><ChevronLeft size={16} /></button>
+                            <button type="button" onClick={() => setImagenActiva((i) => (i + 1) % archivosVista.length)} aria-label="Imagen siguiente"
+                              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-1.5 text-slate-800"><ChevronRight size={16} /></button>
+                            <span className="absolute right-1.5 top-1.5 rounded-md bg-black/65 px-2 py-1 text-[10px] text-white">{imagenActiva + 1}/{archivosVista.length}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {vistaActual === "instagram" ? (
+                      <>
+                        <div className="flex items-center gap-3 px-3 pt-3 text-slate-800" aria-label="Acciones orientativas de Instagram">
+                          <Heart size={19} /><MessageCircle size={19} /><Send size={19} />
+                        </div>
+                        {leyendaVista}
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-around border-t border-slate-100 px-3 py-2 text-xs text-slate-500" aria-label="Acciones orientativas de Facebook">
+                        <span className="inline-flex items-center gap-1"><ThumbsUp size={15} /> Me gusta</span>
+                        <span className="inline-flex items-center gap-1"><MessageCircle size={15} /> Comentar</span>
+                        <span className="inline-flex items-center gap-1"><Send size={15} /> Compartir</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">Vista orientativa. La apariencia puede variar según la red social.</p>
+                </BloqueDesplegable>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+              <span>{contenidosConArchivos}/4 con archivos · {contenidosConIdea}/4 con textos</span>
+              <span>{totalPublicaciones} publicaciones · 7 días</span>
+            </div>
+          </section>
+        )}
 
-            <section className={TARJETA} aria-labelledby="config-negocio">
-              <div id="config-negocio"><TituloSeccion numero="03" titulo="Datos de tu emprendimiento" descripcion="Información para identificar tu negocio y preparar las publicaciones." /></div>
-              <div className="grid gap-5 sm:grid-cols-2">
+        {pasoActivo === 2 && (
+          <section className={TARJETA} aria-labelledby="paso-negocio">
+            <div className="mb-4">
+              <h2 id="paso-negocio" className="text-base font-semibold">Datos del emprendimiento</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Identifican tu pedido y personalizan cómo aparecerá tu negocio.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
                 <Campo titulo="Nombre del emprendimiento">
                   <input className={INPUT} value={negocio.nombre} maxLength={120} onChange={(e) => setNegocio({ ...negocio, nombre: e.target.value })} placeholder="Ej.: Panadería del Centro" />
                 </Campo>
@@ -1126,7 +1248,23 @@ export default function ConfiguradorPublicaciones() {
                   </select>
                 </Campo>
               </div>
-              <div className="mt-7 flex items-start gap-3 rounded-md border border-slate-200 bg-white p-4">
+            {errorPaso && <p role="alert" className="mt-3 text-xs text-red-700">{errorPaso}</p>}
+          </section>
+        )}
+
+        {pasoActivo === 3 && (
+          <section className={TARJETA} aria-labelledby="paso-confirmar">
+            <div className="mb-4">
+              <h2 id="paso-confirmar" className="text-base font-semibold">Revisar y preparar el pedido</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Comprobá la selección y completá la verificación de seguridad.</p>
+            </div>
+            <div className="mb-5 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4">
+              <div><p className="text-[11px] text-slate-500">Redes</p><p className="font-semibold text-slate-900">{redes.length}</p></div>
+              <div><p className="text-[11px] text-slate-500">Contenidos</p><p className="font-semibold text-slate-900">4</p></div>
+              <div><p className="text-[11px] text-slate-500">Publicaciones</p><p className="font-semibold text-slate-900">{totalPublicaciones}</p></div>
+              <div><p className="text-[11px] text-slate-500">Archivos en vista previa</p><p className="font-semibold text-slate-900">{contenidosConArchivos}/4</p></div>
+            </div>
+            <div className="mb-5"><div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:p-4">
                 <ShieldCheck size={18} className="mt-0.5 shrink-0 text-orange-700" />
                 <div>
                   <p className="text-sm font-medium">Conexión segura de tus redes</p>
@@ -1136,15 +1274,11 @@ export default function ConfiguradorPublicaciones() {
                     <span className="inline-flex items-center gap-1.5 text-xs text-slate-600"><LogoRed red="facebook" size={18} /> Facebook</span>
                   </div>
                 </div>
-              </div>
-            </section>
-
-            <section className={TARJETA} aria-labelledby="config-pago">
-              <div id="config-pago"><TituloSeccion numero="04" titulo="Tu prueba gratuita" descripcion="Los cuatro contenidos serán gratuitos durante siete días cuando se habilite la activación. No se cobra por preparar el pedido." /></div>
-              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Elegir moneda">
+              </div></div>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Elegir moneda">
                 {["ARS", "USD"].map((m) => (
                   <button key={m} type="button" aria-pressed={moneda === m} onClick={() => setMoneda(m)}
-                    className={clases("rounded-md border px-3 py-2.5 text-sm font-medium transition", moneda === m ? BOTON_ACTIVO : BOTON_NORMAL)}>
+                    className={clases("rounded-lg border px-3 py-2 text-sm font-medium transition", moneda === m ? BOTON_ACTIVO : BOTON_NORMAL)}>
                     {m === "ARS" ? "Pesos · ARS" : "Dólares · USD"}
                   </button>
                 ))}
@@ -1154,7 +1288,7 @@ export default function ConfiguradorPublicaciones() {
                 <span>Sin pago ni tarjeta durante la prueba</span>
               </div>
               <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                Los contenidos y la conexión de Facebook se preparan antes de activar el calendario. Todavía no se publicará nada.
+                El registro de la prueba es gratuito. La programación comenzará cuando el servicio esté habilitado.
               </p>
               <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
                 <div><p className="text-sm text-slate-600">Tu prueba gratuita</p><p className="mt-0.5 text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"} · hasta {totalPublicaciones} publicaciones</p></div>
@@ -1178,16 +1312,16 @@ export default function ConfiguradorPublicaciones() {
                 </div>
               )}
               {pedidoCreado ? (
-                <div className="mt-5 rounded-md border border-orange-200 bg-orange-50 p-4" role="status" aria-live="polite">
+                <div className="mt-5 rounded-lg border border-orange-200 bg-orange-50 p-3 sm:p-4" role="status" aria-live="polite">
                   <div className="flex items-center gap-2 text-sm font-medium text-orange-900"><CircleCheck size={18} /> {pedidoCreado.modalidad === "prueba_gratuita" ? "Prueba gratuita preparada" : "Pedido registrado"}</div>
                   <p className="mt-2 break-all text-sm font-medium text-slate-900">Código: {pedidoCreado.id}</p>
                   <p className="mt-1 text-xs text-slate-700">{pedidoCreado.modalidad === "prueba_gratuita" ?
                     `Prueba: ${precioFormateado(0, pedidoCreado.moneda)} · Renovación opcional: ${precioFormateado(pedidoCreado.precioRenovacion ?? precio, pedidoCreado.moneda)} por semana` :
                     `Importe validado: ${precioFormateado(pedidoCreado.precio, pedidoCreado.moneda)} · ${pedidoCreado.metodoPago === "paypal" ? "PayPal" : "Transferencia"}`}</p>
                   <p className="mt-2 text-xs leading-5 text-slate-700">{pedidoCreado.modalidad === "prueba_gratuita" ?
-                    "El pedido ya está registrado sin pago. Ahora podremos probar la carga de archivos y la conexión de Facebook. Los siete días todavía no comienzan y no se publicará ningún contenido." :
+                    "El pedido ya está registrado sin pago. Ahora podés cargar los archivos definitivos y conectar las redes autorizadas. Los siete días todavía no comienzan." :
                     "La carga definitiva y la conexión de redes se habilitarán después de confirmar el pago."}</p>
-                  <div className="mt-4 rounded-md border border-orange-200 bg-white p-3">
+                  <div className="mt-4 rounded-lg border border-orange-200 bg-white p-3">
                     <p className="text-sm font-medium text-slate-900">Guardá el acceso a tu pedido</p>
                     <p className="mt-1 text-xs leading-5 text-slate-600">Podrás volver otro día o desde otro dispositivo, sin tener que configurar ni pagar nuevamente. Este acceso es privado: no lo compartas con otras personas.</p>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -1263,110 +1397,29 @@ export default function ConfiguradorPublicaciones() {
               {errorPedido && <p className="mt-3 text-xs leading-5 text-red-700" role="alert">{errorPedido}</p>}
               <p className="mt-3 text-xs leading-5 text-slate-500">
                 {pruebasDisponibles
-                  ? "Preparar la prueba no activa ningún cobro ni publicación. Los días comenzarán más adelante, con las cuentas autorizadas y los contenidos aprobados."
+                  ? "Preparar la prueba no activa ningún cobro ni publicación. La publicación de los contenidos comenzará cuando las cuentas estén vinculadas y los contenidos aprobados."
                   : pedidosDisponibles
                   ? "Primero registramos el pedido con el precio oficial. Después podrás transferir y adjuntar el comprobante para verificación manual."
                   : "Podés revisar los contenidos y guardar la configuración. La preparación de pruebas gratuitas sigue cerrada al público."}
               </p>
-            </section>
-          </div>
+          </section>
+        )}
 
-          <aside ref={vistaRef} className={clases(TARJETA, "min-w-0 scroll-mt-20 lg:sticky lg:top-24")} aria-label="Vista previa de publicaciones">
-            <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <h2 className="text-lg font-medium">Vista previa</h2>
-              <span className="text-xs text-slate-500">Contenido {indice + 1} de 4</span>
-            </div>
-            <div className="mb-3 grid grid-cols-4 gap-2 lg:hidden" role="group" aria-label="Ver cada contenido">
-              {contenidos.map((p, i) => (
-                <button key={p.id} type="button" aria-pressed={seleccion === p.id}
-                  onClick={() => { setSeleccion(p.id); setImagenActiva(0); setErrorArchivo(""); }}
-                  className={clases("rounded-md border py-2 text-xs font-medium", seleccion === p.id ? BOTON_ACTIVO : BOTON_NORMAL)}>
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-            <div className="mb-3 flex items-center gap-2" role="group" aria-label="Ver publicación por red">
-              {redes.map((red) => (
-                <button key={red} type="button" onClick={() => setRedVista(red)} aria-pressed={vistaActual === red}
-                  className={clases("inline-flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition", vistaActual === red ? BOTON_ACTIVO : BOTON_NORMAL)}>
-                  <LogoRed red={red} size={19} /> {red === "instagram" ? "Instagram" : "Facebook"}
-                </button>
-              ))}
-            </div>
-
-            <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
-              <div className="flex items-center gap-2 px-3 py-3">
-                <LogoRed red={vistaActual} size={27} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-slate-900">{vistaActual === "instagram" ? usuarioVista : nombreVista}</p>
-                  <p className="text-[11px] text-slate-500">{vistaActual === "instagram" ? "Publicación de Instagram" : "Página de Facebook · Público"}</p>
-                </div>
-                <MoreHorizontal size={19} className="text-slate-500" />
-              </div>
-
-              <div className="bg-slate-50 px-3 py-2">
-                <div className={clases("relative mx-auto overflow-hidden rounded-md bg-slate-100", contenido.formato === "9:16" ? "w-full max-w-[225px]" : "w-full max-w-[300px]")}
-                  style={{ aspectRatio: contenido.formato.replace(":", " / ") }}>
-                  {archivoActivo ? (
-                    contenido.tipo === "reel"
-                      ? <video key={archivoActivo.url} src={archivoActivo.url} controls playsInline preload="metadata" className="h-full w-full object-contain" aria-label="Vista previa del video" />
-                      : <img src={archivoActivo.url} alt={`Imagen ${imagenActiva + 1} de la publicación`} className="h-full w-full object-contain" />
-                  ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-slate-400">
-                      <FileImage size={28} strokeWidth={1.5} />
-                      <p className="text-xs leading-5">{t("Elegí", "Elige")} {contenido.tipo === "reel" ? "un video" : "imágenes"} para ver tu publicación</p>
-                    </div>
-                  )}
-                  {contenido.tipo === "carrusel" && archivosVista.length > 1 && (
-                    <>
-                      <button type="button" onClick={() => setImagenActiva((i) => (i - 1 + archivosVista.length) % archivosVista.length)} aria-label="Imagen anterior"
-                        className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-1.5 text-slate-800"><ChevronLeft size={16} /></button>
-                      <button type="button" onClick={() => setImagenActiva((i) => (i + 1) % archivosVista.length)} aria-label="Imagen siguiente"
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-1.5 text-slate-800"><ChevronRight size={16} /></button>
-                      <div className="absolute right-1.5 top-1.5 rounded-md bg-black/65 px-2 py-1 text-[10px] text-white">{imagenActiva + 1}/{archivosVista.length}</div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {vistaActual === "instagram" ? (
-                <div className="flex items-center gap-3 px-3 pt-3 text-slate-800" aria-label="Acciones orientativas de Instagram">
-                  <Heart size={19} /><MessageCircle size={19} /><Send size={19} />
-                </div>
-              ) : (
-                <div className="flex items-center justify-around border-b border-slate-100 px-3 py-2 text-xs text-slate-500" aria-label="Acciones orientativas de Facebook">
-                  <span className="inline-flex items-center gap-1"><ThumbsUp size={15} /> Me gusta</span>
-                  <span className="inline-flex items-center gap-1"><MessageCircle size={15} /> Comentar</span>
-                  <span className="inline-flex items-center gap-1"><Send size={15} /> Compartir</span>
-                </div>
-              )}
-              <div className="px-3 py-3">
-                <p className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
-                  {textoVista || t("Acá vas a ver la idea de tu publicación.", "Aquí verás la idea de tu publicación.")}
-                </p>
-                {ctaVista.trim() && <p className="mt-2 text-sm font-medium text-slate-800">{ctaVista}</p>}
-                {urlVistaFacebook && <p className="mt-1 break-all text-sm text-orange-700 underline underline-offset-2">{urlVistaFacebook}</p>}
-                {contenido.hashtags.trim() && <p className="mt-2 break-words text-sm text-orange-700">{contenido.hashtags}</p>}
-              </div>
-            </div>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Simulación orientativa: la apariencia final puede variar según la red social. {t("Los textos finales se preparan para tu público.", "Los textos finales se adaptarán al español de tu público.")}</p>
-            <div className="mt-5 border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-medium">Resumen semanal</h3>
-              <div className="mt-3 space-y-2 text-xs">
-                <div className="flex justify-between gap-3"><span className="text-slate-600">Redes seleccionadas</span><span className="text-right font-medium">{redes.map((red) => red === "instagram" ? "Instagram" : "Facebook").join(" · ")}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-600">Publicaciones</span><span className="font-medium">{totalPublicaciones}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-600">Contenidos con archivos</span><span className="font-medium">{contenidosConArchivos}/4</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-600">Contenidos con ideas</span><span className="font-medium">{contenidosConIdea}/4</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-600">Período de publicaciones</span><span className="text-right font-medium">7 días desde el primer contenido</span></div>
-              </div>
-              <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-3">
-                <span className="text-sm text-slate-600">Total semanal</span>
-                <span className="text-lg font-medium">{precioFormateado(0, moneda)}</span>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">Los materiales deben estar listos para publicar. La producción y edición profesional de fotos o videos se presupuestan por separado.</p>
-            </div>
-          </aside>
-        </div>
+        <footer className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-5">
+          <button type="button" disabled={pasoActivo === 0} onClick={() => irAlPaso(pasoActivo - 1)}
+            className={clases("inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition", pasoActivo === 0 ? "cursor-not-allowed border-slate-100 text-slate-300" : "border-slate-300 text-slate-700 hover:bg-slate-50")}>
+            <ChevronLeft size={16} /> Anterior
+          </button>
+          <span className="text-xs text-slate-500">{pasoActivo + 1} de 4</span>
+          {pasoActivo < 3 ? (
+            <button type="button" onClick={() => irAlPaso(pasoActivo + 1)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700">
+              Continuar <ChevronRight size={16} />
+            </button>
+          ) : (
+            <a href="/servicios/publicacion-automatica/mi-panel" className="text-xs font-medium text-orange-700 underline underline-offset-2">Mi panel</a>
+          )}
+        </footer>
       </div>
     </main>
   );
