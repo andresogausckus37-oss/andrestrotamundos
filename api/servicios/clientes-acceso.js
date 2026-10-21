@@ -45,6 +45,30 @@ function configuracion(env) {
   return { otpSecret, sessionSecret, desde, resend };
 }
 
+// Estado por requisito para Admin. No expone valores, longitudes ni datos sensibles.
+// Mantener las mismas condiciones que configuracion(env).
+export function diagnosticarConfiguracionClientes(env) {
+  const otpSecret = String(env?.SERVICIO_CLIENTES_CODIGO_SECRET ?? "").trim();
+  const sessionSecret = String(env?.SERVICIO_CLIENTES_SESION_SECRET ?? "").trim();
+  const desde = String(env?.SERVICIO_CLIENTES_CORREO_DESDE ?? "").trim();
+  const estados = {
+    MONGODB_URI: Boolean(env?.MONGODB_URI),
+    RESEND_API_KEY: Boolean(String(env?.RESEND_API_KEY ?? "").trim()),
+    SERVICIO_CLIENTES_CODIGO_SECRET: otpSecret.length >= 32,
+    SERVICIO_CLIENTES_SESION_SECRET: sessionSecret.length >= 32,
+    CLAVES_DIFERENTES: otpSecret !== sessionSecret,
+    SERVICIO_CLIENTES_CORREO_DESDE: Boolean(desde) && desde.length <= 180 &&
+      !/[\r\n]/.test(desde) &&
+      /^(?:[^<>]+\s<)?[^@<>\s]+@[^@<>\s]+\.[^@<>\s]+>?$/.test(desde),
+  };
+  return {
+    ok: Object.values(estados).every(Boolean),
+    requisitos: Object.fromEntries(
+      Object.entries(estados).map(([nombre, valido]) => [nombre, valido ? "OK" : "REVISAR"]),
+    ),
+  };
+}
+
 function mismaProcedencia(request) {
   const origin = request.headers.get("origin");
   return origin === new URL(request.url).origin;
@@ -285,4 +309,180 @@ export async function ejecutarAccesoClientes(request, env) {
   const ipHash = hash(ip);
   if (accion === "solicitar") return solicitar(request, env, config, ipHash);
   return verificar(request, env, config, ipHash);
+}
+
+// Panel de clientes registrados. No cambia los permisos de los enlaces privados
+// existentes: vincular un pedido exige demostrar que se posee su clave original.
+const RUTA_PANEL = "/api/servicios/clientes/panel";
+const ID_PEDIDO_VALIDO = /^SER-[a-f0-9-]{36}$/i;
+const CLAVE_PEDIDO_VALIDA = /^[a-f0-9]{64}$/i;
+
+async function usuarioAutenticadoPanel(db, request, config) {
+  const token = tokenSesion(request);
+  if (!token) return null;
+  const tokenHash = crypto.createHmac("sha256", config.sessionSecret).update(token).digest("hex");
+  const sesion = await db.collection("clientes_sesiones").findOne({
+    _id: tokenHash, eliminarEn: { $gt: new Date() },
+  }, { projection: { usuarioId: 1 } });
+  if (!sesion?.usuarioId) return null;
+  const cuenta = await db.collection("clientes_usuarios").findOne({ _id: sesion.usuarioId }, {
+    projection: { email: 1, emailVerificado: 1 },
+  });
+  return cuenta?.emailVerificado === true && typeof cuenta.email === "string"
+    ? { id: sesion.usuarioId, email: cuenta.email } : null;
+}
+
+async function resumenPanel(db, usuario) {
+  const documentos = await db.collection("pedidos_servicios")
+    .find({ tipo: "publicaciones", clienteUsuarioId: usuario.id })
+    .sort({ creadoEn: -1 }).limit(30)
+    .project({ _id: 0, pedidoId: 1, estado: 1, estadoPago: 1, estadoContenidos: 1,
+      estadoServicio: 1, redes: 1, creadoEn: 1, publicaciones: 1,
+      modalidadContratacion: 1, prueba: 1, precioRenovacion: 1, moneda: 1,
+      "negocio.nombre": 1 })
+    .toArray();
+  const ids = documentos.map(p => p.pedidoId).filter(x => ID_PEDIDO_VALIDO.test(x || ""));
+  const conexiones = ids.length
+    ? await db.collection("conexiones_meta_pedidos")
+        .find({ pedidoId: { $in: ids }, plataforma: "facebook" })
+        .project({ _id: 0, pedidoId: 1, nombre: 1, pageId: 1, estado: 1 }).toArray()
+    : [];
+  const conexionesPorPedido = new Map(conexiones.map(c => [c.pedidoId, c]));
+  const pedidos = documentos.map(p => {
+    const conexion = conexionesPorPedido.get(p.pedidoId);
+    return {
+      pedidoId: p.pedidoId,
+      negocio: typeof p.negocio?.nombre === "string" ? p.negocio.nombre : "Mi emprendimiento",
+      creadoEn: p.creadoEn,
+      redes: Array.isArray(p.redes) ? p.redes.filter(x => x === "facebook" || x === "instagram") : [],
+      estado: p.estado || "sin_estado",
+      estadoPago: p.estadoPago || "pendiente",
+      estadoContenidos: p.estadoContenidos || "pendiente_carga",
+      estadoServicio: p.estadoServicio || "sin_activar",
+      modalidad: p.modalidadContratacion || "pago",
+      prueba: p.modalidadContratacion === "prueba_gratuita" ? {
+        estado: p.prueba?.estado || "pendiente_activacion", inicio: p.prueba?.inicio || null,
+        fin: p.prueba?.fin || null,
+      } : null,
+      contenidos: Array.isArray(p.publicaciones) ? p.publicaciones.map(c => ({
+        id: c.id, tipo: c.tipo, estado: c.estado || "pendiente_preparacion",
+      })) : [],
+      facebook: conexion ? {
+        nombre: conexion.nombre || "Página de Facebook",
+        pageId: conexion.pageId || "",
+        estado: conexion.estado || "desconocido",
+      } : null,
+    };
+  });
+  return responder({ ok: true, autenticado: true, email: usuario.email, pedidos,
+    pruebaGratuitaActiva: false });
+}
+
+async function vincularPedidoPanel(db, request, usuario) {
+  const datos = await jsonPequeno(request);
+  const pedidoId = typeof datos?.pedidoId === "string" ? datos.pedidoId.trim() : "";
+  const clave = typeof datos?.clave === "string" ? datos.clave.trim() : "";
+  if (!ID_PEDIDO_VALIDO.test(pedidoId) || !CLAVE_PEDIDO_VALIDA.test(clave)) {
+    return responder({ ok: false, error: "Revisá el código y la clave privada del pedido." }, 400);
+  }
+  const coleccion = db.collection("pedidos_servicios");
+  const pedido = await coleccion.findOne({ pedidoId, tipo: "publicaciones" }, {
+    projection: { _id: 1, clienteUsuarioId: 1, tokenAccesoHash: 1 },
+  });
+  const hashGuardado = pedido?.tokenAccesoHash;
+  const calculado = hash(clave);
+  if (!hashGuardado || !CLAVE_PEDIDO_VALIDA.test(hashGuardado) ||
+      !crypto.timingSafeEqual(Buffer.from(calculado, "hex"), Buffer.from(hashGuardado, "hex"))) {
+    return responder({ ok: false, error: "No se encontró el pedido o la clave es incorrecta." }, 404);
+  }
+  if (pedido.clienteUsuarioId && pedido.clienteUsuarioId !== usuario.id) {
+    return responder({ ok: false, error: "Este pedido ya está vinculado a otra cuenta." }, 409);
+  }
+  const resultado = await coleccion.updateOne({
+    _id: pedido._id, tokenAccesoHash: hashGuardado,
+    $or: [{ clienteUsuarioId: { $exists: false } }, { clienteUsuarioId: usuario.id }],
+  }, {
+    $set: { clienteUsuarioId: usuario.id, clienteVinculadoEn: new Date() },
+  });
+  if (resultado.matchedCount !== 1) {
+    return responder({ ok: false, error: "El pedido cambió de estado. Intentá nuevamente." }, 409);
+  }
+  return responder({ ok: true, vinculado: true, pedidoId });
+}
+
+// Sólo el titular de una cuenta verificada puede rotar la clave de uno de
+// sus pedidos vinculados. El correo del negocio NO acredita titularidad.
+async function recuperarAccesoPrivadoPanel(db, request, usuario) {
+  const datos = await jsonPequeno(request);
+  const pedidoId = typeof datos?.pedidoId === "string" ? datos.pedidoId.trim() : "";
+  if (!ID_PEDIDO_VALIDO.test(pedidoId)) {
+    return responder({ ok: false, error: "Código de pedido inválido." }, 400);
+  }
+  const pedidos = db.collection("pedidos_servicios");
+  const pedido = await pedidos.findOne({
+    pedidoId, tipo: "publicaciones", clienteUsuarioId: usuario.id,
+  }, { projection: { _id: 1, tokenAccesoHash: 1 } });
+  if (!pedido || !CLAVE_PEDIDO_VALIDA.test(pedido.tokenAccesoHash || "")) {
+    return responder({ ok: false, error: "Pedido no encontrado o no vinculado a tu cuenta." }, 404);
+  }
+  // Limita las rotaciones incluso si se secuestra una sesión aún vigente.
+  const permitido = await consumirCupo(db, `recuperar:usuario:${usuario.id}`, 3, Date.now());
+  if (!permitido) {
+    return responder({ ok: false, error: "Alcanzaste el límite de recuperaciones. Intentá más tarde." }, 429);
+  }
+  const tokenAcceso = crypto.randomBytes(32).toString("hex");
+  const tokenAccesoHash = hash(tokenAcceso);
+  const fecha = new Date();
+  // La sustitución atómica invalida inmediatamente todas las claves antiguas.
+  const resultado = await pedidos.updateOne({
+    _id: pedido._id, clienteUsuarioId: usuario.id,
+    tokenAccesoHash: pedido.tokenAccesoHash,
+  }, { $set: { tokenAccesoHash, accesoPrivadoRenovadoEn: fecha, actualizadoEn: fecha } });
+  if (resultado.modifiedCount !== 1) {
+    return responder({ ok: false, error: "El acceso cambió recientemente. Actualizá el panel." }, 409);
+  }
+  // La clave solamente se devuelve en esta respuesta privada; Mongo guarda el hash.
+  return responder({ ok: true, pedidoId, tokenAcceso, claveAnteriorInvalidada: true });
+}
+
+export async function ejecutarPanelClientes(request, env) {
+  const ruta = new URL(request.url).pathname;
+  const esResumen = ruta === RUTA_PANEL;
+  const esVincular = ruta === `${RUTA_PANEL}/vincular`;
+  const esRecuperar = ruta === `${RUTA_PANEL}/recuperar-acceso`;
+  if (!esResumen && !esVincular && !esRecuperar) return responder({ ok: false, error: "Ruta no encontrada." }, 404);
+  if (request.method !== (esResumen ? "GET" : "POST")) {
+    return responder({ ok: false, error: "Método no permitido." }, 405);
+  }
+  if (esVincular || esRecuperar) {
+    const url = new URL(request.url);
+    const origin = request.headers.get("origin");
+    const fetchSite = request.headers.get("sec-fetch-site");
+    if (request.headers.get("x-comunidad-panel") !== "1" ||
+        (origin ? origin !== url.origin : fetchSite !== "same-origin")) {
+      return responder({ ok: false, error: "Origen no autorizado." }, 403);
+    }
+  }
+  const config = configuracion(env);
+  if (!config) return responder({ ok: false, error: "Panel de clientes no configurado." }, 503);
+  try {
+    return await conDB(env, async db => {
+      const usuario = await usuarioAutenticadoPanel(db, request, config);
+      if (!usuario) return responder({ ok: false, error: "Iniciá sesión desde Comunidad Semanal." }, 401);
+      if (esResumen) return resumenPanel(db, usuario);
+      if (esRecuperar) return recuperarAccesoPrivadoPanel(db, request, usuario);
+      return vincularPedidoPanel(db, request, usuario);
+    });
+  } catch {
+    return responder({ ok: false, error: "No fue posible consultar el panel." }, 503);
+  }
+}
+
+
+// Solo identidad autenticada por OTP. Los invitados no se vinculan a cuentas
+// por coincidencia con un correo no verificado.
+export async function obtenerClienteRegistrado(request, env) {
+  const config = configuracion(env);
+  if (!config || !tokenSesion(request)) return null;
+  return conDB(env, db => usuarioAutenticadoPanel(db, request, config));
 }

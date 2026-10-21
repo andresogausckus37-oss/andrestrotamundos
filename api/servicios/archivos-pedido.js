@@ -52,10 +52,18 @@ function firmaCorrecta(bytes, mime) {
   return false;
 }
 function idArchivo(pedidoId, contenidoId, posicion) { return `${pedidoId}:${contenidoId}:${posicion}`; }
+function preparacionAutorizada(pedido) {
+  const gratis = pedido?.modalidadContratacion === "prueba_gratuita" &&
+    pedido?.estadoPago === "no_requerido" && pedido?.metodoPago === "ninguno" &&
+    pedido?.prueba?.estado === "pendiente_activacion";
+  const pago = pedido?.estadoPago === "confirmado" && Boolean(pedido?.pagadoEn);
+  return (gratis || pago) && pedido?.estadoServicio === "sin_activar";
+}
+
 function permisoPedido(pedido, escritura) {
   if (!pedido || pedido.tipo !== "publicaciones" || !Array.isArray(pedido.publicaciones) || pedido.publicaciones.length !== 4) lanzar("Pedido no encontrado.", 404);
-  if (escritura && (pedido.estadoPago !== "confirmado" || !pedido.pagadoEn || pedido.estadoServicio !== "sin_activar" || pedido.estadoContenidos === "aprobados")) {
-    lanzar("La carga requiere pago confirmado y contenidos todavía no aprobados.", 403);
+  if (escritura && (!preparacionAutorizada(pedido) || pedido.estadoContenidos === "aprobados")) {
+    lanzar("La carga requiere un pedido habilitado y contenidos todavía no aprobados.", 403);
   }
 }
 function accesoCliente(request, pedido) {
@@ -92,7 +100,7 @@ async function buscarPedido(db, request, pedidoId, escritura = false) {
 async function estadoArchivos(db, pedido) {
   const archivos = await db.collection("archivos_servicios").find({ pedidoId: pedido.pedidoId, estado: "subido" })
     .project({ _id:0, contenidoId:1, posicion:1, nombre:1, tipo:1, tamano:1, revision:1, motivoRevision:1, subidoEn:1 }).sort({ contenidoId:1, posicion:1 }).toArray();
-  return { ok: true, pedidoId: pedido.pedidoId, habilitada: pedido.estadoPago === "confirmado" && Boolean(pedido.pagadoEn) && pedido.estadoServicio === "sin_activar" && pedido.estadoContenidos !== "aprobados", estadoContenidos: pedido.estadoContenidos || "pendiente_carga", publicaciones: publicacionesDelPedido(pedido), archivos };
+  return { ok: true, pedidoId: pedido.pedidoId, habilitada: preparacionAutorizada(pedido) && pedido.estadoContenidos !== "aprobados", estadoContenidos: pedido.estadoContenidos || "pendiente_carga", publicaciones: publicacionesDelPedido(pedido), archivos };
 }
 async function actualizarEstado(db, pedidoId) {
   const pedidos = db.collection("pedidos_servicios");
@@ -330,7 +338,7 @@ export async function ejecutarAdminArchivosPedido(request, env, autorizado) {
               `<form action="${RUTA_ADMIN}" method="post">${campos}<label>Motivo técnico de la corrección (obligatorio, de 10 a 500 caracteres)<textarea name="motivoRevision" minlength="10" maxlength="500" required placeholder="Ej.: El archivo MP4 no puede reproducirse; volvé a exportarlo."></textarea></label><button name="revision" value="rechazado">Solicitar corrección</button></form></div>`;
           }).join("") : "<p><small>Todavía no hay archivos para este contenido.</small></p>"}</section>`;
         }).join("");
-        return html("Revisión de contenidos",`<p>Pedido: <code>${escapar(pedidoId)}</code></p><p>Pago: <strong>${escapar(pedido.estadoPago)}</strong> · Contenidos: <strong>${escapar(pedido.estadoContenidos)}</strong></p>${tarjetas}<small>Aprobar archivos no activa ni programa publicaciones.</small>`);
+        return html("Revisión de contenidos",`<p>Pedido: <code>${escapar(pedidoId)}</code></p><p>Pago: <strong>${escapar(pedido.estadoPago)}</strong> · Contenidos: <strong>${escapar(pedido.estadoContenidos)}</strong></p>${pedidoId === "SER-7ebdd0fa-4795-4cd9-a688-a72a1e26b937" ? `<p><a href="/api/admin/servicios/publicaciones/activacion-simulada?pedidoId=${encodeURIComponent(pedidoId)}">Simular activación de 7 días (sin publicar)</a></p>` : ""}${tarjetas}<small>Aprobar archivos no activa ni programa publicaciones.</small>`);
       });
     }
     if (request.method === "POST") {
@@ -348,7 +356,7 @@ export async function ejecutarAdminArchivosPedido(request, env, autorizado) {
       }
       return await conDb(env, async db => {
         const pedido = await db.collection("pedidos_servicios").findOne({pedidoId:pid,tipo:"publicaciones"});
-        if (!pedido || pedido.estadoPago !== "confirmado" || !pedido.pagadoEn || pedido.estadoServicio !== "sin_activar") return html("Pedido no habilitado","<p>Se requiere un pedido pagado y todavía no activado.</p>",403);
+        if (!pedido || !preparacionAutorizada(pedido)) return html("Pedido no habilitado","<p>Se requiere un pedido habilitado y todavía no activado.</p>",403);
         const result = await db.collection("archivos_servicios").updateOne({ _id:idArchivo(pid,cid,pos), pedidoId:pid, estado:"subido" },{ $set:{ revision, motivoRevision: revision === "rechazado" ? motivoRevision : "", revisadoEn:tiempo() } });
         if (!result.matchedCount) return html("Archivo no encontrado","<p>El archivo ya no existe.</p>",404);
         await actualizarEstado(db,pid);

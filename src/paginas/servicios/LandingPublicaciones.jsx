@@ -298,7 +298,7 @@ export default function LandingPublicaciones() {
                 <span className="text-xs font-normal text-slate-500">Facebook + Instagram</span>
               </div>
               <p className="text-3xl font-medium tracking-tight text-slate-900">Probá <span className="text-orange-600">7 días gratis</span></p>
-              <p className="mt-3 text-sm leading-6 text-slate-600">Subí hasta 4 contenidos y dejá que nuestro sistema los publique automáticamente en los días y horarios que elijas.</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">Subí hasta 4 contenidos en cada red dejá que nuestro sistema los publique automáticamente en los días y horarios que elijas.</p>
               <div className="my-5 border-t border-slate-100" />
               <p className="text-sm font-medium text-slate-900">¿Querés ver cómo funciona antes de registrarte?</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">Probá nuestro editor con vista previa y descubrí cómo se verán tus publicaciones en Facebook e Instagram.</p>
@@ -315,7 +315,7 @@ export default function LandingPublicaciones() {
           <div className="mb-5 max-w-3xl">
             <h2 id="demo-titulo" className="text-xl font-medium tracking-tight sm:text-2xl">Mirá cómo se verán tus publicaciones</h2>
             <p className="mt-1.5 text-sm leading-5 text-slate-600">
-              Probá tus imágenes, videos, textos y enlaces en una vista previa de Instagram y Facebook.
+              Probá tus imágenes, videos, textos y enlaces en una vista interactiva.
             </p>
           </div>
 
@@ -323,7 +323,7 @@ export default function LandingPublicaciones() {
             <div className="space-y-4">
               <div className={CAJA}>
                 <h3 className="text-sm font-medium">Redes sociales</h3>
-                <p className="mt-1 text-xs text-slate-500">Cuatro contenidos para una red o para ambas redes.</p>
+                <p className="mt-1 text-xs text-slate-500">4 contenidos para una o para ambas redes.</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {["instagram", "facebook"].map((red) => {
                     const activa = redes.includes(red);
@@ -342,7 +342,7 @@ export default function LandingPublicaciones() {
               </div>
 
               <div className={CAJA}>
-                <h3 className="text-sm font-medium">Tus cuatro contenidos</h3>
+                <h3 className="text-sm font-medium">Tus 4 contenidos</h3>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Elegir contenido">
                   {contenidos.map((item, indice) => {
                     const Icono = TIPOS[item.tipo].icono;

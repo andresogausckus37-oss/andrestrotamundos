@@ -1,0 +1,184 @@
+data.id, pedidoId: PEDIDO });
++  if (!foto || foto.estado !== "borrador" || !foto.texto || foto.mimetype !== "image/jpeg") {
++    return error("Primero prepará una imagen y un texto promocional reales.", 409);
++  }
++  if (!await bucket(env).head(foto.r2Key)) return error("La imagen ya no está disponible en R2.", 409);
++  const todas = await conexiones(db);
++  if (!todas.facebook || !todas.instagram || !todas[red]) return error("Las dos conexiones piloto deben corresponder a Redes en Piloto y @redesenpiloto.", 409);
++  const c = todas[red];
++  const intentoId = `${foto._id}:${red}`;
++  const intentos = db.collection(INTENTOS);
++  let intento;
++  if (continuar) {
++    intento = await intentos.findOne({ _id: intentoId });
++    if (!intento || intento.estado !== "contenedor_pendiente") return error("No hay un contenedor de Instagram pendiente de continuar.", 409);
++  } else {
++    // Congelar la pieza antes de crear el intento. Otra red utiliza exactamente el mismo texto.
++    await db.collection(FOTOS).updateOne({ _id: foto._id, bloqueadoEn: { $exists: false } },
++      { $set: { bloqueadoEn: new Date() } });
++    intento = { _id: intentoId, fotoId: foto._id, red, estado: "envio_iniciado_resultado_incierto",
++      destino: red === "facebook" ? PAGE_ID : String(c.instagramId), creadoEn: new Date() };
++    try { await intentos.insertOne(intento); }
++    catch (err) {
++      if (err?.code === 11000) return error("Ya existe un intento para esta imagen y red. No se repetirá automáticamente.", 409);
++      throw err;
++    }
++  }
++  try {
++    const token = tokenDescifrado(c, env);
++    if (red === "facebook") {
++      const res = await graph(`${PAGE_ID}/photos`, token, { url: urlFirmada(env, foto._id),
++        message: foto.texto, published: "true" });
++      const mediaId = String(res.post_id || res.id || "");
++      if (!/^\d{5,30}(?:_\d{5,30})?$/.test(mediaId)) throw new Error("META_ID_INVALIDO");
++      await guardarPublicada(db, intento, mediaId, token);
++      return volver("Facebook confirmó la publicación. Consultá el resultado abajo.");
++    }
++    if (!continuar) {
++      const contenedor = await graph(`${c.instagramId}/media`, token, {
++        image_url: urlFirmada(env, foto._id), caption: foto.texto,
++      });
++      if (!/^\d{5,30}$/.test(String(contenedor?.id || ""))) throw new Error("CONTENEDOR_INVALIDO");
++      // Si fallara esta escritura, NO repetir la creación del contenedor.
++      await intentos.updateOne({ _id: intentoId }, { $set: { contenedorId: String(contenedor.id),
++        estado: "contenedor_pendiente", actualizadoEn: new Date() } });
++      intento.contenedorId = String(contenedor.id);
++    }
++    const estado = await publicarInstagramContenedor(db, intento, c, token);
++    return volver(estado === "publicada" ? "Instagram confirmó la publicación." :
++      estado === "contenedor_pendiente" ? "Instagram está procesando la imagen. Podés consultar y continuar manualmente, sin recrear el contenedor." :
++      "Instagram no confirmó la publicación. Revisá el estado antes de cualquier nueva acción.");
++  } catch (err) {
++    // Cualquier respuesta inesperada queda bloqueada. NO REINTENTAR envíos de forma automática.
++    // En contenedor_pendiente: no modificar el estado, una comprobación posterior es segura.
++    await intentos.updateOne({ _id: intentoId,
++      estado: { $nin: ["publicada", "contenedor_pendiente", "contenedor_error"] } },
++    { $set: { estado: "resultado_incierto_sin_reintento", actualizadoEn: new Date(),
++      diagnostico: { http: Number.isInteger(err?.http) ? err.http : null,
++        metaCodigo: Number.isInteger(err?.codigo) ? err.codigo : null } } }).catch(() => {});
++    return error("Meta no confirmó el resultado. Por seguridad no se repetirá el envío; comprobá las publicaciones en la red y el registro técnico.", 502);
++  }
++}
++function formularioPublicar(foto, red) {
++  return `<form method="post" action="${BASE}/publicar"><input type="hidden" name="id" value="${esc(foto._id)}"><input type="hidden" name="red" value="${red}">
++    <label>Escribí ${CONFIRMACION} para publicar realmente en ${red === "facebook" ? "Facebook" : "Instagram"}</label>
++    <input type="text" name="confirmacion" autocomplete="off" required><button class="danger" type="submit">Publicar ahora en ${red === "facebook" ? "Facebook" : "Instagram"}</button></form>`;
++}
++async function pantalla(env, db, mensaje) {
++  const todos = await conexiones(db);
++  const datos = await db.collection(FOTOS).find({ pedidoId: PEDIDO }).sort({ creadoEn: -1 }).limit(12).toArray();
++  const estados = await db.collection(INTENTOS).find({ fotoId: { $in: datos.map(d => d._id) } }).toArray();
++  const habilitado = bandera(env);
++  const listo = Boolean(todos.facebook && todos.instagram);
++  const tarjetas = datos.map(f => {
++    const intentos = estados.filter(e => e.fotoId === f._id);
++    const congelado = Boolean(f.bloqueadoEn);
++    const intentoUI = intentos.map(e => `<p><strong>${esc(e.red)}</strong>: ${esc(e.estado)}${e.metaId ? ` · ID ${esc(e.metaId)}` : ""}
++      ${e.enlace ? ` · <a rel="noopener noreferrer" href="${esc(e.enlace)}" target="_blank">Ver publicación</a>` : ""}
++      ${e.estado === "contenedor_pendiente" && habilitado ? `<form method="post" action="${BASE}/continuar"><input type="hidden" name="id" value="${esc(f._id)}">
++      <label>Escribí ${CONFIRMACION} para consultar el contenedor y continuar</label><input type="text" name="confirmacion" required autocomplete="off">
++      <button type="submit">Continuar contenedor de Instagram</button></form>` : ""}</p>`).join("");
++    const posibilidad = habilitado && listo && f.estado === "borrador" ? ["facebook", "instagram"].filter(red =>
++      !intentos.some(e => e.red === red)).map(red => formularioPublicar(f, red)).join("") : "";
++    return `<div class="item"><div class="fields"><img src="${esc(urlFirmada(env, f._id))}" alt="Imagen privada del piloto">
++      <div><strong>${esc(f.nombre)}</strong><br><small>${esc(f._id)} · ${(f.tamano / 1024).toFixed(0)} KB</small><br>
++      <span class="pill">${esc(f.estado)}${congelado ? " · congelada" : ""}</span></div></div>
++      <form method="post" action="${BASE}/guardar"><input type="hidden" name="id" value="${esc(f._id)}">
++      <label>Texto promocional definitivo</label><textarea name="texto" maxlength="1500" minlength="20" ${congelado ? "readonly" : "required"}>${esc(f.texto || "")}</textarea>
++      ${congelado ? "<small>Contenido congelado tras iniciar una publicación.</small>" : '<button type="submit">Guardar texto</button>'}</form>
++      ${intentoUI || "<p class='muted'>Sin intentos de publicación.</p>"}${posibilidad}</div>`;
++  }).join("");
++  return html("Publicaciones piloto de Meta", `<p><a href="/api/admin/servicios/publicaciones/activacion-simulada?pedidoId=${PEDIDO}">← Volver a la simulación</a></p>
++    <h1>Publicaciones piloto · Meta</h1><p class="muted">Administración · Cuentas propias del servicio · Solo imágenes JPEG en esta primera etapa</p>
++    ${mensaje ? `<div class="info">${esc(mensaje.slice(0, 220))}</div>` : ""}
++    <div class="info"><strong>${habilitado ? "Envíos reales habilitados por variable privada" : "Envíos reales deshabilitados"}</strong><br>
++    Los archivos que se carguen aquí son independientes de los cuatro contenidos genéricos del pedido.
++    No se programa un cron, no se activa la prueba gratuita y no se toca Mega Bazar.
++    ${habilitado ? "Antes de publicar, verificá visualmente cada imagen y su texto." : "Podés cargar contenido propio y preparar textos sin publicarlos."}</div>
++    <h2>Conexiones autorizadas</h2><p>Facebook · Redes en Piloto: <strong>${todos.facebook ? "Vinculada" : "No disponible"}</strong><br>
++    Instagram · @redesenpiloto: <strong>${todos.instagram ? "Vinculada" : "No disponible"}</strong></p>
++    <h2>Cargar imagen promocional</h2><p class="muted">JPEG de hasta 8 MB. Se guarda en un espacio separado de R2, privado hasta que se autorice una prueba real.</p>
++    <form method="post" action="${BASE}/subir" enctype="multipart/form-data"><label>Imagen JPEG</label><input type="file" name="imagen" accept="image/jpeg,.jpg,.jpeg" required>
++    <button type="submit">Cargar imagen privada</button></form><h2>Piezas preparadas</h2>${tarjetas || "<p class='muted'>Todavía no cargaste imágenes promocionales.</p>"}
++    <p class="muted"><small>Los envíos, cuando se habiliten expresamente, serán individuales por red y sin reintentos automáticos. Los resultados inciertos requieren revisión manual.</small></p>`);
++}
++
++// La URL firmada la consulta Meta para descargar la imagen, sin acceso a la cuenta admin.
++// Solo expone UNA imagen JPEG durante un período acotado; R2 sigue siendo privado.
++export async function ejecutarImagenPiloto(request, env) {
++  const url = new URL(request.url);
++  if (url.origin !== ORIGEN || !["GET", "HEAD"].includes(request.method)) return new Response(null, { status: 403 });
++  const match = /^\/api\/servicios\/piloto-meta\/media\/([a-f0-9-]{36})\.jpg$/.exec(url.pathname);
++  if (!match) return new Response(null, { status: 404 });
++  const id = match[1], v = url.searchParams.get("v") || "", sig = url.searchParams.get("s") || "";
++  const ahora = Math.floor(Date.now() / 1000);
++  if (!/^\d{10}$/.test(v) || !/^[a-f0-9]{64}$/i.test(sig) || Number(v) < ahora || Number(v) > ahora + EXPIRACION_FIRMA) return new Response(null, { status: 403 });
++  const esperado = firmaImagen(env, id, v);
++  if (!crypto.timingSafeEqual(Buffer.from(esperado, "hex"), Buffer.from(sig, "hex"))) return new Response(null, { status: 403 });
++  let mongo;
++  try {
++    mongo = await abrirDb(env);
++    const foto = await mongo.db(DB).collection(FOTOS).findOne({ _id: id, pedidoId: PEDIDO });
++    if (!foto || foto.r2Key !== `promociones-piloto/${id}.jpg`) return new Response(null, { status: 404 });
++    const imagen = await bucket(env).get(foto.r2Key);
++    if (!imagen) return new Response(null, { status: 404 });
++    const h = { "Content-Type": "image/jpeg", "Content-Length": String(foto.tamano),
++      "Cache-Control": "private, max-age=60", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
++    return new Response(request.method === "HEAD" ? null : imagen.body, { status: 200, headers: h });
++  } catch { return new Response(null, { status: 503 }); }
++  finally { if (mongo) await mongo.close().catch(() => {}); }
++}
++
++// Solo sesión administrativa. Las operaciones POST exigen origen de primera parte.
++export async function ejecutarPublicacionPiloto(request, env, autorizado) {
++  const url = new URL(request.url);
++  if (!url.pathname.startsWith(`${BASE}`) || url.origin !== ORIGEN) return error("Ruta no autorizada.", 403);
++  if (!autorizado) return error("Iniciá sesión en Administración.", 401);
++  if (request.method === "POST" && request.headers.get("origin") !== ORIGEN) return error("Origen no autorizado.", 403);
++  const ruta = url.pathname.slice(BASE.length);
++  if (request.method === "GET" && ruta !== "") return error("Ruta no disponible.", 404);
++  if (request.method === "POST" && !["/subir", "/guardar", "/publicar", "/continuar"].includes(ruta)) return error("Ruta no disponible.", 404);
++  if (request.method !== "GET" && request.method !== "POST") return error("Método no permitido.", 405);
++  let mongo;
++  try {
++    mongo = await abrirDb(env);
++    const db = mongo.db(DB);
++    if (request.method === "GET") return await pantalla(env, db, url.searchParams.get("mensaje") || "");
++    if (ruta === "/subir") return await crearFoto(request, env, db);
++    if (ruta === "/guardar") return await guardarTexto(request, db);
++    return await enviar(request, env, db, ruta === "/continuar");
++  } catch (err) {
++    console.warn("Piloto Meta Comunidad Semanal:", err?.code || err?.name || "ERROR");
++    return error("No se pudo procesar la operación del piloto. Los envíos no se reintentan automáticamente.", 503);
++  } finally { if (mongo) await mongo.close().catch(() => {}); }
++}
+diff --git a/worker.js b/worker.js
+index 17e4980..78edcb7 100644
+--- a/worker.js
++++ b/worker.js
+@@ -7,6 +7,7 @@ import { ejecutarConexionMetaPedido } from "./api/servicios/meta-pedidos.js";
+ import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario, ejecutarEnsayoCalendario, ejecutarReservaCalendario } from "./api/servicios/calendario-simulacion.js";
+ import { ejecutarSolicitudProgramacion } from "./api/servicios/solicitud-programacion.js";
+ import { ejecutarActivacionSimulada } from "./api/servicios/activacion-simulada.js";
++import { ejecutarPublicacionPiloto, ejecutarImagenPiloto } from "./api/servicios/publicacion-piloto-meta.js";
+ import { ejecutarAccesoClientes, diagnosticarConfiguracionClientes, ejecutarPanelClientes, obtenerClienteRegistrado } from "./api/servicios/clientes-acceso.js";
+ import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
+ import crypto from "crypto";
+@@ -1355,6 +1356,17 @@ if (url.pathname === "/api/admin/servicios/publicaciones/activacion-simulada") {
+   return ejecutarActivacionSimulada(request, env, adminAutorizadoWorker(request, env));
+ }
+ 
++// Publicación piloto manual aislada; apagada por defecto. Nunca entra en scheduled().
++if (url.pathname.startsWith("/api/servicios/piloto-meta/media/")) {
++  return ejecutarImagenPiloto(request, env);
++}
++if (url.pathname.startsWith("/api/admin/servicios/publicaciones/piloto-meta")) {
++  const exceso = await comprobarLimiteServicio(request, env, request.method === "POST"
++    ? "SERVICIO_LIMITE_PEDIDOS" : "SERVICIO_LIMITE_CONSULTAS");
++  if (exceso) return exceso;
++  return ejecutarPublicacionPiloto(request, env, adminAutorizadoWorker(request, env));
++}
++
+ if (url.pathname === "/api/admin/servicios/transferencias") {
+   return apiAdminTransferenciasServicio(request, env);
+ }

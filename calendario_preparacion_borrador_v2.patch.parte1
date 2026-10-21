@@ -1,0 +1,170 @@
+--- a/worker.js
++++ b/worker.js
+@@ -4,7 +4,7 @@
+ import handlerVisitas from "./api/visitas.js";
+ import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
+ import { ejecutarConexionMetaPedido } from "./api/servicios/meta-pedidos.js";
+-import { ejecutarSimulacionCalendario } from "./api/servicios/calendario-simulacion.js";
++import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario } from "./api/servicios/calendario-simulacion.js";
+ import { ejecutarAccesoClientes, diagnosticarConfiguracionClientes, ejecutarPanelClientes, obtenerClienteRegistrado } from "./api/servicios/clientes-acceso.js";
+ import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
+ import crypto from "crypto";
+@@ -1359,6 +1359,14 @@
+   return ejecutarSimulacionCalendario(request, env);
+ }
+ 
++// Guarda solamente una propuesta no ejecutable, después de verificar la
++// titularidad del cliente. No toca el cron ni el estado de la prueba.
++if (url.pathname === "/api/servicios/publicaciones/calendario/preparar") {
++  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_PEDIDOS");
++  if (exceso) return exceso;
++  return ejecutarPreparacionCalendario(request, env);
++}
++
+ if (url.pathname === "/api/servicios/publicaciones/prueba" ||
+     url.pathname === "/api/servicios/publicaciones/prueba/estado") {
+   return apiPruebaPublicaciones(request, env, url.pathname);
+--- a/src/paginas/servicios/PanelClientePublicaciones.jsx
++++ b/src/paginas/servicios/PanelClientePublicaciones.jsx
+@@ -68,6 +68,8 @@
+   const [calendarios, setCalendarios] = useState({});
+   const [calendarioCargando, setCalendarioCargando] = useState("");
+   const [calendarioErrores, setCalendarioErrores] = useState({});
++  const [confirmarBorrador, setConfirmarBorrador] = useState({});
++  const [preparandoBorrador, setPreparandoBorrador] = useState("");
+ 
+   const cargarPanel = useCallback(async () => {
+     setCargando(true);
+@@ -214,6 +216,7 @@
+     setCalendarioAbierto(pedidoId);
+     setCalendarioCargando(pedidoId);
+     setCalendarioErrores(prev => ({ ...prev, [pedidoId]: "" }));
++    setConfirmarBorrador(prev => ({ ...prev, [pedidoId]: false }));
+     try {
+       const respuesta = await fetch(`/api/servicios/publicaciones/calendario/simulacion?pedidoId=${encodeURIComponent(pedidoId)}`, {
+         credentials: "same-origin", cache: "no-store",
+@@ -239,6 +242,31 @@
+     } catch {
+       setError("No se pudo copiar automáticamente. Seleccioná y copiá el enlace mostrado.");
+     }
++  };
++
++  const guardarBorradorCalendario = async (pedidoId) => {
++    const calendario = calendarios[pedidoId];
++    if (!calendario?.listoParaBorrador || !confirmarBorrador[pedidoId]) return;
++    setPreparandoBorrador(pedidoId);
++    setCalendarioErrores(prev => ({ ...prev, [pedidoId]: "" }));
++    try {
++      const respuesta = await fetch("/api/servicios/publicaciones/calendario/preparar", {
++        method: "POST", credentials: "same-origin", cache: "no-store",
++        headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
++        body: JSON.stringify({ pedidoId, revision: calendario.revision, confirmarBorrador: true }),
++      });
++      const resultado = await respuesta.json();
++      if (!respuesta.ok || resultado.ok !== true || resultado.modo !== "borrador_sin_activar") {
++        throw new Error(resultado.error || "No se pudo guardar el borrador.");
++      }
++      setCalendarios(prev => ({ ...prev, [pedidoId]: {
++        ...prev[pedidoId], seGuardoCalendario: true, borrador: resultado.borrador,
++      } }));
++      setConfirmarBorrador(prev => ({ ...prev, [pedidoId]: false }));
++      setMensaje("Calendario guardado como borrador. La prueba gratuita sigue sin activar y no habrá publicaciones.");
++    } catch (error) {
++      setCalendarioErrores(prev => ({ ...prev, [pedidoId]: error.message || "Error preparando borrador." }));
++    } finally { setPreparandoBorrador(""); }
+   };
+ 
+   const salir = async () => {
+@@ -389,6 +417,28 @@
+                           {calendarios[p.pedidoId].advertencias.map((aviso, i) => <li key={i}>{aviso}</li>)}
+                         </ul>
+                       </div>}
++                      <div className="space-y-2 rounded-md border border-neutral-200 bg-white p-3">
++                        <p className="text-xs font-medium text-neutral-900">Preparación segura del calendario</p>
++                        <p className="text-xs text-neutral-600">Guardar un borrador no confirma fechas definitivas, no inicia los 7 días y no publica. Los horarios se recalcularán cuando habilitemos una activación real.</p>
++                        {calendarios[p.pedidoId].borrador && <p className="text-xs font-medium text-neutral-800" role="status">
++                          {calendarios[p.pedidoId].borrador.revisionVigente
++                            ? "Borrador guardado y vigente. Sin activar."
++                            : "El borrador anterior ya no coincide con los contenidos u horarios actuales. Guardá una versión nueva."}
++                        </p>}
++                        {calendarios[p.pedidoId].listoParaBorrador ? <>
++                          <label className="flex items-start gap-2 text-xs text-neutral-700">
++                            <input type="checkbox" checked={Boolean(confirmarBorrador[p.pedidoId])}
++                              onChange={e => setConfirmarBorrador(prev => ({ ...prev, [p.pedidoId]: e.target.checked }))}
++                              className="mt-0.5" />
++                            Revisé las fechas y confirmo que estos contenidos no son pruebas internas. Solo quiero guardar el borrador; NO autorizo publicaciones todavía.
++                          </label>
++                          <button type="button" onClick={() => guardarBorradorCalendario(p.pedidoId)}
++                            disabled={!confirmarBorrador[p.pedidoId] || Boolean(preparandoBorrador)}
++                            className={`${BOTON} bg-neutral-900 text-white hover:bg-neutral-700`}>
++                            {preparandoBorrador === p.pedidoId ? "Guardando borrador..." : "Guardar calendario preliminar"}
++                          </button>
++                        </> : <p className="text-xs font-medium text-amber-800">Para preparar el borrador, primero resolvé todas las comprobaciones pendientes.</p>}
++                      </div>
+                       <p className="text-xs font-medium text-neutral-700">Ningún contenido será publicado ni se consumirán días de prueba.</p>
+                     </>}
+                   </div>}
+--- a/api/servicios/calendario-simulacion.js
++++ b/api/servicios/calendario-simulacion.js
+@@ -1,10 +1,12 @@
+-// Calendario de SOLO LECTURA de Comunidad Semanal. NO ejecuta, programa ni
+-// autoriza publicaciones; nunca invoca Graph API, cron ni handlers de la tienda.
++// Simulación y borrador NO PUBLICABLE de Comunidad Semanal. No activa la prueba,
++// no invoca Graph API ni modifica el cron o los handlers de la tienda.
+ import crypto from "node:crypto";
+ import { obtenerClienteRegistrado } from "./clientes-acceso.js";
+ 
+ const DB = "andres_imprimibles";
+ const RUTA = "/api/servicios/publicaciones/calendario/simulacion";
++const RUTA_PREPARAR = "/api/servicios/publicaciones/calendario/preparar";
++const BORRADORES = "calendarios_borradores_servicios";
+ const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+ const ID_PEDIDO = /^SER-[a-f0-9-]{36}$/i;
+ const DIAS_REQUERIDOS = 7;
+@@ -114,6 +116,149 @@
+     ventanaFinUTC: new Date(fin).toISOString(), eventos: items, advertencias };
+ }
+ 
++function pruebaPendiente(pedido) {
++  return pedido?.tipo === "publicaciones" && pedido?.modalidadContratacion === "prueba_gratuita" &&
++    pedido?.metodoPago === "ninguno" && pedido?.estadoPago === "no_requerido" &&
++    pedido?.estado !== "cancelado" && pedido?.estadoServicio === "sin_activar" &&
++    pedido?.prueba?.estado === "pendiente_activacion" && !pedido?.prueba?.inicio &&
++    !pedido?.activadoEn && !pedido?.fechaInicioServicio;
++}
++
++async function verificarCalendario(db, pedido, ahora = new Date()) {
++  const pedidoId = pedido.pedidoId;
++  const calendario = calcularCalendarioSimulado(pedido, ahora);
++  const archivos = await db.collection("archivos_servicios").find({ pedidoId, estado: "subido" })
++    .project({ contenidoId: 1, posicion: 1, nombre: 1, tamano: 1, r2Key: 1, revision: 1, _id: 0 }).toArray();
++  const archivosAprobados = pedido.publicaciones.every(p => {
++    const asociados = archivos.filter(a => a.contenidoId === p.id);
++    return asociados.length >= (p.tipo === "carrusel" ? 2 : 1) &&
++      asociados.length <= (p.tipo === "carrusel" ? 10 : 1) &&
++      asociados.every(a => a.revision === "aprobado" && typeof a.r2Key === "string" && a.r2Key.length > 5);
++  }) && archivos.every(a => pedido.publicaciones.some(p => p.id === a.contenidoId));
++  const conexiones = await db.collection("conexiones_meta_pedidos").find({
++    pedidoId, plataforma: { $in: pedido.redes }, estado: "conectada",
++  }).project({ _id: 0, plataforma: 1, pageId: 1, instagramId: 1, actualizadoEn: 1,
++    tokenPaginaCifrado: 1, estado: 1 }).toArray();
++  const redesConectadas = pedido.redes.every(red => conexiones.some(c => c.plataforma === red));
++  const facebook = conexiones.find(c => c.plataforma === "facebook");
++  const instagram = conexiones.find(c => c.plataforma === "instagram");
++  const mismaPagina = !facebook || !instagram || Boolean(facebook.pageId &&
++    String(facebook.pageId) === String(instagram.pageId));
++  const tokensGuardados = pedido.redes.every(red => conexiones.some(c => c.plataforma === red &&
++    c.tokenPaginaCifrado?.algoritmo === "aes-256-gcm" &&
++    typeof c.tokenPaginaCifrado?.contenido === "string" &&
++    Boolean(c.tokenPaginaCifrado.contenido)));
++  const textosDePrueba = pedido.publicaciones.some(p =>
++    [p.descripcion, p.ctaFacebook, p.ctaInstagram, p.hashtags].some(x =>
++      /(?:prueba interna|no publicar)/i.test(String(x || ""))));
++  const condiciones = {
++    cuatroContenidos: pedido.publicaciones.length === 4,
++    archivosAprobados: archivosAprobados && pedido.estadoContenidos === "aprobados",
++    redesConectadas, facebookInstagramMismaPagina: mismaPagina, tokensGuardados,
++    sinTextosDePrueba: !textosDePrueba,
++    horariosSinCoincidencias: !calendario.advertencias.some(a => a.includes("coinciden")),
++    todasFechasCalculadas: calendario.eventos.length === pedido.publicaciones.length * pedido.redes.length,
++  

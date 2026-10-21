@@ -1,0 +1,102 @@
+--- a/worker.js
++++ b/worker.js
+@@ -4,7 +4,7 @@
+ import handlerVisitas from "./api/visitas.js";
+ import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
+ import { ejecutarConexionMetaPedido } from "./api/servicios/meta-pedidos.js";
+-import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario } from "./api/servicios/calendario-simulacion.js";
++import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario, ejecutarEnsayoCalendario } from "./api/servicios/calendario-simulacion.js";
+ import { ejecutarAccesoClientes, diagnosticarConfiguracionClientes, ejecutarPanelClientes, obtenerClienteRegistrado } from "./api/servicios/clientes-acceso.js";
+ import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
+ import crypto from "crypto";
+@@ -1359,6 +1359,13 @@
+   return ejecutarSimulacionCalendario(request, env);
+ }
+ 
++// Ensayo aislado y SOLO LECTURA. No llega a ejecutarCronRedes ni a Meta.
++if (url.pathname === "/api/servicios/publicaciones/calendario/ensayo") {
++  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
++  if (exceso) return exceso;
++  return ejecutarEnsayoCalendario(request, env);
++}
++
+ // Guarda solamente una propuesta no ejecutable, después de verificar la
+ // titularidad del cliente. No toca el cron ni el estado de la prueba.
+ if (url.pathname === "/api/servicios/publicaciones/calendario/preparar") {
+--- a/src/paginas/servicios/PanelClientePublicaciones.jsx
++++ b/src/paginas/servicios/PanelClientePublicaciones.jsx
+@@ -70,6 +70,8 @@
+   const [calendarioErrores, setCalendarioErrores] = useState({});
+   const [confirmarBorrador, setConfirmarBorrador] = useState({});
+   const [preparandoBorrador, setPreparandoBorrador] = useState("");
++  const [ensayos, setEnsayos] = useState({});
++  const [ensayando, setEnsayando] = useState("");
+ 
+   const cargarPanel = useCallback(async () => {
+     setCargando(true);
+@@ -217,6 +219,7 @@
+     setCalendarioCargando(pedidoId);
+     setCalendarioErrores(prev => ({ ...prev, [pedidoId]: "" }));
+     setConfirmarBorrador(prev => ({ ...prev, [pedidoId]: false }));
++    setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
+     try {
+       const respuesta = await fetch(`/api/servicios/publicaciones/calendario/simulacion?pedidoId=${encodeURIComponent(pedidoId)}`, {
+         credentials: "same-origin", cache: "no-store",
+@@ -263,10 +266,29 @@
+         ...prev[pedidoId], seGuardoCalendario: true, borrador: resultado.borrador,
+       } }));
+       setConfirmarBorrador(prev => ({ ...prev, [pedidoId]: false }));
++    setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
+       setMensaje("Calendario guardado como borrador. La prueba gratuita sigue sin activar y no habrá publicaciones.");
+     } catch (error) {
+       setCalendarioErrores(prev => ({ ...prev, [pedidoId]: error.message || "Error preparando borrador." }));
+     } finally { setPreparandoBorrador(""); }
++  };
++
++  const ensayarCalendario = async (pedidoId) => {
++    setEnsayando(pedidoId);
++    setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
++    setCalendarioErrores(prev => ({ ...prev, [pedidoId]: "" }));
++    try {
++      const respuesta = await fetch(`/api/servicios/publicaciones/calendario/ensayo?pedidoId=${encodeURIComponent(pedidoId)}`, {
++        credentials: "same-origin", cache: "no-store",
++      });
++      const resultado = await respuesta.json();
++      if (!respuesta.ok || resultado.ok !== true || resultado.modo !== "ensayo_no_ejecutable") {
++        throw new Error(resultado.error || "No se pudo ensayar el calendario.");
++      }
++      setEnsayos(prev => ({ ...prev, [pedidoId]: resultado }));
++    } catch (error) {
++      setCalendarioErrores(prev => ({ ...prev, [pedidoId]: error.message || "No fue posible completar el ensayo." }));
++    } finally { setEnsayando(""); }
+   };
+ 
+   const salir = async () => {
+@@ -439,6 +461,27 @@
+                           </button>
+                         </> : <p className="text-xs font-medium text-amber-800">Para preparar el borrador, primero resolvé todas las comprobaciones pendientes.</p>}
+                       </div>
++                      <div className="space-y-2 rounded-md border border-neutral-200 bg-white p-3">
++                        <p className="text-xs font-medium text-neutral-900">Ensayo del motor de envíos</p>
++                        <p className="text-xs text-neutral-600">Verifica el borrador guardado y las identidades de los envíos. No se conecta con Meta, no reserva eventos y no activa la prueba.</p>
++                        <button type="button" onClick={() => ensayarCalendario(p.pedidoId)}
++                          disabled={Boolean(ensayando) || !calendarios[p.pedidoId].listoParaBorrador ||
++                            !calendarios[p.pedidoId].borrador?.revisionVigente}
++                          className={`${BOTON} border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50`}>
++                          {ensayando === p.pedidoId ? "Comprobando envíos..." : "Ensayar ejecución sin publicar"}
++                        </button>
++                        {!calendarios[p.pedidoId].borrador?.revisionVigente && <p className="text-xs text-amber-800">Necesitás un borrador guardado y vigente para ensayar los envíos.</p>}
++                        {ensayos[p.pedidoId] && <div className="space-y-2" role="status">
++                          <p className="text-xs font-medium text-neutral-800">Ensayo correcto: {ensayos[p.pedidoId].cantidadEventos} eventos distintos, todos bloqueados y sin publicar.</p>
++                          <div className="space-y-1">
++                            {ensayos[p.pedidoId].eventos.map(item => <div key={item.claveIdempotenciaPropuesta} className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 py-1 text-xs text-neutral-600">
++                              <span>Contenido {item.numeroContenido} · {item.red === "facebook" ? "Facebook" : "Instagram"}</span>
++                              <span>{item.fechaLocal} · {item.horaLocal} · Bloqueado</span>
++                            </div>)}
++                          </div>
++                          <p className="text-xs text-neutral-500">Son identificadores de ensayo. La protección definitiva contra duplicados se habilitará con el motor de publicación.</p>
++                        </div>}
++                      </div>
+                       <p className="text-xs font-medium text-neutral-700">Ningún contenido será publicado ni se consumirán días de prueba.</p>
+                     </>}
+         

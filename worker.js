@@ -4,7 +4,11 @@ import handlerAdminPedidos from "./api/admin/pedidos.js";
 import handlerVisitas from "./api/visitas.js";
 import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
 import { ejecutarConexionMetaPedido } from "./api/servicios/meta-pedidos.js";
-import { ejecutarAccesoClientes } from "./api/servicios/clientes-acceso.js";
+import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario, ejecutarEnsayoCalendario, ejecutarReservaCalendario } from "./api/servicios/calendario-simulacion.js";
+import { ejecutarSolicitudProgramacion } from "./api/servicios/solicitud-programacion.js";
+import { ejecutarActivacionSimulada } from "./api/servicios/activacion-simulada.js";
+import { ejecutarPublicacionPiloto, ejecutarImagenPiloto } from "./api/servicios/publicacion-piloto-meta.js";
+import { ejecutarAccesoClientes, diagnosticarConfiguracionClientes, ejecutarPanelClientes, obtenerClienteRegistrado } from "./api/servicios/clientes-acceso.js";
 import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
 import crypto from "crypto";
 
@@ -200,8 +204,8 @@ const PLAN_PUBLICACIONES = Object.freeze({
 
 // Los precios del Worker son la fuente de verdad; no usar precioMostrado.
 const PRECIOS_PUBLICACIONES = Object.freeze({
-  ARS: Object.freeze({ 1: 15000, 2: 25000 }),
-  USD: Object.freeze({ 1: 15, 2: 25 }),
+  ARS: Object.freeze({ 1: 10000, 2: 15000 }),
+  USD: Object.freeze({ 1: 10, 2: 15 }),
 });
 
 // Identificadores IANA admitidos en el configurador (América y España).
@@ -443,6 +447,126 @@ async function validarAccesoCrearServicio(request, env, datos) {
   }
 }
 
+// Las pruebas NO comienzan al crear el pedido. Se habilita únicamente la
+// preparación privada; un flag independiente evita abrirlas accidentalmente.
+function preparacionPruebaDisponible(request, env, protegida = false) {
+  if (String(env?.SERVICIO_PRUEBAS_PREPARACION_HABILITADA ?? "").toLowerCase() !== "true") return false;
+  if (env?.SERVICIO_PRUEBAS_MODO_PRIVADO !== "false" && !adminAutorizadoWorker(request, env)) return false;
+  if (protegida && (!limitadoresServicioPreparados(env) || !env?.SERVICIO_TURNSTILE_SITE_KEY || !env?.SERVICIO_TURNSTILE_SECRET)) return false;
+  return true;
+}
+
+async function apiPruebaPublicaciones(request, env, ruta) {
+  const esEstado = ruta === "/api/servicios/publicaciones/prueba/estado";
+  if (request.method !== (esEstado ? "GET" : "POST")) {
+    return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
+  }
+  if (esEstado) {
+    const pedidoId = new URL(request.url).searchParams.get("pedidoId");
+    if (!pedidoServicioIdValido(pedidoId)) return respuestaServicio({ ok: false, error: "Pedido inválido." }, 400);
+    const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+    if (exceso) return exceso;
+    try {
+      return await conColeccionServicios(env, async coleccion => {
+        const pedido = await coleccion.findOne({ pedidoId, tipo: "publicaciones", modalidadContratacion: "prueba_gratuita" });
+        if (!pedido || !clienteServicioAutorizado(request, pedido)) return respuestaServicio({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
+        return respuestaServicio({ ok: true, pedidoId, modalidad: "prueba_gratuita", moneda: pedido.moneda,
+          precio: 0, precioRenovacion: pedido.precioRenovacion, metodoPago: "ninguno",
+          estado: pedido.estado, estadoServicio: pedido.estadoServicio, estadoContenidos: pedido.estadoContenidos,
+          prueba: { estado: pedido.prueba?.estado || "pendiente_activacion", inicio: pedido.prueba?.inicio || null,
+            fin: pedido.prueba?.fin || null }, pagoHabilitado: false });
+      });
+    } catch {
+      return respuestaServicio({ ok: false, error: "No se pudo consultar la prueba." }, 503);
+    }
+  }
+
+  if (!preparacionPruebaDisponible(request, env, true)) {
+    return respuestaServicio({ ok: false, error: "La preparación de pruebas todavía no está habilitada." }, 503);
+  }
+  // La protección se aplica también a cuentas registradas y Admin en modo privado.
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_PEDIDOS");
+  if (exceso) return exceso;
+  if (request.headers.get("origin") !== new URL(request.url).origin) {
+    return respuestaServicio({ ok: false, error: "Origen no autorizado." }, 403);
+  }
+  const lectura = await leerJsonServicio(request);
+  if (lectura.error) return respuestaServicio({ ok: false, error: lectura.error }, lectura.estado);
+  const datos = lectura.datos;
+  if (!["ARS", "USD"].includes(datos.moneda)) {
+    return respuestaServicio({ ok: false, error: "Moneda no admitida." }, 400);
+  }
+  const validacion = validarConfiguracionServicio(datos);
+  if (validacion.error) return respuestaServicio({ ok: false, error: validacion.error }, 400);
+  const acceso = await validarAccesoCrearServicio(request, env, datos);
+  if (acceso.error) return respuestaServicio({ ok: false, error: acceso.error }, acceso.estado);
+
+  let usuario = null;
+  try { usuario = await obtenerClienteRegistrado(request, env); }
+  catch { return respuestaServicio({ ok: false, error: "No se pudo verificar la sesión de cliente." }, 503); }
+  if (usuario && usuario.email !== validacion.configuracion.negocio.email.toLowerCase()) {
+    return respuestaServicio({ ok: false, error: "Usá el correo verificado de tu cuenta para iniciar la prueba." }, 400);
+  }
+
+  let mongo, reservado = false;
+  const pedidoId = `SER-${crypto.randomUUID()}`;
+  const fecha = new Date();
+  const email = validacion.configuracion.negocio.email.trim().toLowerCase();
+  // La reserva de invitado limita ensayos anónimos, pero nunca otorga identidad
+  // verificada ni impide que el propietario real del correo entre a su cuenta.
+  const identidad = usuario ? `cuenta:${usuario.id}` : `invitado:${crypto.createHash("sha256").update(email).digest("hex")}`;
+  try {
+    sincronizarEntorno(env);
+    const { MongoClient } = await import("mongodb");
+    mongo = new MongoClient(env.MONGODB_URI);
+    await mongo.connect();
+    const db = mongo.db("andres_imprimibles");
+    const reservas = db.collection("clientes_pruebas_reservas");
+    try {
+      await reservas.insertOne({ _id: identidad, pedidoId, creadoEn: fecha, emailVerificado: Boolean(usuario) });
+      reservado = true;
+    } catch (error) {
+      if (error?.code === 11000) return respuestaServicio({ ok: false,
+        error: "Ya hay una solicitud de prueba asociada a este acceso. Revisá tu panel o utilizá el enlace privado existente." }, 409);
+      throw error;
+    }
+    const tokenAcceso = crypto.randomBytes(32).toString("hex");
+    const precioRenovacion = PRECIOS_PUBLICACIONES[datos.moneda][validacion.configuracion.redes.length];
+    await db.collection("pedidos_servicios").insertOne({
+      pedidoId, tokenAccesoHash: crypto.createHash("sha256").update(tokenAcceso).digest("hex"),
+      tipo: "publicaciones", planId: PLAN_PUBLICACIONES.id, nombrePlan: PLAN_PUBLICACIONES.nombre,
+      contenidos: PLAN_PUBLICACIONES.contenidos, duracionDias: PLAN_PUBLICACIONES.duracionDias,
+      modalidadContratacion: "prueba_gratuita", moneda: datos.moneda, precio: 0, precioRenovacion,
+      metodoPago: "ninguno", cantidadPublicaciones: 4 * validacion.configuracion.redes.length,
+      ...validacion.configuracion,
+      ...(usuario ? { clienteUsuarioId: usuario.id, clienteVinculadoEn: fecha } : {}),
+      accesoOrigen: usuario ? "cuenta_verificada" : "invitado",
+      modalidadCalendario: "periodo_flexible_7_dias_consecutivos",
+      criterioInicio: "pendiente_de_activacion_y_autorizacion_explicita",
+      fechaInicioServicio: null, fechaFinServicio: null,
+      estado: "prueba_en_preparacion", estadoPago: "no_requerido",
+      estadoCuentas: "pendiente_vinculacion", estadoContenidos: "pendiente_carga", estadoServicio: "sin_activar",
+      prueba: { estado: "pendiente_activacion", inicio: null, fin: null, recordatorioEn: null },
+      archivosSubidos: false, comprobante: null, paypalOrderId: null, paypalCaptureId: null,
+      creadoEn: fecha, actualizadoEn: fecha, pagadoEn: null, activadoEn: null,
+      historialEstados: [{ estado: "prueba_en_preparacion", fecha }],
+    });
+    return respuestaServicio({ ok: true, pedidoId, tokenAcceso, modalidad: "prueba_gratuita",
+      moneda: datos.moneda, precio: 0, precioRenovacion, metodoPago: "ninguno",
+      estado: "prueba_en_preparacion", estadoServicio: "sin_activar",
+      prueba: { estado: "pendiente_activacion", inicio: null, fin: null },
+      pagoHabilitado: false, cuentaVinculada: Boolean(usuario) }, 201);
+  } catch (error) {
+    // Si Mongo falla al crear la orden, no impedir reintentos con una reserva huérfana.
+    if (reservado && mongo) await mongo.db("andres_imprimibles").collection("clientes_pruebas_reservas")
+      .deleteOne({ _id: identidad, pedidoId }).catch(() => {});
+    console.error("Error preparando prueba gratuita:", error?.message || "error interno");
+    return respuestaServicio({ ok: false, error: "No se pudo preparar el pedido gratuito." }, 503);
+  } finally {
+    if (mongo) await mongo.close().catch(() => {});
+  }
+}
+
 async function apiPedidosPublicaciones(request, env, ruta) {
   // El Site Key es público y puede viajar en la respuesta del plan.
   // La Secret Key nunca se devuelve al navegador.
@@ -463,6 +587,8 @@ async function apiPedidosPublicaciones(request, env, ruta) {
         turnstilePreparado && transferenciaPreparada && proteccionesPreparadas,
       transferenciasHabilitadas: transferenciaPreparada && proteccionesPreparadas,
       cobrosHabilitados: false,
+      pruebasDisponibles: preparacionPruebaDisponible(request, env, true),
+      pruebaModoPrivado: env?.SERVICIO_PRUEBAS_MODO_PRIVADO !== "false",
     });
   }
   if (request.method !== "POST") {
@@ -1164,11 +1290,32 @@ if (url.pathname === "/api/admin/pedidos") {
   }
 }
 
+// Diagnóstico de solo lectura, disponible exclusivamente para una sesión Admin.
+// No se muestran los secretos, sus longitudes ni el remitente configurado.
+if (url.pathname === "/api/admin/servicios/clientes/diagnostico") {
+  if (request.method !== "GET") {
+    return respuestaServicio({ ok: false, error: "Método no permitido." }, 405);
+  }
+  if (!adminAutorizadoWorker(request, env)) {
+    return respuestaServicio({ ok: false, error: "No autorizado." }, 401);
+  }
+  return respuestaServicio(diagnosticarConfiguracionClientes(env));
+}
+
 // Registro de clientes de Comunidad Semanal, aislado de Admin y de Mega Bazar.
 if (url.pathname.startsWith("/api/servicios/clientes/acceso/")) {
   const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
   if (exceso) return exceso;
   return ejecutarAccesoClientes(request, env);
+}
+
+// Panel de usuarios registrados: sesion propia + comprobacion privada al vincular pedidos.
+if (url.pathname === "/api/servicios/clientes/panel" ||
+    url.pathname === "/api/servicios/clientes/panel/vincular" ||
+    url.pathname === "/api/servicios/clientes/panel/recuperar-acceso") {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  return ejecutarPanelClientes(request, env);
 }
 
 if (url.pathname === "/api/servicios/publicaciones/transferencia" ||
@@ -1182,7 +1329,8 @@ if (url.pathname === "/api/admin/servicios/meta/iniciar" ||
 
 // Meta de clientes: acceso Bearer por pedido y retorno OAuth separado de Admin.
 if (url.pathname.startsWith("/api/servicios/meta/pedidos/")) {
-  if (url.pathname !== "/api/servicios/meta/pedidos/callback") {
+  if (url.pathname !== "/api/servicios/meta/pedidos/callback" &&
+      url.pathname !== "/api/servicios/meta/pedidos/instagram/callback") {
     const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
     if (exceso) return exceso;
   }
@@ -1202,8 +1350,70 @@ if (url.pathname === "/api/admin/servicios/publicaciones/archivos") {
   return ejecutarAdminArchivosPedido(request, env, adminAutorizadoWorker(request, env));
 }
 
+// Ensayo administrativo GET, sin escrituras ni publicaciones en Meta.
+// NO altera cron de Mega Bazar, pedidos ni reservas existentes.
+if (url.pathname === "/api/admin/servicios/publicaciones/activacion-simulada") {
+  return ejecutarActivacionSimulada(request, env, adminAutorizadoWorker(request, env));
+}
+
+// Publicación piloto manual aislada; apagada por defecto. Nunca entra en scheduled().
+if (url.pathname.startsWith("/api/servicios/piloto-meta/media/")) {
+  return ejecutarImagenPiloto(request, env);
+}
+if (url.pathname.startsWith("/api/admin/servicios/publicaciones/piloto-meta")) {
+  const exceso = await comprobarLimiteServicio(request, env, request.method === "POST"
+    ? "SERVICIO_LIMITE_PEDIDOS" : "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  return ejecutarPublicacionPiloto(request, env, adminAutorizadoWorker(request, env));
+}
+
 if (url.pathname === "/api/admin/servicios/transferencias") {
   return apiAdminTransferenciasServicio(request, env);
+}
+
+// Confirmación voluntaria e independiente de la revisión técnica.
+// No activa la prueba ni modifica el cron de la tienda.
+if (url.pathname.startsWith("/api/servicios/publicaciones/solicitud/")) {
+  const exceso = await comprobarLimiteServicio(request, env, request.method === "GET"
+    ? "SERVICIO_LIMITE_CONSULTAS" : "SERVICIO_LIMITE_PEDIDOS");
+  if (exceso) return exceso;
+  return ejecutarSolicitudProgramacion(request, env);
+}
+
+// Simulación bajo sesión de cliente o Bearer del pedido. Solo lectura;
+// no llama a Meta ni modifica la ejecución scheduled() de Mega Bazar.
+if (url.pathname === "/api/servicios/publicaciones/calendario/simulacion") {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  return ejecutarSimulacionCalendario(request, env);
+}
+
+// Ensayo aislado y SOLO LECTURA. No llega a ejecutarCronRedes ni a Meta.
+if (url.pathname === "/api/servicios/publicaciones/calendario/ensayo") {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  return ejecutarEnsayoCalendario(request, env);
+}
+
+// Reserva atómica de ocho eventos bloqueados; sin ejecución, sin publicar.
+// Aislada de scheduled() y de la automatización de Mega Bazar.
+if (url.pathname === "/api/servicios/publicaciones/calendario/reservar") {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_PEDIDOS");
+  if (exceso) return exceso;
+  return ejecutarReservaCalendario(request, env);
+}
+
+// Guarda solamente una propuesta no ejecutable, después de verificar la
+// titularidad del cliente. No toca el cron ni el estado de la prueba.
+if (url.pathname === "/api/servicios/publicaciones/calendario/preparar") {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_PEDIDOS");
+  if (exceso) return exceso;
+  return ejecutarPreparacionCalendario(request, env);
+}
+
+if (url.pathname === "/api/servicios/publicaciones/prueba" ||
+    url.pathname === "/api/servicios/publicaciones/prueba/estado") {
+  return apiPruebaPublicaciones(request, env, url.pathname);
 }
 
 if (

@@ -36,8 +36,8 @@ const PLAN = {
   contenidos: 4,
   duracionDias: 7,
   precios: {
-    ARS: { 1: 15000, 2: 25000 },
-    USD: { 1: 15, 2: 25 },
+    ARS: { 1: 10000, 2: 15000 },
+    USD: { 1: 10, 2: 15 },
   },
 };
 
@@ -45,6 +45,7 @@ const PLAN = {
 // La clave privada permanece exclusivamente en los secretos del Worker.
 const API_PLAN = "/api/servicios/publicaciones/plan";
 const API_PEDIDOS = "/api/servicios/publicaciones/pedidos";
+const API_PRUEBA = "/api/servicios/publicaciones/prueba";
 const API_TRANSFERENCIA = "/api/servicios/publicaciones/transferencia";
 const PEDIDO_PENDIENTE_STORAGE = "pedido-publicaciones-transferencia-v1";
 
@@ -81,6 +82,22 @@ function enlacePrivadoServicio(pedido) {
 async function consultarPedidoServicio(id, tokenAcceso) {
   if (!credencialesPedidoValidas(id, tokenAcceso)) {
     throw new Error("Revisá el código de pedido y la clave privada de acceso.");
+  }
+  // Las pruebas gratuitas no tienen transferencia ni comprobante. Se consultan
+  // con el mismo token privado, sin mostrarlo en enlaces de red ni en registros.
+  const gratisRespuesta = await fetch(`${API_PRUEBA}/estado?pedidoId=${encodeURIComponent(id)}`, {
+    method: "GET", cache: "no-store",
+    headers: { Authorization: `Bearer ${tokenAcceso}`, Accept: "application/json" },
+  });
+  if (gratisRespuesta.ok) {
+    const gratis = await gratisRespuesta.json();
+    if (gratis.ok === true && gratis.pedidoId === id && gratis.modalidad === "prueba_gratuita") {
+      return { id, tokenAcceso, moneda: gratis.moneda, precio: 0,
+        precioRenovacion: gratis.precioRenovacion, metodoPago: "ninguno",
+        modalidad: "prueba_gratuita", estado: gratis.estado, pagoHabilitado: false };
+    }
+  } else if (gratisRespuesta.status !== 404) {
+    throw new Error("No pudimos consultar el estado del pedido. Intentá nuevamente más tarde.");
   }
   const respuesta = await fetch(`${API_TRANSFERENCIA}?pedidoId=${encodeURIComponent(id)}`, {
     method: "GET", cache: "no-store",
@@ -281,7 +298,7 @@ function datosParaDescargar({ redes, contenidos, negocio, moneda, zonaHoraria })
         tamano: archivo.size,
       })),
     })),
-    aviso: "Este archivo guarda la configuración, pero no incluye los archivos multimedia. La carga definitiva se realiza después del pago.",
+    aviso: "Este archivo guarda la configuración, pero no incluye los archivos multimedia. La carga definitiva se realiza después de preparar el pedido gratuito.",
   };
 }
 
@@ -551,7 +568,7 @@ export default function ConfiguradorPublicaciones() {
     try {
       const guardado = JSON.parse(sessionStorage.getItem(PEDIDO_PENDIENTE_STORAGE) || "null");
       return credencialesPedidoValidas(guardado?.id, guardado?.tokenAcceso) &&
-        guardado?.moneda === "ARS" ? guardado : null;
+        ["ARS", "USD"].includes(guardado?.moneda) ? guardado : null;
     } catch { return null; }
   });
   const enviandoRef = useRef(false);
@@ -623,6 +640,18 @@ export default function ConfiguradorPublicaciones() {
     return () => controller.abort();
   }, [revisionPlan]);
 
+  useEffect(() => {
+    const controlador = new AbortController();
+    fetch("/api/servicios/clientes/acceso/sesion", { cache: "no-store", credentials: "same-origin", signal: controlador.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(datos => {
+        if (datos?.autenticado && typeof datos.email === "string") {
+          setNegocio(actual => actual.email.trim() ? actual : { ...actual, email: datos.email });
+        }
+      }).catch(() => {});
+    return () => controlador.abort();
+  }, []);
+
   const idiomaArgentino = zonaHoraria.startsWith("America/Argentina/");
   const t = (argentino, neutro) => idiomaArgentino ? argentino : neutro;
   const contenido = contenidos.find((p) => p.id === seleccion) || contenidos[0];
@@ -635,8 +664,12 @@ export default function ConfiguradorPublicaciones() {
   const transferenciasDisponibles = planServidor?.transferenciasHabilitadas === true;
   // El registro público continúa cerrado hasta que el Worker habilite pedidos.
   // USD no puede contratarse hasta implementar y verificar PayPal Checkout.
-  const pedidosDisponibles = precioConfirmado && planServidor?.pedidosHabilitados === true &&
-    Boolean(turnstileSiteKey) && moneda === "ARS" && transferenciasDisponibles;
+  const pruebasDisponibles = precioConfirmado && planServidor?.pruebasDisponibles === true &&
+    Boolean(turnstileSiteKey);
+  // La antigua contratación paga se conserva para consultar pedidos anteriores,
+  // pero no se presenta en esta oferta de siete días gratuitos.
+  const pedidosDisponibles = false;
+  const creacionDisponible = pruebasDisponibles;
   const medioPago = moneda === "ARS" ? "Transferencia bancaria" : "PayPal";
   const archivosVista = contenido.archivos;
   const archivoActivo = archivosVista[imagenActiva] || archivosVista[0];
@@ -721,7 +754,7 @@ export default function ConfiguradorPublicaciones() {
   }
 
   async function crearPedido() {
-    if (enviandoRef.current || pedidoCreado || !pedidosDisponibles || !turnstileToken) return;
+    if (enviandoRef.current || pedidoCreado || !creacionDisponible || !turnstileToken) return;
     const errorValidacion = verificarFormularioPedido({ negocio, contenidos });
     if (errorValidacion) {
       setErrorPedido(errorValidacion);
@@ -734,8 +767,8 @@ export default function ConfiguradorPublicaciones() {
       const configuracion = datosParaDescargar({ redes, contenidos, negocio, moneda, zonaHoraria });
       // Nunca enviamos archivos, URLs blob: ni un precio editable desde el navegador.
       const { precioMostrado, aviso, ...datosPedido } = configuracion;
-      const respuesta = await fetch(API_PEDIDOS, {
-        method: "POST",
+      const respuesta = await fetch(pruebasDisponibles ? API_PRUEBA : API_PEDIDOS, {
+        method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         cache: "no-store",
         body: JSON.stringify({ ...datosPedido, turnstileToken }),
@@ -752,11 +785,13 @@ export default function ConfiguradorPublicaciones() {
         metodoPago: datos.metodoPago,
         estado: datos.estado,
         pagoHabilitado: datos.pagoHabilitado === true,
+        modalidad: datos.modalidad || "pago",
+        precioRenovacion: datos.precioRenovacion,
       };
       setPedidoCreado(pedido);
       // Solo permanece durante la sesión del navegador. Nunca incluir el token
       // en URLs, registros de consola ni archivos públicos.
-      if (pedido.tokenAcceso && pedido.moneda === "ARS") {
+      if (pedido.tokenAcceso && ["ARS", "USD"].includes(pedido.moneda)) {
         try { sessionStorage.setItem(PEDIDO_PENDIENTE_STORAGE, JSON.stringify(pedido)); } catch { /* Almacenamiento no disponible */ }
       }
     } catch (error) {
@@ -810,7 +845,7 @@ export default function ConfiguradorPublicaciones() {
   }
 
   function comenzarNuevoPedido() {
-    if (!window.confirm("¿Querés comenzar otra contratación? Antes guardá el acceso privado de tu pedido actual.")) return;
+    if (!window.confirm("¿Querés comenzar otro pedido? Antes guardá el acceso privado del pedido actual.")) return;
     try { sessionStorage.removeItem(PEDIDO_PENDIENTE_STORAGE); } catch { /* Sesión no disponible */ }
     setPedidoCreado(null);
     setAvisoAcceso("");
@@ -822,7 +857,8 @@ export default function ConfiguradorPublicaciones() {
   function descargarConfiguracion() {
     const datos = datosParaDescargar({ redes, contenidos, negocio, moneda, zonaHoraria });
     datos.precioMostrado = {
-      monto: precio,
+      monto: 0,
+      renovacionPorSemana: precio,
       moneda,
       sujetoAConfirmacion: !precioConfirmado,
     };
@@ -911,8 +947,8 @@ export default function ConfiguradorPublicaciones() {
               <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-600">
                 <CalendarDays size={15} className="mt-0.5 shrink-0 text-orange-700" />
                 {t(
-                  "No necesitás esperar al lunes. Tras verificar el pago, vincular las cuentas y aprobar los contenidos, acordamos la primera fecha disponible. Desde esa primera publicación se cuentan siete días consecutivos, respetando tu zona horaria.",
-                  "No necesitas esperar al lunes. Tras verificar el pago, vincular las cuentas y aprobar los contenidos, acordamos la primera fecha disponible. Desde esa primera publicación se cuentan siete días consecutivos, respetando tu zona horaria."
+                  "Podés preparar el pedido gratuito sin pagar. Los siete días comenzarán cuando habilitemos la activación, se vinculen las cuentas y se aprueben los contenidos. No hay publicaciones automáticas durante esta etapa de pruebas.",
+                  "Puedes preparar el pedido gratuito sin pagar. Los siete días comenzarán cuando habilitemos la activación, se vinculen las cuentas y se aprueben los contenidos. No hay publicaciones automáticas durante esta etapa de pruebas."
                 )}
               </p>
             </section>
@@ -986,7 +1022,7 @@ export default function ConfiguradorPublicaciones() {
                   </span>
                   <input className="sr-only" type="file" accept={contenido.tipo === "reel" ? "video/mp4,.mp4" : "image/jpeg,image/png,image/webp"} multiple={contenido.tipo === "carrusel"} onChange={agregarArchivos} />
                 </label>
-                <p className="mt-1.5 text-xs leading-5 text-slate-500">Los archivos se usan solo en esta vista previa. Podrás subir los definitivos después del pago.</p>
+                <p className="mt-1.5 text-xs leading-5 text-slate-500">Los archivos de esta vista previa no se envían todavía. Podrás subir los definitivos al preparar el pedido gratuito.</p>
                 {errorArchivo && <p role="alert" className="mt-2 text-xs text-red-700">{errorArchivo}</p>}
                 {!!contenido.archivos.length && (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -1093,7 +1129,7 @@ export default function ConfiguradorPublicaciones() {
               <div className="mt-7 flex items-start gap-3 rounded-md border border-slate-200 bg-white p-4">
                 <ShieldCheck size={18} className="mt-0.5 shrink-0 text-orange-700" />
                 <div>
-                  <p className="text-sm font-medium">Conexión segura después del pago</p>
+                  <p className="text-sm font-medium">Conexión segura de tus redes</p>
                   <p className="mt-1 text-xs leading-5 text-slate-600">Para publicar en Instagram necesitás una cuenta profesional compatible; para Facebook, una página que puedas administrar. La autorización se realizará desde Meta, sin pedirte contraseñas.</p>
                   <div className="mt-2 flex items-center gap-3" aria-label="Redes compatibles para conectar">
                     <span className="inline-flex items-center gap-1.5 text-xs text-slate-600"><LogoRed red="instagram" size={18} /> Instagram</span>
@@ -1104,7 +1140,7 @@ export default function ConfiguradorPublicaciones() {
             </section>
 
             <section className={TARJETA} aria-labelledby="config-pago">
-              <div id="config-pago"><TituloSeccion numero="04" titulo="Moneda y pago" descripcion={t("Revisá el importe correspondiente a las redes seleccionadas.", "Revisa el importe correspondiente a las redes seleccionadas.")} /></div>
+              <div id="config-pago"><TituloSeccion numero="04" titulo="Tu prueba gratuita" descripcion="Los cuatro contenidos serán gratuitos durante siete días cuando se habilite la activación. No se cobra por preparar el pedido." /></div>
               <div className="grid grid-cols-2 gap-2" role="group" aria-label="Elegir moneda">
                 {["ARS", "USD"].map((m) => (
                   <button key={m} type="button" aria-pressed={moneda === m} onClick={() => setMoneda(m)}
@@ -1114,18 +1150,17 @@ export default function ConfiguradorPublicaciones() {
                 ))}
               </div>
               <div className="mt-4 flex items-center gap-2 text-sm text-slate-700">
-                {moneda === "ARS" ? <Wallet size={18} className="text-orange-700" /> : <CreditCard size={18} className="text-orange-700" />}
-                <span>{medioPago}</span>
+                <ShieldCheck size={18} className="text-orange-700" />
+                <span>Sin pago ni tarjeta durante la prueba</span>
               </div>
               <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                {moneda === "ARS"
-                  ? "Después de transferir, podrás enviar el comprobante. El servicio se activa una vez verificado el pago y aprobados los contenidos."
-                  : "El pago se realizará mediante PayPal. La activación requiere la confirmación del pago y la aprobación del contenido."}
+                Los contenidos y la conexión de Facebook se preparan antes de activar el calendario. Todavía no se publicará nada.
               </p>
               <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
-                <div><p className="text-sm text-slate-600">{precioConfirmado ? "Total por semana" : "Importe orientativo"}</p><p className="mt-0.5 text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"} · {totalPublicaciones} publicaciones</p></div>
-                <p className="text-xl font-medium text-slate-900">{precioFormateado(precio, moneda)}</p>
+                <div><p className="text-sm text-slate-600">Tu prueba gratuita</p><p className="mt-0.5 text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"} · hasta {totalPublicaciones} publicaciones</p></div>
+                <p className="text-xl font-medium text-slate-900">{precioFormateado(0, moneda)}</p>
               </div>
+              <p className="mt-2 text-xs text-slate-500">Después de los siete días: {precioFormateado(precio, moneda)} por semana, solo si decidís contratar.</p>
               {!precioConfirmado && (
                 <div className="mt-3 text-xs leading-5 text-slate-600" role="status">
                   {estadoPlan === "cargando" ? "Consultando el precio actualizado..." : (
@@ -1136,7 +1171,7 @@ export default function ConfiguradorPublicaciones() {
                   )}
                 </div>
               )}
-              {pedidosDisponibles && !pedidoCreado && (
+              {creacionDisponible && !pedidoCreado && (
                 <div className="mt-5 border-t border-slate-100 pt-4">
                   <p className="mb-2 text-sm font-medium text-slate-800">Verificación de seguridad</p>
                   <VerificacionHumana key={`${turnstileSiteKey}-${revisionTurnstile}`} clave={turnstileSiteKey} onToken={setTurnstileToken} />
@@ -1144,10 +1179,14 @@ export default function ConfiguradorPublicaciones() {
               )}
               {pedidoCreado ? (
                 <div className="mt-5 rounded-md border border-orange-200 bg-orange-50 p-4" role="status" aria-live="polite">
-                  <div className="flex items-center gap-2 text-sm font-medium text-orange-900"><CircleCheck size={18} /> Pedido registrado</div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-orange-900"><CircleCheck size={18} /> {pedidoCreado.modalidad === "prueba_gratuita" ? "Prueba gratuita preparada" : "Pedido registrado"}</div>
                   <p className="mt-2 break-all text-sm font-medium text-slate-900">Código: {pedidoCreado.id}</p>
-                  <p className="mt-1 text-xs text-slate-700">Importe validado: {precioFormateado(pedidoCreado.precio, pedidoCreado.moneda)} · {pedidoCreado.metodoPago === "paypal" ? "PayPal" : "Transferencia"}</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-700">La carga definitiva de publicaciones y la conexión de redes se habilitarán después de confirmar el pago.</p>
+                  <p className="mt-1 text-xs text-slate-700">{pedidoCreado.modalidad === "prueba_gratuita" ?
+                    `Prueba: ${precioFormateado(0, pedidoCreado.moneda)} · Renovación opcional: ${precioFormateado(pedidoCreado.precioRenovacion ?? precio, pedidoCreado.moneda)} por semana` :
+                    `Importe validado: ${precioFormateado(pedidoCreado.precio, pedidoCreado.moneda)} · ${pedidoCreado.metodoPago === "paypal" ? "PayPal" : "Transferencia"}`}</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-700">{pedidoCreado.modalidad === "prueba_gratuita" ?
+                    "El pedido ya está registrado sin pago. Ahora podremos probar la carga de archivos y la conexión de Facebook. Los siete días todavía no comienzan y no se publicará ningún contenido." :
+                    "La carga definitiva y la conexión de redes se habilitarán después de confirmar el pago."}</p>
                   <div className="mt-4 rounded-md border border-orange-200 bg-white p-3">
                     <p className="text-sm font-medium text-slate-900">Guardá el acceso a tu pedido</p>
                     <p className="mt-1 text-xs leading-5 text-slate-600">Podrás volver otro día o desde otro dispositivo, sin tener que configurar ni pagar nuevamente. Este acceso es privado: no lo compartas con otras personas.</p>
@@ -1164,7 +1203,7 @@ export default function ConfiguradorPublicaciones() {
                     <p className="mt-2 text-xs leading-5 text-slate-600">Si guardás solamente la clave, también necesitarás el código de pedido que aparece arriba. Por seguridad, no enviamos estos datos por correo automáticamente.</p>
                     {avisoAcceso && <p className="mt-2 text-xs text-slate-700" role="status">{avisoAcceso}</p>}
                   </div>
-                  {pedidoCreado.moneda === "ARS" && <TransferenciaPedidoServicio pedido={pedidoCreado} habilitada={transferenciasDisponibles} />}
+                  {pedidoCreado.modalidad !== "prueba_gratuita" && pedidoCreado.moneda === "ARS" && <TransferenciaPedidoServicio pedido={pedidoCreado} habilitada={transferenciasDisponibles} />}
                   {pedidoCreado.tokenAcceso && <ConexionFacebookPedido key={pedidoCreado.id} pedido={pedidoCreado} />}
                   {pedidoCreado.tokenAcceso && <ArchivosPedido key={`archivos-${pedidoCreado.id}`} pedido={pedidoCreado} />}
                   <button type="button" onClick={comenzarNuevoPedido} className="mt-4 text-xs font-medium text-orange-700 underline underline-offset-2">Configurar otro pedido</button>
@@ -1172,15 +1211,17 @@ export default function ConfiguradorPublicaciones() {
               ) : (
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <button type="button" onClick={crearPedido}
-                    disabled={!pedidosDisponibles || !turnstileToken || creandoPedido}
+                    disabled={!creacionDisponible || !turnstileToken || creandoPedido}
                     className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-medium transition",
-                      pedidosDisponibles && turnstileToken && !creandoPedido
+                      creacionDisponible && turnstileToken && !creandoPedido
                         ? "bg-orange-600 text-white hover:bg-orange-700"
                         : "cursor-not-allowed bg-slate-300 text-white")}
                   >
-                    {creandoPedido ? "Registrando pedido..." : pedidosDisponibles ? (
+                    {creandoPedido ? "Preparando pedido..." : pruebasDisponibles ? (
+                      <><ShieldCheck size={16} /> Preparar mi prueba gratuita</>
+                    ) : pedidosDisponibles ? (
                       <><ShieldCheck size={16} /> Continuar con transferencia</>
-                    ) : <><LockKeyhole size={16} /> {moneda === "USD" ? "PayPal próximamente" : "Contratación próximamente"}</>}
+                    ) : <><LockKeyhole size={16} /> Prueba gratuita todavía en preparación</>}
                   </button>
                   <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50">
                     <Download size={16} /> Guardar configuración
@@ -1221,9 +1262,11 @@ export default function ConfiguradorPublicaciones() {
               )}
               {errorPedido && <p className="mt-3 text-xs leading-5 text-red-700" role="alert">{errorPedido}</p>}
               <p className="mt-3 text-xs leading-5 text-slate-500">
-                {pedidosDisponibles
+                {pruebasDisponibles
+                  ? "Preparar la prueba no activa ningún cobro ni publicación. Los días comenzarán más adelante, con las cuentas autorizadas y los contenidos aprobados."
+                  : pedidosDisponibles
                   ? "Primero registramos el pedido con el precio oficial. Después podrás transferir y adjuntar el comprobante para verificación manual."
-                  : "Podés revisar todos tus contenidos y guardar la configuración sin pagar. La contratación se habilitará próximamente."}
+                  : "Podés revisar los contenidos y guardar la configuración. La preparación de pruebas gratuitas sigue cerrada al público."}
               </p>
             </section>
           </div>
@@ -1318,7 +1361,7 @@ export default function ConfiguradorPublicaciones() {
               </div>
               <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-3">
                 <span className="text-sm text-slate-600">Total semanal</span>
-                <span className="text-lg font-medium">{precioFormateado(precio, moneda)}</span>
+                <span className="text-lg font-medium">{precioFormateado(0, moneda)}</span>
               </div>
               <p className="mt-3 text-xs leading-5 text-slate-500">Los materiales deben estar listos para publicar. La producción y edición profesional de fotos o videos se presupuestan por separado.</p>
             </div>

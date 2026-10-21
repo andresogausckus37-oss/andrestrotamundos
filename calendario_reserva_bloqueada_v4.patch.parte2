@@ -1,0 +1,137 @@
+ara este calendario. Requiere revisión administrativa." }, 409);
+     }
++    const reservaExistente = await db.collection(EJECUCIONES).findOne({ _id: pedidoId });
++    if (reservaExistente && !mismaPropuesta(reservaExistente, actual.revision, eventos)) {
++      return json({ ok: false, error: "La reserva existente no coincide con este borrador." }, 409);
++    }
+     return json({ ok: true, modo: "ensayo_no_ejecutable", pedidoId,
++      reserva: resumenReserva(reservaExistente, actual.revision),
+       zonaHoraria: actual.zonaHoraria, revision: actual.revision,
+       cantidadEventos: eventos.length, eventos,
+       pedidosActivados: 0, publicacionesRealizadas: 0,
+@@ -379,10 +499,13 @@
+       { projection: { _id: 0, estado: 1, revision: 1, actualizadoEn: 1 } });
+     const borrador = existente ? { estado: existente.estado, revisionVigente: existente.revision === calendario.revision,
+       actualizadoEn: existente.actualizadoEn } : null;
++    const reservaGuardada = await db.collection(EJECUCIONES).findOne({ _id: pedidoId },
++      { projection: { _id: 0, estado: 1, revision: 1, publicacionHabilitada: 1, creadaEn: 1, eventos: 1 } });
+     return json({ ok: true, pedidoId, modalidad: "prueba_gratuita",
+       modo: "simulacion_sin_publicacion", esSimulacion: true, fechaGeneracion: new Date().toISOString(),
+       estadoPrueba: "pendiente_activacion", diasConsumidos: 0, activa: false,
+       puedePublicar: false, seGuardoCalendario: Boolean(borrador), borrador,
++      reserva: resumenReserva(reservaGuardada, calendario.revision),
+       cantidadContenidos: pedido.publicaciones.length,
+       cantidadEventos: calendario.eventos.length, ...calendario });
+   } catch (error) {
+diff --git a/src/paginas/servicios/PanelClientePublicaciones.jsx b/src/paginas/servicios/PanelClientePublicaciones.jsx
+--- a/src/paginas/servicios/PanelClientePublicaciones.jsx
++++ b/src/paginas/servicios/PanelClientePublicaciones.jsx
+@@ -72,6 +72,8 @@
+   const [preparandoBorrador, setPreparandoBorrador] = useState("");
+   const [ensayos, setEnsayos] = useState({});
+   const [ensayando, setEnsayando] = useState("");
++  const [confirmarReserva, setConfirmarReserva] = useState({});
++  const [reservando, setReservando] = useState("");
+ 
+   const cargarPanel = useCallback(async () => {
+     setCargando(true);
+@@ -220,6 +222,7 @@
+     setCalendarioErrores(prev => ({ ...prev, [pedidoId]: "" }));
+     setConfirmarBorrador(prev => ({ ...prev, [pedidoId]: false }));
+     setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
++    setConfirmarReserva(prev => ({ ...prev, [pedidoId]: false }));
+     try {
+       const respuesta = await fetch(`/api/servicios/publicaciones/calendario/simulacion?pedidoId=${encodeURIComponent(pedidoId)}`, {
+         credentials: "same-origin", cache: "no-store",
+@@ -266,7 +269,7 @@
+         ...prev[pedidoId], seGuardoCalendario: true, borrador: resultado.borrador,
+       } }));
+       setConfirmarBorrador(prev => ({ ...prev, [pedidoId]: false }));
+-    setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
++      setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
+       setMensaje("Calendario guardado como borrador. La prueba gratuita sigue sin activar y no habrá publicaciones.");
+     } catch (error) {
+       setCalendarioErrores(prev => ({ ...prev, [pedidoId]: error.message || "Error preparando borrador." }));
+@@ -289,6 +292,34 @@
+     } catch (error) {
+       setCalendarioErrores(prev => ({ ...prev, [pedidoId]: error.message || "No fue posible completar el ensayo." }));
+     } finally { setEnsayando(""); }
++  };
++
++  const reservarEventos = async (pedidoId) => {
++    const simulacion = calendarios[pedidoId];
++    const ensayo = ensayos[pedidoId];
++    if (!confirmarReserva[pedidoId] || !ensayo?.ok || ensayo.cantidadEventos !== 8 ||
++        ensayo.revision !== simulacion?.revision || simulacion?.reserva) return;
++    setReservando(pedidoId);
++    setCalendarioErrores(prev => ({ ...prev, [pedidoId]: "" }));
++    try {
++      const respuesta = await fetch("/api/servicios/publicaciones/calendario/reservar", {
++        method: "POST", credentials: "same-origin", cache: "no-store",
++        headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
++        body: JSON.stringify({ pedidoId, revision: ensayo.revision, confirmarReserva: true }),
++      });
++      const resultado = await respuesta.json();
++      if (!respuesta.ok || resultado.ok !== true ||
++          resultado.modo !== "reserva_bloqueada_sin_activar" ||
++          resultado.reserva?.bloqueados !== 8 || resultado.reserva?.puedePublicar !== false) {
++        throw new Error(resultado.error || "No fue posible reservar los ocho eventos.");
++      }
++      setCalendarios(prev => ({ ...prev, [pedidoId]: { ...prev[pedidoId], reserva: resultado.reserva } }));
++      setEnsayos(prev => ({ ...prev, [pedidoId]: { ...prev[pedidoId], reserva: resultado.reserva } }));
++      setConfirmarReserva(prev => ({ ...prev, [pedidoId]: false }));
++      setMensaje("Se reservaron ocho eventos bloqueados. La prueba continúa sin activar y no se publicará contenido.");
++    } catch (error) {
++      setCalendarioErrores(prev => ({ ...prev, [pedidoId]: error.message || "No se pudo reservar." }));
++    } finally { setReservando(""); }
+   };
+ 
+   const salir = async () => {
+@@ -447,7 +478,7 @@
+                             ? "Borrador guardado y vigente. Sin activar."
+                             : "El borrador anterior ya no coincide con los contenidos u horarios actuales. Guardá una versión nueva."}
+                         </p>}
+-                        {calendarios[p.pedidoId].listoParaBorrador ? <>
++                        {calendarios[p.pedidoId].reserva ? <p className="text-xs text-neutral-600">La reserva ya está registrada. El borrador quedó protegido contra reemplazos accidentales.</p> : calendarios[p.pedidoId].listoParaBorrador ? <>
+                           <label className="flex items-start gap-2 text-xs text-neutral-700">
+                             <input type="checkbox" checked={Boolean(confirmarBorrador[p.pedidoId])}
+                               onChange={e => setConfirmarBorrador(prev => ({ ...prev, [p.pedidoId]: e.target.checked }))}
+@@ -463,7 +494,7 @@
+                       </div>
+                       <div className="space-y-2 rounded-md border border-neutral-200 bg-white p-3">
+                         <p className="text-xs font-medium text-neutral-900">Ensayo del motor de envíos</p>
+-                        <p className="text-xs text-neutral-600">Verifica el borrador guardado y las identidades de los envíos. No se conecta con Meta, no reserva eventos y no activa la prueba.</p>
++                        <p className="text-xs text-neutral-600">Verifica el borrador y las identidades de los envíos. No se conecta con Meta y no activa la prueba.</p>
+                         <button type="button" onClick={() => ensayarCalendario(p.pedidoId)}
+                           disabled={Boolean(ensayando) || !calendarios[p.pedidoId].listoParaBorrador ||
+                             !calendarios[p.pedidoId].borrador?.revisionVigente}
+@@ -481,6 +512,29 @@
+                           </div>
+                           <p className="text-xs text-neutral-500">Son identificadores de ensayo. La protección definitiva contra duplicados se habilitará con el motor de publicación.</p>
+                         </div>}
++                      </div>
++                      <div className="space-y-2 rounded-md border border-neutral-200 bg-white p-3">
++                        <p className="text-xs font-medium text-neutral-900">Reserva protegida de eventos</p>
++                        <p className="text-xs text-neutral-600">Guarda los ocho turnos en una sola operación atómica. Todos quedan bloqueados; no inicia los siete días ni autoriza publicaciones.</p>
++                        {calendarios[p.pedidoId].reserva && <p role="status" className="text-xs font-medium text-neutral-800">
++                          {calendarios[p.pedidoId].reserva.revisionVigente
++                            ? `Reserva registrada: ${calendarios[p.pedidoId].reserva.bloqueados} eventos bloqueados. Prueba sin activar.`
++                            : "La reserva está bloqueada, pero sus contenidos o fechas cambiaron. Requiere revisión administrativa."}
++                        </p>}
++                        {!calendarios[p.pedidoId].reserva && ensayos[p.pedidoId]?.ok && ensayos[p.pedidoId]?.cantidadEventos === 8 && <>
++                          <label className="flex items-start gap-2 text-xs text-neutral-700">
++                            <input type="checkbox" checked={Boolean(confirmarReserva[p.pedidoId])}
++                              onChange={e => setConfirmarReserva(prev => ({ ...prev, [p.pedidoId]: e.target.checked }))}
++                              className="mt-0.5" />
++                            Confirmo que deseo reservar ocho eventos bloqueados. NO autorizo la publicación ni el inicio de la prueba gratuita.
++                          </label>
++                          <button type="button" onClick={() => reservarEventos(p.pedidoId)}
++                            disabled={!confirmarReserva[p.pedidoId] || Boolean(reservando)}
++                            className={`${BOTON} bg-neutral-900 text-white hover:bg-neutral-700`}>
++                            {reservando === p.pedidoId ? "Registrando reserva..." : "Reservar ocho eventos sin publicar"}
++                          </button>
++                        </>}
++                        {!calendarios[p.pedidoId].reserva && !ensayos[p.pedidoId]?.ok && <p className="text-xs text-neutral-500">Primero ejecutá el ensayo correctamente para habilitar la reserva.</p>}
+                       </div>
+                       <p className="text-xs font-medium text-neutral-700">Ningún contenido será publicado ni se consumirán días de prueba.</p>
+                     </>}

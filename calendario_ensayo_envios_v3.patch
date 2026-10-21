@@ -1,0 +1,214 @@
+--- a/worker.js
++++ b/worker.js
+@@ -4,7 +4,7 @@
+ import handlerVisitas from "./api/visitas.js";
+ import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
+ import { ejecutarConexionMetaPedido } from "./api/servicios/meta-pedidos.js";
+-import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario } from "./api/servicios/calendario-simulacion.js";
++import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario, ejecutarEnsayoCalendario } from "./api/servicios/calendario-simulacion.js";
+ import { ejecutarAccesoClientes, diagnosticarConfiguracionClientes, ejecutarPanelClientes, obtenerClienteRegistrado } from "./api/servicios/clientes-acceso.js";
+ import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
+ import crypto from "crypto";
+@@ -1359,6 +1359,13 @@
+   return ejecutarSimulacionCalendario(request, env);
+ }
+ 
++// Ensayo aislado y SOLO LECTURA. No llega a ejecutarCronRedes ni a Meta.
++if (url.pathname === "/api/servicios/publicaciones/calendario/ensayo") {
++  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
++  if (exceso) return exceso;
++  return ejecutarEnsayoCalendario(request, env);
++}
++
+ // Guarda solamente una propuesta no ejecutable, después de verificar la
+ // titularidad del cliente. No toca el cron ni el estado de la prueba.
+ if (url.pathname === "/api/servicios/publicaciones/calendario/preparar") {
+--- a/src/paginas/servicios/PanelClientePublicaciones.jsx
++++ b/src/paginas/servicios/PanelClientePublicaciones.jsx
+@@ -70,6 +70,8 @@
+   const [calendarioErrores, setCalendarioErrores] = useState({});
+   const [confirmarBorrador, setConfirmarBorrador] = useState({});
+   const [preparandoBorrador, setPreparandoBorrador] = useState("");
++  const [ensayos, setEnsayos] = useState({});
++  const [ensayando, setEnsayando] = useState("");
+ 
+   const cargarPanel = useCallback(async () => {
+     setCargando(true);
+@@ -217,6 +219,7 @@
+     setCalendarioCargando(pedidoId);
+     setCalendarioErrores(prev => ({ ...prev, [pedidoId]: "" }));
+     setConfirmarBorrador(prev => ({ ...prev, [pedidoId]: false }));
++    setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
+     try {
+       const respuesta = await fetch(`/api/servicios/publicaciones/calendario/simulacion?pedidoId=${encodeURIComponent(pedidoId)}`, {
+         credentials: "same-origin", cache: "no-store",
+@@ -263,10 +266,29 @@
+         ...prev[pedidoId], seGuardoCalendario: true, borrador: resultado.borrador,
+       } }));
+       setConfirmarBorrador(prev => ({ ...prev, [pedidoId]: false }));
++    setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
+       setMensaje("Calendario guardado como borrador. La prueba gratuita sigue sin activar y no habrá publicaciones.");
+     } catch (error) {
+       setCalendarioErrores(prev => ({ ...prev, [pedidoId]: error.message || "Error preparando borrador." }));
+     } finally { setPreparandoBorrador(""); }
++  };
++
++  const ensayarCalendario = async (pedidoId) => {
++    setEnsayando(pedidoId);
++    setEnsayos(prev => ({ ...prev, [pedidoId]: null }));
++    setCalendarioErrores(prev => ({ ...prev, [pedidoId]: "" }));
++    try {
++      const respuesta = await fetch(`/api/servicios/publicaciones/calendario/ensayo?pedidoId=${encodeURIComponent(pedidoId)}`, {
++        credentials: "same-origin", cache: "no-store",
++      });
++      const resultado = await respuesta.json();
++      if (!respuesta.ok || resultado.ok !== true || resultado.modo !== "ensayo_no_ejecutable") {
++        throw new Error(resultado.error || "No se pudo ensayar el calendario.");
++      }
++      setEnsayos(prev => ({ ...prev, [pedidoId]: resultado }));
++    } catch (error) {
++      setCalendarioErrores(prev => ({ ...prev, [pedidoId]: error.message || "No fue posible completar el ensayo." }));
++    } finally { setEnsayando(""); }
+   };
+ 
+   const salir = async () => {
+@@ -439,6 +461,27 @@
+                           </button>
+                         </> : <p className="text-xs font-medium text-amber-800">Para preparar el borrador, primero resolvé todas las comprobaciones pendientes.</p>}
+                       </div>
++                      <div className="space-y-2 rounded-md border border-neutral-200 bg-white p-3">
++                        <p className="text-xs font-medium text-neutral-900">Ensayo del motor de envíos</p>
++                        <p className="text-xs text-neutral-600">Verifica el borrador guardado y las identidades de los envíos. No se conecta con Meta, no reserva eventos y no activa la prueba.</p>
++                        <button type="button" onClick={() => ensayarCalendario(p.pedidoId)}
++                          disabled={Boolean(ensayando) || !calendarios[p.pedidoId].listoParaBorrador ||
++                            !calendarios[p.pedidoId].borrador?.revisionVigente}
++                          className={`${BOTON} border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50`}>
++                          {ensayando === p.pedidoId ? "Comprobando envíos..." : "Ensayar ejecución sin publicar"}
++                        </button>
++                        {!calendarios[p.pedidoId].borrador?.revisionVigente && <p className="text-xs text-amber-800">Necesitás un borrador guardado y vigente para ensayar los envíos.</p>}
++                        {ensayos[p.pedidoId] && <div className="space-y-2" role="status">
++                          <p className="text-xs font-medium text-neutral-800">Ensayo correcto: {ensayos[p.pedidoId].cantidadEventos} eventos distintos, todos bloqueados y sin publicar.</p>
++                          <div className="space-y-1">
++                            {ensayos[p.pedidoId].eventos.map(item => <div key={item.claveIdempotenciaPropuesta} className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 py-1 text-xs text-neutral-600">
++                              <span>Contenido {item.numeroContenido} · {item.red === "facebook" ? "Facebook" : "Instagram"}</span>
++                              <span>{item.fechaLocal} · {item.horaLocal} · Bloqueado</span>
++                            </div>)}
++                          </div>
++                          <p className="text-xs text-neutral-500">Son identificadores de ensayo. La protección definitiva contra duplicados se habilitará con el motor de publicación.</p>
++                        </div>}
++                      </div>
+                       <p className="text-xs font-medium text-neutral-700">Ningún contenido será publicado ni se consumirán días de prueba.</p>
+                     </>}
+                   </div>}
+--- a/api/servicios/calendario-simulacion.js
++++ b/api/servicios/calendario-simulacion.js
+@@ -6,6 +6,8 @@
+ const DB = "andres_imprimibles";
+ const RUTA = "/api/servicios/publicaciones/calendario/simulacion";
+ const RUTA_PREPARAR = "/api/servicios/publicaciones/calendario/preparar";
++const RUTA_ENSAYO = "/api/servicios/publicaciones/calendario/ensayo";
++const EJECUCIONES = "ejecuciones_publicaciones_servicios";
+ const BORRADORES = "calendarios_borradores_servicios";
+ const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+ const ID_PEDIDO = /^SER-[a-f0-9-]{36}$/i;
+@@ -259,6 +261,100 @@
+   } finally { if (mongo) await mongo.close().catch(() => {}); }
+ }
+ 
++// Contrato de identidad para la futura cola. En esta etapa no se reserva nada:
++// la clave determinista sirve para detectar colisiones ANTES de habilitar envíos.
++// No equivale todavía a una garantía de exactamente una publicación.
++export function construirEnsayoEjecucion(pedidoId, calendario) {
++  if (!ID_PEDIDO.test(pedidoId || "") || !calendario?.listoParaBorrador ||
++      !/^[a-f0-9]{64}$/.test(calendario?.revision || "") ||
++      !Array.isArray(calendario?.eventos) || calendario.eventos.length < 4 ||
++      calendario.eventos.length > 8) throw new Error("ENSAYO_NO_APTO");
++  const vistos = new Set();
++  const ids = new Set();
++  const eventos = calendario.eventos.map(evento => {
++    if (!/^contenido-[1-4]$/.test(evento.contenidoId || "") ||
++        !REDES.has(evento.red) || !["imagen", "reel", "carrusel"].includes(evento.tipo) ||
++        !/^contenido-[1-4]:(facebook|instagram)$/.test(evento.id || "") ||
++        evento.id !== `${evento.contenidoId}:${evento.red}` ||
++        !Number.isFinite(Date.parse(evento.fechaHoraUTC || ""))) throw new Error("EVENTO_INVALIDO");
++    const par = `${evento.contenidoId}:${evento.red}`;
++    if (vistos.has(par)) throw new Error("EVENTO_REPETIDO");
++    vistos.add(par);
++    const huella = crypto.createHash("sha256").update(JSON.stringify([
++      "comunidad-semanal", "ensayo-v1", pedidoId, calendario.revision,
++      evento.contenidoId, evento.red, evento.fechaHoraUTC,
++    ])).digest("hex");
++    const clave = `comunidad:${huella}`;
++    if (ids.has(clave)) throw new Error("COLISION_EVENTO");
++    ids.add(clave);
++    return { contenidoId: evento.contenidoId, numeroContenido: evento.numeroContenido,
++      red: evento.red, tipo: evento.tipo, fechaHoraUTC: evento.fechaHoraUTC,
++      fechaLocal: evento.fechaLocal, horaLocal: evento.horaLocal,
++      claveIdempotenciaPropuesta: clave, estado: "bloqueado_sin_activacion" };
++  });
++  if (eventos.length !== new Set(eventos.map(x => x.contenidoId)).size *
++      new Set(eventos.map(x => x.red)).size) throw new Error("PARES_INCOMPLETOS");
++  return eventos;
++}
++
++// Ensayo de lectura. Revalida el borrador, las aprobaciones y las conexiones;
++// verifica que las identidades propuestas no estén ya registradas. Nunca
++// publica, reserva turnos, consume días, activa pedidos ni escribe a MongoDB.
++export async function ejecutarEnsayoCalendario(request, env) {
++  const url = new URL(request.url);
++  if (url.pathname !== RUTA_ENSAYO) return json({ ok: false, error: "Ruta no encontrada." }, 404);
++  if (request.method !== "GET") return json({ ok: false, error: "Método no permitido." }, 405);
++  const pedidoId = url.searchParams.get("pedidoId") || "";
++  if (!ID_PEDIDO.test(pedidoId)) return json({ ok: false, error: "Pedido inválido." }, 400);
++  if (!env?.MONGODB_URI) return json({ ok: false, error: "Ensayo no disponible." }, 503);
++  let mongo;
++  try {
++    const cliente = await obtenerClienteRegistrado(request, env);
++    if (!cliente?.id) return json({ ok: false, error: "Iniciá sesión en tu cuenta verificada." }, 401);
++    mongo = await abrirDB(env);
++    const db = mongo.db(DB);
++    const pedido = await db.collection("pedidos_servicios").findOne({ pedidoId, tipo: "publicaciones" });
++    if (!pedido || pedido.clienteUsuarioId !== cliente.id) {
++      return json({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
++    }
++    if (!pruebaPendiente(pedido)) {
++      return json({ ok: false, error: "La prueba debe permanecer sin activar." }, 409);
++    }
++    const borrador = await db.collection(BORRADORES).findOne({
++      _id: pedidoId, estado: "borrador_sin_activar", publicacionHabilitada: false,
++    }, { projection: { revision: 1, eventos: 1, _id: 0 } });
++    if (!borrador || !Array.isArray(borrador.eventos)) {
++      return json({ ok: false, error: "Primero guardá el calendario preliminar desde tu panel." }, 409);
++    }
++    const actual = await verificarCalendario(db, pedido);
++    if (!actual.listoParaBorrador || actual.revision !== borrador.revision) {
++      return json({ ok: false, error: "El borrador cambió o tiene requisitos pendientes. Actualizá el calendario y volvé a guardarlo." }, 409);
++    }
++    // Comprobación adicional del snapshot de horarios persistido.
++    const programados = actual.eventos.map(e => `${e.id}|${e.fechaHoraUTC}`).sort();
++    const guardados = borrador.eventos.map(e => `${e.id}|${e.fechaHoraPropuestaUTC}`).sort();
++    if (JSON.stringify(programados) !== JSON.stringify(guardados)) {
++      return json({ ok: false, error: "Los horarios del borrador no coinciden. Prepará otro borrador." }, 409);
++    }
++    const eventos = construirEnsayoEjecucion(pedidoId, actual);
++    const registros = await db.collection(EJECUCIONES).countDocuments({
++      _id: { $in: eventos.map(e => e.claveIdempotenciaPropuesta) },
++    }, { limit: 1 });
++    if (registros !== 0) {
++      return json({ ok: false, error: "Ya existe un registro de ejecución para este calendario. Requiere revisión administrativa." }, 409);
++    }
++    return json({ ok: true, modo: "ensayo_no_ejecutable", pedidoId,
++      zonaHoraria: actual.zonaHoraria, revision: actual.revision,
++      cantidadEventos: eventos.length, eventos,
++      pedidosActivados: 0, publicacionesRealizadas: 0,
++      puedePublicar: false, reservasCreadas: 0, diasConsumidos: 0,
++      cronModificado: false });
++  } catch (error) {
++    console.warn("Error ensayando calendario Comunidad Semanal:", error?.code || error?.name || "desconocido");
++    return json({ ok: false, error: "No fue posible completar el ensayo del calendario." }, 503);
++  } finally { if (mongo) await mongo.close().catch(() => {}); }
++}
++
+ export async function ejecutarSimulacionCalendario(request, env) {
+   const url = new URL(request.url);
+   if (url.pathname !== RUTA) return json({ ok: false, error: "Ruta no encontrada." }, 404);

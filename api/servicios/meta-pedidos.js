@@ -1,6 +1,7 @@
 // Vinculación de Facebook a un pedido pagado de Comunidad Semanal.
 // No publica contenidos y no toca la conexión de prueba administrativa.
 import crypto from "node:crypto";
+import { ejecutarConexionInstagramPedido } from "./instagram-pedidos.js";
 
 const META_VERSION = "v26.0";
 const ORIGENES = new Set([
@@ -55,8 +56,12 @@ function accesoCliente(request, pedido) {
   return crypto.timingSafeEqual(Buffer.from(hash(token), "hex"), Buffer.from(guardado, "hex"));
 }
 function pedidoHabilitado(pedido) {
-  return pedido?.tipo === "publicaciones" && pedido?.estadoPago === "confirmado" &&
-    Boolean(pedido.pagadoEn) && Array.isArray(pedido.redes) && pedido.redes.includes("facebook") &&
+  const prueba = pedido?.modalidadContratacion === "prueba_gratuita" &&
+    pedido?.estadoPago === "no_requerido" && pedido?.metodoPago === "ninguno" &&
+    pedido?.prueba?.estado === "pendiente_activacion" && pedido?.estadoServicio === "sin_activar";
+  const pago = pedido?.estadoPago === "confirmado" && Boolean(pedido.pagadoEn);
+  return pedido?.tipo === "publicaciones" && (prueba || pago) &&
+    Array.isArray(pedido.redes) && pedido.redes.includes("facebook") &&
     pedido.estado !== "cancelado" && pedido.estadoServicio !== "cancelado";
 }
 function configuracion(env) {
@@ -126,7 +131,7 @@ async function iniciar(request, env, url) {
       return "ok";
     });
     if (autorizado === "sin_acceso") return json({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
-    if (autorizado === "no_habilitado") return json({ ok: false, error: "El pedido debe tener el pago confirmado y Facebook contratado." }, 409);
+    if (autorizado === "no_habilitado") return json({ ok: false, error: "El pedido debe estar habilitado para preparación y tener Facebook seleccionado." }, 409);
 
     const state = crypto.randomBytes(32).toString("hex");
     const redirectUri = `${url.origin}${CALLBACK}`;
@@ -185,6 +190,7 @@ async function estadoODesconectar(request, env, url, desconectar) {
         ok: true,
         facebookContratado,
         pagoConfirmado,
+        pruebaGratuita: pedido.modalidadContratacion === "prueba_gratuita",
         habilitada: pedidoHabilitado(pedido),
         conectada: Boolean(registro),
         conexion: registro || null,
@@ -269,6 +275,7 @@ async function callback(request, env, url) {
 export async function ejecutarConexionMetaPedido(request, env) {
   const url = new URL(request.url);
   if (!ORIGENES.has(url.origin)) return json({ ok: false, error: "Dominio no permitido." }, 403);
+  if (url.pathname.startsWith(`${BASE}/instagram/`)) return ejecutarConexionInstagramPedido(request, env);
   if (url.pathname === CALLBACK) return callback(request, env, url);
   if (url.pathname === `${BASE}/iniciar`) return iniciar(request, env, url);
   if (url.pathname === `${BASE}/estado`) return estadoODesconectar(request, env, url, false);
