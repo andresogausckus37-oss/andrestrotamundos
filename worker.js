@@ -290,6 +290,20 @@ function urlServicio(valor, maximo, soloHttps = false) {
   }
 }
 
+// Acepta enlaces https://, www.dominio.com o dominio.com sin reescribirlos.
+// Valida una URL segura para evitar esquemas peligrosos al mostrarla después.
+function enlaceEscritoServicio(valor, maximo) {
+  const texto = textoServicio(valor, maximo);
+  if (texto === null || /[\x00-\x1f\x7f]/.test(texto)) return null;
+  if (!texto) return "";
+  try {
+    const tieneProtocolo = /^[a-z][a-z0-9+.-]*:/i.test(texto);
+    const destino = new URL(tieneProtocolo ? texto : `https://${texto}`);
+    if (!["http:", "https:"].includes(destino.protocol) || destino.username || destino.password || !destino.hostname) return null;
+    return texto;
+  } catch { return null; }
+}
+
 // Los datos recibidos se copian campo por campo: no se persisten claves extra.
 function validarConfiguracionServicio(datos) {
   if (datos.planId !== PLAN_PUBLICACIONES.id) {
@@ -314,7 +328,7 @@ function validarConfiguracionServicio(datos) {
     rubro: textoServicio(n.rubro ?? "", 100),
     contacto: textoServicio(n.contacto, 120),
     email: textoServicio(n.email, 160),
-    url: urlServicio(n.url ?? "", 300),
+    url: enlaceEscritoServicio(n.url ?? "", 300),
     whatsapp: textoServicio(n.whatsapp ?? "", 50),
     publico: textoServicio(n.publico ?? "", 180),
     tono: n.tono ?? "cercano",
@@ -342,7 +356,7 @@ function validarConfiguracionServicio(datos) {
     const descripcion = textoServicio(p.descripcion ?? "", 1500);
     const ctaInstagram = textoServicio(p.ctaInstagram ?? "", 100);
     const ctaFacebook = textoServicio(p.ctaFacebook ?? "", 100);
-    const urlFacebook = urlServicio(p.urlFacebook ?? "", 500, true);
+    const urlFacebook = enlaceEscritoServicio(p.urlFacebook ?? "", 500);
     const hashtags = textoServicio(p.hashtags ?? "", 240);
     if ([descripcion, ctaInstagram, ctaFacebook, urlFacebook, hashtags].some((v) => v === null)) return null;
 

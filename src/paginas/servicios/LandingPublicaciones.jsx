@@ -3,15 +3,25 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight, Check, ChevronLeft, ChevronRight, CloudUpload,
   FileImage, Film, Heart, Images, Mail, MessageCircle,
-  MoreHorizontal, Send, ThumbsUp, Trash2, UserRound, UserRoundPlus, X,
+  MoreHorizontal, Send, ShieldCheck, ThumbsUp, Trash2, UserRound, UserRoundPlus, X,
 } from "lucide-react";
 
 const RUTA_BASE = "/servicios/publicacion-automatica";
 const RUTA_CONFIGURADOR = `${RUTA_BASE}/configurar`;
+const RUTA_PANEL = `${RUTA_BASE}/mi-panel`;
 const API_SOLICITAR_CODIGO = "/api/servicios/clientes/acceso/solicitar";
 const API_VERIFICAR_CODIGO = "/api/servicios/clientes/acceso/verificar";
 
 // Los mismos logos utilizados en el configurador completo.
+function cargarMontserrat() {
+  const id = "comunidad-semanal-fuente-montserrat";
+  if (document.getElementById(id)) return;
+  const fuente = document.createElement("link");
+  fuente.id = id; fuente.rel = "stylesheet";
+  fuente.href = "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap";
+  document.head.appendChild(fuente);
+}
+
 const LOGOS = {
   instagram: "https://i.postimg.cc/1tGRTnck/3840px-Instagram-logo-2022-svg.png",
   facebook: "https://i.postimg.cc/rshTXS0k/Logo-de-Facebook.png",
@@ -20,6 +30,46 @@ const LOGOS = {
 const CAMPO = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
 const CAJA = "rounded-xl border border-slate-200 bg-white p-4 sm:p-5";
 const BOTON = "inline-flex min-h-9 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60";
+const PAISES_REGISTRO = [
+  "Argentina", "Belice", "Bolivia", "Brasil", "Chile", "Colombia", "Costa Rica",
+  "Cuba", "Ecuador", "El Salvador", "España", "Estados Unidos", "Guatemala",
+  "Haití", "Honduras", "México", "Nicaragua", "Panamá", "Paraguay", "Perú",
+  "Puerto Rico", "República Dominicana", "Uruguay", "Venezuela",
+].sort((a, b) => a.localeCompare(b, "es"));
+
+function VerificacionRegistro({ sitekey, onToken, revision }) {
+  const ref = useRef(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!sitekey || !ref.current) return undefined;
+    let montado = true, widget = null;
+    const pintar = () => {
+      if (!montado || !window.turnstile || !ref.current || widget !== null) return;
+      try {
+        widget = window.turnstile.render(ref.current, {
+          sitekey, callback: token => { if (montado) onToken(token); },
+          "expired-callback": () => { if (montado) onToken(""); },
+          "error-callback": () => { if (montado) onToken(""); },
+        });
+      } catch { setError("No se pudo mostrar la verificación de Cloudflare."); }
+    };
+    let script = document.getElementById("turnstile-comunidad-registro");
+    if (!script) {
+      script = document.createElement("script"); script.id = "turnstile-comunidad-registro";
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true; script.defer = true; document.head.appendChild(script);
+    }
+    if (window.turnstile) pintar();
+    else script.addEventListener("load", pintar);
+    return () => {
+      montado = false; script.removeEventListener("load", pintar);
+      if (widget !== null && window.turnstile) try { window.turnstile.remove(widget); } catch { /* retirado */ }
+    };
+  }, [sitekey, onToken, revision]);
+  return <div className="space-y-1.5"><div ref={ref} aria-label="Verificación Cloudflare" />
+    {error && <p className="text-xs text-red-700" role="alert">{error}</p>}</div>;
+}
+
 const TIPOS = {
   imagen: { nombre: "Imagen", icono: FileImage, formatos: ["4:5", "1:1"] },
   carrusel: { nombre: "Carrusel", icono: Images, formatos: ["4:5", "1:1"] },
@@ -66,6 +116,7 @@ function Campo({ etiqueta, children, nota }) {
 
 export default function LandingPublicaciones() {
   const location = useLocation();
+  useEffect(() => { cargarMontserrat(); }, []);
   const navigate = useNavigate();
   const [redes, setRedes] = useState(["instagram", "facebook"]);
   const [vistaRed, setVistaRed] = useState("instagram");
@@ -76,6 +127,15 @@ export default function LandingPublicaciones() {
   const [mensajeArchivo, setMensajeArchivo] = useState("");
   const [modalRegistro, setModalRegistro] = useState(false);
   const [email, setEmail] = useState("");
+  const [repetirEmail, setRepetirEmail] = useState("");
+  const [nombreRegistro, setNombreRegistro] = useState("");
+  const [whatsappRegistro, setWhatsappRegistro] = useState("");
+  const [paisRegistro, setPaisRegistro] = useState("Argentina");
+  const [webRegistro, setWebRegistro] = useState("");
+  const [modoAcceso, setModoAcceso] = useState("registro");
+  const [turnstileKey, setTurnstileKey] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileRevision, setTurnstileRevision] = useState(0);
   const [codigo, setCodigo] = useState("");
   const [pasoRegistro, setPasoRegistro] = useState("email");
   const [errorRegistro, setErrorRegistro] = useState("");
@@ -175,13 +235,33 @@ export default function LandingPublicaciones() {
     setImagenActual(0);
   }
 
-  function abrirRegistro() {
+  function abrirRegistro(modo = "registro") {
     setErrorRegistro("");
+    setCodigo("");
+    setPasoRegistro("email");
+    setModoAcceso(modo);
+    setTurnstileToken("");
     setModalRegistro(true);
   }
 
-  // Estos endpoints serán implementados en el backend de registro por correo.
-  // La interfaz no declara cuentas creadas si el servidor no las confirma.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get("acceso") === "ingreso") abrirRegistro("ingreso");
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!modalRegistro || modoAcceso !== "registro" || turnstileKey) return;
+    let vivo = true;
+    fetch("/api/servicios/publicaciones/plan", { credentials: "same-origin", cache: "no-store" })
+      .then(r => r.json()).then(d => { if (vivo) setTurnstileKey(d.turnstileSiteKey || ""); })
+      .catch(() => { if (vivo) setTurnstileKey(""); });
+    return () => { vivo = false; };
+  }, [modalRegistro, modoAcceso, turnstileKey]);
+
+  const perfilRegistro = () => ({
+    nombre: nombreRegistro.trim(), whatsapp: whatsappRegistro.trim(),
+    pais: paisRegistro, web: webRegistro.trim(),
+  });
+
   async function enviarCodigo(evento) {
     evento.preventDefault();
     const correo = email.trim().toLowerCase();
@@ -189,12 +269,22 @@ export default function LandingPublicaciones() {
       setErrorRegistro("Ingresá un correo electrónico válido.");
       return;
     }
+    if (modoAcceso === "registro") {
+      if (correo !== repetirEmail.trim().toLowerCase()) { setErrorRegistro("Los correos electrónicos no coinciden."); return; }
+      if (nombreRegistro.trim().length < 2 || !/^\+?[0-9]{8,17}$/.test(whatsappRegistro.trim()) ||
+          !PAISES_REGISTRO.includes(paisRegistro) || webRegistro.trim().length > 300) {
+        setErrorRegistro("Completá tu nombre, WhatsApp y país correctamente."); return;
+      }
+      if (!turnstileToken) { setErrorRegistro("Completá la verificación de Cloudflare."); return; }
+    }
     setEsperandoRegistro(true);
     setErrorRegistro("");
     try {
       const respuesta = await fetch(API_SOLICITAR_CODIGO, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        credentials: "same-origin", cache: "no-store", body: JSON.stringify({ email: correo }),
+        credentials: "same-origin", cache: "no-store",
+        body: JSON.stringify({ email: correo, modo: modoAcceso,
+          ...(modoAcceso === "registro" ? { perfil: perfilRegistro(), turnstileToken } : {}) }),
       });
       const datos = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok || datos.ok !== true) throw new Error("No fue posible enviar el código. Intentá nuevamente más tarde.");
@@ -203,6 +293,7 @@ export default function LandingPublicaciones() {
       setCodigo("");
     } catch (error) {
       setErrorRegistro(error.message || "No fue posible enviar el código.");
+      if (modoAcceso === "registro") { setTurnstileToken(""); setTurnstileRevision(v => v + 1); }
     } finally {
       setEsperandoRegistro(false);
     }
@@ -219,12 +310,14 @@ export default function LandingPublicaciones() {
     try {
       const respuesta = await fetch(API_VERIFICAR_CODIGO, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        credentials: "same-origin", cache: "no-store", body: JSON.stringify({ email, codigo }),
+        credentials: "same-origin", cache: "no-store",
+        body: JSON.stringify({ email, codigo, modo: modoAcceso,
+          ...(modoAcceso === "registro" ? { perfil: perfilRegistro() } : {}) }),
       });
       const datos = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok || datos.ok !== true) throw new Error("El código no pudo verificarse. Revisalo e intentá nuevamente.");
       setModalRegistro(false);
-      navigate(RUTA_CONFIGURADOR);
+      navigate(RUTA_PANEL);
     } catch (error) {
       setErrorRegistro(error.message || "No se pudo verificar el código.");
     } finally {
@@ -252,20 +345,18 @@ export default function LandingPublicaciones() {
   );
 
   function botonesAcceso() {
-    return (
-      <div className="flex flex-wrap items-center gap-2.5">
-        <button type="button" onClick={abrirRegistro} className={`${BOTON} bg-orange-600 text-white hover:bg-orange-700`}>
-          <UserRoundPlus size={15} /> Registrarme
-        </button>
-        <button type="button" onClick={() => navigate(RUTA_CONFIGURADOR)} className={`${BOTON} border border-slate-300 bg-white text-slate-800 hover:border-slate-500`}>
-          <UserRound size={15} /> Seguir como invitado
-        </button>
-      </div>
-    );
+    return <div className="flex flex-wrap items-center gap-2.5">
+      <button type="button" onClick={() => abrirRegistro("registro")} className={`${BOTON} bg-orange-600 text-white hover:bg-orange-700`}>
+        <UserRoundPlus size={15} /> Registrarme
+      </button>
+      <button type="button" onClick={() => abrirRegistro("ingreso")} className={`${BOTON} border border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100`}>
+        <UserRound size={15} /> Iniciar sesión
+      </button>
+    </div>;
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8fa] pb-16 font-normal text-slate-900" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+    <main className="min-h-screen bg-[#f7f8fa] pb-16 font-normal text-slate-900" style={{ fontFamily: 'Montserrat, ui-sans-serif, system-ui, sans-serif' }}>
       <section className="px-4 pb-10 pt-10 sm:px-6 sm:pb-14 sm:pt-14">
         <div className="mx-auto max-w-6xl">
           <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
@@ -286,13 +377,11 @@ export default function LandingPublicaciones() {
               <div className="mt-7">
                 <p className="mb-3 text-base font-medium text-slate-900">¡Empezá gratis y simplificá la gestión de tus redes!</p>
                 {botonesAcceso()}
-                <Link to={RUTA_CONFIGURADOR} className="mt-4 inline-flex text-xs font-medium text-slate-600 underline underline-offset-4 hover:text-orange-700">
-                  ¿Ya tenés un pedido? Recuperar acceso
-                </Link>
+
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="-mx-4 bg-orange-50 p-5 sm:mx-0 sm:rounded-xl sm:p-6">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs font-medium text-orange-700">PRUEBA GRATUITA</span>
                 <span className="text-xs font-normal text-slate-500">Facebook + Instagram</span>
@@ -521,42 +610,67 @@ export default function LandingPublicaciones() {
       </section>
 
       {modalRegistro && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-5" role="presentation"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) setModalRegistro(false); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="registro-titulo" className="w-full max-w-sm rounded-lg bg-white p-5 shadow-xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2"><Mail size={19} className="text-orange-700" /><h2 id="registro-titulo" className="text-base font-medium">Acceso con correo electrónico</h2></div>
-              <button type="button" aria-label="Cerrar registro" onClick={() => setModalRegistro(false)} className="rounded-md p-1 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-3 py-4"
+          onMouseDown={e => { if (e.target === e.currentTarget) setModalRegistro(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="registro-titulo"
+            className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-4 shadow-xl sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2"><Mail size={18} className="text-orange-600" />
+                <h2 id="registro-titulo" className="text-base font-medium">{modoAcceso === "registro" ? "Crear mi cuenta" : "Iniciar sesión"}</h2>
+              </div>
+              <button type="button" aria-label="Cerrar" onClick={() => setModalRegistro(false)} className="rounded-md p-1 text-slate-500 hover:bg-slate-100"><X size={17} /></button>
             </div>
-            {pasoRegistro === "email" ? (
-              <form onSubmit={enviarCodigo} className="mt-4 space-y-3">
-                <p className="text-sm text-slate-600">Ingresá tu correo para recibir un código de verificación de seis dígitos.</p>
-                <Campo etiqueta="Correo electrónico">
-                  <input className={`${CAMPO} h-9`} type="email" autoComplete="email" inputMode="email" required maxLength={160}
-                    value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" />
+            {pasoRegistro === "email" ? <form onSubmit={enviarCodigo} className="space-y-3">
+              {modoAcceso === "registro" && <>
+                <Campo etiqueta="Nombre y apellido *"><input className={CAMPO} required autoComplete="name" maxLength={100}
+                  value={nombreRegistro} onChange={e => setNombreRegistro(e.target.value)} /></Campo>
+              </>}
+              <Campo etiqueta="Correo electrónico *"><input className={CAMPO} required type="email" autoComplete="email" maxLength={160}
+                value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" /></Campo>
+              {modoAcceso === "registro" && <>
+                <Campo etiqueta="Repetir correo electrónico *"><input className={CAMPO} required type="email" autoComplete="email" maxLength={160}
+                  value={repetirEmail} onChange={e => setRepetirEmail(e.target.value)} placeholder="tu@email.com" /></Campo>
+                <Campo etiqueta="WhatsApp *" nota="Solo números; podés incluir el prefijo internacional +.">
+                  <input className={CAMPO} required type="tel" inputMode="tel" maxLength={18} value={whatsappRegistro}
+                    onChange={e => setWhatsappRegistro(e.target.value.replace(/[^+0-9]/g, "").replace(/(?!^)\+/g, ""))} placeholder="5493511234567" />
                 </Campo>
-                {errorRegistro && <p role="alert" className="text-xs text-red-700">{errorRegistro}</p>}
-                <button type="submit" disabled={esperandoRegistro} className={`${BOTON} w-full bg-orange-600 text-white hover:bg-orange-700`}>
-                  {esperandoRegistro ? "Enviando..." : "Enviar código"}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={verificarCodigo} className="mt-4 space-y-3">
-                <p className="text-sm text-slate-600">Ingresá el código enviado a <span className="font-medium">{email}</span>.</p>
-                <Campo etiqueta="Código de seis dígitos">
-                  <input className={`${CAMPO} h-9 tracking-widest`} inputMode="numeric" pattern="[0-9]{6}" autoComplete="one-time-code" required maxLength={6}
-                    value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" />
-                </Campo>
-                {errorRegistro && <p role="alert" className="text-xs text-red-700">{errorRegistro}</p>}
-                <button type="submit" disabled={esperandoRegistro} className={`${BOTON} w-full bg-orange-600 text-white hover:bg-orange-700`}>
-                  {esperandoRegistro ? "Verificando..." : "Verificar y continuar"}
-                </button>
-                <button type="button" onClick={() => { setPasoRegistro("email"); setCodigo(""); setErrorRegistro(""); }} className="text-xs font-medium text-slate-600 underline underline-offset-4">Cambiar correo</button>
-              </form>
-            )}
+                <Campo etiqueta="País *"><select className={CAMPO} value={paisRegistro} onChange={e => setPaisRegistro(e.target.value)}>
+                  {PAISES_REGISTRO.map(pais => <option key={pais} value={pais}>{pais}</option>)}
+                </select></Campo>
+                <Campo etiqueta="Web o enlace principal (opcional)"><input className={CAMPO} type="text" maxLength={300}
+                  value={webRegistro} onChange={e => setWebRegistro(e.target.value)} placeholder="tusitio.com" /></Campo>
+                <div className="rounded-md bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center gap-1.5 text-xs font-medium"><ShieldCheck size={15} className="text-orange-600"/> Verificación de seguridad</div>
+                  {turnstileKey ? <VerificacionRegistro sitekey={turnstileKey} onToken={setTurnstileToken} revision={turnstileRevision} />
+                    : <p className="text-xs text-amber-700">La verificación de Cloudflare no está disponible. No se puede completar el registro.</p>}
+                </div>
+              </>}
+              {errorRegistro && <p role="alert" className="text-xs text-red-700">{errorRegistro}</p>}
+              <button type="submit" disabled={esperandoRegistro || (modoAcceso === "registro" && !turnstileToken)}
+                className={`${BOTON} w-full bg-orange-600 text-white hover:bg-orange-700`}>
+                {esperandoRegistro ? "Enviando código..." : modoAcceso === "registro" ? "Registrarme" : "Enviar código de acceso"}
+              </button>
+              <button type="button" className="w-full text-xs font-medium text-slate-600 underline underline-offset-2"
+                onClick={() => { setErrorRegistro(""); setModoAcceso(v => v === "registro" ? "ingreso" : "registro"); setTurnstileToken(""); }}>
+                {modoAcceso === "registro" ? "Ya tengo cuenta · Iniciar sesión" : "Crear una cuenta nueva"}
+              </button>
+            </form> : <form onSubmit={verificarCodigo} className="space-y-3">
+              <p className="text-sm text-slate-600">Ingresá el código de seis dígitos enviado a <span className="font-medium">{email}</span>.</p>
+              <Campo etiqueta="Código de verificación"><input className={`${CAMPO} tracking-widest`} autoComplete="one-time-code"
+                inputMode="numeric" pattern="[0-9]{6}" required maxLength={6} value={codigo}
+                onChange={e => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" /></Campo>
+              {errorRegistro && <p role="alert" className="text-xs text-red-700">{errorRegistro}</p>}
+              <button type="submit" disabled={esperandoRegistro} className={`${BOTON} w-full bg-orange-600 text-white hover:bg-orange-700`}>
+                {esperandoRegistro ? "Verificando..." : "Confirmar correo e ir a mi panel"}
+              </button>
+              <button type="button" onClick={() => { setPasoRegistro("email"); setCodigo(""); setErrorRegistro("");
+                setTurnstileToken(""); setTurnstileRevision(v => v + 1); }}
+                className="text-xs font-medium text-slate-600 underline underline-offset-2">Volver</button>
+            </form>}
           </div>
         </div>
       )}
+
     </main>
   );
 }

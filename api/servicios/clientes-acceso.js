@@ -76,7 +76,7 @@ function mismaProcedencia(request) {
 
 async function jsonPequeno(request) {
   if (!/^application\/json(?:;|$)/i.test(request.headers.get("content-type") || "")) return null;
-  if (Number(request.headers.get("content-length") || 0) > 2048) return null;
+  if (Number(request.headers.get("content-length") || 0) > 4096) return null;
   if (!request.body) return null;
   const lector = request.body.getReader();
   const decoder = new TextDecoder();
@@ -86,7 +86,7 @@ async function jsonPequeno(request) {
     const { done, value } = await lector.read();
     if (done) break;
     total += value.byteLength;
-    if (total > 2048) { await lector.cancel(); return null; }
+    if (total > 4096) { await lector.cancel(); return null; }
     texto += decoder.decode(value, { stream: true });
   }
   texto += decoder.decode();
@@ -105,6 +105,43 @@ async function conDB(env, callback) {
   } finally {
     await mongo.close().catch(() => {});
   }
+}
+
+// Perfil asociado al correo verificado. Nunca se asigna a una cuenta hasta
+// consumir correctamente el OTP enviado a ese correo.
+const PAISES_COMUNIDAD = new Set([
+  "Argentina", "Belice", "Bolivia", "Brasil", "Chile", "Colombia", "Costa Rica",
+  "Cuba", "Ecuador", "El Salvador", "España", "Estados Unidos", "Guatemala",
+  "Haití", "Honduras", "México", "Nicaragua", "Panamá", "Paraguay", "Perú",
+  "Puerto Rico", "República Dominicana", "Uruguay", "Venezuela",
+]);
+function validarPerfil(datos) {
+  if (!datos || typeof datos !== "object" || Array.isArray(datos)) return null;
+  const nombre = typeof datos.nombre === "string" ? datos.nombre.trim() : "";
+  const whatsapp = typeof datos.whatsapp === "string" ? datos.whatsapp.trim() : "";
+  const pais = typeof datos.pais === "string" ? datos.pais.trim() : "";
+  const web = typeof datos.web === "string" ? datos.web.trim() : "";
+  if (nombre.length < 2 || nombre.length > 100 || /[\r\n<>]/.test(nombre) ||
+      !/^\+?[0-9]{8,17}$/.test(whatsapp) || !PAISES_COMUNIDAD.has(pais) ||
+      web.length > 300 || /[\r\n<>]/.test(web)) return null;
+  return { nombre, whatsapp, pais, web };
+}
+
+async function verificarTurnstileRegistro(request, env, token) {
+  const secret = String(env?.SERVICIO_TURNSTILE_SECRET ?? "").trim();
+  if (!secret || typeof token !== "string" || token.length < 20 || token.length > 2048) return false;
+  try {
+    const ip = request.headers.get("CF-Connecting-IP");
+    const body = new URLSearchParams({ secret, response: token });
+    if (ip) body.set("remoteip", ip);
+    const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST", body, redirect: "manual",
+    });
+    if (!r.ok) return false;
+    const data = await r.json();
+    return data?.success === true &&
+      String(data.hostname || "").toLowerCase() === new URL(request.url).hostname.toLowerCase();
+  } catch { return false; }
 }
 
 // Los indices TTL limpian intentos, codigos y sesiones expiradas. La validez
@@ -150,6 +187,13 @@ async function solicitar(request, env, config, ipHash) {
   const datos = await jsonPequeno(request);
   const email = normalizarCorreo(datos?.email);
   if (!email) return responder({ ok: false, error: "Ingresá un correo válido." }, 400);
+  const modo = datos?.modo === "registro" ? "registro" : "ingreso";
+  if (modo === "registro") {
+    if (!validarPerfil(datos?.perfil)) return responder({ ok: false, error: "Completá correctamente tus datos de registro." }, 400);
+    if (!await verificarTurnstileRegistro(request, env, datos?.turnstileToken)) {
+      return responder({ ok: false, error: "Completá nuevamente la verificación de seguridad." }, 403);
+    }
+  }
   const emailHash = hash(email);
   const ahora = Date.now();
   try {
@@ -203,6 +247,9 @@ async function verificar(request, env, config, ipHash) {
   const email = normalizarCorreo(datos?.email);
   const codigo = typeof datos?.codigo === "string" ? datos.codigo : "";
   if (!email || !/^\d{6}$/.test(codigo)) return responder({ ok: false, error: "Revisá el correo y los seis dígitos." }, 400);
+  const modo = datos?.modo === "registro" ? "registro" : "ingreso";
+  const perfil = modo === "registro" ? validarPerfil(datos?.perfil) : null;
+  if (modo === "registro" && !perfil) return responder({ ok: false, error: "Los datos de registro no son válidos." }, 400);
   const emailHash = hash(email);
   const ahora = Date.now();
   try {
@@ -232,10 +279,14 @@ async function verificar(request, env, config, ipHash) {
 
       const cuentas = db.collection("clientes_usuarios");
       const _id = `correo:${emailHash}`;
+      if (modo === "ingreso" && !await cuentas.findOne({ _id }, { projection: { _id: 1 } })) {
+        return responder({ ok: false, error: "No hay una cuenta registrada con ese correo. Elegí Registrarme." }, 404);
+      }
       await cuentas.updateOne({ _id }, {
         $setOnInsert: { email, creadoEn: new Date(ahora), origen: "comunidad_semanal" },
-        $set: { ultimoAccesoEn: new Date(ahora), emailVerificado: true },
-      }, { upsert: true });
+        $set: { ultimoAccesoEn: new Date(ahora), emailVerificado: true,
+          ...(perfil ? { perfil, perfilActualizadoEn: new Date(ahora) } : {}) },
+      }, { upsert: modo === "registro" });
 
       const token = crypto.randomBytes(32).toString("hex");
       const tokenHash = crypto.createHmac("sha256", config.sessionSecret).update(token).digest("hex");
@@ -269,9 +320,13 @@ async function consultarSesion(request, env, config) {
       });
       if (!sesion) return responder({ ok: true, autenticado: false });
       const cuenta = await db.collection("clientes_usuarios").findOne({ _id: sesion.usuarioId },
-        { projection: { email: 1 } });
+        { projection: { email: 1, perfil: 1 } });
       if (!cuenta) return responder({ ok: true, autenticado: false });
-      return responder({ ok: true, autenticado: true, email: cuenta.email });
+      return responder({ ok: true, autenticado: true, email: cuenta.email,
+        perfil: cuenta.perfil ? {
+          nombre: cuenta.perfil.nombre || "", whatsapp: cuenta.perfil.whatsapp || "",
+          pais: cuenta.perfil.pais || "", web: cuenta.perfil.web || "",
+        } : null });
     });
   } catch { return responder({ ok: false, error: "No se pudo consultar la sesión." }, 503); }
 }

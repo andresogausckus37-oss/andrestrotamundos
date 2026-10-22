@@ -2,6 +2,7 @@
 // No publica contenidos y no toca la conexión de prueba administrativa.
 import crypto from "node:crypto";
 import { ejecutarConexionInstagramPedido } from "./instagram-pedidos.js";
+import { obtenerClienteRegistrado } from "./clientes-acceso.js";
 
 const META_VERSION = "v26.0";
 const ORIGENES = new Set([
@@ -49,7 +50,10 @@ function pedidoValido(valor) { return typeof valor === "string" && /^SER-[a-f0-9
 function tokenCliente(request) {
   return /^Bearer ([a-f0-9]{64})$/i.exec(request.headers.get("authorization") || "")?.[1] || "";
 }
-function accesoCliente(request, pedido) {
+function accesoCliente(request, pedido, usuario = null) {
+  // Un pedido vinculado puede gestionarse con la sesión de su titular;
+  // los pedidos de invitado conservan el acceso Bearer privado existente.
+  if (usuario?.id && pedido?.clienteUsuarioId === usuario.id) return true;
   const token = tokenCliente(request);
   const guardado = pedido?.tokenAccesoHash;
   if (!token || typeof guardado !== "string" || !/^[a-f0-9]{64}$/i.test(guardado)) return false;
@@ -124,9 +128,10 @@ async function iniciar(request, env, url) {
   const config = configuracion(env);
   if (!config) return json({ ok: false, error: "Conexión de Meta no configurada." }, 503);
   try {
+    const usuario = await obtenerClienteRegistrado(request, env).catch(() => null);
     const autorizado = await conDb(env, async db => {
       const pedido = await db.collection("pedidos_servicios").findOne({ pedidoId: datos.pedidoId, tipo: "publicaciones" });
-      if (!pedido || !accesoCliente(request, pedido)) return "sin_acceso";
+      if (!pedido || !accesoCliente(request, pedido, usuario)) return "sin_acceso";
       if (!pedidoHabilitado(pedido)) return "no_habilitado";
       return "ok";
     });
@@ -168,9 +173,10 @@ async function estadoODesconectar(request, env, url, desconectar) {
   const datos = desconectar ? await leerJsonAcotado(request) : { pedidoId: url.searchParams.get("pedidoId") };
   if (!pedidoValido(datos?.pedidoId)) return json({ ok: false, error: "Pedido inválido." }, 400);
   try {
+    const usuario = await obtenerClienteRegistrado(request, env).catch(() => null);
     return await conDb(env, async db => {
       const pedido = await db.collection("pedidos_servicios").findOne({ pedidoId: datos.pedidoId, tipo: "publicaciones" });
-      if (!pedido || !accesoCliente(request, pedido)) return json({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
+      if (!pedido || !accesoCliente(request, pedido, usuario)) return json({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
       if (desconectar) {
         await db.collection(COLECCION).deleteOne({ _id: `facebook:${datos.pedidoId}`, pedidoId: datos.pedidoId });
         // Cancelar también autorizaciones pendientes para impedir nuevas conexiones tardías.

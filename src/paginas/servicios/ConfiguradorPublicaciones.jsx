@@ -15,6 +15,8 @@ import {
   Heart,
   Images,
   LockKeyhole,
+  Landmark,
+  CircleDollarSign,
   MessageCircle,
   MoreHorizontal,
   Send,
@@ -197,9 +199,9 @@ const CONFIGURACION_INICIAL = [
   ["reel", "Domingo", "18:00"],
 ];
 const RESOLUCIONES = { "9:16": "1080 × 1920", "4:5": "1080 × 1350", "1:1": "1080 × 1080" };
-const INPUT = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
+const INPUT = "w-full min-h-9 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
 const BOTON_ACTIVO = "border-orange-500 bg-orange-50 text-orange-800";
-const TARJETA = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6";
+const TARJETA = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5";
 const BOTON_NORMAL = "border-slate-200 bg-white text-slate-700 hover:border-slate-400";
 
 function clases(...clasesLista) {
@@ -250,7 +252,7 @@ function LogoRed({ red, size = 23, className = "" }) {
 function Campo({ titulo, ayuda, children }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-slate-800">{titulo}</span>
+      <span className="mb-1.5 block text-sm font-semibold text-slate-800">{titulo}</span>
       {children}
       {ayuda && <span className="mt-1.5 block text-xs leading-5 text-slate-500">{ayuda}</span>}
     </label>
@@ -448,11 +450,11 @@ function TransferenciaPedidoServicio({ pedido, habilitada }) {
 
   return (
     <div className="mt-5 border-t border-orange-200 pt-4">
-      <h3 className="text-sm font-medium text-slate-900">Transferencia bancaria</h3>
+      <h3 className="text-sm font-semibold text-slate-900">Transferencia bancaria</h3>
       {cargando && <p className="mt-2 text-xs text-slate-600" role="status">Consultando los datos bancarios...</p>}
       {detalle && (
         <div className="mt-3 space-y-3">
-          <p className="text-sm text-slate-700">Importe a transferir: <span className="font-medium">{precioFormateado(detalle.precio, "ARS")}</span></p>
+          <p className="text-sm text-slate-700">Importe a transferir: <span className="font-semibold">{precioFormateado(detalle.precio, "ARS")}</span></p>
           <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
             {[
               ["Titular", detalle.cuenta?.titular],
@@ -463,21 +465,21 @@ function TransferenciaPedidoServicio({ pedido, habilitada }) {
               <div key={nombre} className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
                 <div className="min-w-0">
                   <p className="text-[11px] text-slate-500">{nombre}</p>
-                  <p className="select-text break-all text-sm font-medium text-slate-900">{valor || "No disponible"}</p>
+                  <p className="select-text break-all text-sm font-semibold text-slate-900">{valor || "No disponible"}</p>
                 </div>
-                {valor && <button type="button" onClick={() => copiarDato(valor, nombre)} className="shrink-0 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" aria-label={`Copiar ${nombre}`}>
+                {valor && <button type="button" onClick={() => copiarDato(valor, nombre)} className="shrink-0 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" aria-label={`Copiar ${nombre}`}>
                   {copiado === nombre ? "Copiado" : "Copiar"}
                 </button>}
               </div>
             ))}
           </div>
-          <p className="text-xs text-slate-600">Estado: <span className="font-medium text-slate-800">{estados[detalle.estado] || detalle.estado}</span></p>
+          <p className="text-xs text-slate-600">Estado: <span className="font-semibold text-slate-800">{estados[detalle.estado] || detalle.estado}</span></p>
           {detalle.estado === "pendiente_comprobante" ? (
             <form onSubmit={enviarComprobante} className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
-              <label className="block text-sm font-medium text-slate-800" htmlFor="comprobante-servicio">Adjuntá el comprobante de transferencia</label>
-              <input id="comprobante-servicio" type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:font-medium file:text-orange-800" onChange={(e) => { setArchivo(e.target.files?.[0] || null); setError(""); }} />
+              <label className="block text-sm font-semibold text-slate-800" htmlFor="comprobante-servicio">Adjuntá el comprobante de transferencia</label>
+              <input id="comprobante-servicio" type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:font-semibold file:text-orange-800" onChange={(e) => { setArchivo(e.target.files?.[0] || null); setError(""); }} />
               <p className="text-xs text-slate-500">JPG, PNG o PDF, hasta 8 MB. La confirmación del pago es manual.</p>
-              <button type="submit" disabled={!archivo || subiendo} className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium", archivo && !subiendo ? "bg-orange-600 text-white hover:bg-orange-700" : "cursor-not-allowed bg-slate-300 text-white")}>
+              <button type="submit" disabled={!archivo || subiendo} className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-semibold", archivo && !subiendo ? "bg-orange-600 text-white hover:bg-orange-700" : "cursor-not-allowed bg-slate-300 text-white")}>
                 <CloudUpload size={16} /> {subiendo ? "Enviando comprobante..." : "Enviar comprobante"}
               </button>
             </form>
@@ -504,18 +506,8 @@ function verificarFormularioPedido({ negocio, contenidos }) {
   if (negocio.whatsapp.trim() && !/^[+\d()\s.-]{5,50}$/.test(negocio.whatsapp.trim())) {
     return "Revisá el número de WhatsApp; usá números y el código de país.";
   }
-  const urlValida = (valor, soloHttps = false) => {
-    if (!valor.trim()) return true;
-    try {
-      const url = new URL(valor.trim());
-      return (soloHttps ? url.protocol === "https:" : ["http:", "https:"].includes(url.protocol)) &&
-        !url.username && !url.password && Boolean(url.hostname);
-    } catch { return false; }
-  };
-  if (!urlValida(negocio.url)) return "Revisá la dirección web de tu emprendimiento (incluí https://).";
-  if (contenidos.some((p) => !urlValida(p.urlFacebook, true))) {
-    return "Las URL de Facebook deben comenzar con https:// y ser válidas.";
-  }
+  // Los enlaces se envían como texto: pueden empezar con https://, www. o ser un dominio.
+  // El Worker valida su longitud y los almacena sin forzar un protocolo.
   if (contenidos.some((p) => p.archivos.some(({ archivo }) => !archivo.size))) {
     return "Uno de los archivos seleccionados está vacío. Quitalo de la vista previa.";
   }
@@ -545,7 +537,9 @@ function BloqueDesplegable({ titulo, descripcion, abierto, alAlternar, children 
   );
 }
 
-export default function ConfiguradorPublicaciones() {
+// modoPanel reutiliza el configurador real dentro de Mi panel.
+// Ningún pedido se crea hasta que la API lo acepte y valide Turnstile.
+export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverAlPanel } = {}) {
   const [redes, setRedes] = useState(["instagram", "facebook"]);
   const [pasoActivo, setPasoActivo] = useState(0);
   const [desplegables, setDesplegables] = useState({ contenidos: true, textos: false, vista: true });
@@ -556,6 +550,7 @@ export default function ConfiguradorPublicaciones() {
   const [redVista, setRedVista] = useState("instagram");
   const [moneda, setMoneda] = useState("ARS");
   const [zonaHoraria, setZonaHoraria] = useState("America/Argentina/Buenos_Aires");
+  const [correoVerificado, setCorreoVerificado] = useState("");
   const [negocio, setNegocio] = useState({
     nombre: "", rubro: "", contacto: "", email: "", url: "", whatsapp: "", publico: "", tono: "cercano",
   });
@@ -576,6 +571,9 @@ export default function ConfiguradorPublicaciones() {
   const [avisoAcceso, setAvisoAcceso] = useState("");
   const enlaceLeidoRef = useRef(false);
   const [pedidoCreado, setPedidoCreado] = useState(() => {
+    // Una nueva cuenta no debe heredar el acceso privado que otra cuenta haya
+    // utilizado anteriormente en esta pestaña del navegador.
+    if (modoPanel) return null;
     try {
       const guardado = JSON.parse(sessionStorage.getItem(PEDIDO_PENDIENTE_STORAGE) || "null");
       return credencialesPedidoValidas(guardado?.id, guardado?.tokenAcceso) &&
@@ -585,6 +583,7 @@ export default function ConfiguradorPublicaciones() {
   const enviandoRef = useRef(false);
   const urlsLocales = useRef(new Set());
   const vistaRef = useRef(null);
+  const panelConfigRef = useRef(null);
 
   // Abrir un enlace privado verifica sus credenciales y repone el pedido.
   // La clave no queda en la URL, y sólo se conserva en sessionStorage.
@@ -657,7 +656,10 @@ export default function ConfiguradorPublicaciones() {
       .then(r => r.ok ? r.json() : null)
       .then(datos => {
         if (datos?.autenticado && typeof datos.email === "string") {
-          setNegocio(actual => actual.email.trim() ? actual : { ...actual, email: datos.email });
+          setCorreoVerificado(datos.email);
+          // El correo del pedido debe coincidir con el titular autenticado
+          // para que MongoDB lo vincule automáticamente al panel.
+          setNegocio(actual => ({ ...actual, email: datos.email }));
         }
       }).catch(() => {});
     return () => controlador.abort();
@@ -699,7 +701,8 @@ export default function ConfiguradorPublicaciones() {
     }
     setErrorPaso("");
     setPasoActivo(numero);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (modoPanel) panelConfigRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    else window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function actualizarContenido(id, cambios) {
@@ -910,19 +913,21 @@ export default function ConfiguradorPublicaciones() {
       <p className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
         {textoVista || t("Acá vas a ver el texto de tu publicación.", "Aquí verás el texto de tu publicación.")}
       </p>
-      {ctaVista.trim() && <p className="mt-1.5 text-sm font-medium text-slate-800">{ctaVista}</p>}
+      {ctaVista.trim() && <p className="mt-1.5 text-sm font-semibold text-slate-800">{ctaVista}</p>}
       {urlVistaFacebook && <p className="mt-1 break-all text-xs text-orange-700 underline underline-offset-2">{urlVistaFacebook}</p>}
       {contenido.hashtags.trim() && <p className="mt-1.5 break-words text-sm text-orange-700">{contenido.hashtags}</p>}
     </div>
   );
 
   return (
-    <main className="min-h-screen bg-slate-50 px-3 pb-20 pt-5 text-slate-900 sm:px-6 sm:pt-8">
+    <main ref={panelConfigRef} className={modoPanel
+      ? "rounded-md bg-transparent pb-5 font-normal text-slate-900"
+      : "min-h-screen bg-slate-50 px-3 pb-20 pt-5 font-normal text-slate-900 sm:px-6 sm:pt-8"}>
       <div className="mx-auto max-w-6xl">
         <header className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-medium uppercase tracking-[0.12em] text-orange-700">Comunidad Semanal · Configurador</span>
-            <span className="text-xs font-medium text-slate-500">Paso {pasoActivo + 1} de {PASOS.length}</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-orange-700">{modoPanel ? "Tu primera semana" : "Comunidad Semanal · Configurador"}</span>
+            <span className="text-xs font-semibold text-slate-500">Paso {pasoActivo + 1} de {PASOS.length}</span>
           </div>
           <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{PASOS[pasoActivo].nombre}</h1>
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="Progreso de configuración" aria-valuemin={1} aria-valuemax={4} aria-valuenow={pasoActivo + 1}>
@@ -931,7 +936,7 @@ export default function ConfiguradorPublicaciones() {
           <nav className="mt-3 grid grid-cols-4 gap-1.5 sm:gap-3" aria-label="Pasos del configurador">
             {PASOS.map((paso, i) => (
               <button type="button" key={paso.nombre} aria-current={pasoActivo === i ? "step" : undefined}
-                onClick={() => irAlPaso(i)} className={clases("flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 py-2 text-[11px] font-medium transition sm:justify-start sm:px-3 sm:text-xs",
+                onClick={() => irAlPaso(i)} className={clases("flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 py-2 text-[11px] font-semibold transition sm:justify-start sm:px-3 sm:text-xs",
                   pasoActivo === i ? "border-orange-300 bg-orange-50 text-orange-800" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50")}>
                 <span className={clases("flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", pasoActivo === i ? "bg-orange-600 text-white" : i < pasoActivo ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500")}>
                   {i < pasoActivo ? <Check size={12} /> : i + 1}
@@ -947,9 +952,9 @@ export default function ConfiguradorPublicaciones() {
           <section className={TARJETA} aria-labelledby="paso-redes">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 id="paso-redes" className="text-base font-semibold">Elegí las redes</h2>
-              {!pedidoCreado && (
+              {!pedidoCreado && !modoPanel && (
                 <button type="button" onClick={() => { setMostrarRecuperacion(true); setPasoActivo(3); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  className="text-xs font-medium text-orange-700 underline underline-offset-2">Ya tengo un pedido</button>
+                  className="text-xs font-semibold text-orange-700 underline underline-offset-2">Ya tengo un pedido</button>
               )}
             </div>
             <p className="mt-1 text-xs text-slate-500">Seleccioná una o ambas cuentas para tus publicaciones.</p>
@@ -959,7 +964,7 @@ export default function ConfiguradorPublicaciones() {
                 return (
                   <button key={red.id} type="button" disabled={!red.disponible} aria-pressed={red.disponible ? activa : undefined}
                     onClick={() => alternarRed(red.id)}
-                    className={clases("relative flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium transition",
+                    className={clases("relative flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs font-semibold transition",
                       !red.disponible ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : activa ? BOTON_ACTIVO : BOTON_NORMAL)}>
                     {activa && <Check size={13} className="absolute right-2 top-2 text-orange-700" />}
                     <LogoRed red={red.id} size={23} className={!red.disponible ? "opacity-40" : ""} />
@@ -992,7 +997,7 @@ export default function ConfiguradorPublicaciones() {
             <div className={TARJETA}>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 id="paso-contenidos" className="text-base font-semibold">Elegí el contenido que querés editar</h2>
+                  <h2 id="paso-contenidos" className="text-base font-semibold">Elegí el contenido que querés publicar</h2>
                   <p className="mt-1 text-xs text-slate-500">Cada contenido conserva sus propios archivos, textos y horarios.</p>
                 </div>
                 <span className="text-xs text-slate-500">{contenidosConArchivos} de 4 con archivos</span>
@@ -1007,7 +1012,7 @@ export default function ConfiguradorPublicaciones() {
                       className={clases("flex items-center gap-2 rounded-md border px-3 py-2.5 text-left transition", seleccion === p.id ? BOTON_ACTIVO : BOTON_NORMAL)}
                     >
                       <Icono size={17} className="shrink-0" />
-                      <span className="min-w-0"><span className="block text-xs font-medium">Contenido {i + 1}</span><span className="block text-[11px] font-normal capitalize opacity-75">{p.tipo}</span></span>
+                      <span className="min-w-0"><span className="block text-xs font-semibold">Contenido {i + 1}</span><span className="block text-[11px] font-normal capitalize opacity-75">{p.tipo}</span></span>
                       {p.archivos.length > 0 && <CircleCheck size={13} className="ml-auto shrink-0 text-orange-600" />}
                     </button>
                   );
@@ -1019,11 +1024,11 @@ export default function ConfiguradorPublicaciones() {
                 <BloqueDesplegable titulo="Contenidos" descripcion="Formato, archivos, día y hora" abierto={desplegables.contenidos}
                   alAlternar={() => setDesplegables((a) => ({ ...a, contenidos: !a.contenidos }))}>
                   <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <h3 className="text-sm font-medium">Contenido {indice + 1}</h3>
+                <h3 className="text-sm font-semibold">Contenido {indice + 1}</h3>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"}</span>
                   <button type="button" onClick={() => { setDesplegables((a) => ({ ...a, vista: true })); requestAnimationFrame(() => vistaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })); }}
-                    className="text-xs font-medium text-orange-700 underline underline-offset-2 lg:hidden">Ver vista previa</button>
+                    className="text-xs font-semibold text-orange-700 underline underline-offset-2 lg:hidden">Ver vista previa</button>
                 </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1049,18 +1054,18 @@ export default function ConfiguradorPublicaciones() {
                   </select>
                 </Campo>
               </div>
-              <p className="mt-2 text-xs leading-5 text-slate-500">Los días y horarios son preferencias. Tras la aprobación organizamos las cuatro publicaciones dentro de siete días consecutivos, desde la primera fecha confirmada, según tu zona horaria.</p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">Tras la aprobación organizamos tus 4 publicaciones dentro de 7 días consecutivos, desde la primera fecha confirmada, según tu zona horaria.</p>
               {contenidos.some((p) => p.id !== contenido.id && p.dia === contenido.dia && p.hora === contenido.hora) && (
                 <p className="mt-2 text-xs text-amber-700" role="status">Otro contenido tiene el mismo día y horario. {t("Podés mantenerlos o elegir horas diferentes.", "Puedes mantenerlos o elegir horas diferentes.")}</p>
               )}
 
               <div className="mt-5 border-t border-slate-100 pt-4">
-                <label className="mb-2 block text-sm font-medium">
+                <label className="mb-2 block text-sm font-semibold">
                   {contenido.tipo === "reel" ? "Video del reel" : contenido.tipo === "carrusel" ? "Imágenes del carrusel (2 a 10)" : "Imagen de la publicación"}
                 </label>
                 <label className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-center transition hover:border-orange-500 hover:bg-orange-50/40">
                   <CloudUpload size={21} className="text-orange-700" />
-                  <span className="text-sm font-medium text-slate-800">
+                  <span className="text-sm font-semibold text-slate-800">
                     {contenido.archivos.length === 0 ? "Seleccionar archivos para la vista previa" : contenido.tipo === "carrusel" && contenido.archivos.length < 10 ? "Agregar imágenes" : "Reemplazar archivos"}
                   </span>
                   <span className="text-xs text-slate-500">
@@ -1086,7 +1091,7 @@ export default function ConfiguradorPublicaciones() {
                 <BloqueDesplegable titulo="Texto y detalles de la publicación" descripcion="Mensaje, llamadas a la acción, enlaces y hashtags" abierto={desplegables.textos}
                   alAlternar={() => setDesplegables((a) => ({ ...a, textos: !a.textos }))}>
                   <div className="space-y-4">
-                <Campo titulo={t("¿Qué querés comunicar?", "¿Qué quieres comunicar?")} ayuda={t("Contanos tu idea. Nosotros preparamos el texto final y lo enviamos para tu aprobación.", "Cuéntanos tu idea. Nosotros preparamos el texto final y lo enviamos para tu aprobación.")}>
+                <Campo titulo={t("¿Qué querés comunicar?", "¿Qué quieres comunicar?")} ayuda={t("Contanos tu idea. Nosotros preparamos el texto final y lo enviamos para tu aprobación.", "Nosotros preparamos el texto final y lo enviamos para tu aprobación.")}>
                   <textarea className={INPUT} rows={3} maxLength={1500} value={contenido.descripcion} onChange={(e) => actualizarContenido(contenido.id, { descripcion: e.target.value })} placeholder="Ej.: Queremos contar cómo elaboramos nuestros productos..." />
                 </Campo>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -1094,8 +1099,8 @@ export default function ConfiguradorPublicaciones() {
                     <div>
                       <Campo titulo={<span className="inline-flex items-center gap-2"><LogoRed red="instagram" size={19} /> CTA para Instagram (opcional)</span>}
                         ayuda={t(
-                          "En Instagram los enlaces del texto no suelen ser clicables. Usá indicaciones como ‘Enlace en nuestra bio’ o ‘Escribinos por mensaje’.",
-                          "En Instagram los enlaces del texto no suelen ser clicables. Usa indicaciones como ‘Enlace en nuestra biografía’ o ‘Escríbenos por mensaje’."
+                          "Usá nuestras sugerencias como ‘Enlace en nuestra bio’ o ‘Escribinos por mensaje’, o escribí las tuyas propias.",
+                          "Usá nuestras sugerencias como ‘Enlace en nuestra bio’ o ‘Escribinos por mensaje’, o escribí las tuyas propias."
                         )}>
                         <input className={INPUT} maxLength={100} list={`cta-instagram-${contenido.id}`} value={contenido.ctaInstagram}
                           onChange={(e) => actualizarContenido(contenido.id, { ctaInstagram: e.target.value })}
@@ -1124,13 +1129,10 @@ export default function ConfiguradorPublicaciones() {
                         <option value={t("Envianos un mensaje", "Envíanos un mensaje")} />
                         <option value={t("Dejanos tu opinión", "Déjanos tu opinión")} />
                       </datalist>
-                      <Campo titulo="URL para Facebook (opcional)" ayuda={t(
-                        "Pegá el enlace completo (https://...), por ejemplo tu tienda o https://wa.me/... Se verá debajo del CTA en la vista previa.",
-                        "Pega el enlace completo (https://...), por ejemplo tu tienda o https://wa.me/... Se verá debajo del CTA en la vista previa."
-                      )}>
-                        <input className={INPUT} type="url" inputMode="url" maxLength={500} value={contenido.urlFacebook}
+                      <Campo titulo="Enlace o sitio web para Facebook (opcional)" ayuda="Se mostrará tal como lo escribas. Podés usar https://tusitio.com, www.tusitio.com o tusitio.com.">
+                        <input className={INPUT} type="text" inputMode="url" maxLength={500} value={contenido.urlFacebook}
                           onChange={(e) => actualizarContenido(contenido.id, { urlFacebook: e.target.value })}
-                          placeholder="https://..." />
+                          placeholder="tusitio.com" />
                       </Campo>
                     </div>
                   )}
@@ -1147,7 +1149,7 @@ export default function ConfiguradorPublicaciones() {
                   <div className="mb-3 flex gap-2" role="group" aria-label="Vista previa por red">
                     {redes.map((red) => (
                       <button key={red} type="button" onClick={() => setRedVista(red)} aria-pressed={vistaActual === red}
-                        className={clases("inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition", vistaActual === red ? BOTON_ACTIVO : BOTON_NORMAL)}>
+                        className={clases("inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition", vistaActual === red ? BOTON_ACTIVO : BOTON_NORMAL)}>
                         <LogoRed red={red} size={17} /> {red === "instagram" ? "Instagram" : "Facebook"}
                       </button>
                     ))}
@@ -1221,31 +1223,17 @@ export default function ConfiguradorPublicaciones() {
                 <Campo titulo="Nombre del emprendimiento">
                   <input className={INPUT} value={negocio.nombre} maxLength={120} onChange={(e) => setNegocio({ ...negocio, nombre: e.target.value })} placeholder="Ej.: Panadería del Centro" />
                 </Campo>
-                <Campo titulo="Rubro">
-                  <input className={INPUT} value={negocio.rubro} maxLength={100} onChange={(e) => setNegocio({ ...negocio, rubro: e.target.value })} placeholder="Ej.: Gastronomía" />
-                </Campo>
                 <Campo titulo="Nombre de contacto">
                   <input className={INPUT} autoComplete="name" maxLength={120} value={negocio.contacto} onChange={(e) => setNegocio({ ...negocio, contacto: e.target.value })} placeholder="Nombre y apellido" />
                 </Campo>
-                <Campo titulo="Correo electrónico">
-                  <input className={INPUT} type="email" autoComplete="email" maxLength={160} value={negocio.email} onChange={(e) => setNegocio({ ...negocio, email: e.target.value })} placeholder="correo@negocio.com" />
+                <Campo titulo="Correo electrónico" ayuda={correoVerificado ? "Correo verificado de tu cuenta. El pedido aparecerá automáticamente en Mi panel." : "Usá el correo con el que vas a entrar a Comunidad Semanal."}>
+                  <input className={INPUT} type="email" autoComplete="email" maxLength={160} value={negocio.email} readOnly={Boolean(correoVerificado)} onChange={(e) => setNegocio({ ...negocio, email: e.target.value })} placeholder="correo@negocio.com" />
                 </Campo>
-                <Campo titulo="Web o enlace principal (opcional)">
-                  <input className={INPUT} type="url" maxLength={300} value={negocio.url} onChange={(e) => setNegocio({ ...negocio, url: e.target.value })} placeholder="https://..." />
+                <Campo titulo="Web o enlace principal (opcional)" ayuda="Podés escribir https://tusitio.com, www.tusitio.com o tusitio.com.">
+                  <input className={INPUT} type="text" inputMode="url" maxLength={300} value={negocio.url} onChange={(e) => setNegocio({ ...negocio, url: e.target.value })} placeholder="tusitio.com" />
                 </Campo>
                 <Campo titulo="WhatsApp (opcional)">
                   <input className={INPUT} type="tel" autoComplete="tel" maxLength={50} value={negocio.whatsapp} onChange={(e) => setNegocio({ ...negocio, whatsapp: e.target.value })} placeholder="+54 ..." />
-                </Campo>
-                <Campo titulo="¿A quién se dirige tu contenido? (opcional)">
-                  <input className={INPUT} maxLength={180} value={negocio.publico} onChange={(e) => setNegocio({ ...negocio, publico: e.target.value })} placeholder="Ej.: Familias de mi ciudad" />
-                </Campo>
-                <Campo titulo="Estilo de comunicación">
-                  <select className={INPUT} value={negocio.tono} onChange={(e) => setNegocio({ ...negocio, tono: e.target.value })}>
-                    <option value="cercano">Cercano</option>
-                    <option value="profesional">Profesional</option>
-                    <option value="informal">Informal</option>
-                    <option value="promocional">Promocional</option>
-                  </select>
                 </Campo>
               </div>
             {errorPaso && <p role="alert" className="mt-3 text-xs text-red-700">{errorPaso}</p>}
@@ -1267,7 +1255,7 @@ export default function ConfiguradorPublicaciones() {
             <div className="mb-5"><div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:p-4">
                 <ShieldCheck size={18} className="mt-0.5 shrink-0 text-orange-700" />
                 <div>
-                  <p className="text-sm font-medium">Conexión segura de tus redes</p>
+                  <p className="text-sm font-semibold">Conexión segura de tus redes</p>
                   <p className="mt-1 text-xs leading-5 text-slate-600">Para publicar en Instagram necesitás una cuenta profesional compatible; para Facebook, una página que puedas administrar. La autorización se realizará desde Meta, sin pedirte contraseñas.</p>
                   <div className="mt-2 flex items-center gap-3" aria-label="Redes compatibles para conectar">
                     <span className="inline-flex items-center gap-1.5 text-xs text-slate-600"><LogoRed red="instagram" size={18} /> Instagram</span>
@@ -1275,14 +1263,27 @@ export default function ConfiguradorPublicaciones() {
                   </div>
                 </div>
               </div></div>
-            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Elegir moneda">
-                {["ARS", "USD"].map((m) => (
-                  <button key={m} type="button" aria-pressed={moneda === m} onClick={() => setMoneda(m)}
-                    className={clases("rounded-lg border px-3 py-2 text-sm font-medium transition", moneda === m ? BOTON_ACTIVO : BOTON_NORMAL)}>
-                    {m === "ARS" ? "Pesos · ARS" : "Dólares · USD"}
-                  </button>
-                ))}
-              </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="group" aria-label="Elegir moneda">
+              {[
+                { id: "ARS", nombre: "Pesos argentinos", detalle: "ARS · Transferencia bancaria", Icono: Landmark },
+                { id: "USD", nombre: "Dólares estadounidenses", detalle: "USD · PayPal", Icono: CircleDollarSign },
+              ].map(({ id, nombre, detalle, Icono }) => (
+                <button key={id} type="button" aria-pressed={moneda === id} onClick={() => setMoneda(id)}
+                  className={clases("flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400",
+                    moneda === id ? "border-orange-400 bg-orange-50 shadow-sm" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50")}>
+                  <span className={clases("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                    moneda === id ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600")}>
+                    <Icono size={20} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-semibold text-slate-900">{nombre}</span>
+                    <span className="mt-0.5 block text-[11px] font-normal text-slate-500">{detalle}</span>
+                  </span>
+                  <span className={clases("h-4 w-4 shrink-0 rounded-full border-2",
+                    moneda === id ? "border-orange-600 bg-orange-600 ring-2 ring-orange-100" : "border-slate-300")} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
               <div className="mt-4 flex items-center gap-2 text-sm text-slate-700">
                 <ShieldCheck size={18} className="text-orange-700" />
                 <span>Sin pago ni tarjeta durante la prueba</span>
@@ -1292,7 +1293,7 @@ export default function ConfiguradorPublicaciones() {
               </p>
               <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
                 <div><p className="text-sm text-slate-600">Tu prueba gratuita</p><p className="mt-0.5 text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"} · hasta {totalPublicaciones} publicaciones</p></div>
-                <p className="text-xl font-medium text-slate-900">{precioFormateado(0, moneda)}</p>
+                <p className="text-xl font-semibold text-slate-900">{precioFormateado(0, moneda)}</p>
               </div>
               <p className="mt-2 text-xs text-slate-500">Después de los siete días: {precioFormateado(precio, moneda)} por semana, solo si decidís contratar.</p>
               {!precioConfirmado && (
@@ -1300,53 +1301,59 @@ export default function ConfiguradorPublicaciones() {
                   {estadoPlan === "cargando" ? "Consultando el precio actualizado..." : (
                     <span>
                       {errorPlan} El importe mostrado es orientativo. {" "}
-                      <button type="button" onClick={() => setRevisionPlan((n) => n + 1)} className="font-medium text-orange-700 underline underline-offset-2">Reintentar</button>
+                      <button type="button" onClick={() => setRevisionPlan((n) => n + 1)} className="font-semibold text-orange-700 underline underline-offset-2">Reintentar</button>
                     </span>
                   )}
                 </div>
               )}
-              {creacionDisponible && !pedidoCreado && (
+              {!pedidoCreado && (
                 <div className="mt-5 border-t border-slate-100 pt-4">
-                  <p className="mb-2 text-sm font-medium text-slate-800">Verificación de seguridad</p>
-                  <VerificacionHumana key={`${turnstileSiteKey}-${revisionTurnstile}`} clave={turnstileSiteKey} onToken={setTurnstileToken} />
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-800"><ShieldCheck size={17} className="text-orange-600" /> Verificación de seguridad</div>
+                  {turnstileSiteKey
+                    ? <VerificacionHumana key={`${turnstileSiteKey}-${revisionTurnstile}`} clave={turnstileSiteKey} onToken={setTurnstileToken} />
+                    : <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" role="status">Cloudflare Turnstile no está disponible en este momento. No se pueden crear pedidos hasta que se configure en el servidor.</p>}
+                  {turnstileSiteKey && !creacionDisponible && <p role="status" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                    La creación de pruebas todavía está restringida desde el servidor{planServidor?.pruebaModoPrivado ? " a Administración" : ""}. Podés revisar el formulario, pero no registrar un pedido hasta su habilitación.
+                  </p>}
                 </div>
               )}
               {pedidoCreado ? (
                 <div className="mt-5 rounded-lg border border-orange-200 bg-orange-50 p-3 sm:p-4" role="status" aria-live="polite">
-                  <div className="flex items-center gap-2 text-sm font-medium text-orange-900"><CircleCheck size={18} /> {pedidoCreado.modalidad === "prueba_gratuita" ? "Prueba gratuita preparada" : "Pedido registrado"}</div>
-                  <p className="mt-2 break-all text-sm font-medium text-slate-900">Código: {pedidoCreado.id}</p>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-orange-900"><CircleCheck size={18} /> {pedidoCreado.modalidad === "prueba_gratuita" ? "Prueba gratuita preparada" : "Pedido registrado"}</div>
+                  {!modoPanel && <p className="mt-2 break-all text-sm font-semibold text-slate-900">Código: {pedidoCreado.id}</p>}
                   <p className="mt-1 text-xs text-slate-700">{pedidoCreado.modalidad === "prueba_gratuita" ?
                     `Prueba: ${precioFormateado(0, pedidoCreado.moneda)} · Renovación opcional: ${precioFormateado(pedidoCreado.precioRenovacion ?? precio, pedidoCreado.moneda)} por semana` :
                     `Importe validado: ${precioFormateado(pedidoCreado.precio, pedidoCreado.moneda)} · ${pedidoCreado.metodoPago === "paypal" ? "PayPal" : "Transferencia"}`}</p>
                   <p className="mt-2 text-xs leading-5 text-slate-700">{pedidoCreado.modalidad === "prueba_gratuita" ?
                     "El pedido ya está registrado sin pago. Ahora podés cargar los archivos definitivos y conectar las redes autorizadas. Los siete días todavía no comienzan." :
                     "La carga definitiva y la conexión de redes se habilitarán después de confirmar el pago."}</p>
-                  <div className="mt-4 rounded-lg border border-orange-200 bg-white p-3">
-                    <p className="text-sm font-medium text-slate-900">Guardá el acceso a tu pedido</p>
+                  {!modoPanel && <div className="mt-4 rounded-lg border border-orange-200 bg-white p-3">
+                    <p className="text-sm font-semibold text-slate-900">Guardá el acceso a tu pedido</p>
                     <p className="mt-1 text-xs leading-5 text-slate-600">Podrás volver otro día o desde otro dispositivo, sin tener que configurar ni pagar nuevamente. Este acceso es privado: no lo compartas con otras personas.</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button type="button" onClick={() => copiarAccesoServicio("enlace")}
-                        className="rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700">
+                        className="rounded-md bg-orange-600 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-700">
                         Copiar enlace privado
                       </button>
                       <button type="button" onClick={() => copiarAccesoServicio("clave")}
-                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-50">
+                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50">
                         Copiar clave de acceso
                       </button>
                     </div>
                     <p className="mt-2 text-xs leading-5 text-slate-600">Si guardás solamente la clave, también necesitarás el código de pedido que aparece arriba. Por seguridad, no enviamos estos datos por correo automáticamente.</p>
                     {avisoAcceso && <p className="mt-2 text-xs text-slate-700" role="status">{avisoAcceso}</p>}
-                  </div>
+                  </div>}
+                  {modoPanel && <p className="mt-3 text-xs text-slate-600">Cuando termines de cargar los archivos, volvé al panel para revisar el estado de tu pedido y conectar tus redes.</p>}
                   {pedidoCreado.modalidad !== "prueba_gratuita" && pedidoCreado.moneda === "ARS" && <TransferenciaPedidoServicio pedido={pedidoCreado} habilitada={transferenciasDisponibles} />}
                   {pedidoCreado.tokenAcceso && <ConexionFacebookPedido key={pedidoCreado.id} pedido={pedidoCreado} />}
                   {pedidoCreado.tokenAcceso && <ArchivosPedido key={`archivos-${pedidoCreado.id}`} pedido={pedidoCreado} />}
-                  <button type="button" onClick={comenzarNuevoPedido} className="mt-4 text-xs font-medium text-orange-700 underline underline-offset-2">Configurar otro pedido</button>
+                  {!modoPanel && <button type="button" onClick={comenzarNuevoPedido} className="mt-4 text-xs font-semibold text-orange-700 underline underline-offset-2">Configurar otro pedido</button>}
                 </div>
               ) : (
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <button type="button" onClick={crearPedido}
                     disabled={!creacionDisponible || !turnstileToken || creandoPedido}
-                    className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-medium transition",
+                    className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-semibold transition",
                       creacionDisponible && turnstileToken && !creandoPedido
                         ? "bg-orange-600 text-white hover:bg-orange-700"
                         : "cursor-not-allowed bg-slate-300 text-white")}
@@ -1357,31 +1364,31 @@ export default function ConfiguradorPublicaciones() {
                       <><ShieldCheck size={16} /> Continuar con transferencia</>
                     ) : <><LockKeyhole size={16} /> Prueba gratuita todavía en preparación</>}
                   </button>
-                  <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50">
+                  <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50">
                     <Download size={16} /> Guardar configuración
                   </button>
                 </div>
               )}
-              {!pedidoCreado && (
+              {!pedidoCreado && !modoPanel && (
                 <div className="mt-5 border-t border-slate-200 pt-4">
                   <button type="button" onClick={() => { setMostrarRecuperacion((actual) => !actual); setErrorRecuperacion(""); }}
-                    className="text-sm font-medium text-orange-700 underline underline-offset-2">
+                    className="text-sm font-semibold text-orange-700 underline underline-offset-2">
                     ¿Ya tenés un pedido? Recuperar acceso
                   </button>
                   {mostrarRecuperacion && (
                     <form onSubmit={recuperarPedido} className="mt-3 space-y-3 rounded-md border border-slate-200 bg-white p-3">
                       <p className="text-xs leading-5 text-slate-600">Pegá tu enlace privado completo o ingresá el código de pedido y la clave de acceso que guardaste.</p>
                       <div>
-                        <label htmlFor="recuperar-pedido-codigo" className="mb-1 block text-xs font-medium text-slate-800">Código de pedido (si usás la clave)</label>
+                        <label htmlFor="recuperar-pedido-codigo" className="mb-1 block text-xs font-semibold text-slate-800">Código de pedido (si usás la clave)</label>
                         <input id="recuperar-pedido-codigo" autoComplete="off" spellCheck={false} value={codigoRecuperacion}
                           onChange={(e) => setCodigoRecuperacion(e.target.value)} placeholder="SER-..." className={INPUT} />
                       </div>
                       <div>
-                        <label htmlFor="recuperar-pedido-clave" className="mb-1 block text-xs font-medium text-slate-800">Enlace privado o clave de acceso</label>
+                        <label htmlFor="recuperar-pedido-clave" className="mb-1 block text-xs font-semibold text-slate-800">Enlace privado o clave de acceso</label>
                         <input id="recuperar-pedido-clave" type="password" autoComplete="off" spellCheck={false} value={claveRecuperacion}
                           onChange={(e) => setClaveRecuperacion(e.target.value)} placeholder="Pegá acá tu enlace o clave" className={INPUT} />
                       </div>
-                      <button type="submit" disabled={recuperandoPedido} className={clases("rounded-md px-3 py-2.5 text-sm font-medium", recuperandoPedido ? "bg-slate-300 text-white" : "bg-orange-600 text-white hover:bg-orange-700")}>
+                      <button type="submit" disabled={recuperandoPedido} className={clases("rounded-md px-3 py-2.5 text-sm font-semibold", recuperandoPedido ? "bg-slate-300 text-white" : "bg-orange-600 text-white hover:bg-orange-700")}>
                         {recuperandoPedido ? "Verificando acceso..." : "Abrir mi pedido"}
                       </button>
                       {errorRecuperacion && <p role="alert" className="text-xs leading-5 text-red-700">{errorRecuperacion}</p>}
@@ -1390,7 +1397,7 @@ export default function ConfiguradorPublicaciones() {
                 </div>
               )}
               {pedidoCreado && (
-                <button type="button" onClick={descargarConfiguracion} className="mt-3 inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-50">
+                <button type="button" onClick={descargarConfiguracion} className="mt-3 inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50">
                   <Download size={15} /> Guardar una copia de la configuración
                 </button>
               )}
@@ -1407,7 +1414,7 @@ export default function ConfiguradorPublicaciones() {
 
         <footer className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-5">
           <button type="button" disabled={pasoActivo === 0} onClick={() => irAlPaso(pasoActivo - 1)}
-            className={clases("inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition", pasoActivo === 0 ? "cursor-not-allowed border-slate-100 text-slate-300" : "border-slate-300 text-slate-700 hover:bg-slate-50")}>
+            className={clases("inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition", pasoActivo === 0 ? "cursor-not-allowed border-slate-100 text-slate-300" : "border-slate-300 text-slate-700 hover:bg-slate-50")}>
             <ChevronLeft size={16} /> Anterior
           </button>
           <span className="text-xs text-slate-500">{pasoActivo + 1} de 4</span>
@@ -1416,8 +1423,13 @@ export default function ConfiguradorPublicaciones() {
               className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700">
               Continuar <ChevronRight size={16} />
             </button>
+          ) : modoPanel && typeof onVolverAlPanel === "function" ? (
+            <button type="button" onClick={onVolverAlPanel}
+              className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-800 hover:bg-orange-100">
+              Volver a mi panel
+            </button>
           ) : (
-            <a href="/servicios/publicacion-automatica/mi-panel" className="text-xs font-medium text-orange-700 underline underline-offset-2">Mi panel</a>
+            <a href="/servicios/publicacion-automatica/mi-panel" className="text-xs font-semibold text-orange-700 underline underline-offset-2">Mi panel</a>
           )}
         </footer>
       </div>
