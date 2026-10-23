@@ -199,9 +199,9 @@ const CONFIGURACION_INICIAL = [
   ["reel", "Domingo", "18:00"],
 ];
 const RESOLUCIONES = { "9:16": "1080 × 1920", "4:5": "1080 × 1350", "1:1": "1080 × 1080" };
-const INPUT = "w-full min-h-9 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
+const INPUT = "w-full min-h-9 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
 const BOTON_ACTIVO = "border-orange-500 bg-orange-50 text-orange-800";
-const TARJETA = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5";
+const TARJETA = "rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5";
 const BOTON_NORMAL = "border-slate-200 bg-white text-slate-700 hover:border-slate-400";
 
 function clases(...clasesLista) {
@@ -252,7 +252,7 @@ function LogoRed({ red, size = 23, className = "" }) {
 function Campo({ titulo, ayuda, children }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-slate-800">{titulo}</span>
+      <span className="mb-1.5 block text-sm font-medium text-slate-800">{titulo}</span>
       {children}
       {ayuda && <span className="mt-1.5 block text-xs leading-5 text-slate-500">{ayuda}</span>}
     </label>
@@ -450,11 +450,11 @@ function TransferenciaPedidoServicio({ pedido, habilitada }) {
 
   return (
     <div className="mt-5 border-t border-orange-200 pt-4">
-      <h3 className="text-sm font-semibold text-slate-900">Transferencia bancaria</h3>
+      <h3 className="text-sm font-medium text-slate-900">Transferencia bancaria</h3>
       {cargando && <p className="mt-2 text-xs text-slate-600" role="status">Consultando los datos bancarios...</p>}
       {detalle && (
         <div className="mt-3 space-y-3">
-          <p className="text-sm text-slate-700">Importe a transferir: <span className="font-semibold">{precioFormateado(detalle.precio, "ARS")}</span></p>
+          <p className="text-sm text-slate-700">Importe a transferir: <span className="font-medium">{precioFormateado(detalle.precio, "ARS")}</span></p>
           <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
             {[
               ["Titular", detalle.cuenta?.titular],
@@ -465,21 +465,21 @@ function TransferenciaPedidoServicio({ pedido, habilitada }) {
               <div key={nombre} className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
                 <div className="min-w-0">
                   <p className="text-[11px] text-slate-500">{nombre}</p>
-                  <p className="select-text break-all text-sm font-semibold text-slate-900">{valor || "No disponible"}</p>
+                  <p className="select-text break-all text-sm font-medium text-slate-900">{valor || "No disponible"}</p>
                 </div>
-                {valor && <button type="button" onClick={() => copiarDato(valor, nombre)} className="shrink-0 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" aria-label={`Copiar ${nombre}`}>
+                {valor && <button type="button" onClick={() => copiarDato(valor, nombre)} className="shrink-0 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" aria-label={`Copiar ${nombre}`}>
                   {copiado === nombre ? "Copiado" : "Copiar"}
                 </button>}
               </div>
             ))}
           </div>
-          <p className="text-xs text-slate-600">Estado: <span className="font-semibold text-slate-800">{estados[detalle.estado] || detalle.estado}</span></p>
+          <p className="text-xs text-slate-600">Estado: <span className="font-medium text-slate-800">{estados[detalle.estado] || detalle.estado}</span></p>
           {detalle.estado === "pendiente_comprobante" ? (
             <form onSubmit={enviarComprobante} className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
-              <label className="block text-sm font-semibold text-slate-800" htmlFor="comprobante-servicio">Adjuntá el comprobante de transferencia</label>
-              <input id="comprobante-servicio" type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:font-semibold file:text-orange-800" onChange={(e) => { setArchivo(e.target.files?.[0] || null); setError(""); }} />
+              <label className="block text-sm font-medium text-slate-800" htmlFor="comprobante-servicio">Adjuntá el comprobante de transferencia</label>
+              <input id="comprobante-servicio" type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:font-medium file:text-orange-800" onChange={(e) => { setArchivo(e.target.files?.[0] || null); setError(""); }} />
               <p className="text-xs text-slate-500">JPG, PNG o PDF, hasta 8 MB. La confirmación del pago es manual.</p>
-              <button type="submit" disabled={!archivo || subiendo} className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-semibold", archivo && !subiendo ? "bg-orange-600 text-white hover:bg-orange-700" : "cursor-not-allowed bg-slate-300 text-white")}>
+              <button type="submit" disabled={!archivo || subiendo} className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium", archivo && !subiendo ? "bg-orange-600 text-white hover:bg-orange-700" : "cursor-not-allowed bg-slate-300 text-white")}>
                 <CloudUpload size={16} /> {subiendo ? "Enviando comprobante..." : "Enviar comprobante"}
               </button>
             </form>
@@ -523,11 +523,11 @@ const PASOS = [
 
 function BloqueDesplegable({ titulo, descripcion, abierto, alAlternar, children }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
       <button type="button" aria-expanded={abierto} onClick={alAlternar}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-slate-50 sm:px-5">
         <span className="min-w-0">
-          <span className="block text-sm font-semibold text-slate-900">{titulo}</span>
+          <span className="block text-sm font-medium text-slate-900">{titulo}</span>
           {descripcion && <span className="mt-0.5 block text-xs leading-5 text-slate-500">{descripcion}</span>}
         </span>
         <ChevronDown size={18} aria-hidden="true" className={clases("shrink-0 text-slate-500 transition-transform", abierto && "rotate-180")} />
@@ -539,10 +539,10 @@ function BloqueDesplegable({ titulo, descripcion, abierto, alAlternar, children 
 
 // modoPanel reutiliza el configurador real dentro de Mi panel.
 // Ningún pedido se crea hasta que la API lo acepte y valide Turnstile.
-export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverAlPanel } = {}) {
+export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverAlPanel, onPedidoCreado } = {}) {
   const [redes, setRedes] = useState(["instagram", "facebook"]);
   const [pasoActivo, setPasoActivo] = useState(0);
-  const [desplegables, setDesplegables] = useState({ contenidos: true, textos: false, vista: true });
+  const [desplegables, setDesplegables] = useState({ contenidos: true, textos: false, vista: false, resumen: false });
   const [errorPaso, setErrorPaso] = useState("");
   const [contenidos, setContenidos] = useState(crearContenidos);
   const [seleccion, setSeleccion] = useState("contenido-1");
@@ -664,6 +664,33 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
       }).catch(() => {});
     return () => controlador.abort();
   }, []);
+
+  // En el panel, los datos del negocio provienen de la cuenta verificada.
+  // El backend debe persistir el perfil recibido durante el registro.
+  useEffect(() => {
+    if (!modoPanel) return;
+    const controller = new AbortController();
+    fetch("/api/servicios/clientes/panel/detalles", {
+      credentials: "same-origin", cache: "no-store", signal: controller.signal,
+    }).then(r => r.ok ? r.json() : null).then(data => {
+      const perfil = data?.perfil;
+      if (!perfil || controller.signal.aborted) return;
+      setNegocio(actual => ({
+        ...actual,
+        nombre: actual.nombre || perfil.emprendimiento || perfil.nombreEmprendimiento || "",
+        contacto: actual.contacto || perfil.nombre || perfil.nombreApellido || perfil.nombreCompleto || "",
+        whatsapp: actual.whatsapp || perfil.whatsapp || "",
+        url: actual.url || perfil.web || "",
+      }));
+      const pais = perfil.pais;
+      if (pais && !pedidoCreado) {
+        const entrada = ZONAS_DISPONIBLES.find(z => z.pais === pais);
+        if (entrada?.zonas?.length) setZonaHoraria(actual => actual === "America/Argentina/Buenos_Aires" ? entrada.zonas[0][0] : actual);
+        setMoneda(pais === "Argentina" ? "ARS" : "USD");
+      }
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [modoPanel]);
 
   useEffect(() => {
     if (pedidoCreado?.id) setPasoActivo(3);
@@ -823,6 +850,7 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
       if (pedido.tokenAcceso && ["ARS", "USD"].includes(pedido.moneda)) {
         try { sessionStorage.setItem(PEDIDO_PENDIENTE_STORAGE, JSON.stringify(pedido)); } catch { /* Almacenamiento no disponible */ }
       }
+      if (typeof onPedidoCreado === "function") onPedidoCreado(pedido.id);
     } catch (error) {
       setErrorPedido(error?.message || "No se pudo comunicar con el servidor.");
       // El token Turnstile tiene un solo uso, incluso si falla el guardado.
@@ -913,32 +941,48 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
       <p className="whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
         {textoVista || t("Acá vas a ver el texto de tu publicación.", "Aquí verás el texto de tu publicación.")}
       </p>
-      {ctaVista.trim() && <p className="mt-1.5 text-sm font-semibold text-slate-800">{ctaVista}</p>}
+      {ctaVista.trim() && <p className="mt-1.5 text-sm font-medium text-slate-800">{ctaVista}</p>}
       {urlVistaFacebook && <p className="mt-1 break-all text-xs text-orange-700 underline underline-offset-2">{urlVistaFacebook}</p>}
       {contenido.hashtags.trim() && <p className="mt-1.5 break-words text-sm text-orange-700">{contenido.hashtags}</p>}
     </div>
   );
 
   return (
-    <main ref={panelConfigRef} className={modoPanel
+    <main ref={panelConfigRef} style={modoPanel ? { fontFamily: "Montserrat, system-ui, sans-serif", fontWeight: 400 } : undefined} className={modoPanel
       ? "rounded-md bg-transparent pb-5 font-normal text-slate-900"
       : "min-h-screen bg-slate-50 px-3 pb-20 pt-5 font-normal text-slate-900 sm:px-6 sm:pt-8"}>
       <div className="mx-auto max-w-6xl">
-        <header className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        {modoPanel ? (
+          <header className="mb-4 rounded-md border border-slate-200 bg-white px-3 py-3">
+            <h2 className="text-sm font-medium text-slate-900">Prepará tu primera semana</h2>
+            <p className="mt-1 text-xs font-normal text-slate-500">Configurá tus cuatro contenidos y revisá cómo se verán antes de continuar.</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-600">
+              <span>Facebook e Instagram</span>
+              <span aria-hidden="true">·</span>
+              <label className="flex flex-1 items-center gap-2 sm:flex-none">
+                <span>Zona horaria</span>
+                <select aria-label="Zona horaria" className="min-w-0 max-w-[230px] rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-normal" value={zonaHoraria} onChange={e => setZonaHoraria(e.target.value)}>
+                  {ZONAS_DISPONIBLES.flatMap(({pais,zonas})=>zonas.map(([id,ciudad])=><option key={id} value={id}>{pais}{zonas.length>1 ? ` · ${ciudad}` : ""}</option>))}
+                </select>
+              </label>
+            </div>
+          </header>
+        ) : (
+        <header className="mb-5 rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-orange-700">{modoPanel ? "Tu primera semana" : "Comunidad Semanal · Configurador"}</span>
-            <span className="text-xs font-semibold text-slate-500">Paso {pasoActivo + 1} de {PASOS.length}</span>
+            <span className="text-xs font-medium uppercase tracking-[0.12em] text-orange-700">{modoPanel ? "Tu primera semana" : "Comunidad Semanal · Configurador"}</span>
+            <span className="text-xs font-medium text-slate-500">Paso {pasoActivo + 1} de {PASOS.length}</span>
           </div>
-          <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{PASOS[pasoActivo].nombre}</h1>
+          <h1 className="mt-2 text-xl font-medium tracking-tight text-slate-900 sm:text-2xl">{PASOS[pasoActivo].nombre}</h1>
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="Progreso de configuración" aria-valuemin={1} aria-valuemax={4} aria-valuenow={pasoActivo + 1}>
             <div className="h-full rounded-full bg-orange-600 transition-all duration-300" style={{ width: `${(pasoActivo + 1) * 25}%` }} />
           </div>
           <nav className="mt-3 grid grid-cols-4 gap-1.5 sm:gap-3" aria-label="Pasos del configurador">
             {PASOS.map((paso, i) => (
               <button type="button" key={paso.nombre} aria-current={pasoActivo === i ? "step" : undefined}
-                onClick={() => irAlPaso(i)} className={clases("flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 py-2 text-[11px] font-semibold transition sm:justify-start sm:px-3 sm:text-xs",
+                onClick={() => irAlPaso(i)} className={clases("flex min-w-0 items-center justify-center gap-1.5 rounded-md border px-1.5 py-2 text-[11px] font-medium transition sm:justify-start sm:px-3 sm:text-xs",
                   pasoActivo === i ? "border-orange-300 bg-orange-50 text-orange-800" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50")}>
-                <span className={clases("flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", pasoActivo === i ? "bg-orange-600 text-white" : i < pasoActivo ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500")}>
+                <span className={clases("flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-medium", pasoActivo === i ? "bg-orange-600 text-white" : i < pasoActivo ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500")}>
                   {i < pasoActivo ? <Check size={12} /> : i + 1}
                 </span>
                 <span className="truncate sm:hidden">{paso.corto}</span>
@@ -948,13 +992,15 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
           </nav>
         </header>
 
-        {pasoActivo === 0 && (
+        )}
+
+        {!modoPanel && pasoActivo === 0 && (
           <section className={TARJETA} aria-labelledby="paso-redes">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="paso-redes" className="text-base font-semibold">Elegí las redes</h2>
+              <h2 id="paso-redes" className="text-base font-medium">Elegí las redes</h2>
               {!pedidoCreado && !modoPanel && (
                 <button type="button" onClick={() => { setMostrarRecuperacion(true); setPasoActivo(3); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  className="text-xs font-semibold text-orange-700 underline underline-offset-2">Ya tengo un pedido</button>
+                  className="text-xs font-medium text-orange-700 underline underline-offset-2">Ya tengo un pedido</button>
               )}
             </div>
             <p className="mt-1 text-xs text-slate-500">Seleccioná una o ambas cuentas para tus publicaciones.</p>
@@ -964,7 +1010,7 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
                 return (
                   <button key={red.id} type="button" disabled={!red.disponible} aria-pressed={red.disponible ? activa : undefined}
                     onClick={() => alternarRed(red.id)}
-                    className={clases("relative flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs font-semibold transition",
+                    className={clases("relative flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs font-medium transition",
                       !red.disponible ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : activa ? BOTON_ACTIVO : BOTON_NORMAL)}>
                     {activa && <Check size={13} className="absolute right-2 top-2 text-orange-700" />}
                     <LogoRed red={red.id} size={23} className={!red.disponible ? "opacity-40" : ""} />
@@ -985,19 +1031,19 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
                 </select>
               </Campo>
             </div>
-            <div className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            <div className="mt-5 flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
               <CalendarDays size={15} className="text-orange-700" />
               <span>{redes.length} {redes.length === 1 ? "red seleccionada" : "redes seleccionadas"} · {totalPublicaciones} publicaciones previstas</span>
             </div>
           </section>
         )}
 
-        {pasoActivo === 1 && (
+        {(modoPanel || pasoActivo === 1) && (
           <section aria-labelledby="paso-contenidos" className="space-y-4">
             <div className={TARJETA}>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 id="paso-contenidos" className="text-base font-semibold">Elegí el contenido que querés publicar</h2>
+                  <h2 id="paso-contenidos" className="text-base font-medium">Elegí el contenido que querés publicar</h2>
                   <p className="mt-1 text-xs text-slate-500">Cada contenido conserva sus propios archivos, textos y horarios.</p>
                 </div>
                 <span className="text-xs text-slate-500">{contenidosConArchivos} de 4 con archivos</span>
@@ -1012,23 +1058,23 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
                       className={clases("flex items-center gap-2 rounded-md border px-3 py-2.5 text-left transition", seleccion === p.id ? BOTON_ACTIVO : BOTON_NORMAL)}
                     >
                       <Icono size={17} className="shrink-0" />
-                      <span className="min-w-0"><span className="block text-xs font-semibold">Contenido {i + 1}</span><span className="block text-[11px] font-normal capitalize opacity-75">{p.tipo}</span></span>
+                      <span className="min-w-0"><span className="block text-xs font-medium">Contenido {i + 1}</span><span className="block text-[11px] font-normal capitalize opacity-75">{p.tipo}</span></span>
                       {p.archivos.length > 0 && <CircleCheck size={13} className="ml-auto shrink-0 text-orange-600" />}
                     </button>
                   );
                 })}
               </div>
             </div>
-            <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(0,0.94fr)]">
+            <div className={modoPanel ? "grid items-start gap-3" : "grid items-start gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(0,0.94fr)]"}>
               <div className="min-w-0 space-y-4">
                 <BloqueDesplegable titulo="Contenidos" descripcion="Formato, archivos, día y hora" abierto={desplegables.contenidos}
                   alAlternar={() => setDesplegables((a) => ({ ...a, contenidos: !a.contenidos }))}>
                   <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <h3 className="text-sm font-semibold">Contenido {indice + 1}</h3>
+                <h3 className="text-sm font-medium">Contenido {indice + 1}</h3>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"}</span>
                   <button type="button" onClick={() => { setDesplegables((a) => ({ ...a, vista: true })); requestAnimationFrame(() => vistaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })); }}
-                    className="text-xs font-semibold text-orange-700 underline underline-offset-2 lg:hidden">Ver vista previa</button>
+                    className="text-xs font-medium text-orange-700 underline underline-offset-2 lg:hidden">Ver vista previa</button>
                 </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1060,12 +1106,12 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
               )}
 
               <div className="mt-5 border-t border-slate-100 pt-4">
-                <label className="mb-2 block text-sm font-semibold">
+                <label className="mb-2 block text-sm font-medium">
                   {contenido.tipo === "reel" ? "Video del reel" : contenido.tipo === "carrusel" ? "Imágenes del carrusel (2 a 10)" : "Imagen de la publicación"}
                 </label>
-                <label className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-center transition hover:border-orange-500 hover:bg-orange-50/40">
+                <label className="flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-center transition hover:border-orange-500 hover:bg-orange-50/40">
                   <CloudUpload size={21} className="text-orange-700" />
-                  <span className="text-sm font-semibold text-slate-800">
+                  <span className="text-sm font-medium text-slate-800">
                     {contenido.archivos.length === 0 ? "Seleccionar archivos para la vista previa" : contenido.tipo === "carrusel" && contenido.archivos.length < 10 ? "Agregar imágenes" : "Reemplazar archivos"}
                   </span>
                   <span className="text-xs text-slate-500">
@@ -1143,22 +1189,22 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
               </div>
                 </BloqueDesplegable>
               </div>
-              <div ref={vistaRef} className="min-w-0 scroll-mt-20 lg:sticky lg:top-5">
+              <div ref={vistaRef} className={modoPanel ? "min-w-0 scroll-mt-20" : "min-w-0 scroll-mt-20 lg:sticky lg:top-5"}>
                 <BloqueDesplegable titulo="Vista previa" descripcion={`Contenido ${indice + 1} · Así se verá en cada red`} abierto={desplegables.vista}
                   alAlternar={() => setDesplegables((a) => ({ ...a, vista: !a.vista }))}>
                   <div className="mb-3 flex gap-2" role="group" aria-label="Vista previa por red">
                     {redes.map((red) => (
                       <button key={red} type="button" onClick={() => setRedVista(red)} aria-pressed={vistaActual === red}
-                        className={clases("inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition", vistaActual === red ? BOTON_ACTIVO : BOTON_NORMAL)}>
+                        className={clases("inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border px-2 py-2 text-xs font-medium transition", vistaActual === red ? BOTON_ACTIVO : BOTON_NORMAL)}>
                         <LogoRed red={red} size={17} /> {red === "instagram" ? "Instagram" : "Facebook"}
                       </button>
                     ))}
                   </div>
-                  <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                  <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
                     <div className="flex items-center gap-2 px-3 py-2.5">
                       <LogoRed red={vistaActual} size={26} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-slate-900">{vistaActual === "instagram" ? usuarioVista : nombreVista}</p>
+                        <p className="truncate text-xs font-medium text-slate-900">{vistaActual === "instagram" ? usuarioVista : nombreVista}</p>
                         <p className="text-[11px] text-slate-500">{vistaActual === "instagram" ? "Instagram" : "Página de Facebook · Público"}</p>
                       </div>
                       <MoreHorizontal size={18} className="text-slate-400" />
@@ -1206,17 +1252,17 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
                 </BloqueDesplegable>
               </div>
             </div>
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
               <span>{contenidosConArchivos}/4 con archivos · {contenidosConIdea}/4 con textos</span>
               <span>{totalPublicaciones} publicaciones · 7 días</span>
             </div>
           </section>
         )}
 
-        {pasoActivo === 2 && (
+        {!modoPanel && pasoActivo === 2 && (
           <section className={TARJETA} aria-labelledby="paso-negocio">
             <div className="mb-4">
-              <h2 id="paso-negocio" className="text-base font-semibold">Datos del emprendimiento</h2>
+              <h2 id="paso-negocio" className="text-base font-medium">Datos del emprendimiento</h2>
               <p className="mt-1 text-xs leading-5 text-slate-500">Identifican tu pedido y personalizan cómo aparecerá tu negocio.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1240,22 +1286,42 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
           </section>
         )}
 
-        {pasoActivo === 3 && (
-          <section className={TARJETA} aria-labelledby="paso-confirmar">
-            <div className="mb-4">
-              <h2 id="paso-confirmar" className="text-base font-semibold">Revisar y preparar el pedido</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Comprobá la selección y completá la verificación de seguridad.</p>
+        {(modoPanel || pasoActivo === 3) && (
+          <section className={modoPanel ? "overflow-hidden rounded-md border border-slate-200 bg-white" : TARJETA} aria-labelledby="paso-confirmar">
+            {modoPanel ? (
+              <button type="button" aria-expanded={Boolean(desplegables.resumen)}
+                onClick={() => setDesplegables(d => ({...d,resumen:!d.resumen}))}
+                className="flex w-full items-center justify-between px-3 py-3 text-left text-sm font-medium text-slate-900 hover:bg-slate-50">
+                <span>Resumen y programación</span>
+                <ChevronDown size={16} className={desplegables.resumen ? "rotate-180 text-slate-500" : "text-slate-500"}/>
+              </button>
+            ) : (
+              <div className="mb-4">
+                <h2 id="paso-confirmar" className="text-base font-medium">Revisar y preparar el pedido</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Comprobá la selección y completá la verificación de seguridad.</p>
+              </div>
+            )}
+            {(!modoPanel || desplegables.resumen) && <div className={modoPanel ? "space-y-3 border-t border-slate-100 p-3" : ""}>
+              {modoPanel && <div className="rounded-md bg-slate-50 p-3 text-xs text-slate-700">
+                <div className="flex flex-wrap justify-between gap-2 font-medium"><span>{totalPublicaciones} publicaciones</span><span>Facebook · Instagram</span></div>
+                <div className="mt-3 space-y-2">
+                  {contenidos.map((item, index) => <div key={item.id} className="flex flex-wrap justify-between gap-2 border-t border-slate-200 pt-2 font-normal">
+                    <span>Contenido {index+1} · {TIPOS.find(t=>t.id===item.tipo)?.nombre || item.tipo}</span>
+                    <span>{item.dia} · {item.hora} hora local</span>
+                  </div>)}
+                </div>
+              </div>}
+            {!modoPanel && <>
+            <div className="mb-5 grid grid-cols-2 gap-3 rounded-md bg-slate-50 p-3 text-sm sm:grid-cols-4">
+              <div><p className="text-[11px] text-slate-500">Redes</p><p className="font-medium text-slate-900">{redes.length}</p></div>
+              <div><p className="text-[11px] text-slate-500">Contenidos</p><p className="font-medium text-slate-900">4</p></div>
+              <div><p className="text-[11px] text-slate-500">Publicaciones</p><p className="font-medium text-slate-900">{totalPublicaciones}</p></div>
+              <div><p className="text-[11px] text-slate-500">Archivos en vista previa</p><p className="font-medium text-slate-900">{contenidosConArchivos}/4</p></div>
             </div>
-            <div className="mb-5 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4">
-              <div><p className="text-[11px] text-slate-500">Redes</p><p className="font-semibold text-slate-900">{redes.length}</p></div>
-              <div><p className="text-[11px] text-slate-500">Contenidos</p><p className="font-semibold text-slate-900">4</p></div>
-              <div><p className="text-[11px] text-slate-500">Publicaciones</p><p className="font-semibold text-slate-900">{totalPublicaciones}</p></div>
-              <div><p className="text-[11px] text-slate-500">Archivos en vista previa</p><p className="font-semibold text-slate-900">{contenidosConArchivos}/4</p></div>
-            </div>
-            <div className="mb-5"><div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:p-4">
+            <div className="mb-5"><div className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 sm:p-4">
                 <ShieldCheck size={18} className="mt-0.5 shrink-0 text-orange-700" />
                 <div>
-                  <p className="text-sm font-semibold">Conexión segura de tus redes</p>
+                  <p className="text-sm font-medium">Conexión segura de tus redes</p>
                   <p className="mt-1 text-xs leading-5 text-slate-600">Para publicar en Instagram necesitás una cuenta profesional compatible; para Facebook, una página que puedas administrar. La autorización se realizará desde Meta, sin pedirte contraseñas.</p>
                   <div className="mt-2 flex items-center gap-3" aria-label="Redes compatibles para conectar">
                     <span className="inline-flex items-center gap-1.5 text-xs text-slate-600"><LogoRed red="instagram" size={18} /> Instagram</span>
@@ -1269,14 +1335,14 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
                 { id: "USD", nombre: "Dólares estadounidenses", detalle: "USD · PayPal", Icono: CircleDollarSign },
               ].map(({ id, nombre, detalle, Icono }) => (
                 <button key={id} type="button" aria-pressed={moneda === id} onClick={() => setMoneda(id)}
-                  className={clases("flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400",
+                  className={clases("flex items-center gap-3 rounded-md border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400",
                     moneda === id ? "border-orange-400 bg-orange-50 shadow-sm" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50")}>
-                  <span className={clases("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                  <span className={clases("flex h-10 w-10 shrink-0 items-center justify-center rounded-md",
                     moneda === id ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600")}>
                     <Icono size={20} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-semibold text-slate-900">{nombre}</span>
+                    <span className="block text-xs font-medium text-slate-900">{nombre}</span>
                     <span className="mt-0.5 block text-[11px] font-normal text-slate-500">{detalle}</span>
                   </span>
                   <span className={clases("h-4 w-4 shrink-0 rounded-full border-2",
@@ -1293,50 +1359,51 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
               </p>
               <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
                 <div><p className="text-sm text-slate-600">Tu prueba gratuita</p><p className="mt-0.5 text-xs text-slate-500">{redes.length} {redes.length === 1 ? "red" : "redes"} · hasta {totalPublicaciones} publicaciones</p></div>
-                <p className="text-xl font-semibold text-slate-900">{precioFormateado(0, moneda)}</p>
+                <p className="text-xl font-medium text-slate-900">{precioFormateado(0, moneda)}</p>
               </div>
               <p className="mt-2 text-xs text-slate-500">Después de los siete días: {precioFormateado(precio, moneda)} por semana, solo si decidís contratar.</p>
+            </>}
               {!precioConfirmado && (
                 <div className="mt-3 text-xs leading-5 text-slate-600" role="status">
                   {estadoPlan === "cargando" ? "Consultando el precio actualizado..." : (
                     <span>
                       {errorPlan} El importe mostrado es orientativo. {" "}
-                      <button type="button" onClick={() => setRevisionPlan((n) => n + 1)} className="font-semibold text-orange-700 underline underline-offset-2">Reintentar</button>
+                      <button type="button" onClick={() => setRevisionPlan((n) => n + 1)} className="font-medium text-orange-700 underline underline-offset-2">Reintentar</button>
                     </span>
                   )}
                 </div>
               )}
               {!pedidoCreado && (
                 <div className="mt-5 border-t border-slate-100 pt-4">
-                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-800"><ShieldCheck size={17} className="text-orange-600" /> Verificación de seguridad</div>
+                  <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-800"><ShieldCheck size={17} className="text-orange-600" /> Verificación de seguridad</div>
                   {turnstileSiteKey
                     ? <VerificacionHumana key={`${turnstileSiteKey}-${revisionTurnstile}`} clave={turnstileSiteKey} onToken={setTurnstileToken} />
-                    : <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" role="status">Cloudflare Turnstile no está disponible en este momento. No se pueden crear pedidos hasta que se configure en el servidor.</p>}
-                  {turnstileSiteKey && !creacionDisponible && <p role="status" className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                    : <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" role="status">Cloudflare Turnstile no está disponible en este momento. No se pueden crear pedidos hasta que se configure en el servidor.</p>}
+                  {turnstileSiteKey && !creacionDisponible && <p role="status" className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                     La creación de pruebas todavía está restringida desde el servidor{planServidor?.pruebaModoPrivado ? " a Administración" : ""}. Podés revisar el formulario, pero no registrar un pedido hasta su habilitación.
                   </p>}
                 </div>
               )}
               {pedidoCreado ? (
-                <div className="mt-5 rounded-lg border border-orange-200 bg-orange-50 p-3 sm:p-4" role="status" aria-live="polite">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-orange-900"><CircleCheck size={18} /> {pedidoCreado.modalidad === "prueba_gratuita" ? "Prueba gratuita preparada" : "Pedido registrado"}</div>
-                  {!modoPanel && <p className="mt-2 break-all text-sm font-semibold text-slate-900">Código: {pedidoCreado.id}</p>}
+                <div className="mt-5 rounded-md border border-orange-200 bg-orange-50 p-3 sm:p-4" role="status" aria-live="polite">
+                  <div className="flex items-center gap-2 text-sm font-medium text-orange-900"><CircleCheck size={18} /> {pedidoCreado.modalidad === "prueba_gratuita" ? "Prueba gratuita preparada" : "Pedido registrado"}</div>
+                  {!modoPanel && <p className="mt-2 break-all text-sm font-medium text-slate-900">Código: {pedidoCreado.id}</p>}
                   <p className="mt-1 text-xs text-slate-700">{pedidoCreado.modalidad === "prueba_gratuita" ?
                     `Prueba: ${precioFormateado(0, pedidoCreado.moneda)} · Renovación opcional: ${precioFormateado(pedidoCreado.precioRenovacion ?? precio, pedidoCreado.moneda)} por semana` :
                     `Importe validado: ${precioFormateado(pedidoCreado.precio, pedidoCreado.moneda)} · ${pedidoCreado.metodoPago === "paypal" ? "PayPal" : "Transferencia"}`}</p>
                   <p className="mt-2 text-xs leading-5 text-slate-700">{pedidoCreado.modalidad === "prueba_gratuita" ?
                     "El pedido ya está registrado sin pago. Ahora podés cargar los archivos definitivos y conectar las redes autorizadas. Los siete días todavía no comienzan." :
                     "La carga definitiva y la conexión de redes se habilitarán después de confirmar el pago."}</p>
-                  {!modoPanel && <div className="mt-4 rounded-lg border border-orange-200 bg-white p-3">
-                    <p className="text-sm font-semibold text-slate-900">Guardá el acceso a tu pedido</p>
+                  {!modoPanel && <div className="mt-4 rounded-md border border-orange-200 bg-white p-3">
+                    <p className="text-sm font-medium text-slate-900">Guardá el acceso a tu pedido</p>
                     <p className="mt-1 text-xs leading-5 text-slate-600">Podrás volver otro día o desde otro dispositivo, sin tener que configurar ni pagar nuevamente. Este acceso es privado: no lo compartas con otras personas.</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button type="button" onClick={() => copiarAccesoServicio("enlace")}
-                        className="rounded-md bg-orange-600 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-700">
+                        className="rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700">
                         Copiar enlace privado
                       </button>
                       <button type="button" onClick={() => copiarAccesoServicio("clave")}
-                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50">
+                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-50">
                         Copiar clave de acceso
                       </button>
                     </div>
@@ -1345,26 +1412,26 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
                   </div>}
                   {modoPanel && <p className="mt-3 text-xs text-slate-600">Cuando termines de cargar los archivos, volvé al panel para revisar el estado de tu pedido y conectar tus redes.</p>}
                   {pedidoCreado.modalidad !== "prueba_gratuita" && pedidoCreado.moneda === "ARS" && <TransferenciaPedidoServicio pedido={pedidoCreado} habilitada={transferenciasDisponibles} />}
-                  {pedidoCreado.tokenAcceso && <ConexionFacebookPedido key={pedidoCreado.id} pedido={pedidoCreado} />}
+                  {!modoPanel && pedidoCreado.tokenAcceso && <ConexionFacebookPedido key={pedidoCreado.id} pedido={pedidoCreado} />}
                   {pedidoCreado.tokenAcceso && <ArchivosPedido key={`archivos-${pedidoCreado.id}`} pedido={pedidoCreado} />}
-                  {!modoPanel && <button type="button" onClick={comenzarNuevoPedido} className="mt-4 text-xs font-semibold text-orange-700 underline underline-offset-2">Configurar otro pedido</button>}
+                  {!modoPanel && <button type="button" onClick={comenzarNuevoPedido} className="mt-4 text-xs font-medium text-orange-700 underline underline-offset-2">Configurar otro pedido</button>}
                 </div>
               ) : (
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <button type="button" onClick={crearPedido}
                     disabled={!creacionDisponible || !turnstileToken || creandoPedido}
-                    className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-semibold transition",
+                    className={clases("inline-flex items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-medium transition",
                       creacionDisponible && turnstileToken && !creandoPedido
                         ? "bg-orange-600 text-white hover:bg-orange-700"
                         : "cursor-not-allowed bg-slate-300 text-white")}
                   >
                     {creandoPedido ? "Preparando pedido..." : pruebasDisponibles ? (
-                      <><ShieldCheck size={16} /> Preparar mi prueba gratuita</>
+                      <><ShieldCheck size={16} /> {modoPanel ? "Programar semana" : "Preparar mi prueba gratuita"}</>
                     ) : pedidosDisponibles ? (
                       <><ShieldCheck size={16} /> Continuar con transferencia</>
                     ) : <><LockKeyhole size={16} /> Prueba gratuita todavía en preparación</>}
                   </button>
-                  <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50">
+                  <button type="button" onClick={descargarConfiguracion} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50">
                     <Download size={16} /> Guardar configuración
                   </button>
                 </div>
@@ -1372,23 +1439,23 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
               {!pedidoCreado && !modoPanel && (
                 <div className="mt-5 border-t border-slate-200 pt-4">
                   <button type="button" onClick={() => { setMostrarRecuperacion((actual) => !actual); setErrorRecuperacion(""); }}
-                    className="text-sm font-semibold text-orange-700 underline underline-offset-2">
+                    className="text-sm font-medium text-orange-700 underline underline-offset-2">
                     ¿Ya tenés un pedido? Recuperar acceso
                   </button>
                   {mostrarRecuperacion && (
                     <form onSubmit={recuperarPedido} className="mt-3 space-y-3 rounded-md border border-slate-200 bg-white p-3">
                       <p className="text-xs leading-5 text-slate-600">Pegá tu enlace privado completo o ingresá el código de pedido y la clave de acceso que guardaste.</p>
                       <div>
-                        <label htmlFor="recuperar-pedido-codigo" className="mb-1 block text-xs font-semibold text-slate-800">Código de pedido (si usás la clave)</label>
+                        <label htmlFor="recuperar-pedido-codigo" className="mb-1 block text-xs font-medium text-slate-800">Código de pedido (si usás la clave)</label>
                         <input id="recuperar-pedido-codigo" autoComplete="off" spellCheck={false} value={codigoRecuperacion}
                           onChange={(e) => setCodigoRecuperacion(e.target.value)} placeholder="SER-..." className={INPUT} />
                       </div>
                       <div>
-                        <label htmlFor="recuperar-pedido-clave" className="mb-1 block text-xs font-semibold text-slate-800">Enlace privado o clave de acceso</label>
+                        <label htmlFor="recuperar-pedido-clave" className="mb-1 block text-xs font-medium text-slate-800">Enlace privado o clave de acceso</label>
                         <input id="recuperar-pedido-clave" type="password" autoComplete="off" spellCheck={false} value={claveRecuperacion}
                           onChange={(e) => setClaveRecuperacion(e.target.value)} placeholder="Pegá acá tu enlace o clave" className={INPUT} />
                       </div>
-                      <button type="submit" disabled={recuperandoPedido} className={clases("rounded-md px-3 py-2.5 text-sm font-semibold", recuperandoPedido ? "bg-slate-300 text-white" : "bg-orange-600 text-white hover:bg-orange-700")}>
+                      <button type="submit" disabled={recuperandoPedido} className={clases("rounded-md px-3 py-2.5 text-sm font-medium", recuperandoPedido ? "bg-slate-300 text-white" : "bg-orange-600 text-white hover:bg-orange-700")}>
                         {recuperandoPedido ? "Verificando acceso..." : "Abrir mi pedido"}
                       </button>
                       {errorRecuperacion && <p role="alert" className="text-xs leading-5 text-red-700">{errorRecuperacion}</p>}
@@ -1397,30 +1464,31 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
                 </div>
               )}
               {pedidoCreado && (
-                <button type="button" onClick={descargarConfiguracion} className="mt-3 inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50">
+                <button type="button" onClick={descargarConfiguracion} className="mt-3 inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-50">
                   <Download size={15} /> Guardar una copia de la configuración
                 </button>
               )}
               {errorPedido && <p className="mt-3 text-xs leading-5 text-red-700" role="alert">{errorPedido}</p>}
               <p className="mt-3 text-xs leading-5 text-slate-500">
                 {pruebasDisponibles
-                  ? "Preparar la prueba no activa ningún cobro ni publicación. La publicación de los contenidos comenzará cuando las cuentas estén vinculadas y los contenidos aprobados."
+                  ? "Esta solicitud queda pendiente de revisión. El envío automático sigue deshabilitado hasta su activación."
                   : pedidosDisponibles
                   ? "Primero registramos el pedido con el precio oficial. Después podrás transferir y adjuntar el comprobante para verificación manual."
-                  : "Podés revisar los contenidos y guardar la configuración. La preparación de pruebas gratuitas sigue cerrada al público."}
+                  : "La creación de pruebas gratuitas sigue cerrada al público. Podés revisar y guardar la configuración."}
               </p>
+            </div>}
           </section>
         )}
 
-        <footer className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-5">
+        {!modoPanel && <footer className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-5">
           <button type="button" disabled={pasoActivo === 0} onClick={() => irAlPaso(pasoActivo - 1)}
-            className={clases("inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition", pasoActivo === 0 ? "cursor-not-allowed border-slate-100 text-slate-300" : "border-slate-300 text-slate-700 hover:bg-slate-50")}>
+            className={clases("inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition", pasoActivo === 0 ? "cursor-not-allowed border-slate-100 text-slate-300" : "border-slate-300 text-slate-700 hover:bg-slate-50")}>
             <ChevronLeft size={16} /> Anterior
           </button>
           <span className="text-xs text-slate-500">{pasoActivo + 1} de 4</span>
           {pasoActivo < 3 ? (
             <button type="button" onClick={() => irAlPaso(pasoActivo + 1)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700">
+              className="inline-flex items-center gap-1.5 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700">
               Continuar <ChevronRight size={16} />
             </button>
           ) : modoPanel && typeof onVolverAlPanel === "function" ? (
@@ -1429,9 +1497,11 @@ export default function ConfiguradorPublicaciones({ modoPanel = false, onVolverA
               Volver a mi panel
             </button>
           ) : (
-            <a href="/servicios/publicacion-automatica/mi-panel" className="text-xs font-semibold text-orange-700 underline underline-offset-2">Mi panel</a>
+            <a href="/servicios/publicacion-automatica/mi-panel" className="text-xs font-medium text-orange-700 underline underline-offset-2">Mi panel</a>
           )}
-        </footer>
+        </footer>}
+        {modoPanel && typeof onVolverAlPanel === "function" && <button type="button" onClick={onVolverAlPanel}
+          className="mt-4 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50">Volver a mi panel</button>}
       </div>
     </main>
   );

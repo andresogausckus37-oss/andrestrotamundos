@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import ArchivosPedido, { subirArchivosSemana } from "./ArchivosPedido";
 import {
-  ArrowRight, CalendarCheck2, CheckCircle2, ChevronDown, CircleAlert,
-  Clock3, Copy, ExternalLink, FileImage, KeyRound,
-  LockKeyhole, LogOut, RefreshCw, ShieldCheck,
+  ArrowRight, ChevronDown, ExternalLink, LogOut,
+  RefreshCw, ShieldCheck, UserRound, Send,
+  Check, ChevronLeft, ChevronRight, CloudUpload, FileImage, Film, Images,
+  Heart, MessageCircle, MoreHorizontal, ThumbsUp, Trash2,
 } from "lucide-react";
 
 // Diseño del panel de cliente. Las rutas, los contratos de API y las autorizaciones
@@ -31,11 +33,11 @@ const API_INSTAGRAM = "/api/servicios/meta/pedidos/instagram";
 const PEDIDO_SESION = "pedido-publicaciones-transferencia-v1";
 const VALIDAR_PEDIDO = /^SER-[a-f0-9-]{36}$/i;
 const VALIDAR_CLAVE = /^[a-f0-9]{64}$/i;
-const BTN = "inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500 disabled:cursor-not-allowed disabled:opacity-50";
+const BTN = "inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500 disabled:cursor-not-allowed disabled:opacity-50";
 const BTN_PRIMARIO = `${BTN} border border-orange-600 bg-orange-600 text-white hover:border-orange-700 hover:bg-orange-700 active:bg-orange-800`;
 const BTN_SECUNDARIO = `${BTN} border border-sky-300 bg-sky-100 text-sky-900 hover:border-sky-400 hover:bg-sky-200`;
-const CARD = "rounded-xl border border-slate-200 bg-white shadow-sm";
-const CAMPO = "w-full min-h-9 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
+const CARD = "rounded-md border border-slate-200 bg-white";
+const CAMPO = "w-full min-h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
 
 const ESTADOS = {
   pendiente: "Pendiente", confirmado: "Confirmado", conectada: "Conectada",
@@ -61,26 +63,468 @@ function tonoEstado(valor) {
   return "border-sky-200 bg-sky-50 text-sky-800";
 }
 function Etiqueta({ valor, texto }) {
-  return <span className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${tonoEstado(valor)}`}>
+  return <span className={`inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-[11px] font-medium ${tonoEstado(valor)}`}>
     {texto || estado(valor)}
   </span>;
 }
 function CampoInfo({ etiqueta, valor }) {
   return <div className="min-w-0">
     <p className="text-[11px] text-slate-500">{etiqueta}</p>
-    <p className="mt-0.5 break-words text-xs font-semibold text-slate-800">{valor}</p>
+    <p className="mt-0.5 break-words text-xs font-medium text-slate-800">{valor}</p>
   </div>;
 }
-function resumenSolicitud(solicitud, pedido) {
-  if (solicitud?.requiereNuevaConfirmacion) return { titulo: "Revisá los cambios de tu solicitud", detalle: "Hay cambios o requisitos pendientes. Volvé a revisar antes de programar.", tono: "amber" };
-  if (solicitud?.vigente && solicitud?.aprobadosTecnicamente) return { titulo: "Solicitud confirmada", detalle: "Tus contenidos están aprobados. El servicio espera su habilitación.", tono: "ok" };
-  if (solicitud?.vigente) return { titulo: "Solicitud enviada", detalle: "Tus publicaciones están pendientes de revisión técnica.", tono: "ok" };
-  if (pedido.estadoServicio === "activo") return { titulo: "Servicio activo", detalle: "Consultá el estado de tus publicaciones.", tono: "ok" };
-  return { titulo: "Tu programación", detalle: "Revisá los contenidos y autorizá su programación en un solo paso.", tono: "base" };
+
+const ZONAS_DISPONIBLES = [
+  { pais: "Argentina", zonas: [["America/Argentina/Buenos_Aires", "Buenos Aires"]] },
+  { pais: "Belice", zonas: [["America/Belize", "Belmopán"]] },
+  { pais: "Bolivia", zonas: [["America/La_Paz", "La Paz"]] },
+  { pais: "Brasil", zonas: [
+    ["America/Noronha", "Fernando de Noronha"],
+    ["America/Manaus", "Manaos"],
+    ["America/Rio_Branco", "Rio Branco"],
+    ["America/Sao_Paulo", "São Paulo (Brasilia y la mayor parte del país)"],
+  ] },
+  { pais: "Chile", zonas: [
+    ["America/Coyhaique", "Aysén / Coyhaique"],
+    ["Pacific/Easter", "Isla de Pascua (Rapa Nui)"],
+    ["America/Punta_Arenas", "Magallanes / Punta Arenas"],
+    ["America/Santiago", "Santiago (zona central)"],
+  ] },
+  { pais: "Colombia", zonas: [["America/Bogota", "Bogotá"]] },
+  { pais: "Costa Rica", zonas: [["America/Costa_Rica", "San José"]] },
+  { pais: "Cuba", zonas: [["America/Havana", "La Habana"]] },
+  { pais: "Ecuador", zonas: [
+    ["Pacific/Galapagos", "Islas Galápagos"],
+    ["America/Guayaquil", "Quito / Guayaquil (continental)"],
+  ] },
+  { pais: "El Salvador", zonas: [["America/El_Salvador", "San Salvador"]] },
+  { pais: "España", zonas: [
+    ["Atlantic/Canary", "Islas Canarias"],
+    ["Europe/Madrid", "Madrid (península y Baleares)"],
+  ] },
+  { pais: "Estados Unidos", zonas: [
+    ["America/Anchorage", "Alaska"],
+    ["America/Chicago", "Central (Chicago / Dallas)"],
+    ["America/Denver", "Montaña (Denver)"],
+    ["America/New_York", "Este (Nueva York / Miami)"],
+    ["Pacific/Honolulu", "Hawái"],
+    ["America/Los_Angeles", "Pacífico (Los Ángeles)"],
+    ["America/Phoenix", "Arizona (Phoenix, sin horario de verano)"],
+  ] },
+  { pais: "Guatemala", zonas: [["America/Guatemala", "Ciudad de Guatemala"]] },
+  { pais: "Haití", zonas: [["America/Port-au-Prince", "Puerto Príncipe"]] },
+  { pais: "Honduras", zonas: [["America/Tegucigalpa", "Tegucigalpa"]] },
+  { pais: "México", zonas: [
+    ["America/Tijuana", "Baja California (Tijuana)"],
+    ["America/Cancun", "Cancún (Quintana Roo)"],
+    ["America/Chihuahua", "Chihuahua (interior)"],
+    ["America/Ciudad_Juarez", "Ciudad Juárez (frontera)"],
+    ["America/Matamoros", "Frontera noreste (Matamoros)"],
+    ["America/Mazatlan", "Pacífico (Mazatlán / Sinaloa)"],
+    ["America/Mexico_City", "Zona centro (Ciudad de México)"],
+    ["America/Hermosillo", "Sonora (Hermosillo)"],
+  ] },
+  { pais: "Nicaragua", zonas: [["America/Managua", "Managua"]] },
+  { pais: "Panamá", zonas: [["America/Panama", "Ciudad de Panamá"]] },
+  { pais: "Paraguay", zonas: [["America/Asuncion", "Asunción"]] },
+  { pais: "Perú", zonas: [["America/Lima", "Lima"]] },
+  { pais: "Puerto Rico", zonas: [["America/Puerto_Rico", "San Juan"]] },
+  { pais: "República Dominicana", zonas: [["America/Santo_Domingo", "Santo Domingo"]] },
+  { pais: "Uruguay", zonas: [["America/Montevideo", "Montevideo"]] },
+  { pais: "Venezuela", zonas: [["America/Caracas", "Caracas"]] },
+].sort((a, b) => a.pais.localeCompare(b.pais, "es", { sensitivity: "base" }));
+
+
+// Configuración de la semana dentro del panel: no se navega a otra página.
+const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const HORAS_SEMANA = ["09:00", "10:00", "12:00", "14:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
+const SEMANA_BASE = [
+  ["reel", "Lunes", "18:00"], ["carrusel", "Miércoles", "18:00"],
+  ["imagen", "Viernes", "18:00"], ["reel", "Domingo", "18:00"],
+];
+const crearSemana = () => SEMANA_BASE.map(([tipo, dia, hora], i) => ({
+  id: `contenido-${i + 1}`, tipo, dia, hora,
+  formato: tipo === "reel" ? "9:16" : "4:5", descripcion: "",
+  ctaInstagram: "", ctaFacebook: "", urlFacebook: "", hashtags: "", archivos: [],
+}));
+
+function VistaArchivoLocal({ archivo, tipo }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    if (!archivo) { setUrl(""); return; }
+    const nueva = URL.createObjectURL(archivo);
+    setUrl(nueva);
+    return () => URL.revokeObjectURL(nueva);
+  }, [archivo]);
+  if (!archivo || !url) return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-slate-400">
+      <FileImage size={28} strokeWidth={1.5} />
+      <p className="text-xs leading-5">Elegí {tipo === "reel" ? "un video" : "imágenes"} para ver tu publicación</p>
+    </div>
+  );
+  return tipo === "reel"
+    ? <video key={url} className="h-full w-full object-contain" src={url} controls playsInline preload="metadata" aria-label="Vista previa del video" />
+    : <img className="h-full w-full object-contain" src={url} alt={archivo.name} />;
+}
+
+function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
+  const [redes, setRedes] = useState(["facebook", "instagram"]);
+  const [paisZona, setPaisZona] = useState(() => ZONAS_DISPONIBLES.some(x => x.pais === perfil?.pais) ? perfil.pais : "Argentina");
+  const [zonaHoraria, setZonaHoraria] = useState(() => {
+    const pais = ZONAS_DISPONIBLES.find(x => x.pais === perfil?.pais);
+    const navegador = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return pais?.zonas.find(([id]) => id === navegador)?.[0] || pais?.zonas[0]?.[0] || "America/Argentina/Buenos_Aires";
+  });
+  const [contenidos, setContenidos] = useState(crearSemana);
+  const [seleccionado, setSeleccionado] = useState(0);
+  const [redVista, setRedVista] = useState("instagram");
+  const [mediaVista, setMediaVista] = useState(0);
+  const [habilitada, setHabilitada] = useState(false);
+  const [consultando, setConsultando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+  const [pedidoCreado, setPedidoCreado] = useState("");
+  const [subida, setSubida] = useState(null);
+  const [errorEditor, setErrorEditor] = useState("");
+  const envioEnCurso = useRef(false);
+  useEffect(() => {
+    let activo = true;
+    fetch("/api/servicios/publicaciones/plan", { cache: "no-store", credentials: "same-origin" })
+      .then(r => r.json()).then(r => { if (activo) setHabilitada(r.ok === true && r.pruebasDisponibles === true); })
+      .catch(() => { if (activo) setHabilitada(false); })
+      .finally(() => { if (activo) setConsultando(false); });
+    return () => { activo = false; };
+  }, []);
+  const item = contenidos[seleccionado];
+  const redPrevia = redes.includes(redVista) ? redVista : redes[0];
+  const nombre = perfil?.emprendimiento?.trim() || "";
+  const datosCompletos = Boolean(nombre && perfil?.nombreApellido?.trim() && email && perfil?.whatsapp?.trim());
+  const actualizar = cambios => setContenidos(lista => lista.map((c, i) => i === seleccionado ? { ...c, ...cambios } : c));
+  const esCarrusel = item.tipo === "carrusel";
+  const cantidad = contenidos.length * redes.length;
+  const cambiarTipo = tipo => {
+    if (tipo === item.tipo) return;
+    actualizar({ tipo, formato: tipo === "reel" ? "9:16" : "4:5", archivos: [] });
+    setMediaVista(0);
+    setErrorEditor("");
+  };
+  const seleccionarArchivos = event => {
+    const nuevos = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!nuevos.length || pedidoCreado || enviando) return;
+    setErrorEditor("");
+    const esReel = item.tipo === "reel";
+    const invalidos = nuevos.some(archivo => archivo.size <= 0 ||
+      (esReel
+        ? archivo.type !== "video/mp4" || archivo.size > 150 * 1024 * 1024
+        : !["image/jpeg", "image/png", "image/webp"].includes(archivo.type) || archivo.size > 20 * 1024 * 1024));
+    if (invalidos) {
+      setErrorEditor(esReel ? "Seleccioná videos MP4 de hasta 150 MB." : "Seleccioná imágenes JPG, PNG o WebP de hasta 20 MB.");
+      return;
+    }
+    if (esCarrusel) {
+      const disponibles = 10 - item.archivos.length;
+      if (disponibles <= 0) {
+        setErrorEditor("El carrusel admite hasta diez imágenes. Quitá una para agregar otra.");
+        return;
+      }
+      if (nuevos.length > disponibles) setErrorEditor("Solo se agregaron las imágenes permitidas (máximo diez por carrusel).");
+      actualizar({ archivos: [...item.archivos, ...nuevos.slice(0, disponibles)] });
+    } else {
+      if (nuevos.length > 1) setErrorEditor("Para este formato se admite un solo archivo.");
+      actualizar({ archivos: nuevos.slice(0, 1) });
+    }
+    setMediaVista(0);
+  };
+  const quitarArchivo = indice => {
+    if (pedidoCreado || enviando) return;
+    actualizar({ archivos: item.archivos.filter((_, i) => i !== indice) });
+    setMediaVista(0);
+    setErrorEditor("");
+  };
+  const alternarRed = red => {
+    if (pedidoCreado || enviando) return;
+    setRedes(actual => actual.includes(red)
+      ? (actual.length === 1 ? actual : actual.filter(x => x !== red))
+      : ["instagram", "facebook"].filter(x => x === red || actual.includes(x)));
+  };
+  const cambiarPais = pais => {
+    setPaisZona(pais);
+    setZonaHoraria(ZONAS_DISPONIBLES.find(item => item.pais === pais)?.zonas[0]?.[0] || "America/Argentina/Buenos_Aires");
+  };
+
+  async function programar(evento) {
+    evento.preventDefault();
+    if (envioEnCurso.current || !habilitada || !datosCompletos) return;
+    if (!redes.length) { setErrorEditor("Elegí al menos una red."); return; }
+    if (contenidos.some(c => c.archivos.length < (c.tipo === "carrusel" ? 2 : 1))) {
+      setErrorEditor("Elegí los archivos de los cuatro contenidos. Cada carrusel necesita al menos dos imágenes."); return;
+    }
+    envioEnCurso.current = true;
+    setEnviando(true);
+    setErrorEditor("");
+    try {
+      let id = pedidoCreado;
+      if (!id) {
+        const publicaciones = contenidos.map(c => ({
+          id: c.id, tipo: c.tipo, formato: c.formato, dia: c.dia, hora: c.hora,
+          descripcion: c.descripcion, ctaInstagram: c.ctaInstagram, ctaFacebook: c.ctaFacebook,
+          urlFacebook: c.urlFacebook, hashtags: c.hashtags,
+          archivosSeleccionados: c.archivos.map(a => ({ nombre: a.name, tipo: a.type, tamano: a.size })),
+        }));
+        const respuesta = await fetch("/api/servicios/publicaciones/prueba", {
+          method: "POST", credentials: "same-origin", cache: "no-store",
+          headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
+          body: JSON.stringify({ planId: "comunidad-semanal", moneda: "ARS", redes,
+            zonaHoraria, negocio: { nombre, contacto: perfil.nombreApellido, email,
+              whatsapp: perfil.whatsapp, url: perfil.web || "", rubro: "", publico: "", tono: "cercano" },
+            publicaciones }),
+        });
+        const datos = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok || !datos.ok || !/^SER-[a-f0-9-]{36}$/i.test(datos.pedidoId || "")) {
+          throw new Error(datos.error || "No se pudo registrar la semana gratuita.");
+        }
+        id = datos.pedidoId;
+        setPedidoCreado(id);
+      }
+      await subirArchivosSemana(id, contenidos, setSubida);
+      alFinalizar();
+    } catch (error) {
+      setErrorEditor(`${error.message || "No se pudieron subir los archivos."} ${pedidoCreado ? "Podés reintentar sin crear otro pedido." : "Si el pedido fue creado, podés continuar desde el panel."}`);
+    } finally {
+      envioEnCurso.current = false;
+      setEnviando(false);
+    }
+  }
+
+  const nombreVisible = nombre || "Tu emprendimiento";
+  const usuarioVisible = nombreVisible.toLowerCase().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "tu_emprendimiento";
+  const ctaVisible = redPrevia === "instagram" ? item.ctaInstagram : item.ctaFacebook;
+  const textoVistaPrevia = (
+    <div className="px-3 py-3">
+      <p className="whitespace-pre-wrap break-words text-sm font-normal leading-5 text-slate-700">
+        {item.descripcion.trim() || "Acá vas a ver la idea de tu publicación."}
+      </p>
+      {ctaVisible.trim() && <p className="mt-2 text-sm font-medium text-slate-800">{ctaVisible}</p>}
+      {redPrevia === "facebook" && item.urlFacebook.trim() &&
+        <p className="mt-1 break-all text-sm text-orange-700 underline underline-offset-2">{item.urlFacebook}</p>}
+      {item.hashtags.trim() && <p className="mt-2 break-words text-sm text-orange-700">{item.hashtags}</p>}
+    </div>
+  );
+  const sinEdicion = !!pedidoCreado || enviando;
+  const TIPOS_EDITOR = {
+    reel: { titulo: "Reel", icono: Film },
+    carrusel: { titulo: "Carrusel", icono: Images },
+    imagen: { titulo: "Imagen", icono: FileImage },
+  };
+
+  return <form onSubmit={programar} className="space-y-4 font-normal">
+    <div className={`${CARD} p-4 sm:p-5`}>
+      <h2 className="text-sm font-medium">Programá tu primera semana</h2>
+      <p className="mt-1 text-xs leading-5 text-slate-500">Prepará tu contenido semanal y envialo para que lo revisemos y publiquemos en tus cuentas.</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="mb-2 text-xs font-medium">Facebook e Instagram</p>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Redes para la primera semana">
+            {["instagram", "facebook"].map(red => {
+              const activa = redes.includes(red);
+              return <button type="button" key={red} aria-pressed={activa} disabled={sinEdicion}
+                onClick={() => alternarRed(red)}
+                className={`flex min-h-9 items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition ${activa ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}>
+                <LogoRed red={red} size={19} />{redLabel(red)} {activa && <Check size={13} />}
+              </button>;
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">{cantidad} publicaciones · {redes.length} {redes.length === 1 ? "red" : "redes"}</p>
+        </div>
+        <div>
+          <label className="mb-2 block text-xs font-medium" htmlFor="pais-zona">Zona horaria con selección de país</label>
+          <div className="grid grid-cols-2 gap-2">
+            <select id="pais-zona" className={CAMPO} value={paisZona} disabled={sinEdicion} onChange={e => cambiarPais(e.target.value)}>
+              {ZONAS_DISPONIBLES.map(p => <option key={p.pais} value={p.pais}>{p.pais}</option>)}
+            </select>
+            <select aria-label="Zona horaria" className={CAMPO} value={zonaHoraria} disabled={sinEdicion} onChange={e => setZonaHoraria(e.target.value)}>
+              {(ZONAS_DISPONIBLES.find(p => p.pais === paisZona)?.zonas || []).map(([id, ciudad]) => <option key={id} value={id}>{ciudad}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className={`${CARD} p-4 sm:p-5`}>
+      <h2 className="text-sm font-medium">Elegí el contenido que querés publicar</h2>
+      <p className="mt-1 text-xs leading-5 text-slate-500">Cada contenido conserva sus propios archivos, formato, textos, día, horario y hagstags.</p>
+    </div>
+
+    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_350px]">
+      <div className="min-w-0 space-y-4">
+        <details open className={`${CARD} group`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-xs font-medium [&::-webkit-details-marker]:hidden">
+            Contenidos <ChevronDown size={14} className="transition group-open:rotate-180" />
+          </summary>
+          <div className="border-t border-slate-100 p-4">
+            <p className="mb-3 text-xs text-slate-500">Formato, archivos, día y hora.</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Elegir contenido">
+              {contenidos.map((c, i) => {
+                const Icono = TIPOS_EDITOR[c.tipo].icono;
+                return <button type="button" key={c.id} aria-pressed={seleccionado === i}
+                  onClick={() => { setSeleccionado(i); setMediaVista(0); setErrorEditor(""); }}
+                  className={`flex items-center justify-center gap-1.5 rounded-md border px-2 py-2 text-xs font-medium transition ${seleccionado === i ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}>
+                  <Icono size={15} /> Contenido {i + 1}
+                </button>;
+              })}
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-medium">Tipo de publicación
+                <select className={`mt-1 ${CAMPO}`} value={item.tipo} disabled={sinEdicion} onChange={e => cambiarTipo(e.target.value)}>
+                  <option value="imagen">Imagen</option><option value="carrusel">Carrusel</option><option value="reel">Reel</option>
+                </select>
+              </label>
+              <label className="text-xs font-medium">Formato
+                <select className={`mt-1 ${CAMPO}`} value={item.formato} disabled={sinEdicion} onChange={e => actualizar({ formato: e.target.value })}>
+                  {(item.tipo === "reel" ? ["9:16"] : ["4:5", "1:1"]).map(x => <option key={x} value={x}>{x}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-medium">Día
+                <select className={`mt-1 ${CAMPO}`} value={item.dia} disabled={sinEdicion} onChange={e => actualizar({ dia: e.target.value })}>
+                  {DIAS_SEMANA.map(x => <option key={x}>{x}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-medium">Horario local
+                <select className={`mt-1 ${CAMPO}`} value={item.hora} disabled={sinEdicion} onChange={e => actualizar({ hora: e.target.value })}>
+                  {HORAS_SEMANA.map(x => <option key={x}>{x}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <p className="mb-2 text-xs font-medium">{item.tipo === "reel" ? "Video del reel" : esCarrusel ? "Imágenes del carrusel" : "Imagen de la publicación"}</p>
+              <label className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-white px-3 py-3 text-center transition ${sinEdicion ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-orange-500"}`}>
+                <CloudUpload size={19} className="shrink-0 text-orange-700" />
+                <span className="text-xs font-medium">{item.archivos.length ? "Agregar o cambiar archivos" : "Elegir archivos"}</span>
+                <span className="hidden text-xs text-slate-500 sm:inline">{item.tipo === "reel" ? "MP4 · 150 MB" : "JPG, PNG, WebP · 20 MB"}</span>
+                <input type="file" className="sr-only" disabled={sinEdicion}
+                  accept={item.tipo === "reel" ? "video/mp4,.mp4" : "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"}
+                  multiple={esCarrusel} onChange={seleccionarArchivos} />
+              </label>
+              <p className="mt-2 text-[11px] text-slate-500">{esCarrusel ? "De 2 a 10 imágenes" : item.tipo === "reel" ? "Un video MP4" : "Una imagen"}.</p>
+              {item.archivos.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">
+                {item.archivos.map((archivo, indice) => <span key={`${item.id}-${indice}-${archivo.name}`} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1 text-xs">
+                  <span className="max-w-36 truncate" title={archivo.name}>{archivo.name}</span>
+                  <button type="button" aria-label={`Quitar ${archivo.name}`} disabled={sinEdicion} className="text-slate-500 hover:text-red-700 disabled:opacity-50"
+                    onClick={() => quitarArchivo(indice)}><Trash2 size={13} /></button>
+                </span>)}
+              </div>}
+              {errorEditor && <p className="mt-2 text-xs text-red-700" role="alert">{errorEditor}</p>}
+            </div>
+          </div>
+        </details>
+
+        <details className={`${CARD} group`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-xs font-medium [&::-webkit-details-marker]:hidden">
+            Texto y detalles de la publicación <ChevronDown size={14} className="transition group-open:rotate-180" />
+          </summary>
+          <div className="grid gap-3 border-t border-slate-100 p-4 sm:grid-cols-2">
+            <p className="col-span-full text-xs text-slate-500">Mensaje, llamadas a la acción, enlaces y hashtags.</p>
+            <label className="col-span-full text-xs font-medium">Copy o texto de la publicación
+              <textarea className={`${CAMPO} mt-1 min-h-24`} placeholder="Escribí el texto de tu publicación" maxLength={1500} disabled={sinEdicion} value={item.descripcion} onChange={e => actualizar({ descripcion: e.target.value })} />
+            </label>
+            {redes.includes("instagram") && <label className="text-xs font-medium">CTA para Instagram
+              <input className={`mt-1 ${CAMPO}`} placeholder="ej: Enlace en nuestra bio" maxLength={100} value={item.ctaInstagram} disabled={sinEdicion} onChange={e => actualizar({ ctaInstagram: e.target.value })} />
+            </label>}
+            {redes.includes("facebook") && <>
+              <label className="text-xs font-medium">CTA para Facebook
+                <input className={`mt-1 ${CAMPO}`} placeholder="ej: Visitá nuestra tienda" maxLength={100} value={item.ctaFacebook} disabled={sinEdicion} onChange={e => actualizar({ ctaFacebook: e.target.value })} />
+              </label>
+              <label className="text-xs font-medium">URL para Facebook
+                <input className={`mt-1 ${CAMPO}`} placeholder="ej: minegocio.com.ar" maxLength={500} value={item.urlFacebook} disabled={sinEdicion} onChange={e => actualizar({ urlFacebook: e.target.value })} />
+              </label>
+            </>}
+            <label className="text-xs font-medium">Hashtags
+              <input className={`mt-1 ${CAMPO}`} placeholder="#redesenpiloto #minegocio #redes" maxLength={240} value={item.hashtags} disabled={sinEdicion} onChange={e => actualizar({ hashtags: e.target.value })} />
+            </label>
+          </div>
+        </details>
+      </div>
+
+      <aside className="min-w-0 lg:sticky lg:top-20" aria-label="Vista previa de la publicación">
+        <details open className={`${CARD} group`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-xs font-medium [&::-webkit-details-marker]:hidden">
+            Vista previa <ChevronDown size={14} className="transition group-open:rotate-180" />
+          </summary>
+          <div className="border-t border-slate-100 p-3 sm:p-4">
+            <p className="mb-3 text-xs text-slate-500">Contenido {seleccionado + 1} · Así se verá en cada red</p>
+            <div className="mb-3 flex gap-2" role="group" aria-label="Ver publicación por red">
+              {["instagram", "facebook"].filter(red => redes.includes(red)).map(red => <button type="button" key={red} aria-pressed={redPrevia === red} onClick={() => setRedVista(red)}
+                className={`flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium ${redPrevia === red ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 text-slate-600"}`}>
+                <LogoRed red={red} size={19} /> {redLabel(red)}
+              </button>)}
+            </div>
+            <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
+              <div className="flex items-center gap-2 px-3 py-3">
+                <LogoRed red={redPrevia} size={27} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-slate-900">{redPrevia === "instagram" ? usuarioVisible : nombreVisible}</p>
+                  <p className="text-[11px] font-normal text-slate-500">{redPrevia === "instagram" ? "Publicación de Instagram" : "Página de Facebook · Público"}</p>
+                </div>
+                <MoreHorizontal size={19} className="text-slate-500" />
+              </div>
+              {redPrevia === "facebook" && textoVistaPrevia}
+              <div className="bg-slate-50 px-3 py-2">
+                <div className={`relative mx-auto overflow-hidden rounded-md bg-slate-100 ${item.formato === "9:16" ? "w-full max-w-[225px]" : "w-full max-w-[300px]"}`}
+                  style={{ aspectRatio: item.formato.replace(":", " / ") }}>
+                  <VistaArchivoLocal archivo={item.archivos[mediaVista] || item.archivos[0]} tipo={item.tipo} />
+                  {esCarrusel && item.archivos.length > 1 && <>
+                    <button type="button" aria-label="Imagen anterior" onClick={() => setMediaVista(i => (i - 1 + item.archivos.length) % item.archivos.length)}
+                      className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-1.5 text-slate-800"><ChevronLeft size={16} /></button>
+                    <button type="button" aria-label="Imagen siguiente" onClick={() => setMediaVista(i => (i + 1) % item.archivos.length)}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md bg-white/90 p-1.5 text-slate-800"><ChevronRight size={16} /></button>
+                    <span className="absolute right-1.5 top-1.5 rounded-md bg-black/65 px-2 py-1 text-[10px] text-white">{mediaVista + 1}/{item.archivos.length}</span>
+                  </>}
+                </div>
+              </div>
+              {redPrevia === "instagram" ? <div className="flex items-center gap-3 px-3 pt-3 text-slate-800" aria-label="Acciones orientativas de Instagram">
+                <Heart size={19} /><MessageCircle size={19} /><Send size={19} />
+              </div> : <div className="flex items-center justify-around border-b border-slate-100 px-3 py-2 text-xs text-slate-500" aria-label="Acciones orientativas de Facebook">
+                <span className="inline-flex items-center gap-1"><ThumbsUp size={15} /> Me gusta</span>
+                <span className="inline-flex items-center gap-1"><MessageCircle size={15} /> Comentar</span>
+                <span className="inline-flex items-center gap-1"><Send size={15} /> Compartir</span>
+              </div>}
+              {redPrevia === "instagram" && textoVistaPrevia}
+            </div>
+            <p className="mt-2 text-xs font-normal leading-4 text-slate-500">Simulación orientativa: la apariencia final puede variar según la red social.</p>
+          </div>
+        </details>
+      </aside>
+    </div>
+
+    <details open className={`${CARD} group`}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-xs font-medium [&::-webkit-details-marker]:hidden">
+        Resumen y programación <ChevronDown size={14} className="transition group-open:rotate-180" />
+      </summary>
+      <div className="space-y-3 border-t border-slate-100 p-4 text-xs">
+        <div><p className="font-medium">{cantidad} publicaciones</p><p className="mt-0.5 text-slate-500">{redes.map(redLabel).join(" · ")}</p></div>
+        {contenidos.map((c, i) => <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 last:border-0 last:pb-0">
+          <p>Contenido {i + 1} · {TIPOS_EDITOR[c.tipo].titulo}</p>
+          <p className="text-slate-500">{c.dia} · {c.hora} hora local</p>
+        </div>)}
+        {errorEditor && <p role="alert" className="text-red-700">{errorEditor}</p>}
+        {!consultando && !habilitada && <p className="text-slate-600">La programación gratuita todavía no está habilitada en el servidor.</p>}
+        {!datosCompletos && <p className="text-amber-700">Revisá tus datos personales y el nombre del emprendimiento en el registro.</p>}
+        {subida && <p role="status" className="text-slate-600">Subiendo {subida.archivo} · {subida.porcentaje}%</p>}
+        <button type="submit" className={BTN_PRIMARIO} disabled={consultando || !habilitada || !datosCompletos || enviando || !redes.length}>
+          {enviando ? "Guardando y subiendo archivos..." : pedidoCreado ? "Reintentar subida de archivos" : "Programar semana gratuita"}
+        </button>
+        <p className="text-[11px] text-slate-500">El pedido queda pendiente de revisión. Los 7 días de prueba comienzan luego de la aprobación.</p>
+      </div>
+    </details>
+  </form>;
+
 }
 
 export default function PanelClientePublicaciones() {
   const [datos, setDatos] = useState(null);
+  const [configurando, setConfigurando] = useState(false);
+  const [detallesPanel, setDetallesPanel] = useState({perfil:null,detalles:{}});
   const intentoVinculacion = useRef(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -90,15 +534,13 @@ export default function PanelClientePublicaciones() {
   const [instagramError, setInstagramError] = useState("");
   const [accionInstagram, setAccionInstagram] = useState("");
   const [accionFacebook, setAccionFacebook] = useState("");
-  const [confirmarRecuperacion, setConfirmarRecuperacion] = useState("");
-  const [recuperandoAcceso, setRecuperandoAcceso] = useState("");
-  const [enlaceRecuperado, setEnlaceRecuperado] = useState(null);
-  const [copiado, setCopiado] = useState(false);
   const [solicitudes, setSolicitudes] = useState({});
-  const [solicitudAbierta, setSolicitudAbierta] = useState("");
   const [confirmacionesSolicitud, setConfirmacionesSolicitud] = useState({});
   const [gestionandoSolicitud, setGestionandoSolicitud] = useState("");
   const [erroresSolicitud, setErroresSolicitud] = useState({});
+  const [planSemanal, setPlanSemanal] = useState({});
+  const [medioSemanal, setMedioSemanal] = useState({});
+  const [archivosAbiertos, setArchivosAbiertos] = useState({});
 
   const cargarPanel = useCallback(async () => {
     setCargando(true);
@@ -107,7 +549,7 @@ export default function PanelClientePublicaciones() {
       const respuesta = await fetch(API, { credentials: "same-origin", cache: "no-store" });
       let json = await respuesta.json();
       if (!respuesta.ok || !json.ok) throw new Error(json.error || "No se pudo consultar el panel.");
-      if (!json.autenticado) { setDatos(json); return; }
+      if (!json.autenticado) { setDatos(json); setConfigurando(false); return; }
       // Si el pedido acaba de crearse en este navegador, vincularlo en silencio
       // mediante la clave privada guardada en esta pestaña. El servidor exige
       // sesión verificada y valida el token; nunca confiamos solo en el código.
@@ -115,6 +557,13 @@ export default function PanelClientePublicaciones() {
         intentoVinculacion.current = true;
         let pendiente = null;
         try { pendiente = JSON.parse(sessionStorage.getItem(PEDIDO_SESION) || "null"); } catch { /* Sin acceso local */ }
+        // Compatibilidad con enlaces anteriores: solo se vinculan tras verificar
+        // la sesión y la clave original; nunca se vuelve a mostrar el configurador.
+        const fragmento = new URLSearchParams(window.location.hash.slice(1));
+        if (VALIDAR_PEDIDO.test(fragmento.get("pedido") || "") && VALIDAR_CLAVE.test(fragmento.get("clave") || "")) {
+          pendiente = { id: fragmento.get("pedido"), tokenAcceso: fragmento.get("clave") };
+          window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+        }
         if (VALIDAR_PEDIDO.test(pendiente?.id || "") && VALIDAR_CLAVE.test(pendiente?.tokenAcceso || "") &&
             !(json.pedidos || []).some(p => p.pedidoId === pendiente.id)) {
           try {
@@ -133,6 +582,11 @@ export default function PanelClientePublicaciones() {
         }
       }
       setDatos(json);
+      try {
+        const detalleRespuesta = await fetch(`${API}/detalles`,{credentials:"same-origin",cache:"no-store"});
+        const detalle = await detalleRespuesta.json();
+        if (detalleRespuesta.ok && detalle.ok) setDetallesPanel({perfil:detalle.perfil||null,detalles:detalle.detalles||{}});
+      } catch { /* El resumen del panel sigue disponible. */ }
       try {
         const respuestaIg = await fetch(`${API_INSTAGRAM}/estado`, { credentials: "same-origin", cache: "no-store" });
         const info = await respuestaIg.json();
@@ -172,10 +626,6 @@ export default function PanelClientePublicaciones() {
     return () => { cancelado = true; };
   }, [datos]);
 
-  const abrirSolicitud = pedidoId => {
-    setSolicitudAbierta(actual => actual === pedidoId ? "" : pedidoId);
-    setConfirmacionesSolicitud(actual => ({ ...actual, [pedidoId]: false }));
-  };
   const registrarSolicitud = async pedidoId => {
     const s = solicitudes[pedidoId];
     if (!s?.listaParaSolicitud || !s.revision || !confirmacionesSolicitud[pedidoId]) return;
@@ -233,6 +683,21 @@ export default function PanelClientePublicaciones() {
       window.location.assign(url.toString());
     } catch (e) { setError(e.message || "No se pudo conectar Facebook."); setAccionFacebook(""); }
   };
+  const desconectarFacebook = async pedidoId => {
+    if (!window.confirm("¿Desconectar Facebook de este pedido? Instagram seguirá conectado.")) return;
+    setAccionFacebook(pedidoId); setError("");
+    try {
+      const r = await fetch(`${API}/detalles/desconectar-facebook`,{
+        method:"POST", credentials:"same-origin",headers:{"Content-Type":"application/json","X-Comunidad-Panel":"1"},
+        body:JSON.stringify({pedidoId}),
+      });
+      const info=await r.json();
+      if (!r.ok || !info.ok) throw new Error(info.error||"No se pudo desconectar Facebook.");
+      setMensaje("Facebook quedó desconectado. Instagram no se modificó.");
+      await cargarPanel();
+    } catch(e) {setError(e.message||"No se pudo desconectar Facebook.");}
+    finally {setAccionFacebook("");}
+  };
   const conectarInstagram = async pedidoId => {
     setAccionInstagram(pedidoId); setError("");
     try {
@@ -264,30 +729,6 @@ export default function PanelClientePublicaciones() {
     } catch (e) { setError(e.message || "No se pudo desconectar Instagram."); }
     finally { setAccionInstagram(""); }
   };
-  const recuperarAcceso = async pedidoId => {
-    setRecuperandoAcceso(pedidoId); setError(""); setMensaje("");
-    setEnlaceRecuperado(null);
-    try {
-      const respuesta = await fetch(`${API}/recuperar-acceso`, {
-        method: "POST", credentials: "same-origin", cache: "no-store",
-        headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
-        body: JSON.stringify({ pedidoId }),
-      });
-      const info = await respuesta.json();
-      if (!respuesta.ok || info.ok !== true || info.pedidoId !== pedidoId || !/^[a-f0-9]{64}$/i.test(info.tokenAcceso || "")) {
-        throw new Error(info.error || "No se pudo recuperar el acceso privado.");
-      }
-      const url = `${window.location.origin}${BASE}/configurar#pedido=${encodeURIComponent(pedidoId)}&clave=${encodeURIComponent(info.tokenAcceso)}`;
-      setEnlaceRecuperado({ pedidoId, url }); setCopiado(false); setConfirmarRecuperacion("");
-      setMensaje("Generamos un enlace nuevo. El anterior dejó de funcionar.");
-    } catch (e) { setError(e.message || "No se pudo recuperar el acceso privado."); }
-    finally { setRecuperandoAcceso(""); }
-  };
-  const copiarAcceso = async () => {
-    if (!enlaceRecuperado?.url) return;
-    try { await navigator.clipboard.writeText(enlaceRecuperado.url); setCopiado(true); }
-    catch { setError("No pudimos copiar el enlace. Seleccionalo y copialo manualmente."); }
-  };
   const salir = async () => {
     setCerrando(true); setError("");
     try {
@@ -299,207 +740,277 @@ export default function PanelClientePublicaciones() {
     } catch (e) { setError(e.message || "No se pudo cerrar la sesión."); setCerrando(false); }
   };
 
-  return <main className="min-h-[75vh] bg-slate-100 px-4 pb-16 pt-7 font-normal text-slate-900 sm:px-6 sm:pt-10" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+
+function fechaLocal(valor, zonaHoraria) {
+  if (!valor) return "Por confirmar";
+  const d = new Date(valor);
+  if (!Number.isFinite(d.getTime())) return "Por confirmar";
+  try { return new Intl.DateTimeFormat("es-AR", {
+    day:"numeric", month:"short", hour:"2-digit", minute:"2-digit",
+    ...(zonaHoraria ? { timeZone:zonaHoraria } : {}),
+  }).format(d); }
+  catch { return new Intl.DateTimeFormat("es-AR", {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(d); }
+}
+function enlacePublicado(contenido, red) {
+  const valor = contenido?.urlsPublicadas?.[red] || contenido?.enlaces?.[red] || contenido?.[`${red}UrlPublicada`] || contenido?.urlPublicacion;
+  if (typeof valor !== "string") return "";
+  try {const u = new URL(valor);return u.protocol === "https:" ? u.toString() : "";} catch {return "";}
+}
+function urlWebSegura(valor) {
+  if (typeof valor !== "string" || !valor.trim()) return "";
+  try {
+    const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(valor) ? valor : `https://${valor}`);
+    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.toString() : "";
+  } catch { return ""; }
+}
+function nombreTipo(tipo) { return tipo === "reel" ? "Reel" : tipo === "carrusel" ? "Carrusel" : "Imagen"; }
+function fechaContenido(c, zona) {
+  const definitiva = c.fechaHoraDefinitiva || c.fechaProgramada || c.programadoPara;
+  if (definitiva && Number.isFinite(Date.parse(definitiva))) {
+    try {
+      return new Intl.DateTimeFormat("es-AR", {
+        weekday: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+        ...(zona ? { timeZone: zona } : {}),
+      }).format(new Date(definitiva));
+    } catch { /* Mantener el horario elegido aunque la zona sea inválida. */ }
+  }
+  // El cliente ya eligió un día y una hora. No inventar un número de día
+  // hasta que Administración confirme la fecha concreta.
+  if (c.diaPreferido && c.horaLocalPreferida) {
+    return `${c.diaPreferido} · ${c.horaLocalPreferida}`;
+  }
+  return "Horario pendiente";
+}
+function tieneEstadoActivo(p) {return ["activo","activado","en_curso"].includes(p.estadoServicio) || ["activa","en_curso"].includes(p.prueba?.estado);}
+function infoPersonal(datos, pedido) {
+  const perfil = datos?.perfil || datos?.usuario || datos?.cliente || {};
+  const cliente = pedido?.cliente || {};
+  return {
+    nombre: perfil.nombreApellido || perfil.nombreCompleto || perfil.nombre || cliente.nombreApellido || cliente.nombre || "Pendiente de registrar",
+    emprendimiento: perfil.emprendimiento || perfil.nombreEmprendimiento || (typeof pedido?.negocio === "string" ? pedido.negocio : pedido?.negocio?.nombre) || "Pendiente de registrar",
+    whatsapp: perfil.whatsapp || perfil.telefono || cliente.whatsapp || pedido?.whatsapp || "Pendiente de registrar",
+    pais: perfil.pais || "No informado",
+    web: perfil.web || "",
+  };
+}
+  const pedidos = Array.isArray(datos?.pedidos) ? datos.pedidos : [];
+  const pedidoPrincipal = pedidos[0];
+  const personal = infoPersonal({...datos,perfil:detallesPanel.perfil||datos?.perfil||datos?.usuario?.perfil}, pedidoPrincipal);
+  return <main className="min-h-[76vh] bg-[#f6f7f9] px-3 py-7 text-slate-800 sm:px-6 sm:py-9" style={{fontFamily: "Montserrat, system-ui, sans-serif",fontWeight:400}}>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" />
     <div className="mx-auto max-w-5xl space-y-5">
-      <header className="flex flex-wrap items-start justify-between gap-4 pb-1">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.13em] text-orange-700">Comunidad Semanal</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Mi panel</h1>
-          <div className="mt-2 h-1 w-16 rounded-full bg-gradient-to-r from-orange-500 to-amber-300" aria-hidden="true" />
-          <p className="mt-1 text-sm text-slate-500">Tus contenidos y redes, en un solo lugar.</p>
+          <p className="mb-1 text-xs font-medium tracking-wide text-orange-700">Comunidad Semanal</p>
+          <h1 className="text-xl font-medium text-slate-950 sm:text-2xl">Bienvenido a tu panel privado</h1>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Aca podes revisar tu email registrado, las cuentas conectadas, tu plan actual, el contenido detallado y programado, y configurar una nueva semana.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={cargarPanel} disabled={cargando} className={BTN_SECUNDARIO}><RefreshCw size={14} /> Actualizar</button>
-          {datos?.autenticado && <button type="button" onClick={salir} disabled={cerrando} className={BTN_SECUNDARIO}><LogOut size={14} /> Salir</button>}
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={cargarPanel} disabled={cargando} className={BTN_SECUNDARIO}><RefreshCw size={13}/> Actualizar</button>
+          {datos?.autenticado ? <button type="button" disabled={cerrando} onClick={salir} className={BTN_SECUNDARIO}><LogOut size={13}/> Salir</button>
+            : <Link to={`${BASE}?acceso=ingreso`} className={BTN_PRIMARIO}>Iniciar sesión <ArrowRight size={13}/></Link>}
         </div>
       </header>
 
-      {cargando && <div className={`${CARD} p-5 text-sm text-slate-500`}>Cargando tus pedidos...</div>}
-      {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
-      {mensaje && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{mensaje}</div>}
-
-      {!cargando && (!datos || !datos.autenticado) && <section className={`${CARD} flex flex-col items-start gap-3 p-5 sm:p-7`}>
-        <LockKeyhole size={23} className="text-slate-600" />
-        <div><h2 className="font-semibold text-slate-900">Accedé a tu cuenta</h2><p className="mt-1 text-sm text-slate-500">Iniciá sesión con tu correo verificado desde Comunidad Semanal.</p></div>
-        <Link to={BASE} className={BTN_PRIMARIO}>Ingresar a Comunidad Semanal <ArrowRight size={14} /></Link>
+      {cargando && <div className={`${CARD} p-5 text-xs text-slate-500`}>Cargando tu panel...</div>}
+      {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">{error}</div>}
+      {mensaje && <div role="status" className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">{mensaje}</div>}
+      {!cargando && (!datos || !datos.autenticado) && <section className={`${CARD} p-5`}>
+        <h2 className="text-sm font-medium">Accedé a tu cuenta</h2>
+        <p className="mt-1 text-xs leading-5 text-slate-500">Para ingresar a tu panel, solicitá un nuevo código de seis dígitos desde Iniciar sesión.</p>
+        <Link to={`${BASE}?acceso=ingreso`} className={`${BTN_PRIMARIO} mt-3`}>Iniciar sesión <ArrowRight size={13}/></Link>
       </section>}
 
       {!cargando && datos?.autenticado && <>
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 shadow-sm shadow-emerald-100/70 sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100"><ShieldCheck size={17} className="text-emerald-700" /></div>
-            <div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Cuenta verificada</p><p className="truncate text-xs text-slate-500" title={datos.email}>{datos.email}</p></div>
+        <section className={`${CARD} overflow-hidden`} aria-label="Datos personales">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 sm:px-5">
+            <div className="flex items-center gap-2"><UserRound size={16} className="text-orange-600"/><h2 className="text-sm font-medium">Datos personales</h2></div>
+            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700"><ShieldCheck size={13}/> Email confirmado</span>
           </div>
-          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700"><CheckCircle2 size={14} /> Sesión activa</span>
+          <div className="grid gap-x-6 gap-y-4 p-4 sm:grid-cols-2 sm:p-5">
+            <CampoInfo etiqueta="Email confirmado" valor={datos.email || "—"}/>
+            <CampoInfo etiqueta="Nombre y apellido" valor={personal.nombre}/>
+            <CampoInfo etiqueta="Nombre emprendimiento" valor={personal.emprendimiento}/>
+            <CampoInfo etiqueta="WhatsApp" valor={personal.whatsapp}/>
+            <CampoInfo etiqueta="País" valor={personal.pais}/>
+            {urlWebSegura(personal.web) && <CampoInfo etiqueta="Web o enlace principal" valor={<a className="text-orange-700 underline underline-offset-2" href={urlWebSegura(personal.web)} rel="noopener noreferrer" target="_blank">{personal.web}</a>}/>}
+          </div>
         </section>
 
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3 px-0.5">
-            <div><h2 className="text-lg font-semibold tracking-tight text-slate-900">Mis publicaciones</h2><p className="mt-0.5 text-xs text-slate-500">Seguimiento de tus pedidos y contenidos.</p></div>
-
-          </div>
-
-          {!Array.isArray(datos.pedidos) || datos.pedidos.length === 0 ? <div className={`${CARD} flex flex-col items-start gap-3 p-6`}>
-            <FileImage size={22} className="text-orange-600" />
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-slate-800">No encontramos un pedido registrado en esta cuenta.</p>
-              <p className="max-w-xl text-xs leading-5 text-slate-600">Completar la vista previa del configurador no crea un pedido. Para que aparezca acá, tenés que finalizar la verificación y preparar la prueba gratuita con tu correo verificado. Si ya creaste uno desde otra sesión, ingresá con el correo que utilizaste al registrarlo.</p>
+        {pedidos.length === 0 ? <>
+          <section className={`${CARD} space-y-3 p-4`}>
+            <h2 className="text-sm font-medium">Cuentas</h2>
+            <p className="text-xs leading-5 text-slate-500">Facebook e Instagram estarán disponibles para conectar después de preparar tu primera semana.</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {["facebook","instagram"].map(red => <div key={red} className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                <LogoRed red={red} size={20}/><span className="text-xs font-medium">{redLabel(red)}</span><span className="ml-auto text-[11px] text-slate-500">Sin conectar</span>
+              </div>)}
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link to={`${BASE}/configurar`} className={BTN_PRIMARIO}>Continuar configuración <ArrowRight size={14} /></Link>
-              <button type="button" onClick={salir} disabled={cerrando} className={BTN_SECUNDARIO}>Ingresar con otro correo</button>
-            </div>
-          </div> : datos.pedidos.map(p => {
-            const redes = Array.isArray(p.redes) ? p.redes : [];
-            const contenidos = Array.isArray(p.contenidos) ? p.contenidos : [];
-            const solicitud = solicitudes[p.pedidoId];
-            const estadoSolicitud = resumenSolicitud(solicitud, p);
-            const instagram = instagramPorPedido[p.pedidoId];
-            const esPrueba = p.modalidad === "prueba_gratuita";
-            const aprobados = contenidos.filter(c => esAprobado(c.estado)).length;
-            const pendiente = contenidos.some(c => ["rechazado", "correccion_solicitada"].includes(c.estado));
-            return <article key={p.pedidoId} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-orange-100 bg-orange-50/80 px-4 py-4 sm:px-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-700">Pedido de publicaciones</p>
-                    <h3 className="mt-0.5 text-base font-semibold text-slate-950 sm:text-lg">{p.negocio || "Mi emprendimiento"}</h3>
-                    <p className="mt-1 break-all text-[11px] text-slate-400">{p.pedidoId}</p>
-                  </div>
-                  <Etiqueta valor={p.estadoServicio} />
-                </div>
-                {esPrueba && <div className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-full border border-orange-200 bg-white/75 px-2.5 py-1.5 text-xs text-orange-800">
-                  <Clock3 size={13} className="text-orange-600" />
-                  <span>Prueba gratuita de 7 días</span><span className="text-slate-300">·</span>
-                  <span>{estado(p.prueba?.estado || (p.estadoServicio === "sin_activar" ? "pendiente_activacion" : p.estadoServicio))}</span>
-                </div>}
-              </div>
-
-              <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-2">
-                <section className="rounded-xl border border-orange-200 bg-orange-50 p-3.5 sm:p-4" aria-label="Estado de los contenidos">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><FileImage size={16} className="text-orange-600" /> Contenidos</h4>
-                    <span className="rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">{aprobados}/{contenidos.length || 4} aprobados</span>
-                  </div>
-                  {contenidos.length ? <div className="space-y-0.5">
-                    {contenidos.map((c, indice) => <div key={c.id || indice} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0">
-                      <span className="min-w-0 text-xs text-slate-700">Contenido {indice + 1}{c.tipo ? ` · ${c.tipo === "reel" ? "Reel" : c.tipo === "carrusel" ? "Carrusel" : "Imagen"}` : ""}</span>
-                      <Etiqueta valor={c.estado} />
-                    </div>)}
-                  </div> : <p className="text-xs text-slate-500">Todavía no hay contenidos cargados.</p>}
-                  {pendiente && <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700"><CircleAlert size={13} /> Tenés contenidos para corregir desde el configurador.</p>}
-                  <p className="mt-3 text-[11px] text-slate-500">Estado general: {estado(p.estadoContenidos)}</p>
-                </section>
-
-                <section className="rounded-xl border border-sky-200 bg-sky-50 p-3.5 sm:p-4" aria-label="Redes sociales">
-                  <div className="mb-3 flex items-center justify-between gap-2"><h4 className="text-sm font-semibold text-slate-900">Redes sociales</h4><span className="text-[11px] text-slate-500">{redes.length} seleccionadas</span></div>
-                  {redes.includes("facebook") && <div className="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5">
-                    <div className="flex min-w-0 items-center gap-2.5"><LogoRed red="facebook" size={22} /><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Facebook</p><p className="truncate text-[11px] text-slate-500">{p.facebook?.nombre || "Página pendiente"}</p></div></div>
-                    {p.facebook ? <Etiqueta valor="conectada" texto="Conectada" /> :
-                      <button type="button" onClick={() => conectarFacebook(p.pedidoId)} disabled={Boolean(accionFacebook)} className={BTN_SECUNDARIO}>
-                        {accionFacebook === p.pedidoId ? "Conectando..." : "Conectar"}
-                      </button>}
-                  </div>}
-                  {redes.includes("instagram") && <div className="flex items-center justify-between gap-3 py-2.5">
-                    <div className="flex min-w-0 items-center gap-2.5"><LogoRed red="instagram" size={22} /><div className="min-w-0"><p className="text-xs font-semibold text-slate-800">Instagram</p><p className="truncate text-[11px] text-slate-500">{instagram ? `@${instagram.usuario}` : instagramError ? "Estado no disponible" : "Cuenta pendiente"}</p></div></div>
-                    {instagram ? <Etiqueta valor="conectada" /> : <button type="button" onClick={() => conectarInstagram(p.pedidoId)} disabled={Boolean(accionInstagram)} className={BTN_SECUNDARIO}>{accionInstagram === p.pedidoId ? "Conectando..." : "Conectar"}</button>}
-                  </div>}
-                  {!redes.length && <p className="text-xs text-slate-500">Todavía no hay redes seleccionadas.</p>}
-                  <p className="mt-2 text-[11px] text-slate-500">Las conexiones se autorizan directamente desde Meta, sin compartir contraseñas.</p>
-                </section>
-              </div>
-
-              {esPrueba && <section className={`mx-4 mb-4 rounded-xl border p-4 sm:mx-5 sm:mb-5 sm:p-5 ${solicitud?.requiereNuevaConfirmacion ? "border-amber-200 bg-amber-50" : solicitud?.vigente ? "border-emerald-200 bg-emerald-50/75" : "border-orange-200 bg-orange-50/70"}`} aria-label="Solicitud de programación">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-700"><CalendarCheck2 size={18} /></div>
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-semibold text-slate-900">{estadoSolicitud.titulo}</h4>
-                      <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600">{estadoSolicitud.detalle}</p>
+          </section>
+          <section className={`${CARD} space-y-3 p-4`}>
+            <h2 className="text-sm font-medium">Programá tu primera semana</h2>
+            <p className="text-xs leading-5 text-slate-500">Prepará tu contenido semanal y envialo para que lo revisemos y publiquemos en tus cuentas.</p>
+            <button type="button" className={BTN_PRIMARIO} onClick={() => setConfigurando(v=>!v)}>
+              {configurando ? "Cerrar" : "Programá tu primera semana"} <ChevronDown size={13}/>
+            </button>
+          </section>
+          {configurando && <EditorPrimeraSemana perfil={detallesPanel.perfil || datos.perfil || {}} email={datos.email} alFinalizar={() => {setConfigurando(false); cargarPanel(); setMensaje("Estamos revisando tus contenidos. Recibirás pronto un correo con la confirmación.");}} />}
+        </> : pedidos.map((p) => {
+          const redes = Array.isArray(p.redes) ? p.redes : [];
+          const contenidos = Array.isArray(p.contenidos) ? p.contenidos : [];
+          const detalle = detallesPanel.detalles?.[p.pedidoId];
+          const ig = detalle?.cuentas?.instagram || instagramPorPedido[p.pedidoId];
+          const facebook = detalle?.cuentas?.facebook !== undefined ? detalle.cuentas.facebook : p.facebook;
+          const contenidosVistos = detalle?.contenidos?.length ? contenidos.map(c=>({...c,...(detalle.contenidos.find(v=>v.id===c.id)||{})})) : contenidos;
+          const solicitud = solicitudes[p.pedidoId];
+          const pruebaActiva = tieneEstadoActivo(p);
+          const prueba = detalle?.prueba || p.prueba;
+          const publicados = contenidosVistos.reduce((s, c) => s + redes.filter(red =>
+            c.publicadoEn?.includes?.(red) || c.estadoPorRed?.[red] === "publicado").length, 0);
+          const programados = contenidosVistos.reduce((s, c) => s + redes.filter(red =>
+            ["programado", "publicado"].includes(c.estadoPorRed?.[red] || c.estado)).length, 0);
+          const total = redes.length * Math.max(contenidos.length, 4);
+          const programacionConfirmada = total > 0 && programados === total &&
+            contenidosVistos.every(c => [c.fechaHoraDefinitiva, c.fechaProgramada, c.programadoPara]
+              .some(valor => valor && Number.isFinite(Date.parse(valor))));
+          const archivosPorCorregir = p.estadoContenidos === "correccion_solicitada";
+          const archivosIncompletos = ["pendiente_carga", "en_preparacion"].includes(p.estadoContenidos);
+          return <article key={p.pedidoId} className="space-y-5">
+            <section className={`${CARD} p-4 sm:p-5`} aria-label="Cuentas">
+              <div className="mb-4"><h2 className="text-sm font-medium">Cuentas</h2><p className="mt-1 text-xs leading-5 text-slate-500">{redes.length > 0 && redes.every(red => red === "facebook" ? Boolean(facebook) : Boolean(ig)) ? "Tus cuentas están conectadas. Ahora podemos publicar automáticamente tu contenido programado." : "Conectá las cuentas seleccionadas después de preparar tu primera semana."}</p></div>
+              {redes.length ? redes.map((red) => {
+                const conexion = red === "facebook" ? facebook : ig;
+                const conectada = Boolean(conexion);
+                return <div key={red} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 py-3 first:border-t-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <LogoRed red={red} size={25}/>
+                    <div className="min-w-0"><p className="text-xs font-medium text-slate-800">{redLabel(red)}</p>
+                    {conectada ? <><p className="max-w-xs truncate text-xs text-slate-600">{red === "facebook" ? conexion.nombre || "Página conectada" : `@${conexion.usuario}`}</p>
+                      {conexion.pageId && <p className="text-[11px] text-slate-500">ID: {conexion.pageId}</p>}
+                      <p className="text-[11px] text-slate-500">Estado: conectada</p></>
+                      : <p className="text-[11px] text-slate-500">Sin conectar</p>}
                     </div>
                   </div>
-                  <button type="button" onClick={() => abrirSolicitud(p.pedidoId)} className={solicitud?.vigente ? BTN_SECUNDARIO : BTN_PRIMARIO}>
-                    {solicitudAbierta === p.pedidoId ? "Cerrar" : solicitud?.vigente ? "Ver autorización" : "Revisar y confirmar"}
-                    <ChevronDown size={14} className={solicitudAbierta === p.pedidoId ? "rotate-180" : ""} />
-                  </button>
-                </div>
-                {solicitud?.vigente && <p role="status" className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-700"><CheckCircle2 size={14} /> Autorización registrada</p>}
-                {solicitud?.requiereNuevaConfirmacion && <p role="status" className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-amber-800"><CircleAlert size={14} /> Es necesaria una nueva revisión de la solicitud.</p>}
-                {erroresSolicitud[p.pedidoId] && <p role="alert" className="mt-3 text-xs text-red-700">{erroresSolicitud[p.pedidoId]}</p>}
-                {solicitudAbierta === p.pedidoId && <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
-                  {!solicitud ? <p className="text-xs text-slate-500">Consultando la configuración...</p> : <>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      <CampoInfo etiqueta="Contenidos" valor={solicitud.cantidadContenidos ?? "—"} />
-                      <CampoInfo etiqueta="Publicaciones previstas" valor={solicitud.cantidadEventos ?? "—"} />
-                      <CampoInfo etiqueta="Zona horaria" valor={solicitud.zonaHoraria || "—"} />
-                    </div>
-                    <p className="text-xs text-slate-600">Redes: {(solicitud.redes || []).map(redLabel).join(" e ") || "Sin configurar"}</p>
-                    {solicitud.motivos?.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                      <p className="text-xs font-semibold text-amber-900">Antes de confirmar</p>
-                      <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-amber-900">{solicitud.motivos.map((motivo, i) => <li key={i}>{motivo}</li>)}</ul>
-                    </div>}
-                    {solicitud.vigente ? <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-xs text-slate-600">Tu autorización permanece guardada hasta que modifiques la configuración o la revoques.</p>
-                      {p.estadoServicio === "sin_activar" && <button type="button" disabled={Boolean(gestionandoSolicitud)} onClick={() => revocarSolicitud(p.pedidoId)} className={BTN_SECUNDARIO}>{gestionandoSolicitud === p.pedidoId ? "Procesando..." : "Revocar autorización"}</button>}
-                    </div> : <>
-                      <label className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-700">
-                        <input type="checkbox" className="mt-0.5 h-4 w-4 accent-orange-600" disabled={!solicitud.listaParaSolicitud}
-                          checked={Boolean(confirmacionesSolicitud[p.pedidoId])}
-                          onChange={e => setConfirmacionesSolicitud(actual => ({ ...actual, [p.pedidoId]: e.target.checked }))} />
-                        <span>Autorizo la programación y publicación de los cuatro contenidos en las redes y horarios elegidos, cuando hayan sido aprobados y el servicio esté habilitado. Si modifico los contenidos, archivos, redes u horarios, volveré a confirmar.</span>
-                      </label>
-                      <button type="button" onClick={() => registrarSolicitud(p.pedidoId)}
-                        disabled={!solicitud.listaParaSolicitud || !confirmacionesSolicitud[p.pedidoId] || Boolean(gestionandoSolicitud)} className={BTN_PRIMARIO}>
-                        {gestionandoSolicitud === p.pedidoId ? "Registrando..." : "Enviar solicitud de programación"} <ArrowRight size={14} />
-                      </button>
-                    </>}
-                    <p className="text-[11px] text-slate-500">La solicitud no inicia el período gratuito hasta que el servicio esté habilitado.</p>
-                  </>}
-                </div>}
-              </section>}
-
-              <details className="group border-t border-sky-100 bg-sky-50/40 px-4 py-3 sm:px-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold text-sky-800 [&::-webkit-details-marker]:hidden">
-                  <span className="flex items-center gap-2"><KeyRound size={14} /> Acceso privado y opciones del pedido</span>
-                  <ChevronDown size={14} className="transition-transform group-open:rotate-180" />
-                </summary>
-                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                  <p className="text-xs text-slate-600">Para reemplazar contenidos o gestionar archivos, ingresá al configurador con tu enlace privado.</p>
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" disabled={Boolean(recuperandoAcceso)} onClick={() => {
-                      setConfirmarRecuperacion(actual => actual === p.pedidoId ? "" : p.pedidoId);
-                      setEnlaceRecuperado(null); setCopiado(false); setError("");
-                    }} className={BTN_SECUNDARIO}><KeyRound size={14} /> Recuperar acceso privado</button>
-                    {redes.includes("instagram") && instagram && p.estadoServicio === "sin_activar" && <button type="button" disabled={Boolean(accionInstagram)} onClick={() => desconectarInstagram(p.pedidoId)} className={BTN_SECUNDARIO}>
-                      {accionInstagram === p.pedidoId ? "Procesando..." : "Desconectar Instagram"}
+                  <div className="flex items-center gap-2">
+                    {conectada ? <Etiqueta valor="conectada" texto="Conectada"/> : <button type="button" className={BTN_PRIMARIO} disabled={Boolean(accionInstagram || accionFacebook)}
+                      onClick={() => red === "facebook" ? conectarFacebook(p.pedidoId) : conectarInstagram(p.pedidoId)}>
+                      {((red === "facebook" && accionFacebook === p.pedidoId) || (red === "instagram" && accionInstagram === p.pedidoId)) ? "Conectando..." : "Conectar"}
                     </button>}
+                    {conectada && p.estadoServicio === "sin_activar" && <button type="button" className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+                      disabled={Boolean(accionInstagram || accionFacebook)} onClick={() => red==="facebook" ? desconectarFacebook(p.pedidoId) : desconectarInstagram(p.pedidoId)}>Desconectar</button>}
                   </div>
-                  {confirmarRecuperacion === p.pedidoId && <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <p className="text-xs text-slate-700">Se creará una clave nueva. <strong>Los enlaces privados anteriores dejarán de funcionar.</strong> Se conservarán los contenidos y las conexiones.</p>
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" disabled={Boolean(recuperandoAcceso)} onClick={() => recuperarAcceso(p.pedidoId)} className={BTN_PRIMARIO}>{recuperandoAcceso === p.pedidoId ? "Generando..." : "Generar enlace nuevo"}</button>
-                      <button type="button" onClick={() => setConfirmarRecuperacion("")} className={BTN_SECUNDARIO}>Cancelar</button>
-                    </div>
-                  </div>}
-                  {enlaceRecuperado?.pedidoId === p.pedidoId && <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50 p-3">
-                    <p className="flex items-center gap-2 text-xs font-semibold text-slate-900"><LockKeyhole size={14} /> Tu nuevo enlace privado</p>
-                    <p className="text-xs text-slate-600">Copialo o abrilo ahora. No se guardará en este panel cuando cierres la página.</p>
-                    <input readOnly aria-label="Nuevo enlace privado" value={enlaceRecuperado.url} onFocus={e => e.target.select()} className={`${CAMPO} text-xs`} />
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={copiarAcceso} className={BTN_SECUNDARIO}><Copy size={14} /> {copiado ? "Copiado" : "Copiar enlace"}</button>
-                      <button type="button" onClick={() => window.location.assign(enlaceRecuperado.url)} className={BTN_PRIMARIO}><ExternalLink size={14} /> Abrir configurador</button>
-                    </div>
-                  </div>}
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
-                    <span>Pago: {estado(p.estadoPago)}</span>
-                    <span>Contenidos: {estado(p.estadoContenidos)}</span>
-                    <span>Redes: {redes.map(redLabel).join(" e ") || "Sin configurar"}</span>
-                  </div>
+                </div>;
+              }) : <p className="text-xs text-slate-500">Todavía no hay redes elegidas para este pedido.</p>}
+              {instagramError && redes.includes("instagram") && <p className="mt-2 text-[11px] text-amber-700">Estado de Instagram temporalmente no disponible.</p>}
+            </section>
+
+            <section className={`${CARD} overflow-hidden`} aria-label="Resumen de prueba gratuita">
+              <div className="border-b border-orange-100 bg-orange-50/70 px-4 py-3 sm:px-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-sm font-medium">{p.modalidad === "prueba_gratuita" ? "Resumen de prueba gratuita" : "Resumen de tu plan"}</h2>
+                  <Etiqueta valor={p.estadoServicio}/>
                 </div>
-              </details>
-            </article>;
-          })}
-        </section>
+              </div>
+              <div className="grid grid-cols-2 gap-4 p-4 text-xs sm:p-5">
+                <CampoInfo etiqueta="Redes elegidas" valor={redes.map(redLabel).join(" · ") || "—"}/>
+                <CampoInfo etiqueta="Estado" valor={pruebaActiva ? "En curso" : estado(prueba?.estado || p.estadoServicio)}/>
+                <CampoInfo etiqueta="Publicaciones programadas" valor={pruebaActiva ? `${programados}/${total}` : "Aún sin activar"}/>
+                <CampoInfo etiqueta="Publicaciones realizadas" valor={pruebaActiva ? `${publicados}/${total}` : "Sin publicaciones"}/>
+                {pruebaActiva && prueba?.inicioEn && <CampoInfo etiqueta="Desde" valor={fechaLocal(prueba.inicioEn, detalle?.zonaHoraria)}/>}
+                {pruebaActiva && prueba?.finEn && <CampoInfo etiqueta="Hasta" valor={fechaLocal(prueba.finEn, detalle?.zonaHoraria)}/>}
+              </div>
+              {total > 0 && publicados === total && <p className="border-t border-slate-100 px-4 py-3 text-xs text-emerald-700 sm:px-5">Todos tus contenidos se publicaron correctamente.</p>}
+              {p.modalidad === "prueba_gratuita" && <p className="border-t border-slate-100 px-4 py-3 text-xs leading-5 text-slate-600 sm:px-5">Te notificaremos por correo cuando tu prueba gratuita esté por finalizar.</p>}
+            </section>
+
+            <section className={`${CARD} p-4 sm:p-5`} aria-label="Contenido programado">
+              <div className="mb-4"><h2 className="text-sm font-medium">Contenido programado</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  {programacionConfirmada
+                    ? "Este contenido ya está programado para publicarse con la configuración que definiste."
+                    : "La publicación comenzará después de la revisión y la activación de tu semana."}
+                </p>
+              </div>
+              {redes.map(red => <div key={red} className="mb-4 last:mb-0">
+                <div className="mb-2 flex items-center gap-2 border-b border-slate-100 pb-2"><LogoRed red={red} size={18}/><h3 className="text-xs font-medium">{redLabel(red)}</h3></div>
+                <div className="space-y-1">{contenidosVistos.length ? contenidosVistos.map((c, i) => {
+                  const url = enlacePublicado(c, red);
+                  const estadoPorRed = c.estadoPorRed?.[red] || c.estado;
+                  const sinFecha = ![c.fechaHoraDefinitiva, c.fechaProgramada, c.programadoPara]
+                    .some(valor => valor && Number.isFinite(Date.parse(valor)));
+                  const estadoVisible = ["rechazado", "correccion_solicitada", "error"].includes(estadoPorRed)
+                    ? "Requiere corrección"
+                    : sinFecha ? "Por confirmar" : undefined;
+                  return <div key={`${red}:${c.id || i}`} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 py-3 last:border-b-0 text-xs">
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-medium text-slate-800">Contenido {i+1} · {nombreTipo(c.tipo)}</p>
+                      <p className="text-[11px] text-slate-500">{fechaContenido(c, detalle?.zonaHoraria)} · hora local</p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <Etiqueta valor={estadoPorRed} texto={estadoVisible}/>
+                      {url && <a href={url} target="_blank" rel="noopener noreferrer" className={`${BTN_SECUNDARIO} text-[11px]`}>Ver publicación <ExternalLink size={12}/></a>}
+                    </div>
+                  </div>;
+                }) : <p className="py-2 text-xs text-slate-500">Todavía no hay contenidos cargados.</p>}</div>
+              </div>)}
+              {/* La autorización sigue siendo explícita cuando el servidor la exige.
+                  No se muestra otro paso mientras el pedido está en revisión. */}
+              {p.modalidad === "prueba_gratuita" && solicitud?.listaParaSolicitud && (!solicitud?.vigente || solicitud?.requiereNuevaConfirmacion) && (
+                <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
+                  {solicitud.motivos?.length > 0 && <p className="text-xs text-amber-700">{solicitud.motivos.join(" · ")}</p>}
+                  <label className="flex items-start gap-2 text-xs leading-5 text-slate-600">
+                    <input type="checkbox" className="mt-1 accent-orange-600"
+                      checked={Boolean(confirmacionesSolicitud[p.pedidoId])}
+                      onChange={e => setConfirmacionesSolicitud(v => ({ ...v, [p.pedidoId]: e.target.checked }))}/>
+                    <span>Autorizo la programación y publicación de mis contenidos en las redes y horarios seleccionados.</span>
+                  </label>
+                  <button type="button" className={BTN_PRIMARIO}
+                    disabled={!solicitud.revision || !confirmacionesSolicitud[p.pedidoId] || Boolean(gestionandoSolicitud)}
+                    onClick={() => registrarSolicitud(p.pedidoId)}>Autorizar publicación <Send size={13}/></button>
+                </div>
+              )}
+              {p.modalidad === "prueba_gratuita" && solicitud?.vigente && p.estadoServicio === "sin_activar" && (
+                <div className="mt-3 flex justify-end">
+                  <button type="button" className="text-[11px] text-slate-500 underline underline-offset-2 disabled:opacity-50"
+                    disabled={Boolean(gestionandoSolicitud)} onClick={() => revocarSolicitud(p.pedidoId)}>Revocar autorización</button>
+                </div>
+              )}
+              {erroresSolicitud[p.pedidoId] && <p role="alert" className="mt-2 text-xs text-red-700">{erroresSolicitud[p.pedidoId]}</p>}
+              {(archivosPorCorregir || archivosIncompletos) && (
+                <details className="mt-4 rounded-md border border-amber-200 bg-amber-50/50 p-3"
+                  onToggle={e => { const abierto = e.currentTarget.open; setArchivosAbiertos(v => ({ ...v, [p.pedidoId]: abierto })); }}>
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-amber-900 [&::-webkit-details-marker]:hidden">
+                    {archivosPorCorregir ? "Corregir archivos observados" : "Completar archivos pendientes"}
+                    <ChevronDown size={13}/>
+                  </summary>
+                  {archivosAbiertos[p.pedidoId] && <ArchivosPedido pedido={{ id: p.pedidoId }}/>}
+                </details>
+              )}
+            </section>
+
+            <details className={`${CARD} group p-4 sm:p-5`}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium [&::-webkit-details-marker]:hidden">Configurar otra semana <ChevronDown size={13} className="group-open:rotate-180"/></summary>
+              <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                <p className="text-xs text-slate-500">Elegí en cuantas redes queres publicar</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[{nombre:"Facebook",red:"facebook",precio:"$10.000 · USD 10"},{nombre:"Instagram",red:"instagram",precio:"$10.000 · USD 10"},{nombre:"Ambas",red:"ambas",precio:"$15.000 · USD 15",descuento:"25% de ahorro"}].map(op=><button type="button" key={op.red} onClick={()=>setPlanSemanal(v=>({...v,[p.pedidoId]:op.red}))}
+                    className={`rounded-md border p-3 text-left ${planSemanal[p.pedidoId]===op.red?"border-orange-500 bg-orange-50":"border-slate-200 bg-slate-50"}`}>
+                    <p className="text-xs font-medium">{op.nombre}</p><p className="mt-1 text-[11px] text-slate-500">{op.red==="ambas"?"Hasta 8 publicaciones":"Hasta 4 publicaciones"}</p>
+                    <p className="mt-1 text-xs font-medium">{op.precio}</p>{op.descuento && <p className="text-[11px] text-emerald-700">{op.descuento}</p>}
+                  </button>)}
+                </div>
+                {planSemanal[p.pedidoId] && <div className="space-y-2 border-t border-slate-100 pt-3">
+                  <p className="text-xs font-medium">Elegí como abonar</p>
+                  <div className="flex flex-wrap gap-2"><button type="button" className={medioSemanal[p.pedidoId]==="transferencia"?BTN_PRIMARIO:BTN_SECUNDARIO}
+                    onClick={()=>setMedioSemanal(v=>({...v,[p.pedidoId]:"transferencia"}))}>Transferencia bancaria</button>
+                    <button type="button" className={medioSemanal[p.pedidoId]==="paypal"?BTN_PRIMARIO:BTN_SECUNDARIO}
+                    onClick={()=>setMedioSemanal(v=>({...v,[p.pedidoId]:"paypal"}))}>PayPal</button></div>
+                  {medioSemanal[p.pedidoId] && <p className="text-xs text-slate-500">Este medio de pago todavía no está habilitado para nuevas semanas. No se registró ningún cobro.</p>}
+                </div>}
+              </div>
+            </details>
+          </article>;
+        })}
       </>}
     </div>
   </main>;

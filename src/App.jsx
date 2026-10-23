@@ -5,6 +5,7 @@ import {
   Route,
   useLocation,
   useNavigate,
+  Navigate,
 } from "react-router-dom";
 
 import Navbar from "./componentes/Navbar";
@@ -25,7 +26,6 @@ import PagoExitoso from "./paginas/PagoExitoso";
 import PagoPendiente from "./paginas/PagoPendiente";
 import PagoFallido from "./paginas/PagoFallido";
 import Checkout from "./paginas/Checkout";
-import ConfiguradorPublicaciones from "./paginas/servicios/ConfiguradorPublicaciones";
 import LandingPublicaciones from "./paginas/servicios/LandingPublicaciones";
 import PanelClientePublicaciones from "./paginas/servicios/PanelClientePublicaciones";
 
@@ -138,6 +138,13 @@ const ScrollToTop = () => {
   return null;
 };
 
+// El enlace antiguo deja de abrir el configurador, pero conserva la clave
+// en el fragmento para vincular pedidos existentes desde el panel.
+const RedireccionPanelAnterior = () => {
+  const location = useLocation();
+  return <Navigate replace to={{ pathname: "/servicios/publicacion-automatica/mi-panel", hash: location.hash }} />;
+};
+
 /* =========================
    HOME
 ========================= */
@@ -245,7 +252,7 @@ const ContenidoApp = () => {
           />
           <Route
             path="/servicios/publicacion-automatica/configurar"
-            element={<ConfiguradorPublicaciones />}
+            element={<RedireccionPanelAnterior />}
           />
           <Route
             path="/servicios/publicacion-automatica/mi-panel"
@@ -318,3 +325,4 @@ const App = () => {
 };
 
 export default App;
+``

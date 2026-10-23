@@ -32,7 +32,7 @@ function cookie(valor, borrar = false) {
 }
 function vista(titulo, mensaje, codigo = 200) {
   const volver = "/servicios/publicacion-automatica/mi-panel";
-  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapar(titulo)}</title><style>body{margin:0;background:#f7f8fa;color:#202020;font:15px system-ui,sans-serif}main{max-width:540px;margin:50px auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}h1{font-size:22px;font-weight:600}p{line-height:1.6}a{color:#333}</style></head><body><main><h1>${escapar(titulo)}</h1><p>${escapar(mensaje)}</p><p><a href="${volver}">Volver a mi panel</a></p><small>No se realizaron publicaciones ni se modificó Facebook.</small></main></body></html>`;
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapar(titulo)}</title><style>body{margin:0;background:#f7f8fa;color:#202020;font:15px system-ui,sans-serif}main{max-width:540px;margin:50px auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}h1{font-size:22px;font-weight:600}p{line-height:1.6}a{color:#333}</style></head><body><main><h1>${escapar(titulo)}</h1><p>${escapar(mensaje)}</p><p><a href="${volver}">Volver a mi panel</a></p></main></body></html>`;
   return new Response(html, { status: codigo, headers: {
     "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
@@ -373,7 +373,7 @@ async function callback(request, env, url) {
         $setOnInsert: { conectadoEn: ahora },
       }, { upsert: true });
     });
-    return vista("Instagram conectado al pedido", `La cuenta @${elegida.usuario} quedó vinculada al pedido. La prueba gratuita todavía no comenzó.`);
+    return vista("Instagram conectado al pedido", `La cuenta @${elegida.usuario} quedó vinculada al pedido. Redes en Piloto podrá programar y publicar de forma automática en tu cuenta, los contenidos que hayas brindado.`);
   } catch (error) {
     // Diagnóstico seguro: sin URL completa, code OAuth, correos, access tokens ni
     // mensajes de Meta (pueden contener información sensible).

@@ -2,6 +2,7 @@
 // Los archivos se suben en partes a R2 y se referencian desde MongoDB.
 import crypto from "node:crypto";
 import { MongoClient } from "mongodb";
+import { obtenerClienteRegistrado } from "./clientes-acceso.js";
 
 const DB = "andres_imprimibles";
 const PART_SIZE = 8 * 1024 * 1024;
@@ -90,10 +91,24 @@ async function leerJson(request) {
   catch { /* inválido */ }
   lanzar("JSON inválido.", 400);
 }
-async function buscarPedido(db, request, pedidoId, escritura = false) {
+async function buscarPedido(db, request, env, pedidoId, escritura = false) {
   if (!validarId(pedidoId)) lanzar("Pedido inválido.", 400);
   const pedido = await db.collection("pedidos_servicios").findOne({ pedidoId, tipo: "publicaciones" });
-  if (!pedido || !accesoCliente(request, pedido)) lanzar("Pedido no encontrado o acceso no autorizado.", 404);
+  if (!pedido) lanzar("Pedido no encontrado o acceso no autorizado.", 404);
+  const tokenValido = accesoCliente(request, pedido);
+  let cuentaValida = false;
+  if (!tokenValido && pedido.clienteUsuarioId &&
+      request.headers.get("x-comunidad-panel") === "1") {
+    const origen = new URL(request.url).origin;
+    const headerOrigen = request.headers.get("origin");
+    const contexto = request.headers.get("sec-fetch-site");
+    // El uso de cookies solo se admite desde el mismo sitio, con cabecera explícita.
+    if ((!headerOrigen || headerOrigen === origen) && (!contexto || contexto === "same-origin")) {
+      const usuario = await obtenerClienteRegistrado(request, env);
+      cuentaValida = Boolean(usuario?.id && usuario.id === pedido.clienteUsuarioId);
+    }
+  }
+  if (!tokenValido && !cuentaValida) lanzar("Pedido no encontrado o acceso no autorizado.", 404);
   permisoPedido(pedido, escritura);
   return pedido;
 }
@@ -118,7 +133,7 @@ async function actualizarEstado(db, pedidoId) {
 }
 async function iniciar(request, env, db) {
   const input = await leerJson(request);
-  const pedido = await buscarPedido(db, request, input.pedidoId, true);
+  const pedido = await buscarPedido(db, request, env, input.pedidoId, true);
   const p = pedido.publicaciones.find(p => p.id === input.contenidoId);
   const posicion = validarPosicion(input.posicion);
   if (!p || !validarContenido(input.contenidoId) || posicion === null || posicion >= maxPosiciones(p.tipo)) lanzar("Contenido o posición no válidos.", 400);
@@ -158,7 +173,7 @@ async function subirParte(request, env, db, url) {
   const pedidoId = url.searchParams.get("pedidoId");
   const cargaId = url.searchParams.get("cargaId");
   const numero = Number(url.searchParams.get("numero"));
-  await buscarPedido(db, request, pedidoId, true);
+  await buscarPedido(db, request, env, pedidoId, true);
   if (!/^[0-9a-f-]{36}$/i.test(cargaId || "") || !Number.isInteger(numero) || numero < 1 || numero > 19) lanzar("Parte no válida.", 400);
   const sesion = await db.collection("cargas_archivos_servicios").findOne({ pedidoId, cargaId, estado:"abierta" });
   if (!sesion || new Date(sesion.expiraEn).getTime() < Date.now()) lanzar("La carga no existe o expiró.", 404);
@@ -177,7 +192,7 @@ async function subirParte(request, env, db, url) {
 }
 async function finalizar(request, env, db) {
   const input = await leerJson(request);
-  await buscarPedido(db, request, input.pedidoId, true);
+  await buscarPedido(db, request, env, input.pedidoId, true);
   const carga = await db.collection("cargas_archivos_servicios").findOne({ pedidoId:input.pedidoId, cargaId:input.cargaId, estado:"abierta" });
   if (!carga || new Date(carga.expiraEn).getTime() < Date.now()) lanzar("La carga no existe o expiró.", 404);
   const total = Math.ceil(carga.tamano/PART_SIZE);
@@ -210,7 +225,7 @@ async function finalizar(request, env, db) {
 }
 async function cancelar(request, env, db) {
   const input = await leerJson(request);
-  await buscarPedido(db, request, input.pedidoId, true);
+  await buscarPedido(db, request, env, input.pedidoId, true);
   const carga = await db.collection("cargas_archivos_servicios").findOne({ pedidoId:input.pedidoId, cargaId:input.cargaId, estado:"abierta" });
   if (!carga) return json({ok:true});
   await bucket(env).resumeMultipartUpload(carga.r2Key,carga.uploadId).abort().catch(() => {});
@@ -219,7 +234,7 @@ async function cancelar(request, env, db) {
 }
 async function eliminar(request, env, db) {
   const input = await leerJson(request);
-  await buscarPedido(db, request, input.pedidoId, true);
+  await buscarPedido(db, request, env, input.pedidoId, true);
   const posicion = validarPosicion(input.posicion);
   if (!validarContenido(input.contenidoId) || posicion === null) lanzar("Archivo inválido.",400);
   const id = idArchivo(input.pedidoId,input.contenidoId,posicion);
@@ -242,7 +257,7 @@ export async function ejecutarArchivosPedido(request, env) {
     if (request.method !== metodos[accion]) return fallo("Método no permitido.",405);
     bucket(env);
     return await conDb(env, async db => {
-      if (accion === "estado") { const pedido = await buscarPedido(db,request,url.searchParams.get("pedidoId")); return json(await estadoArchivos(db,pedido)); }
+      if (accion === "estado") { const pedido = await buscarPedido(db, request, env, url.searchParams.get("pedidoId")); return json(await estadoArchivos(db,pedido)); }
       if (accion === "iniciar") return iniciar(request,env,db);
       if (accion === "parte") return subirParte(request,env,db,url);
       if (accion === "finalizar") return finalizar(request,env,db);

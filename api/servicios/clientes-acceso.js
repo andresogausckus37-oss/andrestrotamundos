@@ -118,13 +118,22 @@ const PAISES_COMUNIDAD = new Set([
 function validarPerfil(datos) {
   if (!datos || typeof datos !== "object" || Array.isArray(datos)) return null;
   const nombre = typeof datos.nombre === "string" ? datos.nombre.trim() : "";
+  const emprendimiento = typeof datos.emprendimiento === "string" ? datos.emprendimiento.trim() : "";
   const whatsapp = typeof datos.whatsapp === "string" ? datos.whatsapp.trim() : "";
   const pais = typeof datos.pais === "string" ? datos.pais.trim() : "";
   const web = typeof datos.web === "string" ? datos.web.trim() : "";
   if (nombre.length < 2 || nombre.length > 100 || /[\r\n<>]/.test(nombre) ||
+      emprendimiento.length < 2 || emprendimiento.length > 120 || /[\r\n<>]/.test(emprendimiento) ||
       !/^\+?[0-9]{8,17}$/.test(whatsapp) || !PAISES_COMUNIDAD.has(pais) ||
       web.length > 300 || /[\r\n<>]/.test(web)) return null;
-  return { nombre, whatsapp, pais, web };
+  if (web) {
+    try {
+      const destino = new URL(/^[a-z][a-z\d+.-]*:/i.test(web) ? web : `https://${web}`);
+      if (!["http:", "https:"].includes(destino.protocol) || !destino.hostname ||
+          destino.username || destino.password) return null;
+    } catch { return null; }
+  }
+  return { nombre, emprendimiento, whatsapp, pais, web };
 }
 
 async function verificarTurnstileRegistro(request, env, token) {
@@ -324,8 +333,8 @@ async function consultarSesion(request, env, config) {
       if (!cuenta) return responder({ ok: true, autenticado: false });
       return responder({ ok: true, autenticado: true, email: cuenta.email,
         perfil: cuenta.perfil ? {
-          nombre: cuenta.perfil.nombre || "", whatsapp: cuenta.perfil.whatsapp || "",
-          pais: cuenta.perfil.pais || "", web: cuenta.perfil.web || "",
+          nombre: cuenta.perfil.nombre || "", emprendimiento: cuenta.perfil.emprendimiento || "",
+          whatsapp: cuenta.perfil.whatsapp || "", pais: cuenta.perfil.pais || "", web: cuenta.perfil.web || "",
         } : null });
     });
   } catch { return responder({ ok: false, error: "No se pudo consultar la sesión." }, 503); }

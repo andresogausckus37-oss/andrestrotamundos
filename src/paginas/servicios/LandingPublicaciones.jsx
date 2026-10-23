@@ -7,12 +7,11 @@ import {
 } from "lucide-react";
 
 const RUTA_BASE = "/servicios/publicacion-automatica";
-const RUTA_CONFIGURADOR = `${RUTA_BASE}/configurar`;
 const RUTA_PANEL = `${RUTA_BASE}/mi-panel`;
 const API_SOLICITAR_CODIGO = "/api/servicios/clientes/acceso/solicitar";
 const API_VERIFICAR_CODIGO = "/api/servicios/clientes/acceso/verificar";
 
-// Los mismos logos utilizados en el configurador completo.
+// Identidad visual de la demostración y del panel.
 function cargarMontserrat() {
   const id = "comunidad-semanal-fuente-montserrat";
   if (document.getElementById(id)) return;
@@ -28,7 +27,7 @@ const LOGOS = {
 };
 
 const CAMPO = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
-const CAJA = "rounded-xl border border-slate-200 bg-white p-4 sm:p-5";
+const CAJA = "rounded-md border border-slate-200 bg-white p-4 sm:p-5";
 const BOTON = "inline-flex min-h-9 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60";
 const PAISES_REGISTRO = [
   "Argentina", "Belice", "Bolivia", "Brasil", "Chile", "Colombia", "Costa Rica",
@@ -129,6 +128,7 @@ export default function LandingPublicaciones() {
   const [email, setEmail] = useState("");
   const [repetirEmail, setRepetirEmail] = useState("");
   const [nombreRegistro, setNombreRegistro] = useState("");
+  const [emprendimientoRegistro, setEmprendimientoRegistro] = useState("");
   const [whatsappRegistro, setWhatsappRegistro] = useState("");
   const [paisRegistro, setPaisRegistro] = useState("Argentina");
   const [webRegistro, setWebRegistro] = useState("");
@@ -142,17 +142,16 @@ export default function LandingPublicaciones() {
   const [esperandoRegistro, setEsperandoRegistro] = useState(false);
   const urlsTemporales = useRef(new Set());
 
-  // La demostración no consulta precios anteriores ni envía datos o archivos.
-  // La prueba gratis y los nuevos importes requieren implementación en el backend.
+  // La demostración no crea pedidos ni envía archivos. La semana real se prepara desde el panel.
 
   useEffect(() => () => {
     for (const url of urlsTemporales.current) URL.revokeObjectURL(url);
     urlsTemporales.current.clear();
   }, []);
 
-  // Los enlaces privados antiguos continúan funcionando con el configurador real.
+  // Los enlaces anteriores se recuperan desde la cuenta verificada del panel.
   if (location.hash.startsWith("#pedido=")) {
-    return <Navigate replace to={{ pathname: RUTA_CONFIGURADOR, hash: location.hash }} />;
+    return <Navigate replace to={{ pathname: RUTA_PANEL, hash: location.hash }} />;
   }
 
   const contenido = contenidos[seleccion];
@@ -258,7 +257,7 @@ export default function LandingPublicaciones() {
   }, [modalRegistro, modoAcceso, turnstileKey]);
 
   const perfilRegistro = () => ({
-    nombre: nombreRegistro.trim(), whatsapp: whatsappRegistro.trim(),
+    nombre: nombreRegistro.trim(), emprendimiento: emprendimientoRegistro.trim(), whatsapp: whatsappRegistro.trim(),
     pais: paisRegistro, web: webRegistro.trim(),
   });
 
@@ -271,9 +270,9 @@ export default function LandingPublicaciones() {
     }
     if (modoAcceso === "registro") {
       if (correo !== repetirEmail.trim().toLowerCase()) { setErrorRegistro("Los correos electrónicos no coinciden."); return; }
-      if (nombreRegistro.trim().length < 2 || !/^\+?[0-9]{8,17}$/.test(whatsappRegistro.trim()) ||
+      if (nombreRegistro.trim().length < 2 || !emprendimientoRegistro.trim() || emprendimientoRegistro.trim().length > 120 || !/^\+?[0-9]{8,17}$/.test(whatsappRegistro.trim()) ||
           !PAISES_REGISTRO.includes(paisRegistro) || webRegistro.trim().length > 300) {
-        setErrorRegistro("Completá tu nombre, WhatsApp y país correctamente."); return;
+        setErrorRegistro("Completá tu nombre, emprendimiento, WhatsApp y país correctamente."); return;
       }
       if (!turnstileToken) { setErrorRegistro("Completá la verificación de Cloudflare."); return; }
     }
@@ -381,12 +380,12 @@ export default function LandingPublicaciones() {
               </div>
             </div>
 
-            <div className="-mx-4 bg-orange-50 p-5 sm:mx-0 sm:rounded-xl sm:p-6">
+            <div className="-mx-4 bg-orange-100 px-5 py-6 sm:mx-0 sm:rounded-md sm:p-6">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs font-medium text-orange-700">PRUEBA GRATUITA</span>
                 <span className="text-xs font-normal text-slate-500">Facebook + Instagram</span>
               </div>
-              <p className="text-3xl font-medium tracking-tight text-slate-900">Probá <span className="text-orange-600">7 días gratis</span></p>
+              <p className="text-3xl font-medium tracking-tight text-slate-950">Probá <span className="text-orange-700">7 días gratis</span></p>
               <p className="mt-3 text-sm leading-6 text-slate-600">Subí hasta 4 contenidos en cada red dejá que nuestro sistema los publique automáticamente en los días y horarios que elijas.</p>
               <div className="my-5 border-t border-slate-100" />
               <p className="text-sm font-medium text-slate-900">¿Querés ver cómo funciona antes de registrarte?</p>
@@ -567,7 +566,7 @@ export default function LandingPublicaciones() {
             </aside>
           </div>
 
-          <div className="mt-8 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+          <div className="mt-8 rounded-md border border-slate-200 bg-white p-5 sm:p-6">
             <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-base font-medium text-slate-900">Tus primeros 7 días, gratis</h3>
@@ -578,7 +577,7 @@ export default function LandingPublicaciones() {
             <h3 className="mt-5 text-sm font-medium text-slate-900">Al finalizar la prueba gratuita</h3>
             <p className="mt-1 text-xs text-slate-500">Precios previstos para una semana adicional de servicio.</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-slate-200 px-4 py-3">
+              <div className="rounded-md border border-slate-200 px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium text-slate-900">1 red <span className="font-normal text-slate-500">· 1 semana</span></p>
                   <div className="text-right">
@@ -587,7 +586,7 @@ export default function LandingPublicaciones() {
                   </div>
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-200 px-4 py-3">
+              <div className="rounded-md border border-slate-200 px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium text-slate-900">2 redes <span className="font-normal text-slate-500">· 1 semana</span></p>
                   <div className="text-right">
@@ -598,7 +597,7 @@ export default function LandingPublicaciones() {
               </div>
             </div>
             <p className="mt-4 text-xs font-normal leading-5 text-slate-500">
-              Te avisaremos por correo cuando esté por finalizar tu prueba. Si querés continuar, podrás contratar una semana desde tu panel o el configurador. No se realizará ningún cobro automático.
+              Te avisaremos por correo cuando esté por finalizar tu prueba. Si querés continuar, podrás contratar una semana desde tu panel privado. No se realizará ningún cobro automático.
             </p>
           </div>
 
@@ -613,7 +612,7 @@ export default function LandingPublicaciones() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-3 py-4"
           onMouseDown={e => { if (e.target === e.currentTarget) setModalRegistro(false); }}>
           <div role="dialog" aria-modal="true" aria-labelledby="registro-titulo"
-            className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-4 shadow-xl sm:p-5">
+            className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-md bg-white p-4 shadow-xl sm:p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex items-center gap-2"><Mail size={18} className="text-orange-600" />
                 <h2 id="registro-titulo" className="text-base font-medium">{modoAcceso === "registro" ? "Crear mi cuenta" : "Iniciar sesión"}</h2>
@@ -624,6 +623,8 @@ export default function LandingPublicaciones() {
               {modoAcceso === "registro" && <>
                 <Campo etiqueta="Nombre y apellido *"><input className={CAMPO} required autoComplete="name" maxLength={100}
                   value={nombreRegistro} onChange={e => setNombreRegistro(e.target.value)} /></Campo>
+                <Campo etiqueta="Nombre del emprendimiento *"><input className={CAMPO} required maxLength={120} autoComplete="organization"
+                  value={emprendimientoRegistro} onChange={e => setEmprendimientoRegistro(e.target.value)} placeholder="Ej.: Mi emprendimiento" /></Campo>
               </>}
               <Campo etiqueta="Correo electrónico *"><input className={CAMPO} required type="email" autoComplete="email" maxLength={160}
                 value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" /></Campo>

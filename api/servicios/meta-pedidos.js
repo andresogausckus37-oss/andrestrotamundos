@@ -31,7 +31,7 @@ function pagina(titulo, contenido, status = 200, borrarCookie = true) {
     "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
   });
   if (borrarCookie) headers.set("Set-Cookie", cookieEstado("", true));
-  return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapar(titulo)}</title><style>body{font:16px system-ui,sans-serif;background:#f5f5f5;color:#222;margin:0}main{max-width:580px;margin:48px auto;padding:24px;background:white;border:1px solid #ddd;border-radius:10px}h1{font-size:23px}p{line-height:1.6}</style></head><body><main><h1>${escapar(titulo)}</h1>${contenido}<p><a href="/servicios/publicacion-automatica">Volver a mi pedido</a></p><p>El acceso privado permanece solo en esta sesión del navegador.</p></main></body></html>`, { status, headers });
+  return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapar(titulo)}</title><style>body{font:16px system-ui,sans-serif;background:#f5f5f5;color:#222;margin:0}main{max-width:580px;margin:48px auto;padding:24px;background:white;border:1px solid #ddd;border-radius:10px}h1{font-size:23px}p{line-height:1.6}</style></head><body><main><h1>${escapar(titulo)}</h1>${contenido}<p><a href="/servicios/publicacion-automatica/mi-panel">Volver a mi panel</a></p></main></body></html>`, { status, headers });
 }
 function cookieEstado(valor, borrar = false) {
   return `${COOKIE}=${valor}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${borrar ? 0 : 600}`;
@@ -271,7 +271,7 @@ async function callback(request, env, url) {
         $setOnInsert: { conectadoEn: fecha },
       }, { upsert: true });
     });
-    return pagina("Facebook conectado al pedido", `<p>La página <strong>${escapar(seleccionada.name || "Facebook")}</strong> quedó vinculada exclusivamente a este pedido.</p><p>ID de página: <code>${escapar(seleccionada.id)}</code></p><p>El servicio todavía no realizará publicaciones.</p>`);
+    return pagina("Facebook conectado al pedido", `<p>La página <strong>${escapar(seleccionada.name || "Facebook")}</strong> quedó vinculada exclusivamente a este pedido.</p><p>Redes en Piloto podrá programar y publicar de forma automática en tu cuenta, los contenidos que hayas brindado.</p><p>ID de página: <code>${escapar(seleccionada.id)}</code></p>`);
   } catch {
     // Nunca registrar ni devolver tokens, códigos OAuth, secretos ni respuestas completas de Meta.
     return pagina("No se pudo completar la conexión", "<p>Revisá los permisos, la página seleccionada y el estado de tu pedido.</p>", 502);

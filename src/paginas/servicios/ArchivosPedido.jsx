@@ -6,6 +6,47 @@ const TAMANO_PARTE = 8 * 1024 * 1024;
 const MAX_IMAGEN = 20 * 1024 * 1024;
 const MAX_VIDEO = 150 * 1024 * 1024;
 const CAJA = "mt-4 rounded-md border border-slate-200 bg-white p-4";
+const CABECERAS_PANEL = { "X-Comunidad-Panel": "1" };
+
+// Sube los archivos reales al bucket privado después de crear la semana.
+// Si una subida falla, la semana sigue guardada y el cliente puede reintentar desde el panel.
+export async function subirArchivosSemana(pedidoId, contenidos, progreso = () => {}) {
+  const solicitar = async (ruta, datos) => leer(await fetch(`${API}/${ruta}`, {
+    method: "POST", credentials: "same-origin", cache: "no-store",
+    headers: { ...CABECERAS_PANEL, "Content-Type": "application/json" },
+    body: JSON.stringify(datos),
+  }));
+  const archivos = contenidos.flatMap(contenido =>
+    contenido.archivos.map((archivo, posicion) => ({ contenido, archivo, posicion })));
+  let terminados = 0;
+  for (const { contenido, archivo, posicion } of archivos) {
+    comprobarArchivo(archivo, contenido.tipo);
+    const sesion = await solicitar("iniciar", {
+      pedidoId, contenidoId: contenido.id, posicion,
+      nombre: archivo.name, tipo: archivo.type, tamano: archivo.size,
+    });
+    try {
+      if (sesion.tamanoParte !== TAMANO_PARTE) throw new Error("Tamaño de bloques no admitido.");
+      for (let numero = 1; numero <= sesion.totalPartes; numero++) {
+        const inicio = (numero - 1) * TAMANO_PARTE;
+        const parte = archivo.slice(inicio, Math.min(inicio + TAMANO_PARTE, archivo.size));
+        await leer(await fetch(`${API}/parte?pedidoId=${encodeURIComponent(pedidoId)}&cargaId=${encodeURIComponent(sesion.cargaId)}&numero=${numero}`, {
+          method: "PUT", credentials: "same-origin", cache: "no-store",
+          headers: { ...CABECERAS_PANEL, "Content-Type": "application/octet-stream" },
+          body: parte,
+        }));
+        progreso({ archivo: archivo.name, completado: terminados, total: archivos.length,
+          porcentaje: Math.round((terminados + numero / sesion.totalPartes) / archivos.length * 100) });
+      }
+      await solicitar("finalizar", { pedidoId, cargaId: sesion.cargaId });
+      terminados++;
+    } catch (error) {
+      await solicitar("cancelar", { pedidoId, cargaId: sesion.cargaId }).catch(() => {});
+      throw error;
+    }
+  }
+  return { completados: terminados };
+}
 
 async function leer(respuesta) {
   const data = await respuesta.json().catch(() => ({}));
@@ -38,14 +79,14 @@ export default function ArchivosPedido({ pedido }) {
   const cancelado = useRef(false);
   const token = pedido?.tokenAcceso;
   const id = pedido?.id;
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = { ...CABECERAS_PANEL, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
   useEffect(() => {
-    if (!id || !token) return;
+    if (!id) return;
     const controller = new AbortController();
     setCargando(true);
     const actualizar = () => fetch(`${API}/estado?pedidoId=${encodeURIComponent(id)}`, {
-      method:"GET",cache:"no-store",headers,signal:controller.signal,
+      method:"GET",credentials:"same-origin",cache:"no-store",headers,signal:controller.signal,
     }).then(leer).then(n => { if (!controller.signal.aborted) { setDatos(n); setError(""); } })
       .catch(e => { if (!controller.signal.aborted) { setDatos(null); setError(e.message || "Error consultando contenidos."); } })
       .finally(() => { if (!controller.signal.aborted) setCargando(false); });
@@ -55,7 +96,7 @@ export default function ArchivosPedido({ pedido }) {
   }, [id,token,revision]);
 
   async function recargar() { setRevision(x => x+1); }
-  async function post(ruta, body) { return leer(await fetch(`${API}/${ruta}`, { method:"POST",headers:{...headers,"Content-Type":"application/json"}, body:JSON.stringify(body),cache:"no-store" })); }
+  async function post(ruta, body) { return leer(await fetch(`${API}/${ruta}`, { method:"POST",credentials:"same-origin",headers:{...headers,"Content-Type":"application/json"}, body:JSON.stringify(body),cache:"no-store" })); }
 
   async function cargarArchivos(contenido, elegidos, posicionReemplazo = null) {
     if (!datos?.habilitada || procesando || !elegidos?.length) return;
@@ -90,7 +131,7 @@ export default function ArchivosPedido({ pedido }) {
             if(cancelado.current) throw new Error("Carga interrumpida.");
             const parte = archivo.slice((numero-1)*TAMANO_PARTE,Math.min(numero*TAMANO_PARTE,archivo.size));
             await leer(await fetch(`${API}/parte?pedidoId=${encodeURIComponent(id)}&cargaId=${encodeURIComponent(sesion.cargaId)}&numero=${numero}`, {
-              method:"PUT",headers:{...headers,"Content-Type":"application/octet-stream"},body:parte,cache:"no-store",
+              method:"PUT",credentials:"same-origin",headers:{...headers,"Content-Type":"application/octet-stream"},body:parte,cache:"no-store",
             }));
             setProgreso(Math.round(numero/total*100));
           }
@@ -117,12 +158,12 @@ export default function ArchivosPedido({ pedido }) {
 
   return (
     <section className={CAJA} aria-label="Archivos definitivos de publicaciones">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-900"><CloudUpload size={18} className="text-orange-600" /> Carga definitiva de publicaciones</div>
-      <p className="mt-2 text-xs leading-5 text-slate-600">Después de confirmar el pago, subí los archivos de tus cuatro contenidos. Se guardan de forma privada. La revisión comprueba requisitos técnicos y normas de las plataformas, sin evaluar tus elecciones creativas. Los archivos de la vista previa no se enviaron con el pedido.</p>
+      <div className="flex items-center gap-2 text-sm font-medium text-slate-900"><CloudUpload size={18} className="text-orange-600" /> Carga definitiva de publicaciones</div>
+      <p className="mt-2 text-xs leading-5 text-slate-600">Acá verás tus contenidos programados. También verás los archivos que requieren revisión para que los reemplaces y vuelvas a enviarlos para revisarlos nuevamente.</p>
       {cargando ? <p className="mt-3 text-xs text-slate-600">Consultando el estado de los contenidos...</p> : datos && (
         <>
           <p className="mt-3 text-xs font-medium text-slate-800">Estado: {datos.estadoContenidos === "aprobados" ? "Materiales aprobados" : datos.estadoContenidos === "correccion_solicitada" ? "Hay archivos que necesitan una corrección técnica" : datos.estadoContenidos === "pendiente_revision" ? "Listos para revisión técnica" : datos.estadoContenidos === "en_preparacion" ? "Carga en preparación" : "Pendiente de carga"}</p>
-          {!datos.habilitada && <div className="mt-3 flex gap-2 rounded-md bg-slate-50 p-3 text-xs leading-5 text-slate-700"><ShieldCheck className="shrink-0" size={17} /> La carga se habilita después de confirmar el pago y permanece cerrada una vez aprobados los materiales.</div>}
+          {!datos.habilitada && <div className="mt-3 flex gap-2 rounded-md bg-slate-50 p-3 text-xs leading-5 text-slate-700"><ShieldCheck className="shrink-0" size={17} /> La carga está disponible durante la preparación de la prueba o después de confirmar el pago. Se cierra cuando el material queda aprobado.</div>}
           <div className="mt-4 space-y-3">
             {datos.publicaciones.map((contenido, i) => {
               const propios = datos.archivos.filter(a=>a.contenidoId===contenido.id);
@@ -130,7 +171,7 @@ export default function ArchivosPedido({ pedido }) {
               const completo = propios.length >= (contenido.tipo === "carrusel" ? 2 : 1);
               return <div key={contenido.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-900">{contenido.tipo === "reel" ? <Film size={16}/> : <FileImage size={16}/>} Contenido {i+1} · {nombreTipo(contenido.tipo)}</div>
+                  <div className="flex items-center gap-2 text-xs font-medium text-slate-900">{contenido.tipo === "reel" ? <Film size={16}/> : <FileImage size={16}/>} Contenido {i+1} · {nombreTipo(contenido.tipo)}</div>
                   <span className={`text-[11px] font-medium ${completo ? "text-emerald-700" : "text-slate-500"}`}>{propios.length}/{limite} archivos</span>
                 </div>
                 {!!contenido.descripcion && <p className="mt-2 line-clamp-2 text-xs text-slate-600">{contenido.descripcion}</p>}
@@ -138,9 +179,9 @@ export default function ArchivosPedido({ pedido }) {
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={15} className={a.revision === "aprobado" ? "shrink-0 text-emerald-600" : "shrink-0 text-orange-600"}/>
                     <span className="min-w-0 flex-1 break-words text-slate-700">{a.nombre} · {a.revision === "aprobado" ? "Aprobado técnicamente" : a.revision === "rechazado" ? "Corrección solicitada" : "En revisión"}</span>
-                    {datos.habilitada && a.revision !== "aprobado" && <button type="button" disabled={procesando} onClick={()=>eliminar(contenido.id,a.posicion)} className="rounded p-1 text-slate-600 hover:text-red-700" aria-label={`Eliminar ${a.nombre}`}><Trash2 size={15}/></button>}
+                    {datos.habilitada && a.revision !== "aprobado" && <button type="button" disabled={procesando} onClick={()=>eliminar(contenido.id,a.posicion)} className="rounded-md p-1 text-slate-600 hover:text-red-700" aria-label={`Eliminar ${a.nombre}`}><Trash2 size={15}/></button>}
                   </div>
-                  {a.revision === "rechazado" && <p className="mt-2 rounded bg-amber-50 p-2 leading-5 text-amber-900">Motivo técnico: {a.motivoRevision || "Consultá con Administración el motivo de la corrección."}</p>}
+                  {a.revision === "rechazado" && <p className="mt-2 rounded-md bg-amber-50 p-2 leading-5 text-amber-900">Motivo técnico: {a.motivoRevision || "Consultá con Administración el motivo de la corrección."}</p>}
                   {datos.habilitada && a.revision === "rechazado" && (
                     <label className="mt-2 block font-medium text-orange-800">
                       Reemplazar este archivo corregido
@@ -164,10 +205,10 @@ export default function ArchivosPedido({ pedido }) {
           </div>
         </>
       )}
-      {procesando && <div className="mt-3" role="status"><p className="text-xs text-slate-700">{accion || "Procesando..."} {progreso ? `· ${progreso}%` : ""}</p><div className="mt-1 h-2 overflow-hidden rounded bg-slate-200"><div className="h-full rounded bg-orange-600 transition-all" style={{width:`${progreso}%`}} /></div></div>}
+      {procesando && <div className="mt-3" role="status"><p className="text-xs text-slate-700">{accion || "Procesando..."} {progreso ? `· ${progreso}%` : ""}</p><div className="mt-1 h-2 overflow-hidden rounded-md bg-slate-200"><div className="h-full rounded-md bg-orange-600 transition-all" style={{width:`${progreso}%`}} /></div></div>}
       {error && <p className="mt-3 text-xs text-red-700" role="alert">{error}</p>}
       {aviso && <p className="mt-3 text-xs text-emerald-700" role="status">{aviso}</p>}
-      <button type="button" disabled={procesando} onClick={recargar} className="mt-3 inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 disabled:opacity-50"><RefreshCw size={14}/> Actualizar contenidos</button>
+      <button type="button" disabled={procesando} onClick={recargar} className="mt-3 inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 disabled:opacity-50"><RefreshCw size={14}/> Actualizar contenidos</button>
     </section>
   );
 }

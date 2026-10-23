@@ -181,7 +181,17 @@ export async function ejecutarSolicitudProgramacion(request, env) {
     if (!pedido || pedido.clienteUsuarioId !== cliente.id) {
       return json({ ok: false, error: "Pedido no encontrado o sin autorización." }, 404);
     }
-    if (!esPruebaPendiente(pedido)) return json({ ok: false, error: "El pedido no admite cambios en esta etapa." }, 409);
+    if (!esPruebaPendiente(pedido)) {
+      if (rutaEstado && pedido.estadoServicio === 'activo' && pedido.modalidadContratacion === 'prueba_gratuita') {
+        const cola = await db.collection('calendarios_clientes_activos').findOne({_id:datos.pedidoId,estado:'activa'});
+        return json({ok:true,pedidoId:datos.pedidoId,listaParaSolicitud:false,confirmada:true,
+          vigente:Boolean(cola),estado:'programada',aprobadosTecnicamente:true,
+          activada:Boolean(cola),publicacionHabilitada:Boolean(cola?.publicacionHabilitada),
+          cantidadContenidos:4,cantidadEventos:cola?.eventos?.length||0,
+          zonaHoraria:pedido.zonaHoraria,redes:pedido.redes||[],motivos:[]});
+      }
+      return json({ ok: false, error: "El pedido no admite cambios en esta etapa." }, 409);
+    }
     const solicitudes = db.collection(COLECCION);
     if (rutaRevocar) {
       const actualizado = await solicitudes.updateOne({ _id: datos.pedidoId,

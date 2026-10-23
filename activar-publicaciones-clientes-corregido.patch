@@ -1,0 +1,554 @@
+diff --git a/worker.js b/worker.js
+--- a/worker.js
++++ b/worker.js
+@@ -7,6 +7,7 @@
+ import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario, ejecutarEnsayoCalendario, ejecutarReservaCalendario } from "./api/servicios/calendario-simulacion.js";
+ import { ejecutarSolicitudProgramacion } from "./api/servicios/solicitud-programacion.js";
+ import { ejecutarAdminProgramacion } from "./api/servicios/admin-programacion.js";
++import { ejecutarCronClientes, servirMedioCliente } from "./api/servicios/publicaciones-clientes.js";
+ import { ejecutarActivacionSimulada } from "./api/servicios/activacion-simulada.js";
+ import { ejecutarPublicacionPiloto, ejecutarImagenPiloto } from "./api/servicios/publicacion-piloto-meta.js";
+ import { ejecutarAccesoClientes, diagnosticarConfiguracionClientes, ejecutarPanelClientes, obtenerClienteRegistrado } from "./api/servicios/clientes-acceso.js";
+@@ -1483,6 +1484,9 @@
+       }
+     }
+ 
++    if (url.pathname.startsWith("/api/servicios/publicaciones/media/")) {
++      return servirMedioCliente(request, env);
++    }
+     if (url.pathname.startsWith("/api/")) {
+   return Response.json(
+     {
+@@ -1497,12 +1501,18 @@
+   },
+ 
+   async scheduled(controller, env, ctx) {
+-    ctx.waitUntil(
+-      ejecutarCronRedes(env).catch((error) => {
+-        console.error("Error en Cron Trigger de redes:", error);
++    // Los dos servicios usan el mismo disparador, con colas y credenciales distintas.
++    // La falla de uno nunca impide ejecutar el otro.
++    ctx.waitUntil(Promise.allSettled([
++      ejecutarCronRedes(env).catch(error => {
++        console.error("Cron tienda:", error?.message || "ERROR");
++        throw error;
++      }),
++      ejecutarCronClientes(env).catch(error => {
++        console.error("Cron clientes:", error?.message || "ERROR");
+         throw error;
+       })
+-    );
++    ]));
+   }
+ };
+ 
+diff --git a/api/servicios/admin-programacion.js b/api/servicios/admin-programacion.js
+--- a/api/servicios/admin-programacion.js
++++ b/api/servicios/admin-programacion.js
+@@ -4,6 +4,7 @@
+ import crypto from "node:crypto";
+ import { evaluarSolicitud } from "./solicitud-programacion.js";
+ import { calcularCalendarioSimulado } from "./calendario-simulacion.js";
++import { activarSemanaDesdeAdmin } from "./publicaciones-clientes.js";
+ 
+ const RUTA = "/api/admin/servicios/publicaciones/programacion";
+ const DB = "andres_imprimibles";
+@@ -101,14 +102,40 @@
+       const pedido = await db.collection("pedidos_servicios").findOne({ pedidoId, tipo: "publicaciones" });
+       if (!pedido) return pagina("Pedido no encontrado", "", 404);
+       if (pedido.modalidadContratacion !== "prueba_gratuita") return pagina("Modalidad pendiente", "<p>Las semanas pagas necesitan una validación de pago y activación específica.</p>", 409);
++      if (pedido.estadoServicio === 'activo') {
++        const programacion = await db.collection('calendarios_clientes_activos').findOne({_id:pedidoId});
++        const filas = (programacion?.eventos||[]).map(e => `<div class="linea">${escapar(e.contenidoId)} · ${escapar(e.red)} · ${escapar(e.estado)} · ${escapar(fechaLocal(e, pedido.zonaHoraria))}${e.enlace ? ` · <a href="${escapar(e.enlace)}" target="_blank" rel="noopener noreferrer">Ver publicación</a>` : ''}</div>`).join('');
++        const recuperar = programacion?.estado === 'preparando' && programacion?.revision;
++        if (recuperar && request.method === 'POST' && datos.get('accion') === 'recuperar_activacion') {
++          if (!tokenValido(env,pedidoId,programacion.revision,datos.get('csrf')))
++            return pagina('Sesión de revisión vencida', '<p>Recargá el pedido.</p>',409);
++          const r=await activarSemanaDesdeAdmin(db,env,pedidoId,programacion.revision);
++          if(!r.ok)return pagina('No se pudo completar la activación',`<p>${escapar(r.error)}</p>`,r.status||409);
++          return Response.redirect(`${url.origin}${RUTA}?pedidoId=${encodeURIComponent(pedidoId)}&activada=1`,303);
++        }
++        const mensaje = programacion?.estado==='activa' ? 'Semana activada. Los envíos siguen el horario de cada red.' :
++          'La activación quedó incompleta. No se enviarán publicaciones hasta finalizarla.';
++        const form = recuperar ? `<form method="post" action="${RUTA}">
++          <input type="hidden" name="pedidoId" value="${escapar(pedidoId)}">
++          <input type="hidden" name="accion" value="recuperar_activacion">
++          <input type="hidden" name="csrf" value="${token(env,pedidoId,programacion.revision)}">
++          <button type="submit">Finalizar activación pendiente</button></form>` : '';
++        return pagina('Semana activada', `<section><h2>Pedido ${escapar(pedidoId)}</h2><p class="${recuperar?'mal':'bien'}">${escapar(mensaje)}</p><p>${escapar(pedido.zonaHoraria||'')}</p>${filas}${form}</section><p><a href="${RUTA}">Volver a los pedidos</a></p>`);
++      }
+       const validacion = await verificar(db, pedido);
+       const aprobaciones = db.collection(APROBACIONES);
+       let existente = await aprobaciones.findOne({ _id: pedidoId });
++      let resultadoActivacion = null;
+       if (request.method === "POST") {
+-        if (datos.get("accion") !== "aprobar_revision" || !validacion.listo ||
+-            !tokenValido(env, pedidoId, validacion.evaluacion.revision, datos.get("csrf"))) {
++        if (!validacion.listo || !tokenValido(env, pedidoId, validacion.evaluacion.revision, datos.get("csrf"))) {
+           return pagina("Aprobación no disponible", "<p>La autorización o alguno de los requisitos cambió. Volvé a abrir el pedido y revisalo.</p>", 409);
+         }
++        if (datos.get("accion") === "activar_semana") {
++          resultadoActivacion = await activarSemanaDesdeAdmin(db, env, pedidoId, validacion.evaluacion.revision);
++          if (!resultadoActivacion.ok) return pagina("Activación pendiente", `<p>${escapar(resultadoActivacion.error)}</p><p><a href="${RUTA}?pedidoId=${encodeURIComponent(pedidoId)}">Volver al pedido</a></p>`, resultadoActivacion.status || 409);
++          return Response.redirect(`${url.origin}${RUTA}?pedidoId=${encodeURIComponent(pedidoId)}&activada=1`,303);
++        }
++        if(datos.get("accion") !== "aprobar_revision") return pagina("Acción incorrecta", "", 400);
+         const ahora = new Date();
+         await aprobaciones.updateOne({ _id: pedidoId }, { $set: {
+           pedidoId, revision: validacion.evaluacion.revision,
+@@ -129,14 +156,20 @@
+       const filas = validacion.calendario.eventos.map(e => `<div class="linea">Contenido ${escapar(e.numeroContenido)} · ${escapar(e.tipo)} · ${escapar(e.red)} · ${escapar(fechaLocal(e, pedido.zonaHoraria))}</div>`).join("");
+       const vigente = existente?.revision === validacion.evaluacion.revision &&
+         existente?.estado === "aprobacion_administrativa_pendiente_activacion";
++      const listaActivacion = vigente && validacion.listo && pedido.estadoServicio === 'sin_activar';
+       return pagina("Aprobar y programar semana", `
+         <section><h2>Pedido ${escapar(pedidoId)}</h2><div class="grid"><p><small>Emprendimiento</small><br>${escapar(pedido.negocio?.nombre || "—")}</p><p><small>Redes</small><br>${escapar((pedido.redes || []).join(" · "))}</p><p><small>Zona horaria</small><br>${escapar(pedido.zonaHoraria || "—")}</p><p><small>Estado</small><br>${escapar(pedido.estadoServicio || "—")}</p></div><p><a href="/api/admin/servicios/publicaciones/archivos?pedidoId=${encodeURIComponent(pedidoId)}">Revisar archivos y solicitar correcciones</a></p></section>
+         <section><h2>Verificaciones</h2>${condiciones}${fallos ? `<ul class="mal">${fallos}</ul>` : ""}</section>
+         <section><h2>Programación propuesta</h2><p class="muted">Estas fechas son una simulación calculada desde este momento; todavía no están confirmadas ni reservadas como publicables.</p>${filas || "<p>No se pudo generar una propuesta completa.</p>"}</section>
+         <section><h2>Aprobación administrativa</h2>${vigente ? '<p class="bien">La revisión administrativa fue aprobada. La activación y publicación siguen pendientes.</p>' : ""}
+           ${validacion.listo && !vigente ? `<form method="post" action="${RUTA}"><input type="hidden" name="pedidoId" value="${escapar(pedidoId)}"><input type="hidden" name="accion" value="aprobar_revision"><input type="hidden" name="csrf" value="${token(env,pedidoId,validacion.evaluacion.revision)}"><button type="submit">Aprobar revisión administrativa</button></form>` : "<p class=\"muted\">Para aprobar, completá los requisitos pendientes.</p>"}
+-          <p><button type="button" disabled>Activar y programar semana</button></p>
+-          <p class="muted"><small>La activación real necesita el servicio despachador de publicaciones. No se enviará contenido a Meta desde esta página.</small></p>
++          ${listaActivacion ? `<form method="post" action="${RUTA}">
++            <input type="hidden" name="pedidoId" value="${escapar(pedidoId)}">
++            <input type="hidden" name="accion" value="activar_semana">
++            <input type="hidden" name="csrf" value="${token(env,pedidoId,validacion.evaluacion.revision)}">
++            <button type="submit">Activar y programar semana</button>
++          </form>` : '<p class="muted">Primero aprobá la revisión. La programación real exige la habilitación explícita del servicio.</p>'}
++          <p class="muted"><small>Al activar, comenzarán los siete días de prueba y las publicaciones se enviarán automáticamente a las redes seleccionadas, en sus horarios.</small></p>
+         </section>`);
+     });
+   } catch (error) {
+diff --git a/api/servicios/solicitud-programacion.js b/api/servicios/solicitud-programacion.js
+--- a/api/servicios/solicitud-programacion.js
++++ b/api/servicios/solicitud-programacion.js
+@@ -181,7 +181,17 @@
+     if (!pedido || pedido.clienteUsuarioId !== cliente.id) {
+       return json({ ok: false, error: "Pedido no encontrado o sin autorización." }, 404);
+     }
+-    if (!esPruebaPendiente(pedido)) return json({ ok: false, error: "El pedido no admite cambios en esta etapa." }, 409);
++    if (!esPruebaPendiente(pedido)) {
++      if (rutaEstado && pedido.estadoServicio === 'activo' && pedido.modalidadContratacion === 'prueba_gratuita') {
++        const cola = await db.collection('calendarios_clientes_activos').findOne({_id:datos.pedidoId,estado:'activa'});
++        return json({ok:true,pedidoId:datos.pedidoId,listaParaSolicitud:false,confirmada:true,
++          vigente:Boolean(cola),estado:'programada',aprobadosTecnicamente:true,
++          activada:Boolean(cola),publicacionHabilitada:Boolean(cola?.publicacionHabilitada),
++          cantidadContenidos:4,cantidadEventos:cola?.eventos?.length||0,
++          zonaHoraria:pedido.zonaHoraria,redes:pedido.redes||[],motivos:[]});
++      }
++      return json({ ok: false, error: "El pedido no admite cambios en esta etapa." }, 409);
++    }
+     const solicitudes = db.collection(COLECCION);
+     if (rutaRevocar) {
+       const actualizado = await solicitudes.updateOne({ _id: datos.pedidoId,
+diff --git a/api/servicios/cliente-panel-detalles.js b/api/servicios/cliente-panel-detalles.js
+--- a/api/servicios/cliente-panel-detalles.js
++++ b/api/servicios/cliente-panel-detalles.js
+@@ -82,6 +82,11 @@
+       for (const c of conexion) if (cuentas[c.pedidoId]) cuentas[c.pedidoId][c.plataforma]={
+         nombre:texto(c.nombre),pageId:texto(c.pageId,40),usuario:texto(c.usuario,40),estado:texto(c.estado,40)
+       };
++      // Leer únicamente los calendarios activados de los pedidos del cliente.
++      const programaciones=ids.length ? await db.collection('calendarios_clientes_activos')
++        .find({_id:{$in:ids},estado:{$in:['activa','finalizada']}})
++        .project({_id:1,eventos:1}).toArray():[];
++      const programacionesPorId=new Map(programaciones.map(p=>[p._id,p]));
+       const ultimo=documentos[0];
+       const perfil = {
+         nombreApellido:texto(cuenta?.perfil?.nombreApellido||cuenta?.perfil?.nombre||cuenta?.nombreApellido||cuenta?.nombreCompleto||cuenta?.nombre,150),
+@@ -94,7 +99,20 @@
+         p.pedidoId,{cuentas:cuentas[p.pedidoId],
+           zonaHoraria:texto(p.zonaHoraria,80),
+           prueba:{estado:texto(p.prueba?.estado,50),inicioEn:p.prueba?.inicioEn||p.prueba?.inicio||null,finEn:p.prueba?.finEn||p.prueba?.fin||null},
+-          contenidos:Array.isArray(p.publicaciones)?p.publicaciones.slice(0,4).map(miniContenido):[]}
++          contenidos:Array.isArray(p.publicaciones)?p.publicaciones.slice(0,4).map(c=>{
++            const minimo=miniContenido(c);
++            const eventos=programacionesPorId.get(p.pedidoId)?.eventos||[];
++            const porRed=eventos.filter(e=>e.contenidoId===c.id);
++            const definitiva=porRed.find(e=>Number.isFinite(Date.parse(e.fechaHoraUTC||'')))?.fechaHoraUTC;
++            if (definitiva) minimo.fechaHoraDefinitiva=definitiva;
++            minimo.estadoPorRed={...minimo.estadoPorRed,...Object.fromEntries(porRed.map(e=>[
++              e.red,e.estado==='publicada'?'publicado':e.estado==='atencion_manual'?'error':'programado'
++            ]))};
++            minimo.urlsPublicadas={...minimo.urlsPublicadas,...Object.fromEntries(porRed
++              .map(e=>[e.red,enlacePublicadoSeguro(e.enlace)])
++              .filter(([,enlace])=>Boolean(enlace)))};
++            return minimo;
++          }):[]}
+       ]));
+       return respuesta({ok:true,perfil,detalles});
+     });
+diff --git a/api/servicios/publicaciones-clientes.js b/api/servicios/publicaciones-clientes.js
+new file mode 100644
+--- /dev/null
++++ b/api/servicios/publicaciones-clientes.js
+@@ -0,0 +1,369 @@
++// Cola de publicaciones de clientes: independiente de tienda, Threads y piloto manual.
++// Envíos apagados por defecto. No reintenta acciones cuyo resultado en Meta es incierto.
++import crypto from 'node:crypto';
++import { calcularCalendarioSimulado } from './calendario-simulacion.js';
++import { evaluarSolicitud } from './solicitud-programacion.js';
++
++const DB = 'andres_imprimibles';
++const COLA = 'calendarios_clientes_activos';
++const MEDIA = '/api/servicios/publicaciones/media/';
++const VERSION = 'v26.0';
++const ID = /^SER-[a-f0-9-]{36}$/i;
++const CI = /^contenido-[1-4]$/;
++const MEDIOS = new Set(['image/jpeg','image/png','image/webp','video/mp4']);
++const HORA = 3600000;
++const VENTANA_FIRMA_S = 4 * 60 * 60;
++const LIMITE_POR_CRON = 2;
++const SIGUIENTES = new Set(['programada','contenedor_pendiente','video_confirmacion_pendiente']);
++
++const habilitado = env => String(env?.SERVICIO_CLIENTES_PUBLICACION_REAL_HABILITADA || '').toLowerCase() === 'true';
++const json = (data, status=200) => Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
++const firmaSecret = env => {
++  const s=String(env?.SERVICIO_CLIENTES_MEDIA_FIRMA_SECRET || '');
++  if(s.length < 32) throw new Error('MEDIA_FIRMA_NO_CONFIGURADA');
++  return s;
++};
++const baseMedia = env => {
++  const entrada = String(env?.SERVICIO_CLIENTES_MEDIA_BASE_URL || 'https://andreshousesitter.com');
++  const u=new URL(entrada);
++  if(u.protocol!=='https:' || u.username || u.password || u.pathname!=='/' || u.search || u.hash) throw new Error('MEDIA_BASE_INVALIDA');
++  return u.origin;
++};
++const mac = (env,pedidoId,contenidoId,posicion,vence) => crypto.createHmac('sha256',firmaSecret(env))
++  .update(`comunidad-media-v1\n${pedidoId}\n${contenidoId}\n${posicion}\n${vence}`).digest('hex');
++function urlMedia(env, pedidoId, contenidoId, posicion){
++  const vence=Math.floor(Date.now()/1000)+VENTANA_FIRMA_S;
++  const sig=mac(env,pedidoId,contenidoId,posicion,vence);
++  return `${baseMedia(env)}${MEDIA}${pedidoId}/${contenidoId}/${posicion}?v=${vence}&s=${sig}`;
++}
++async function conDB(env, f) {
++  if(!env?.MONGODB_URI) throw new Error('DB_NO_CONFIGURADA');
++  const {MongoClient}=await import('mongodb');
++  const client=new MongoClient(env.MONGODB_URI);
++  try { await client.connect();return await f(client.db(DB)); }
++  finally {await client.close().catch(()=>{});}
++}
++function descifrar(c,env) {
++  const k=String(env?.SERVICIO_META_CIFRADO_KEY||'');
++  if(!/^[a-f0-9]{64}$/i.test(k)) throw new Error('CLAVE_META_INVALIDA');
++  const x=c?.tokenPaginaCifrado;
++  if(x?.algoritmo!=='aes-256-gcm'||!x.iv||!x.etiqueta||!x.contenido) throw new Error('TOKEN_META_INVALIDO');
++  const d=crypto.createDecipheriv('aes-256-gcm',Buffer.from(k,'hex'),Buffer.from(x.iv,'base64'));
++  d.setAuthTag(Buffer.from(x.etiqueta,'base64'));
++  const valor=Buffer.concat([d.update(Buffer.from(x.contenido,'base64')),d.final()]).toString('utf8');
++  if(valor.length < 20||valor.length > 8192) throw new Error('TOKEN_META_INVALIDO');
++  return valor;
++}
++function validarAprobacion(pedido, evaluacion, aprobacion, solicitud) {
++  return pedido?.tipo==='publicaciones' && pedido.modalidadContratacion==='prueba_gratuita' &&
++    pedido.estadoServicio==='sin_activar' && pedido.prueba?.estado==='pendiente_activacion' &&
++    !pedido.prueba?.inicio && !pedido.activadoEn && evaluacion.lista && evaluacion.aprobados &&
++    aprobacion?.estado==='aprobacion_administrativa_pendiente_activacion' &&
++    aprobacion?.revision===evaluacion.revision &&
++    solicitud?.estado==='solicitud_confirmada_pendiente_habilitacion' &&
++    solicitud?.revision===evaluacion.revision &&
++    solicitud?.aceptaProgramacionYPublicacionAlHabilitar===true;
++}
++
++// Esta función sólo la invoca la pantalla administrativa ya autenticada.
++// La cola se inserta bloqueada y se habilita al finalizar la actualización del pedido.
++export async function activarSemanaDesdeAdmin(db, env, pedidoId, revision) {
++  if(!habilitado(env)) return {ok:false,error:'Los envíos de clientes siguen deshabilitados. Configurá primero el servicio y sus pruebas.',status:409};
++  if(!ID.test(pedidoId)||!/^[a-f0-9]{64}$/.test(revision||'')) return {ok:false,error:'Pedido o revisión inválidos.',status:400};
++  firmaSecret(env);baseMedia(env);
++  const pedidos=db.collection('pedidos_servicios');
++  const cola=db.collection(COLA);
++  const pedido=await pedidos.findOne({pedidoId,tipo:'publicaciones'});
++  if(!pedido) return {ok:false,error:'Pedido inexistente.',status:404};
++  const anterior=await cola.findOne({_id:pedidoId});
++  if(anterior?.estado==='activa' && pedido.estadoServicio==='activo') {
++    await db.collection('solicitudes_programacion_servicios').updateOne({_id:pedidoId,revision},
++      {$set:{estado:'activada',publicacionHabilitada:true}});
++    return {ok:true,yaActiva:true,eventos:anterior.eventos.length};
++  }
++  // Recuperar una activación interrumpida tras actualizar el pedido, antes de
++  // habilitar la cola. No recalcular fechas ni crear eventos diferentes.
++  if(anterior?.estado==='preparando' && pedido.estadoServicio==='activo' && anterior.revision===revision){
++    await cola.updateOne({_id:pedidoId,estado:'preparando'},{$set:{estado:'activa',publicacionHabilitada:true,activadaEn:new Date()}});
++    await db.collection('solicitudes_programacion_servicios').updateOne({_id:pedidoId,revision},
++      {$set:{estado:'activada',publicacionHabilitada:true,activadoEn:new Date()}});
++    return {ok:true,yaActiva:true,eventos:anterior.eventos.length};
++  }
++  const evaluacion=await evaluarSolicitud(db,pedido);
++  const [aprobacion,solicitud]=await Promise.all([
++    db.collection('aprobaciones_programacion_servicios').findOne({_id:pedidoId}),
++    db.collection('solicitudes_programacion_servicios').findOne({_id:pedidoId})
++  ]);
++  if(revision!==evaluacion.revision||!validarAprobacion(pedido,evaluacion,aprobacion,solicitud))
++    return {ok:false,error:'Faltan requisitos, aprobación o consentimiento vigente. Reabrí la revisión.',status:409};
++  const archivos=await db.collection('archivos_servicios').find({pedidoId,estado:'subido'}).toArray();
++  for(const p of pedido.publicaciones){
++    const lista=archivos.filter(a=>a.contenidoId===p.id);
++    if(lista.length < (p.tipo==='carrusel'?2:1) || lista.length > (p.tipo==='carrusel'?10:1) ||
++      lista.some(a=>a.revision!=='aprobado'||!MEDIOS.has(a.tipo)||!a.r2Key))
++      return {ok:false,error:`El contenido ${p.id} tiene archivos pendientes.`,status:409};
++    for(const a of lista){
++      // El endpoint de publicación de Instagram consume imágenes JPEG por URL.
++      // El editor admite también PNG/WebP para previsualización, pero no se
++      // activan esas semanas sin normalizar primero el archivo a JPEG.
++      if(pedido.redes.includes('instagram') && p.tipo!=='reel' && a.tipo!=='image/jpeg')
++        return {ok:false,error:`El contenido ${p.id} necesita imágenes JPEG para publicar en Instagram.`,status:409};
++      const existente=await env?.SERVICIOS_CONTENIDOS_R2?.head(a.r2Key);
++      if(!existente||existente.size!==a.tamano) return {ok:false,error:`Archivo no disponible: ${p.id}.`,status:409};
++    }
++  }
++  const conexiones=await db.collection('conexiones_meta_pedidos').find({pedidoId,estado:'conectada',plataforma:{$in:pedido.redes}}).toArray();
++  for(const red of pedido.redes){
++    const c=conexiones.find(x=>x.plataforma===red);
++    if(!c||!c.pageId|| (red==='instagram' && !c.instagramId))
++      return {ok:false,error:`Falta la conexión a ${red}.`,status:409};
++    descifrar(c,env);
++  }
++  const ahora=new Date();
++  const ancla=new Date(ahora.getTime()+15*60000);
++  const calendario=calcularCalendarioSimulado(pedido,ancla);
++  if(calendario.advertencias.length||calendario.eventos.length!==pedido.publicaciones.length*pedido.redes.length)
++    return {ok:false,error:'El calendario presenta advertencias o faltan horarios. Revisalo antes de activar.',status:409};
++  const eventos=calendario.eventos.map(e=>({
++    id:e.id,red:e.red,contenidoId:e.contenidoId,tipo:e.tipo,fechaHoraUTC:e.fechaHoraUTC,
++    estado:'programada',intentos:0,contenedorId:null,metaId:null,enlace:null,publicadaEn:null
++  }));
++  // No se recalcula el calendario en caso de reintento; debe prevalecer la reserva original.
++  if(anterior && anterior.estado!=='preparando')
++    return {ok:false,error:'La semana ya tiene una programación incompatible. Requiere revisión técnica.',status:409};
++  if(anterior && anterior.revision!==revision)
++    return {ok:false,error:'La programación previa pertenece a otra revisión.',status:409};
++  if(!anterior){
++    try {await cola.insertOne({_id:pedidoId,pedidoId,clienteUsuarioId:pedido.clienteUsuarioId,revision,
++      estado:'preparando',publicacionHabilitada:false,creadoEn:ahora,
++      inicio:ahora,fin:new Date(ahora.getTime()+7*24*HORA),zonaHoraria:pedido.zonaHoraria,eventos});}
++    catch(e){if(e?.code===11000)return {ok:false,error:'La semana está siendo activada desde otra sesión. Recargá.',status:409};throw e;}
++  }
++  const programacion=anterior||await cola.findOne({_id:pedidoId});
++  const finalFechas=new Map(programacion.eventos.map(e=>[e.contenidoId,e.fechaHoraUTC]));
++  const fecha=new Date();
++  const modificacion=await pedidos.updateOne({pedidoId,tipo:'publicaciones',estadoServicio:'sin_activar',
++    'prueba.estado':'pendiente_activacion'},{$set:{
++    estado:'prueba_activa',estadoServicio:'activo',estadoContenidos:'aprobados',
++    'prueba.estado':'activa','prueba.inicio':programacion.inicio,'prueba.fin':programacion.fin,
++    fechaInicioServicio:programacion.inicio,fechaFinServicio:programacion.fin,activadoEn:fecha,
++    actualizadoEn:fecha,publicacionHabilitada:true,
++    publicaciones:pedido.publicaciones.map(p=>({...p,fechaHoraDefinitiva:finalFechas.get(p.id)||null,estado:'programado'}))
++  }});
++  if(!modificacion.modifiedCount){
++    const comprobacion=await pedidos.findOne({pedidoId});
++    if(comprobacion?.estadoServicio!=='activo') return {ok:false,error:'La activación cambió de estado. Consultá el pedido.',status:409};
++  }
++  await cola.updateOne({_id:pedidoId,revision,estado:'preparando'},{$set:{estado:'activa',publicacionHabilitada:true,activadaEn:fecha}});
++  await db.collection('solicitudes_programacion_servicios').updateOne({_id:pedidoId,revision},
++    {$set:{estado:'activada',activadoEn:fecha,publicacionHabilitada:true}});
++  return {ok:true,yaActiva:false,eventos:programacion.eventos.length};
++}
++
++// Únicamente entrega archivos aprobados, asociados a un pedido ya activado.
++export async function servirMedioCliente(request,env){
++  const u=new URL(request.url);
++  if(!['GET','HEAD'].includes(request.method)||u.origin!==baseMedia(env))return json({ok:false},403);
++  const match=/^\/api\/servicios\/publicaciones\/media\/(SER-[a-f0-9-]{36})\/(contenido-[1-4])\/(\d)$/.exec(u.pathname);
++  if(!match)return json({ok:false},404);
++  const [,pedidoId,contenidoId,numero]=match;const posicion=Number(numero);
++  const vence=u.searchParams.get('v')||'';const sig=u.searchParams.get('s')||'';
++  const ahora=Math.floor(Date.now()/1000);
++  if(!/^\d{10}$/.test(vence)||!/^[a-f0-9]{64}$/i.test(sig)||Number(vence)<ahora||Number(vence)>ahora+VENTANA_FIRMA_S)
++    return json({ok:false},403);
++  const esperado=Buffer.from(mac(env,pedidoId,contenidoId,posicion,vence),'hex');
++  if(!crypto.timingSafeEqual(esperado,Buffer.from(sig,'hex')))return json({ok:false},403);
++  return conDB(env,async db=>{
++    const plan=await db.collection(COLA).findOne({_id:pedidoId,estado:'activa',publicacionHabilitada:true,
++      eventos:{$elemMatch:{contenidoId,estado:{$in:['enviando_resultado_incierto','contenedor_pendiente','consultando_contenedor','publicacion_iniciada_resultado_incierto','video_confirmacion_pendiente']}}}});
++    if(!plan)return json({ok:false},404);
++    const a=await db.collection('archivos_servicios').findOne({pedidoId,contenidoId,posicion,estado:'subido',revision:'aprobado'});
++    if(!a||!MEDIOS.has(a.tipo)||!a.r2Key)return json({ok:false},404);
++    const bucket=env?.SERVICIOS_CONTENIDOS_R2;if(!bucket?.get)return json({ok:false},503);
++    const h={'Content-Type':a.tipo,'Content-Disposition':'inline','Cache-Control':'private,max-age=60',
++      'X-Content-Type-Options':'nosniff','Accept-Ranges':'bytes','Content-Security-Policy':"default-src 'none'"};
++    const rango=request.headers.get('range');let seleccion;
++    if(rango){const m=/^bytes=(\d+)-(\d*)$/.exec(rango);
++      if(!m)return new Response(null,{status:416,headers:{'Content-Range':`bytes */${a.tamano}`}});
++      const ini=Number(m[1]),fin=m[2]?Number(m[2]):a.tamano-1;
++      if(!Number.isSafeInteger(ini)||!Number.isSafeInteger(fin)||ini>fin||fin>=a.tamano)
++        return new Response(null,{status:416,headers:{'Content-Range':`bytes */${a.tamano}`}});
++      seleccion={offset:ini,length:fin-ini+1};h['Content-Range']=`bytes ${ini}-${fin}/${a.tamano}`;
++    }
++    const archivo=await bucket.get(a.r2Key,seleccion?{range:seleccion}:undefined);
++    if(!archivo)return json({ok:false},404);
++    h['Content-Length']=String(seleccion?seleccion.length:a.tamano);
++    return new Response(request.method==='HEAD'?null:archivo.body,{status:seleccion?206:200,headers:h});
++  });
++}
++
++async function graph(ruta,token,form){
++  const r=await fetch(`https://graph.facebook.com/${VERSION}/${ruta}`,{
++    method:form?'POST':'GET',redirect:'manual',
++    headers:{Authorization:`Bearer ${token}`,...(form?{'Content-Type':'application/x-www-form-urlencoded'}:{})},
++    ...(form?{body:new URLSearchParams(form)}:{})
++  });
++  if(r.status>=300 && r.status<400)throw new Error(`META_HTTP_${r.status}`);
++  const d=await r.json().catch(()=>null);
++  if(!r.ok||!d||d.error)throw new Error(`META_HTTP_${r.status}_${Number(d?.error?.code)||0}`);
++  return d;
++}
++async function enlacePublicado(metaId,red,token){
++  try {const d=await graph(`${metaId}?fields=${red==='instagram'?'permalink':'link,permalink_url'}`,token);
++    const candidato=d.permalink||d.permalink_url||d.link;
++    const u=new URL(candidato);
++    if(u.protocol==='https:' && ['www.instagram.com','instagram.com','www.facebook.com','facebook.com'].includes(u.hostname))return u.toString();
++  }catch{/* No transformar un ID en una URL inventada. */}
++  return null;
++}
++function copy(p,red){
++  return [String(p.descripcion||'').trim(),String(red==='instagram'?p.ctaInstagram||'':p.ctaFacebook||'').trim(),
++    ...(red==='facebook'&&p.urlFacebook?[p.urlFacebook]:[]),String(p.hashtags||'').trim()].filter(Boolean).join('\n\n').slice(0,2100);
++}
++function clave(e){return `eventos.${e.indice}`;}
++async function actualizar(db,plan,e,estado,otros={}){
++  const campos={};for(const [k,v] of Object.entries({estado,...otros}))campos[`${clave(e)}.${k}`]=v;
++  await db.collection(COLA).updateOne({_id:plan._id,[`${clave(e)}.id`]:e.id},{$set:campos});
++}
++async function reclamar(db,plan,e,anterior,nuevo){
++  const c=await db.collection(COLA).updateOne({_id:plan._id,estado:'activa',publicacionHabilitada:true,
++    [`${clave(e)}.id`]:e.id,[`${clave(e)}.estado`]:anterior},{$set:{[`${clave(e)}.estado`]:nuevo,[`${clave(e)}.actualizadoEn`]:new Date()}});
++  return c.modifiedCount===1;
++}
++async function publicarInstagram(db,plan,e,p,c,token,archivos,env){
++  const ig=String(c.instagramId||'');if(!/^\d{5,30}$/.test(ig))throw new Error('IG_INVALIDA');
++  const caption=copy(p,'instagram');
++  // El estado ya se reclamó antes de cualquier llamada que cree contenido en Meta.
++  let contenedor;
++  if(p.tipo==='carrusel'){
++    const hijos=[];
++    for(const a of archivos){
++      const hijo=await graph(`${ig}/media`,token,{image_url:urlMedia(env,plan._id,p.id,a.posicion),is_carousel_item:'true'});
++      if(!/^\d{5,30}$/.test(String(hijo.id||'')))throw new Error('META_ID_INVALIDO');
++      hijos.push(String(hijo.id));
++    }
++    // Meta debe terminar de procesar los hijos antes de armar el carrusel.
++    // No se repiten las llamadas de creación si la preparación falla.
++    let preparados=false;
++    for(let intento=0;intento<4;intento++){
++      const revisiones=await Promise.all(hijos.map(id=>graph(`${id}?fields=status_code`,token)));
++      if(revisiones.some(x=>['ERROR','EXPIRED'].includes(x.status_code)))throw new Error('IG_HIJO_CON_ERROR');
++      if(revisiones.every(x=>x.status_code==='FINISHED')){preparados=true;break;}
++      await new Promise(res=>setTimeout(res,1500));
++    }
++    if(!preparados)throw new Error('IG_HIJOS_SIN_PREPARAR');
++    contenedor=await graph(`${ig}/media`,token,{media_type:'CAROUSEL',children:hijos.join(','),caption});
++  }else if(p.tipo==='reel'){
++    contenedor=await graph(`${ig}/media`,token,{media_type:'REELS',video_url:urlMedia(env,plan._id,p.id,archivos[0].posicion),caption,share_to_feed:'true'});
++  }else{
++    contenedor=await graph(`${ig}/media`,token,{image_url:urlMedia(env,plan._id,p.id,archivos[0].posicion),caption});
++  }
++  if(!/^\d{5,30}$/.test(String(contenedor?.id||'')))throw new Error('META_ID_INVALIDO');
++  await actualizar(db,plan,e,'contenedor_pendiente',{contenedorId:String(contenedor.id)});
++}
++async function finalizarInstagram(db,plan,e,c,token){
++  const id=String(e.contenedorId||'');if(!/^\d{5,30}$/.test(id))throw new Error('CONTENEDOR_INVALIDO');
++  const d=await graph(`${id}?fields=status_code`,token);
++  if(d.status_code!=='FINISHED'){
++    await actualizar(db,plan,e,['ERROR','EXPIRED'].includes(d.status_code)?'atencion_manual':'contenedor_pendiente');return;
++  }
++  if(!await reclamar(db,plan,e,'consultando_contenedor','publicacion_iniciada_resultado_incierto'))return;
++  const res=await graph(`${c.instagramId}/media_publish`,token,{creation_id:id});
++  if(!/^\d{5,30}$/.test(String(res?.id||'')))throw new Error('META_ID_INVALIDO');
++  await actualizar(db,plan,e,'publicada',{metaId:String(res.id),publicadaEn:new Date(),enlace:await enlacePublicado(String(res.id),'instagram',token)});
++}
++async function publicarFacebook(db,plan,e,p,c,token,archivos,env){
++  const page=String(c.pageId||'');if(!/^\d{5,30}$/.test(page))throw new Error('FB_PAGINA_INVALIDA');
++  const mensaje=copy(p,'facebook');
++  let mediaId;
++  if(p.tipo==='imagen'){
++    const r=await graph(`${page}/photos`,token,{url:urlMedia(env,plan._id,p.id,archivos[0].posicion),message:mensaje,published:'true'});
++    mediaId=String(r.post_id||r.id||'');
++  }else if(p.tipo==='carrusel'){
++    const media=[];
++    for(const a of archivos){
++      const r=await graph(`${page}/photos`,token,{url:urlMedia(env,plan._id,p.id,a.posicion),published:'false'});
++      if(!/^\d{5,30}$/.test(String(r.id||'')))throw new Error('FB_PHOTO_INVALIDA');
++      media.push(r.id);
++    }
++    const args={message:mensaje};media.forEach((id,i)=>args[`attached_media[${i}]`]=JSON.stringify({media_fbid:id}));
++    const r=await graph(`${page}/feed`,token,args);mediaId=String(r.id||'');
++  }else{
++    // Hosted Reel: el tamaño real permanece en R2 privado; Meta descarga con URL temporal.
++    const inicio=await graph(`${page}/video_reels`,token,{upload_phase:'start'});
++    const videoId=String(inicio.video_id||'');const subida=inicio.upload_url;
++    const destino=new URL(subida);
++    if(!/^\d{5,30}$/.test(videoId)||destino.protocol!=='https:'||destino.hostname!=='rupload.facebook.com')throw new Error('FB_VIDEO_SESSION_INVALIDA');
++    const subidaR=await fetch(destino.toString(),{method:'POST',redirect:'manual',headers:{Authorization:`OAuth ${token}`,
++      file_url:urlMedia(env,plan._id,p.id,archivos[0].posicion)}});
++    const subidaD=await subidaR.json().catch(()=>null);
++    if(!subidaR.ok||subidaD?.success!==true)throw new Error('FB_VIDEO_UPLOAD_NO_CONFIRMADA');
++    // La finalización puede crear una publicación: ya tenemos el bloqueo sin reintento.
++    const fin=await graph(`${page}/video_reels`,token,{video_id:videoId,upload_phase:'finish',video_state:'PUBLISHED',description:mensaje});
++    if(fin.success!==true)throw new Error('FB_REEL_NO_CONFIRMADO');
++    await actualizar(db,plan,e,'video_confirmacion_pendiente',{metaId:videoId});
++    return;
++  }
++  if(!/^\d{5,30}(?:_\d{5,30})?$/.test(mediaId))throw new Error('META_ID_INVALIDO');
++  await actualizar(db,plan,e,'publicada',{metaId:mediaId,publicadaEn:new Date(),enlace:await enlacePublicado(mediaId,'facebook',token)});
++}
++async function procesarEvento(db,plan,e,env){
++  const pedido=await db.collection('pedidos_servicios').findOne({pedidoId:plan._id,tipo:'publicaciones',estadoServicio:'activo',publicacionHabilitada:true});
++  if(!pedido||Date.now()>new Date(plan.fin).getTime())return;
++  const p=pedido.publicaciones?.find(p=>p.id===e.contenidoId);
++  const c=await db.collection('conexiones_meta_pedidos').findOne({pedidoId:plan._id,plataforma:e.red,estado:'conectada'});
++  const archivos=await db.collection('archivos_servicios').find({pedidoId:plan._id,contenidoId:e.contenidoId,estado:'subido',revision:'aprobado'}).sort({posicion:1}).toArray();
++  if(!p||!c||!archivos.length||!archivos.every(a=>MEDIOS.has(a.tipo))) {
++    await actualizar(db,plan,e,'atencion_manual',{motivo:'REQUISITOS_CAMBIARON'});return;
++  }
++  const destino=e.estado==='programada'?'enviando_resultado_incierto':
++    e.estado==='video_confirmacion_pendiente'?'confirmando_video':'consultando_contenedor';
++  if(!await reclamar(db,plan,e,e.estado,destino))return;
++  try{
++    const token=descifrar(c,env);
++    if(e.red==='instagram'){
++      if(e.estado==='programada')await publicarInstagram(db,plan,e,p,c,token,archivos,env);
++      else await finalizarInstagram(db,plan,e,c,token);
++    }else if(e.estado==='programada')await publicarFacebook(db,plan,e,p,c,token,archivos,env);
++    else if(e.estado==='video_confirmacion_pendiente') {
++      const estado=await graph(`${e.metaId}?fields=status`,token);
++      const fases=estado?.status;
++      if(['complete','published','finished'].includes(String(fases?.publishing_phase?.status||'').toLowerCase())){
++        await actualizar(db,plan,e,'publicada',{publicadaEn:new Date(),
++          enlace:await enlacePublicado(e.metaId,'facebook',token)});
++      }else if(['error','failed'].includes(String(fases?.publishing_phase?.status||'').toLowerCase())){
++        await actualizar(db,plan,e,'atencion_manual',{motivo:'FB_VIDEO_ERROR'});
++      }else await actualizar(db,plan,e,'video_confirmacion_pendiente');
++    } else await actualizar(db,plan,e,'atencion_manual',{motivo:'ESTADO_INESPERADO'});
++  }catch(error){
++    console.warn('Publicación cliente: resultado sin confirmar',plan._id,e.id,error?.message?.slice(0,80)||'ERROR');
++    await actualizar(db,plan,e,'atencion_manual',{motivo:String(error?.message||'META_NO_CONFIRMADA').slice(0,100),revisarEn:new Date()});
++  }
++}
++export async function ejecutarCronClientes(env){
++  if(!habilitado(env))return {ok:true,deshabilitado:true};
++  firmaSecret(env);baseMedia(env);
++  return conDB(env,async db=>{
++    const ahora=new Date();
++    const planes=await db.collection(COLA).find({estado:'activa',publicacionHabilitada:true,
++      eventos:{$elemMatch:{estado:{$in:[...SIGUIENTES]},fechaHoraUTC:{$lte:ahora.toISOString()}}}}).limit(12).toArray();
++    let procesados=0;
++    for(const plan of planes){
++      for(const [indice,evento] of plan.eventos.entries()){
++        if(procesados>=LIMITE_POR_CRON)break;
++        if(!SIGUIENTES.has(evento.estado)||Date.parse(evento.fechaHoraUTC)>ahora.getTime())continue;
++        await procesarEvento(db,plan,{...evento,indice},env);procesados++;
++      }
++      if(procesados>=LIMITE_POR_CRON)break;
++    }
++    // Cerrar pruebas transcurridos siete días sin interferir con otros pedidos.
++    const vencidas=await db.collection(COLA).find({estado:'activa',fin:{$lte:ahora}})
++      .project({_id:1}).limit(30).toArray();
++    for(const p of vencidas){
++      await db.collection(COLA).updateOne({_id:p._id,estado:'activa'},{$set:{estado:'finalizada',publicacionHabilitada:false,finalizadaEn:ahora}});
++      await db.collection('pedidos_servicios').updateOne({pedidoId:p._id,estadoServicio:'activo'},
++        {$set:{estadoServicio:'finalizado','prueba.estado':'finalizada',publicacionHabilitada:false,actualizadoEn:ahora}});
++    }
++    return {ok:true,procesados,pruebasFinalizadas:vencidas.length};
++  });
++}

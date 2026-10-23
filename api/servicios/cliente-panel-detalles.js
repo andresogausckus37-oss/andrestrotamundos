@@ -1,0 +1,120 @@
+// Datos de perfil y conexiones para el panel privado de Comunidad Semanal.
+// No activa pruebas ni publica. No usa ni modifica las conexiones de Mega Bazar.
+import { obtenerClienteRegistrado } from './clientes-acceso.js';
+
+const DB = 'andres_imprimibles';
+const RAIZ = '/api/servicios/clientes/panel/detalles';
+const IDENTIFICADOR = /^SER-[a-f0-9-]{36}$/i;
+function respuesta(datos, codigo=200) {
+  return Response.json(datos, {status:codigo,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+}
+function texto(valor, longitud=180) { return typeof valor==='string' ? valor.trim().slice(0,longitud) : ''; }
+async function conDB(env, fn) {
+  if (!env?.MONGODB_URI) throw new Error('DB_NO_CONFIGURADA');
+  const {MongoClient} = await import('mongodb');
+  const c=new MongoClient(env.MONGODB_URI);
+  try { await c.connect(); return await fn(c.db(DB)); }
+  finally { await c.close().catch(()=>{}); }
+}
+function enlacePublicadoSeguro(valor) {
+  if (typeof valor !== 'string' || valor.length > 1000) return '';
+  try {
+    const url = new URL(valor);
+    return url.protocol === 'https:' && !url.username && !url.password ? url.toString() : '';
+  } catch { return ''; }
+}
+function miniContenido(c) {
+  // Solo URLs públicas https. No devolver claves R2 ni tokens internos.
+  const urls = {};
+  for (const red of ['facebook','instagram']) {
+    const candidata = c?.urlsPublicadas?.[red] || c?.enlaces?.[red] || c?.[`${red}UrlPublicada`];
+    const segura = enlacePublicadoSeguro(candidata);
+    if (segura) urls[red] = segura;
+  }
+  return {
+    id: texto(c?.id,60), tipo:texto(c?.tipo,30), formato:texto(c?.formato,10),
+    descripcion:texto(c?.descripcion,1500), ctaInstagram:texto(c?.ctaInstagram,100),
+    ctaFacebook:texto(c?.ctaFacebook,100), hashtags:texto(c?.hashtags,240),
+    urlFacebook:texto(c?.urlFacebook,500), estado:texto(c?.estado,40),
+    fechaHoraDefinitiva:c?.fechaHoraDefinitiva || null,
+    diaPreferido:texto(c?.diaPreferido,30), horaLocalPreferida:texto(c?.horaLocalPreferida,10),
+    publicadoEn:Array.isArray(c?.publicadoEn) ? c.publicadoEn.filter(red=>['facebook','instagram'].includes(red)) : [],
+    estadoPorRed:Object.fromEntries(['facebook','instagram'].map(red=>[red,texto(c?.estadoPorRed?.[red],35)])),
+    urlsPublicadas:urls,
+  };
+}
+export async function ejecutarDetallesPanel(request,env) {
+  const url=new URL(request.url);
+  const desconectar=url.pathname===`${RAIZ}/desconectar-facebook`;
+  if (url.pathname!==RAIZ && !desconectar) return respuesta({ok:false,error:'Ruta no disponible.'},404);
+  if (request.method !== (desconectar?'POST':'GET')) return respuesta({ok:false,error:'Método no permitido.'},405);
+  if (desconectar && (request.headers.get('origin')!==url.origin || request.headers.get('x-comunidad-panel')!=='1'))
+    return respuesta({ok:false,error:'Origen no autorizado.'},403);
+  const usuario=await obtenerClienteRegistrado(request,env).catch(()=>null);
+  if (!usuario?.id) return respuesta({ok:false,error:'Iniciá sesión con tu correo verificado.'},401);
+  try {
+    return await conDB(env,async db => {
+      const pedidos=db.collection('pedidos_servicios');
+      if (desconectar) {
+        if (Number(request.headers.get('content-length')||0)>2048) return respuesta({ok:false,error:'Solicitud demasiado grande.'},413);
+        const body=await request.json().catch(()=>null);
+        const pedidoId=body?.pedidoId;
+        if (!IDENTIFICADOR.test(pedidoId||'')) return respuesta({ok:false,error:'Pedido inválido.'},400);
+        const p=await pedidos.findOne({pedidoId,tipo:'publicaciones',clienteUsuarioId:usuario.id},{projection:{estadoServicio:1,redes:1}});
+        if (!p) return respuesta({ok:false,error:'Pedido no encontrado.'},404);
+        if (p.estadoServicio!=='sin_activar') return respuesta({ok:false,error:'No podés desconectar cuentas con el servicio activo.'},409);
+        if (!p.redes?.includes('facebook')) return respuesta({ok:false,error:'Facebook no está incluido en este pedido.'},409);
+        await db.collection('conexiones_meta_pedidos').deleteOne({_id:`facebook:${pedidoId}`,pedidoId,plataforma:'facebook'});
+        await db.collection('meta_oauth_pedidos').deleteMany({pedidoId});
+        return respuesta({ok:true,desconectada:true});
+      }
+      const cuenta=await db.collection('clientes_usuarios').findOne({_id:usuario.id},{projection:{
+        _id:0,nombre:1,nombreApellido:1,nombreCompleto:1,whatsapp:1,telefono:1,
+        nombreEmprendimiento:1,emprendimiento:1,perfil:1,
+      }});
+      const documentos=await pedidos.find({tipo:'publicaciones',clienteUsuarioId:usuario.id})
+        .sort({creadoEn:-1}).limit(30).project({_id:0,pedidoId:1,negocio:1,prueba:1,publicaciones:1,estadoServicio:1,zonaHoraria:1}).toArray();
+      const ids=documentos.map(x=>x.pedidoId).filter(x=>IDENTIFICADOR.test(x||''));
+      const conexion=ids.length?await db.collection('conexiones_meta_pedidos').find({
+        pedidoId:{$in:ids},plataforma:{$in:['facebook','instagram']}
+      }).project({_id:0,pedidoId:1,plataforma:1,nombre:1,pageId:1,usuario:1,estado:1}).toArray():[];
+      const cuentas=Object.fromEntries(ids.map(id=>[id,{facebook:null,instagram:null}]));
+      for (const c of conexion) if (cuentas[c.pedidoId]) cuentas[c.pedidoId][c.plataforma]={
+        nombre:texto(c.nombre),pageId:texto(c.pageId,40),usuario:texto(c.usuario,40),estado:texto(c.estado,40)
+      };
+      // Leer únicamente los calendarios activados de los pedidos del cliente.
+      const programaciones=ids.length ? await db.collection('calendarios_clientes_activos')
+        .find({_id:{$in:ids},estado:{$in:['activa','finalizada']}})
+        .project({_id:1,eventos:1}).toArray():[];
+      const programacionesPorId=new Map(programaciones.map(p=>[p._id,p]));
+      const ultimo=documentos[0];
+      const perfil = {
+        nombreApellido:texto(cuenta?.perfil?.nombreApellido||cuenta?.perfil?.nombre||cuenta?.nombreApellido||cuenta?.nombreCompleto||cuenta?.nombre,150),
+        emprendimiento:texto(cuenta?.perfil?.emprendimiento||cuenta?.nombreEmprendimiento||cuenta?.emprendimiento||ultimo?.negocio?.nombre,150),
+        whatsapp:texto(cuenta?.perfil?.whatsapp||cuenta?.whatsapp||cuenta?.telefono||ultimo?.negocio?.whatsapp,50),
+        pais:texto(cuenta?.perfil?.pais,100),
+        web:texto(cuenta?.perfil?.web||ultimo?.negocio?.url,300),
+      };
+      const detalles=Object.fromEntries(documentos.filter(x=>IDENTIFICADOR.test(x.pedidoId||'')).map(p=>[
+        p.pedidoId,{cuentas:cuentas[p.pedidoId],
+          zonaHoraria:texto(p.zonaHoraria,80),
+          prueba:{estado:texto(p.prueba?.estado,50),inicioEn:p.prueba?.inicioEn||p.prueba?.inicio||null,finEn:p.prueba?.finEn||p.prueba?.fin||null},
+          contenidos:Array.isArray(p.publicaciones)?p.publicaciones.slice(0,4).map(c=>{
+            const minimo=miniContenido(c);
+            const eventos=programacionesPorId.get(p.pedidoId)?.eventos||[];
+            const porRed=eventos.filter(e=>e.contenidoId===c.id);
+            const definitiva=porRed.find(e=>Number.isFinite(Date.parse(e.fechaHoraUTC||'')))?.fechaHoraUTC;
+            if (definitiva) minimo.fechaHoraDefinitiva=definitiva;
+            minimo.estadoPorRed={...minimo.estadoPorRed,...Object.fromEntries(porRed.map(e=>[
+              e.red,e.estado==='publicada'?'publicado':e.estado==='atencion_manual'?'error':'programado'
+            ]))};
+            minimo.urlsPublicadas={...minimo.urlsPublicadas,...Object.fromEntries(porRed
+              .map(e=>[e.red,enlacePublicadoSeguro(e.enlace)])
+              .filter(([,enlace])=>Boolean(enlace)))};
+            return minimo;
+          }):[]}
+      ]));
+      return respuesta({ok:true,perfil,detalles});
+    });
+  } catch { return respuesta({ok:false,error:'No se pudo consultar la información del panel.'},503); }
+}

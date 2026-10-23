@@ -6,11 +6,14 @@ import { ejecutarPruebaConexionMeta } from "./api/servicios/meta-conexion.js";
 import { ejecutarConexionMetaPedido } from "./api/servicios/meta-pedidos.js";
 import { ejecutarSimulacionCalendario, ejecutarPreparacionCalendario, ejecutarEnsayoCalendario, ejecutarReservaCalendario } from "./api/servicios/calendario-simulacion.js";
 import { ejecutarSolicitudProgramacion } from "./api/servicios/solicitud-programacion.js";
+import { ejecutarAdminProgramacion } from "./api/servicios/admin-programacion.js";
+import { ejecutarCronClientes, servirMedioCliente } from "./api/servicios/publicaciones-clientes.js";
 import { ejecutarActivacionSimulada } from "./api/servicios/activacion-simulada.js";
 import { ejecutarPublicacionPiloto, ejecutarImagenPiloto } from "./api/servicios/publicacion-piloto-meta.js";
 import { ejecutarAccesoClientes, diagnosticarConfiguracionClientes, ejecutarPanelClientes, obtenerClienteRegistrado } from "./api/servicios/clientes-acceso.js";
 import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
 import crypto from "crypto";
+import { ejecutarDetallesPanel } from "./api/servicios/cliente-panel-detalles.js";
 
 const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
 
@@ -461,12 +464,11 @@ async function validarAccesoCrearServicio(request, env, datos) {
   }
 }
 
-// Las pruebas NO comienzan al crear el pedido. Se habilita únicamente la
-// preparación privada; un flag independiente evita abrirlas accidentalmente.
+// El cliente ya pasó Turnstile en el registro y verificó el correo por OTP.
+// Un flag independiente sigue protegiendo la habilitación de las pruebas.
 function preparacionPruebaDisponible(request, env, protegida = false) {
   if (String(env?.SERVICIO_PRUEBAS_PREPARACION_HABILITADA ?? "").toLowerCase() !== "true") return false;
-  if (env?.SERVICIO_PRUEBAS_MODO_PRIVADO !== "false" && !adminAutorizadoWorker(request, env)) return false;
-  if (protegida && (!limitadoresServicioPreparados(env) || !env?.SERVICIO_TURNSTILE_SITE_KEY || !env?.SERVICIO_TURNSTILE_SECRET)) return false;
+  if (protegida && !limitadoresServicioPreparados(env)) return false;
   return true;
 }
 
@@ -498,7 +500,7 @@ async function apiPruebaPublicaciones(request, env, ruta) {
   if (!preparacionPruebaDisponible(request, env, true)) {
     return respuestaServicio({ ok: false, error: "La preparación de pruebas todavía no está habilitada." }, 503);
   }
-  // La protección se aplica también a cuentas registradas y Admin en modo privado.
+  // Protección por IP adicional a la sesión verificada del titular.
   const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_PEDIDOS");
   if (exceso) return exceso;
   if (request.headers.get("origin") !== new URL(request.url).origin) {
@@ -510,25 +512,23 @@ async function apiPruebaPublicaciones(request, env, ruta) {
   if (!["ARS", "USD"].includes(datos.moneda)) {
     return respuestaServicio({ ok: false, error: "Moneda no admitida." }, 400);
   }
-  const validacion = validarConfiguracionServicio(datos);
-  if (validacion.error) return respuestaServicio({ ok: false, error: validacion.error }, 400);
-  const acceso = await validarAccesoCrearServicio(request, env, datos);
-  if (acceso.error) return respuestaServicio({ ok: false, error: acceso.error }, acceso.estado);
-
+  // La segunda verificación de Cloudflare no es necesaria: la prueba solo
+  // puede crearla una cuenta con correo validado y sesión activa.
   let usuario = null;
   try { usuario = await obtenerClienteRegistrado(request, env); }
   catch { return respuestaServicio({ ok: false, error: "No se pudo verificar la sesión de cliente." }, 503); }
-  if (usuario && usuario.email !== validacion.configuracion.negocio.email.toLowerCase()) {
+  if (!usuario?.id) return respuestaServicio({ ok: false, error: "Iniciá sesión con tu correo confirmado." }, 401);
+  const validacion = validarConfiguracionServicio(datos);
+  if (validacion.error) return respuestaServicio({ ok: false, error: validacion.error }, 400);
+  if (usuario.email !== validacion.configuracion.negocio.email.toLowerCase()) {
     return respuestaServicio({ ok: false, error: "Usá el correo verificado de tu cuenta para iniciar la prueba." }, 400);
   }
 
   let mongo, reservado = false;
   const pedidoId = `SER-${crypto.randomUUID()}`;
   const fecha = new Date();
-  const email = validacion.configuracion.negocio.email.trim().toLowerCase();
-  // La reserva de invitado limita ensayos anónimos, pero nunca otorga identidad
-  // verificada ni impide que el propietario real del correo entre a su cuenta.
-  const identidad = usuario ? `cuenta:${usuario.id}` : `invitado:${crypto.createHash("sha256").update(email).digest("hex")}`;
+  // Una sola prueba por cuenta con correo verificado.
+  const identidad = `cuenta:${usuario.id}`;
   try {
     sincronizarEntorno(env);
     const { MongoClient } = await import("mongodb");
@@ -536,12 +536,26 @@ async function apiPruebaPublicaciones(request, env, ruta) {
     await mongo.connect();
     const db = mongo.db("andres_imprimibles");
     const reservas = db.collection("clientes_pruebas_reservas");
+    const cuenta = await db.collection("clientes_usuarios").findOne({ _id: usuario.id },
+      { projection: { perfil: 1, emailVerificado: 1 } });
+    if (cuenta?.emailVerificado !== true || !cuenta?.perfil?.emprendimiento) {
+      return respuestaServicio({ ok: false, error: "Completá tu registro antes de programar la prueba." }, 403);
+    }
+    // Los datos personales no pueden ser sustituidos por el formulario enviado.
+    validacion.configuracion.negocio = {
+      ...validacion.configuracion.negocio,
+      nombre: cuenta.perfil.emprendimiento,
+      contacto: cuenta.perfil.nombre,
+      email: usuario.email,
+      whatsapp: cuenta.perfil.whatsapp,
+      url: cuenta.perfil.web || "",
+    };
     try {
-      await reservas.insertOne({ _id: identidad, pedidoId, creadoEn: fecha, emailVerificado: Boolean(usuario) });
+      await reservas.insertOne({ _id: identidad, pedidoId, creadoEn: fecha, emailVerificado: true });
       reservado = true;
     } catch (error) {
       if (error?.code === 11000) return respuestaServicio({ ok: false,
-        error: "Ya hay una solicitud de prueba asociada a este acceso. Revisá tu panel o utilizá el enlace privado existente." }, 409);
+        error: "Ya tenés una prueba asociada a esta cuenta. Revisá tu panel privado." }, 409);
       throw error;
     }
     const tokenAcceso = crypto.randomBytes(32).toString("hex");
@@ -553,8 +567,8 @@ async function apiPruebaPublicaciones(request, env, ruta) {
       modalidadContratacion: "prueba_gratuita", moneda: datos.moneda, precio: 0, precioRenovacion,
       metodoPago: "ninguno", cantidadPublicaciones: 4 * validacion.configuracion.redes.length,
       ...validacion.configuracion,
-      ...(usuario ? { clienteUsuarioId: usuario.id, clienteVinculadoEn: fecha } : {}),
-      accesoOrigen: usuario ? "cuenta_verificada" : "invitado",
+      clienteUsuarioId: usuario.id, clienteVinculadoEn: fecha,
+      accesoOrigen: "cuenta_verificada",
       modalidadCalendario: "periodo_flexible_7_dias_consecutivos",
       criterioInicio: "pendiente_de_activacion_y_autorizacion_explicita",
       fechaInicioServicio: null, fechaFinServicio: null,
@@ -569,7 +583,7 @@ async function apiPruebaPublicaciones(request, env, ruta) {
       moneda: datos.moneda, precio: 0, precioRenovacion, metodoPago: "ninguno",
       estado: "prueba_en_preparacion", estadoServicio: "sin_activar",
       prueba: { estado: "pendiente_activacion", inicio: null, fin: null },
-      pagoHabilitado: false, cuentaVinculada: Boolean(usuario) }, 201);
+      pagoHabilitado: false, cuentaVinculada: true }, 201);
   } catch (error) {
     // Si Mongo falla al crear la orden, no impedir reintentos con una reserva huérfana.
     if (reservado && mongo) await mongo.db("andres_imprimibles").collection("clientes_pruebas_reservas")
@@ -602,7 +616,7 @@ async function apiPedidosPublicaciones(request, env, ruta) {
       transferenciasHabilitadas: transferenciaPreparada && proteccionesPreparadas,
       cobrosHabilitados: false,
       pruebasDisponibles: preparacionPruebaDisponible(request, env, true),
-      pruebaModoPrivado: env?.SERVICIO_PRUEBAS_MODO_PRIVADO !== "false",
+      pruebaModoPrivado: false,
     });
   }
   if (request.method !== "POST") {
@@ -1323,6 +1337,14 @@ if (url.pathname.startsWith("/api/servicios/clientes/acceso/")) {
   return ejecutarAccesoClientes(request, env);
 }
 
+// Perfil y conexión de Facebook desde el panel del titular, sin tocar el cron.
+if (url.pathname === "/api/servicios/clientes/panel/detalles" ||
+    url.pathname === "/api/servicios/clientes/panel/detalles/desconectar-facebook") {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  return ejecutarDetallesPanel(request, env);
+}
+
 // Panel de usuarios registrados: sesion propia + comprobacion privada al vincular pedidos.
 if (url.pathname === "/api/servicios/clientes/panel" ||
     url.pathname === "/api/servicios/clientes/panel/vincular" ||
@@ -1360,6 +1382,10 @@ if (url.pathname.startsWith("/api/servicios/publicaciones/archivos/")) {
   }
   return ejecutarArchivosPedido(request, env);
 }
+if (url.pathname === "/api/admin/servicios/publicaciones/programacion") {
+  return ejecutarAdminProgramacion(request, env, adminAutorizadoWorker(request, env));
+}
+
 if (url.pathname === "/api/admin/servicios/publicaciones/archivos") {
   return ejecutarAdminArchivosPedido(request, env, adminAutorizadoWorker(request, env));
 }
@@ -1469,6 +1495,9 @@ if (url.pathname === RUTA_CONTENIDO_REDES) {
       }
     }
 
+    if (url.pathname.startsWith("/api/servicios/publicaciones/media/")) {
+      return servirMedioCliente(request, env);
+    }
     if (url.pathname.startsWith("/api/")) {
   return Response.json(
     {
@@ -1483,12 +1512,18 @@ if (url.pathname === RUTA_CONTENIDO_REDES) {
   },
 
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(
-      ejecutarCronRedes(env).catch((error) => {
-        console.error("Error en Cron Trigger de redes:", error);
+    // Los dos servicios usan el mismo disparador, con colas y credenciales distintas.
+    // La falla de uno nunca impide ejecutar el otro.
+    ctx.waitUntil(Promise.allSettled([
+      ejecutarCronRedes(env).catch(error => {
+        console.error("Cron tienda:", error?.message || "ERROR");
+        throw error;
+      }),
+      ejecutarCronClientes(env).catch(error => {
+        console.error("Cron clientes:", error?.message || "ERROR");
         throw error;
       })
-    );
+    ]));
   }
 };
 
