@@ -1,0 +1,13 @@
+{
+  "archivos": {
+    "src/paginas/servicios/PanelClientePublicaciones.jsx": {
+      "antes": "209f4aee16ad30f3a4e91b9ad69d426781b907ba0be28e79da56158b3a3e05c9",
+      "despues": "4d6a3d7c99f8ee926304ec17e436d965d9dec7cddf4c5e3e45e640f474500ab3"
+    },
+    "api/servicios/renovacion-contenidos-reales.js": {
+      "antes": "80d716942ce30b6e5fc5c5029f5063e8e233b08750807f6d6bb8512d1511ce3a",
+      "despues": "c25f50490581e71a726507e34e5af78005c9c0dbdcd72a839bad5053795c2a77"
+    }
+  },
+  "descripcion": "Fase 9: PNG/WebP para semanas pagadas con revisi\u00f3n JPEG existente"
+}

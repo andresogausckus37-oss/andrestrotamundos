@@ -1,3 +1,4 @@
+export { AccesoClientesDurable } from "./api/servicios/acceso-clientes-durable.js";
 import handlerContenidoRedes from "./api/contenido-redes.js";
 import handlerAdminLogin from "./api/admin/login.js";
 import handlerAdminPedidos from "./api/admin/pedidos.js";
@@ -12,8 +13,12 @@ import { ejecutarActivacionSimulada } from "./api/servicios/activacion-simulada.
 import { ejecutarPublicacionPiloto, ejecutarImagenPiloto } from "./api/servicios/publicacion-piloto-meta.js";
 import { ejecutarAccesoClientes, diagnosticarConfiguracionClientes, ejecutarPanelClientes, obtenerClienteRegistrado } from "./api/servicios/clientes-acceso.js";
 import { ejecutarArchivosPedido, ejecutarAdminArchivosPedido } from "./api/servicios/archivos-pedido.js";
+import { ejecutarRenovacionTransferencia, ejecutarAdminRenovacionesTransferencia } from "./api/servicios/renovacion-transferencia.js";
+import { ejecutarContenidosRenovacionReal } from "./api/servicios/renovacion-contenidos-reales.js";
+import { ejecutarRenovacionPaypal } from "./api/servicios/renovacion-paypal.js";
 import crypto from "crypto";
 import { ejecutarDetallesPanel } from "./api/servicios/cliente-panel-detalles.js";
+import { ejecutarTransferenciaEnsayo, ejecutarAdminTransferenciaEnsayo } from "./api/servicios/transferencias-prueba.js";
 
 const RUTA_CONTENIDO_REDES = "/api/contenido-redes";
 
@@ -407,7 +412,7 @@ function limitadoresServicioPreparados(env) {
   ].every((binding) => typeof binding?.limit === "function");
 }
 
-async function comprobarLimiteServicio(request, env, nombreBinding) {
+async function comprobarLimiteServicio(request, env, nombreBinding, grupoAcotado = "") {
   const limitador = env?.[nombreBinding];
   if (typeof limitador?.limit !== "function") {
     return respuestaServicio({ ok: false, error: "La proteccion de solicitudes aun no esta configurada." }, 503);
@@ -418,7 +423,7 @@ async function comprobarLimiteServicio(request, env, nombreBinding) {
   if (!ip) {
     return respuestaServicio({ ok: false, error: "No se pudo verificar el origen de la solicitud." }, 403);
   }
-  const clave = crypto.createHash("sha256").update(ip).digest("hex");
+  const clave = crypto.createHash("sha256").update(grupoAcotado ? `${ip}:${grupoAcotado}` : ip).digest("hex");
   try {
     const resultado = await limitador.limit({ key: clave });
     if (!resultado?.success) {
@@ -1109,8 +1114,77 @@ async function ejecutarCronRedes(env) {
 
 export default {
   async fetch(request, env) {
-    sincronizarEntorno(env);
     const url = new URL(request.url);
+    // FASE3_RUTAS_ACCESO_ANTES_DEL_ENTORNO
+// Registro de clientes de Comunidad Semanal, aislado de Admin y de Mega Bazar.
+if (url.pathname.startsWith("/api/servicios/clientes/acceso/")) {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  // FASE8: en el despliegue inicial permanece APAGADO.
+  if (String(env.SERVICIO_ACCESO_DURABLE_HABILITADO || "").toLowerCase() === "true") {
+    if (!env.ACCESO_CLIENTES_DURABLE) {
+      return Response.json({ ok: false, error: "Servicio de acceso temporalmente no disponible." }, { status: 503 });
+    }
+    const ip = request.headers.get("CF-Connecting-IP")?.trim();
+    if (!ip) return Response.json({ ok: false, error: "No se pudo validar el origen de la solicitud." }, { status: 403 });
+    // No se acepta el valor de IP proporcionado por el navegador.
+    const headers = new Headers(request.headers);
+    headers.set("x-servicio-ip-verificada", ip);
+    const delegado = new Request(request, { headers });
+    try {
+      const stub = env.ACCESO_CLIENTES_DURABLE.getByName("acceso-clientes-v1");
+      return await stub.fetch(delegado);
+    } catch (error) {
+      console.warn("Fase 8: acceso Durable Object no disponible", String(error?.name || "Error").slice(0, 80));
+      // Nunca reintentar automáticamente OTP: podría haberse enviado el correo.
+      return Response.json({ ok: false, error: "Servicio de acceso temporalmente no disponible." }, { status: 503 });
+    }
+  }
+  return ejecutarAccesoClientes(request, env);
+}
+// Perfil y conexión de Facebook desde el panel del titular, sin tocar el cron.
+if (url.pathname === "/api/servicios/clientes/panel/detalles" ||
+    url.pathname === "/api/servicios/clientes/panel/detalles/desconectar-facebook") {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  return ejecutarDetallesPanel(request, env);
+}
+// Panel de usuarios registrados: sesion propia + comprobacion privada al vincular pedidos.
+if (url.pathname === "/api/servicios/clientes/panel" ||
+    url.pathname === "/api/servicios/clientes/panel/vincular" ||
+    url.pathname === "/api/servicios/clientes/panel/recuperar-acceso") {
+  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  if (exceso) return exceso;
+  return ejecutarPanelClientes(request, env);
+}
+    // FIN_FASE3_RUTAS_ACCESO
+    // FASE5_CPU_IG_20261024: la conexión de Meta no depende de process.env.
+// Meta de clientes: acceso Bearer por pedido y retorno OAuth separado de Admin.
+if (url.pathname.startsWith("/api/servicios/meta/pedidos/")) {
+  if (url.pathname !== "/api/servicios/meta/pedidos/callback" &&
+      url.pathname !== "/api/servicios/meta/pedidos/instagram/callback") {
+    const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+    if (exceso) return exceso;
+  }
+  return ejecutarConexionMetaPedido(request, env);
+}
+
+    // FASE6_AUTORIZACION_DEMANDA_20261024: solicitudes usan env directamente; no necesitan process.env.
+// Confirmación voluntaria e independiente de la revisión técnica.
+// No activa la prueba ni modifica el cron de la tienda.
+if (url.pathname.startsWith("/api/servicios/publicaciones/solicitud/")) {
+  const exceso = await comprobarLimiteServicio(request, env, request.method === "GET"
+    ? "SERVICIO_LIMITE_CONSULTAS" : "SERVICIO_LIMITE_PEDIDOS");
+  if (exceso) return exceso;
+  return ejecutarSolicitudProgramacion(request, env);
+}
+
+    sincronizarEntorno(env);
+    // Retiramos rutas de pago ficticio: no se crean ni aprueban más ensayos.
+    if (url.pathname.startsWith("/api/servicios/publicaciones/transferencia-ensayo") ||
+        url.pathname.startsWith("/api/admin/servicios/publicaciones/transferencias-ensayo")) {
+      return Response.json({ok:false,error:"Los ensayos de pago dejaron de estar disponibles."},{status:410});
+    }
 
     
 if (url.pathname === "/api/diagnostico-facebook") {
@@ -1330,28 +1404,32 @@ if (url.pathname === "/api/admin/servicios/clientes/diagnostico") {
   return respuestaServicio(diagnosticarConfiguracionClientes(env));
 }
 
-// Registro de clientes de Comunidad Semanal, aislado de Admin y de Mega Bazar.
-if (url.pathname.startsWith("/api/servicios/clientes/acceso/")) {
-  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
-  if (exceso) return exceso;
-  return ejecutarAccesoClientes(request, env);
+// Renovaciones bancarias reales: separadas del ensayo privado de $0.
+if (url.pathname.startsWith("/api/servicios/publicaciones/renovacion-contenidos/")) {
+  // Archivos independientes del cron; el backend verifica titularidad, pago y activación.
+  return ejecutarContenidosRenovacionReal(request,env);
 }
 
-// Perfil y conexión de Facebook desde el panel del titular, sin tocar el cron.
-if (url.pathname === "/api/servicios/clientes/panel/detalles" ||
-    url.pathname === "/api/servicios/clientes/panel/detalles/desconectar-facebook") {
-  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
-  if (exceso) return exceso;
-  return ejecutarDetallesPanel(request, env);
+// FASE10: PayPal usa el mismo sistema de semanas, sin tocar cron de tienda ni clientes.
+if (url.pathname.startsWith("/api/servicios/publicaciones/renovacion-paypal")) {
+  if (url.pathname !== "/api/servicios/publicaciones/renovacion-paypal/webhook") {
+    const exceso = await comprobarLimiteServicio(request, env, request.method === "POST"
+      ? "SERVICIO_LIMITE_PEDIDOS" : "SERVICIO_LIMITE_CONSULTAS");
+    if (exceso) return exceso;
+  }
+  return ejecutarRenovacionPaypal(request, env);
 }
-
-// Panel de usuarios registrados: sesion propia + comprobacion privada al vincular pedidos.
-if (url.pathname === "/api/servicios/clientes/panel" ||
-    url.pathname === "/api/servicios/clientes/panel/vincular" ||
-    url.pathname === "/api/servicios/clientes/panel/recuperar-acceso") {
-  const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+if (url.pathname === "/api/servicios/publicaciones/renovacion-transferencia" ||
+    url.pathname === "/api/servicios/publicaciones/renovacion-transferencia/crear" ||
+    url.pathname === "/api/servicios/publicaciones/renovacion-transferencia/comprobante") {
+  const exceso = await comprobarLimiteServicio(request, env,
+    url.pathname.endsWith("/comprobante") ? "SERVICIO_LIMITE_COMPROBANTES" :
+    request.method === "POST" ? "SERVICIO_LIMITE_PEDIDOS" : "SERVICIO_LIMITE_CONSULTAS");
   if (exceso) return exceso;
-  return ejecutarPanelClientes(request, env);
+  return ejecutarRenovacionTransferencia(request, env);
+}
+if (url.pathname === "/api/admin/servicios/publicaciones/renovaciones-transferencia") {
+  return ejecutarAdminRenovacionesTransferencia(request, env, adminAutorizadoWorker(request, env));
 }
 
 if (url.pathname === "/api/servicios/publicaciones/transferencia" ||
@@ -1363,21 +1441,22 @@ if (url.pathname === "/api/admin/servicios/meta/iniciar" ||
   return ejecutarPruebaConexionMeta(request, env, adminAutorizadoWorker(request, env));
 }
 
-// Meta de clientes: acceso Bearer por pedido y retorno OAuth separado de Admin.
-if (url.pathname.startsWith("/api/servicios/meta/pedidos/")) {
-  if (url.pathname !== "/api/servicios/meta/pedidos/callback" &&
-      url.pathname !== "/api/servicios/meta/pedidos/instagram/callback") {
-    const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
-    if (exceso) return exceso;
-  }
-  return ejecutarConexionMetaPedido(request, env);
-}
-
 // Multimedia del servicio: colección y bucket privados, sin vínculos con Mega Bazar.
 if (url.pathname.startsWith("/api/servicios/publicaciones/archivos/")) {
-  // Los videos se envían en partes: limitar inicio/consultas, no cada bloque.
-  if (!url.pathname.endsWith("/parte") && !url.pathname.endsWith("/finalizar") && !url.pathname.endsWith("/cancelar")) {
-    const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS");
+  // Inicio: cupo acotado por contenido y posición, sin quitar el límite por IP.
+  // Las partes y finalización mantienen la protección del pedido en MongoDB.
+  const accion = url.pathname.slice("/api/servicios/publicaciones/archivos/".length);
+  if (!["parte", "finalizar", "cancelar"].includes(accion)) {
+    let grupo = "";
+    if (accion === "estado") grupo = "archivos-estado";
+    if (accion === "iniciar" && request.method === "POST") {
+      const contenido = url.searchParams.get("contenido") || "";
+      const pos = url.searchParams.get("pos") || "";
+      if (/^contenido-[1-4]$/.test(contenido) && /^[0-9]$/.test(pos)) {
+        grupo = `archivos-iniciar:${contenido}:${pos}`;
+      }
+    }
+    const exceso = await comprobarLimiteServicio(request, env, "SERVICIO_LIMITE_CONSULTAS", grupo);
     if (exceso) return exceso;
   }
   return ejecutarArchivosPedido(request, env);
@@ -1407,17 +1486,36 @@ if (url.pathname.startsWith("/api/admin/servicios/publicaciones/piloto-meta")) {
   return ejecutarPublicacionPiloto(request, env, adminAutorizadoWorker(request, env));
 }
 
-if (url.pathname === "/api/admin/servicios/transferencias") {
-  return apiAdminTransferenciasServicio(request, env);
+// Ensayo de pago a $0 y correos aislado de cobros y publicaciones reales.
+if (url.pathname === "/api/servicios/publicaciones/transferencia-ensayo" ||
+    url.pathname.startsWith("/api/servicios/publicaciones/transferencia-ensayo/")) {
+  const esMedioEnsayo = url.pathname === "/api/servicios/publicaciones/transferencia-ensayo/medio";
+  let grupoEnsayo = "";
+  if (request.method === "POST") {
+    if (esMedioEnsayo) {
+      // Hasta 4 contenidos y 10 posiciones por contenido. Nunca incluir el ID
+      // de pedido en la clave: un atacante podría rotarlo para evadir el límite.
+      const contenido = url.searchParams.get("contenido") || "";
+      const posicionTexto = url.searchParams.get("pos") || "";
+      if (/^contenido-[1-4]$/.test(contenido) && /^(?:[0-9])$/.test(posicionTexto)) {
+        grupoEnsayo = `ensayo-medio:${contenido}:${posicionTexto}`;
+      }
+    } else if (url.pathname.endsWith("/configurar")) grupoEnsayo = "ensayo-configurar";
+    else if (url.pathname.endsWith("/enviar")) grupoEnsayo = "ensayo-enviar";
+  }
+  const exceso = await comprobarLimiteServicio(request, env,
+    esMedioEnsayo ? "SERVICIO_LIMITE_COMPROBANTES" :
+      request.method === "POST" ? "SERVICIO_LIMITE_PEDIDOS" : "SERVICIO_LIMITE_CONSULTAS",
+    grupoEnsayo);
+  if (exceso) return exceso;
+  return ejecutarTransferenciaEnsayo(request, env);
+}
+if (url.pathname === "/api/admin/servicios/publicaciones/transferencias-ensayo") {
+  return ejecutarAdminTransferenciaEnsayo(request, env, adminAutorizadoWorker(request, env));
 }
 
-// Confirmación voluntaria e independiente de la revisión técnica.
-// No activa la prueba ni modifica el cron de la tienda.
-if (url.pathname.startsWith("/api/servicios/publicaciones/solicitud/")) {
-  const exceso = await comprobarLimiteServicio(request, env, request.method === "GET"
-    ? "SERVICIO_LIMITE_CONSULTAS" : "SERVICIO_LIMITE_PEDIDOS");
-  if (exceso) return exceso;
-  return ejecutarSolicitudProgramacion(request, env);
+if (url.pathname === "/api/admin/servicios/transferencias") {
+  return apiAdminTransferenciasServicio(request, env);
 }
 
 // Simulación bajo sesión de cliente o Bearer del pedido. Solo lectura;

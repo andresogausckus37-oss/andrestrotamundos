@@ -19,10 +19,18 @@ function json(data, status = 200) {
   return Response.json(data, { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 }
 function fallo(message, status = 400) { return json({ ok: false, error: message }, status); }
-function errorSeguro(err) {
+// DIAGNOSTICO_SUBIDA_503_V1: nunca exponer mensajes de excepciones, tokens ni rutas privadas.
+function errorSeguro(err, accion = "SOLICITUD") {
   if (err?.status && err?.publico) return fallo(err.publico, err.status);
-  console.error("Error en archivos privados de servicio:", err?.message || "Error interno");
-  return fallo("No se pudo procesar el archivo del pedido.", 503);
+  const permitido = new Set(["R2_CREAR", "R2_PARTE", "R2_COMPLETAR", "R2_VERIFICAR",
+    "MONGODB_CONEXION", "INICIAR", "PARTE", "FINALIZAR", "ESTADO", "CANCELAR", "ELIMINAR"]);
+  const fase = permitido.has(err?.fase) ? err.fase : permitido.has(accion) ? accion : "SOLICITUD";
+  console.error("Archivos de servicio: fallo controlado", { fase, tipo: String(err?.name || "Error").slice(0, 50) });
+  return json({ ok: false, error: "No se pudo completar esta etapa de la subida. Los archivos confirmados permanecen guardados.", codigo: `ARCHIVOS_${fase}` }, 503);
+}
+async function pasoDiagnostico(fase, operacion) {
+  try { return await operacion(); }
+  catch (e) { if (!e.fase) e.fase = fase; throw e; }
 }
 function lanzar(mensaje, status) { const e = new Error(mensaje); e.status = status; e.publico = mensaje; throw e; }
 function validarId(id) { return typeof id === "string" && VALID_ID.test(id); }
@@ -76,7 +84,7 @@ function accesoCliente(request, pedido) {
 async function conDb(env, fn) {
   if (!env?.MONGODB_URI) lanzar("MongoDB no está configurado.", 503);
   const client = new MongoClient(env.MONGODB_URI);
-  try { await client.connect(); return await fn(client.db(DB)); }
+  try { await pasoDiagnostico("MONGODB_CONEXION", () => client.connect()); return await fn(client.db(DB)); }
   finally { await client.close().catch(() => {}); }
 }
 function publicacionesDelPedido(pedido) {
@@ -158,7 +166,7 @@ async function iniciar(request, env, db) {
   }
   const r2 = bucket(env);
   const r2Key = `contenidos/publicaciones/${input.pedidoId}/${input.contenidoId}/${posicion}/${crypto.randomUUID()}`;
-  const carga = await r2.createMultipartUpload(r2Key, { httpMetadata: { contentType: tipo } });
+  const carga = await pasoDiagnostico("R2_CREAR", () => r2.createMultipartUpload(r2Key, { httpMetadata: { contentType: tipo } }));
   const cargaId = crypto.randomUUID();
   try {
     await cargas.insertOne({ _id:id, pedidoId:input.pedidoId, contenidoId:input.contenidoId, posicion, nombre, tipo, tamano, r2Key, uploadId:carga.uploadId, cargaId, estado:"abierta", partes:{}, creadaEn:tiempo(), expiraEn:new Date(Date.now()+VENCE_MS) });
@@ -186,7 +194,7 @@ async function subirParte(request, env, db, url) {
   if (bytes.byteLength !== longitud) lanzar("Parte incompleta.", 400);
   if (numero === 1 && !firmaCorrecta(bytes, sesion.tipo)) lanzar("El archivo no coincide con su formato declarado.", 415);
   const r2 = bucket(env);
-  const parte = await r2.resumeMultipartUpload(sesion.r2Key, sesion.uploadId).uploadPart(numero, bytes);
+  const parte = await pasoDiagnostico("R2_PARTE", () => r2.resumeMultipartUpload(sesion.r2Key, sesion.uploadId).uploadPart(numero, bytes));
   await db.collection("cargas_archivos_servicios").updateOne({ _id:sesion._id, cargaId, estado:"abierta" }, { $set: { [`partes.${numero}`]: { partNumber:numero, etag:parte.etag, tamano:longitud } } });
   return json({ ok:true, numero, total });
 }
@@ -205,8 +213,8 @@ async function finalizar(request, env, db) {
   if (bloqueo.modifiedCount !== 1) lanzar("Otra operación está finalizando esta carga.", 409);
   const r2 = bucket(env);
   try {
-    await r2.resumeMultipartUpload(carga.r2Key,carga.uploadId).complete(partes.map(p=>({partNumber:p.partNumber, etag:p.etag})));
-    const objeto = await r2.head(carga.r2Key);
+    await pasoDiagnostico("R2_COMPLETAR", () => r2.resumeMultipartUpload(carga.r2Key,carga.uploadId).complete(partes.map(p=>({partNumber:p.partNumber, etag:p.etag}))));
+    const objeto = await pasoDiagnostico("R2_VERIFICAR", () => r2.head(carga.r2Key));
     if (!objeto || objeto.size !== carga.tamano) lanzar("R2 no confirmó el archivo completo.", 503);
     const coleccion = db.collection("archivos_servicios");
     const anterior = await coleccion.findOne({ _id:carga._id });
@@ -249,26 +257,67 @@ async function eliminar(request, env, db) {
   return json({ok:true});
 }
 export async function ejecutarArchivosPedido(request, env) {
+  let accion = "SOLICITUD";
   try {
     const url = new URL(request.url);
-    const accion = url.pathname.slice(RUTA.length+1);
+    accion = url.pathname.slice(RUTA.length+1).toUpperCase();
+    const ruta = accion.toLowerCase();
     const metodos = {estado:"GET",iniciar:"POST",parte:"PUT",finalizar:"POST",cancelar:"POST",eliminar:"POST"};
-    if (!(accion in metodos)) return fallo("Ruta no disponible.",404);
-    if (request.method !== metodos[accion]) return fallo("Método no permitido.",405);
+    if (!(ruta in metodos)) return fallo("Ruta no disponible.",404);
+    if (request.method !== metodos[ruta]) return fallo("Método no permitido.",405);
     bucket(env);
     return await conDb(env, async db => {
-      if (accion === "estado") { const pedido = await buscarPedido(db, request, env, url.searchParams.get("pedidoId")); return json(await estadoArchivos(db,pedido)); }
-      if (accion === "iniciar") return iniciar(request,env,db);
-      if (accion === "parte") return subirParte(request,env,db,url);
-      if (accion === "finalizar") return finalizar(request,env,db);
-      if (accion === "cancelar") return cancelar(request,env,db);
+      if (ruta === "estado") { const pedido = await buscarPedido(db, request, env, url.searchParams.get("pedidoId")); return json(await estadoArchivos(db,pedido)); }
+      if (ruta === "iniciar") return iniciar(request,env,db);
+      if (ruta === "parte") return subirParte(request,env,db,url);
+      if (ruta === "finalizar") return finalizar(request,env,db);
+      if (ruta === "cancelar") return cancelar(request,env,db);
       return eliminar(request,env,db);
     });
-  } catch(e) { return errorSeguro(e); }
+  } catch(e) { return errorSeguro(e, accion); }
 }
 function escapar(s) { return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]); }
 function html(titulo, cuerpo, status=200) {
-  return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapar(titulo)}</title><style>body{margin:0;background:#f5f5f5;color:#252525;font:15px system-ui}main{max-width:800px;margin:24px auto;background:white;padding:24px;border-radius:10px}section{border:1px solid #ddd;border-radius:9px;padding:16px;margin:14px 0}input,button,select,textarea{padding:9px;margin:4px}textarea{display:block;width:calc(100% - 28px);max-width:620px;min-height:80px;font:inherit}form{margin:12px 0}img,video{max-width:100%;max-height:350px}a{color:#b85f12}small{color:#666}</style></head><body><main><h1>${escapar(titulo)}</h1>${cuerpo}<p><a href="/admin">Volver a Administración</a></p></main></body></html>`, {status,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff","Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; media-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"}});
+  return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapar(titulo)}</title><style>
+  :root{color-scheme:light}*{box-sizing:border-box}
+  body{margin:0;background:#f8fafb;color:#26303c;font:400 14px/1.6 Montserrat,system-ui,-apple-system,sans-serif}
+  main{max-width:1020px;margin:0 auto;padding:36px 22px 70px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:32px;color:#73808b;font-size:12px}
+  .topbar a{color:#526171;text-decoration:none}.topbar a:hover{text-decoration:underline}
+  .encabezado{margin-bottom:26px}.encabezado p{color:#73808b;font-size:13px;margin:8px 0 0}
+  h1{font-size:clamp(21px,3vw,27px);letter-spacing:-.035em;line-height:1.3;font-weight:500;margin:0}
+  h2{font-size:16px;font-weight:500;line-height:1.4;margin:0}h3{font-size:14px;font-weight:500;margin:0}
+  p{line-height:1.65;margin:9px 0}.muted,small{color:#788592;font-size:12px}
+  section{border:1px solid #e9edf1;border-radius:10px;padding:24px 26px;margin:18px 0;background:#fff}
+  .seccion-cabecera{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  a{color:#526779;text-decoration:none}a:hover{text-decoration:underline}
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:14px 0}
+  .dato{padding:13px 15px;background:#fafbfc;border:1px solid #f0f2f4;border-radius:8px;min-width:0}
+  .dato small{display:block;margin-bottom:5px}.dato strong{font-weight:500;overflow-wrap:anywhere}
+  .chip{display:inline-flex;align-items:center;background:#f7f9fa;border:1px solid #e8ecf0;border-radius:100px;padding:3px 9px;font-size:11px;color:#637281;font-weight:500}
+  .archivo{display:grid;grid-template-columns:110px minmax(0,1fr);gap:18px;align-items:start;padding:18px 0;border-top:1px solid #f0f2f4}
+  .media{width:110px;height:104px;border-radius:8px;overflow:hidden;background:#f4f6f8;border:1px solid #e9edf1;display:flex;align-items:center;justify-content:center}
+  .media img,.media video{display:block;max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}
+  .archivo-info{min-width:0}.archivo-info p{margin:0 0 6px}.archivo-info .nombre{font-weight:500;overflow-wrap:anywhere}
+  .botonera{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 0;align-items:center}
+  input,button,select,textarea{font:inherit;border:1px solid #dce3e9;border-radius:7px;padding:9px 12px}
+  input{max-width:100%;min-height:40px}.busqueda{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .busqueda input{width:360px}button{background:#3d5263;color:#fff;border-color:#3d5263;cursor:pointer;min-height:38px;font-weight:500}
+  button:hover{background:#283b4a}.correccion button{background:#fff;color:#815b50;border-color:#e5d9d5}
+  .correccion button:hover{background:#fbf7f5}
+  input:focus-visible,button:focus-visible,textarea:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #8d9eae;outline-offset:2px}
+  .correccion{margin-top:10px;border:1px solid #e9edf1;border-radius:8px;padding:10px 12px;max-width:560px}
+  .correccion summary{font-weight:500;font-size:12px;color:#835b50;cursor:pointer}
+  .correccion form{margin:12px 0 0}.correccion label{display:block;font-size:12px;color:#52606d}
+  textarea{display:block;width:100%;max-width:100%;margin:8px 0 12px;min-height:88px;resize:vertical;font:inherit}
+  .copy{margin:12px 0 16px;border-left:2px solid #edf0f3;padding:0 14px;overflow-wrap:anywhere;white-space:pre-wrap;color:#465361}
+  .mensaje{border-radius:8px;background:#fafbfc;color:#75808a;padding:12px 14px;margin-top:15px;font-size:12px}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+  .enlace-suave{display:inline-block;border:1px solid #e3e8ed;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:500}
+  code{overflow-wrap:anywhere;font-size:12px}
+  @media(max-width:640px){main{padding:24px 14px 45px}.topbar{margin-bottom:24px}section{padding:18px 16px;margin:14px 0}.archivo{grid-template-columns:80px minmax(0,1fr);gap:12px}.media{width:80px;height:80px}.meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.busqueda input{width:100%}.busqueda button{width:100%}}
+  @media(max-width:390px){.meta-grid{grid-template-columns:1fr}.archivo{grid-template-columns:1fr}.media{width:110px;height:100px}}
+  </style></head><body><main><div class="topbar"><a href="/admin">← Administración</a><span>Publicaciones automáticas · Revisión técnica</span></div><header class="encabezado"><h1>${escapar(titulo)}</h1><p>Verificá los archivos de cada contenido antes de aprobar o solicitar correcciones.</p></header>${cuerpo}<nav class="footer-nav"><a class="enlace-suave" href="/admin">Volver a Administración</a><a class="enlace-suave" href="/api/admin/servicios/publicaciones/programacion">Programación de semanas</a></nav></main></body></html>`, {status,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff","Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; media-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"}});
 }
 // Token antifalsificacion para formularios de revision de Administración.
 // Mantiene la proteccion CSRF aunque el navegador omita Origin en un POST.
@@ -305,10 +354,19 @@ export async function ejecutarAdminArchivosPedido(request, env, autorizado) {
   if (!autorizado) return html("Acceso no autorizado","<p>Iniciá sesión en Administración.</p>",401);
   const url = new URL(request.url);
   const pedidoId = url.searchParams.get("pedidoId");
+  if(url.searchParams.has('semanaId')){
+    const { ejecutarAdminSemanaPagada } = await import('./admin-semanas-pagadas.js');
+    return ejecutarAdminSemanaPagada(request,env,autorizado,'archivos');
+  }
   try {
     bucket(env);
     if (request.method === "GET") {
-      if (!pedidoId) return html("Revisión de contenidos",`<p>Ingresá el código del pedido.</p><form method="get"><input name="pedidoId" placeholder="SER-..." required><button>Buscar pedido</button></form>`);
+      if (!pedidoId) return await conDb(env,async db=>{
+        const { listarRenovacionesPendientes }=await import('./admin-semanas-pagadas.js');
+        const pagadas=await listarRenovacionesPendientes(db);
+        const links=pagadas.map(x=>`<p><a class="enlace-suave" href="${RUTA_ADMIN}?semanaId=${encodeURIComponent(x._id)}">Semana ${Number(x.numeroSemana)||2} · ${escapar(x.email||'Cliente')} · ${escapar(x.configuracionEstado)}</a></p>`).join('');
+        return html("Revisión de contenidos",`<section><h2>Semanas pagadas reales</h2>${links||'<p>Sin semanas pagadas pendientes.</p>'}</section><section><h2>Buscar prueba gratuita</h2><form class="busqueda" method="get"><input aria-label="ID del pedido" name="pedidoId" placeholder="ID del pedido · SER-..." required><button type="submit">Buscar pedido</button></form></section>`);
+      });
       if (!validarId(pedidoId)) return html("Pedido incorrecto","<p>El código es inválido.</p>",400);
       return await conDb(env, async db => {
         const pedido = await db.collection("pedidos_servicios").findOne({pedidoId,tipo:"publicaciones"});
@@ -340,20 +398,22 @@ export async function ejecutarAdminArchivosPedido(request, env, autorizado) {
           return new Response(objeto.body,{ status:rango?206:200,headers });
         }
         const archivos = await db.collection("archivos_servicios").find({pedidoId,estado:"subido"}).sort({contenidoId:1,posicion:1}).toArray();
-        const tarjetas = pedido.publicaciones.map(p => {
-          const lista = archivos.filter(a=>a.contenidoId===p.id);
-          return `<section><h2>${escapar(p.id)} · ${escapar(p.tipo)}</h2><p>${escapar(p.descripcion || "Sin descripción")}</p>${lista.length ? lista.map(a => {
+        const revisable = preparacionAutorizada(pedido);
+        const tarjetas = pedido.publicaciones.map((p, indice) => {
+          const lista = archivos.filter(a => a.contenidoId === p.id);
+          return `<section><div class="seccion-cabecera"><h2>Contenido ${indice + 1} · ${escapar(p.tipo)}</h2><span class="chip">${lista.length} archivo${lista.length === 1 ? "" : "s"}</span></div><p class="muted">${escapar(p.diaPreferido || "Día sin definir")} · ${escapar(p.horaLocalPreferida || "Horario sin definir")} hora local</p><div class="copy">${escapar(p.descripcion || "Sin texto de publicación")}</div>${lista.length ? lista.map(a => {
             const enlace = `${RUTA_ADMIN}?pedidoId=${encodeURIComponent(pedidoId)}&accion=ver&contenidoId=${encodeURIComponent(p.id)}&posicion=${a.posicion}`;
-            const medio = a.tipo.startsWith("image/") ? `<img src="${escapar(enlace)}" alt="${escapar(a.nombre)}">` : `<video src="${escapar(enlace)}" controls preload="none"></video>`;
+            const medio = a.tipo.startsWith("image/") ? `<img src="${escapar(enlace)}" alt="${escapar(a.nombre)}" loading="lazy">` : `<video src="${escapar(enlace)}" controls preload="none" playsinline></video>`;
             const csrf = tokenRevision(env, pedidoId, p.id, a.posicion);
             const campos = `<input type="hidden" name="pedidoId" value="${escapar(pedidoId)}"><input type="hidden" name="contenidoId" value="${escapar(p.id)}"><input type="hidden" name="posicion" value="${a.posicion}"><input type="hidden" name="csrfRevision" value="${escapar(csrf)}">`;
-            const motivoAnterior = a.revision === "rechazado" && a.motivoRevision ? `<p><small>Motivo técnico: ${escapar(a.motivoRevision)}</small></p>` : "";
-            return `<div><p><strong>${escapar(a.nombre)}</strong> · ${Math.ceil(a.tamano/1024)} KB · ${a.revision === "rechazado" ? "Corrección solicitada" : escapar(a.revision)}</p>${motivoAnterior}${medio}` +
-              `<form action="${RUTA_ADMIN}" method="post">${campos}<button name="revision" value="aprobado">Aprobar técnicamente</button></form>` +
-              `<form action="${RUTA_ADMIN}" method="post">${campos}<label>Motivo técnico de la corrección (obligatorio, de 10 a 500 caracteres)<textarea name="motivoRevision" minlength="10" maxlength="500" required placeholder="Ej.: El archivo MP4 no puede reproducirse; volvé a exportarlo."></textarea></label><button name="revision" value="rechazado">Solicitar corrección</button></form></div>`;
-          }).join("") : "<p><small>Todavía no hay archivos para este contenido.</small></p>"}</section>`;
+            const motivoAnterior = a.revision === "rechazado" && a.motivoRevision ? `<p class="mal"><small>Corrección anterior: ${escapar(a.motivoRevision)}</small></p>` : "";
+            const estadoArchivo = a.revision === "aprobado" ? "Aprobado" : a.revision === "rechazado" ? "Corrección solicitada" : "Pendiente de revisión";
+            return `<article class="archivo"><div class="media">${medio}</div><div class="archivo-info"><p class="nombre">${escapar(a.nombre)}</p><p class="muted">${Math.ceil(a.tamano/1024)} KB · Archivo ${a.posicion + 1}</p><p><span class="chip">${estadoArchivo}</span></p>${motivoAnterior}${revisable ? `
+              <div class="botonera"><form action="${RUTA_ADMIN}" method="post">${campos}<button name="revision" value="aprobado">Aprobar técnicamente</button></form></div>
+              <details class="correccion"><summary>Solicitar corrección</summary><form action="${RUTA_ADMIN}" method="post">${campos}<label>Motivo técnico de la corrección (10 a 500 caracteres)<textarea name="motivoRevision" minlength="10" maxlength="500" required placeholder="Ej.: El archivo MP4 no puede reproducirse; volvé a exportarlo."></textarea></label><button name="revision" value="rechazado">Enviar solicitud de corrección</button></form></details>` : '<p class="muted">La revisión de archivos está cerrada para este pedido.</p>'}</div></article>`;
+          }).join("") : '<div class="mensaje">Todavía no hay archivos cargados para este contenido.</div>'}</section>`;
         }).join("");
-        return html("Revisión de contenidos",`<p>Pedido: <code>${escapar(pedidoId)}</code></p><p>Pago: <strong>${escapar(pedido.estadoPago)}</strong> · Contenidos: <strong>${escapar(pedido.estadoContenidos)}</strong></p>${pedidoId === "SER-7ebdd0fa-4795-4cd9-a688-a72a1e26b937" ? `<p><a href="/api/admin/servicios/publicaciones/activacion-simulada?pedidoId=${encodeURIComponent(pedidoId)}">Simular activación de 7 días (sin publicar)</a></p>` : ""}${tarjetas}<small>Aprobar archivos no activa ni programa publicaciones.</small>`);
+        return html("Revisión de contenidos",`<section><div class="seccion-cabecera"><h2>Resumen del pedido</h2><a class="enlace-suave" href="/api/admin/servicios/publicaciones/programacion?pedidoId=${encodeURIComponent(pedidoId)}">Ver programación ↗</a></div><div class="meta-grid"><div class="dato"><small>ID del pedido</small><strong>${escapar(pedidoId)}</strong></div><div class="dato"><small>Estado del contenido</small><strong>${escapar((pedido.estadoContenidos || "—").replaceAll("_", " "))}</strong></div><div class="dato"><small>Estado del pago</small><strong>${escapar((pedido.estadoPago || "—").replaceAll("_", " "))}</strong></div><div class="dato"><small>Archivos recibidos</small><strong>${archivos.length}</strong></div></div>${pedidoId === "SER-7ebdd0fa-4795-4cd9-a688-a72a1e26b937" ? `<p><a class="enlace-suave" href="/api/admin/servicios/publicaciones/activacion-simulada?pedidoId=${encodeURIComponent(pedidoId)}">Simular activación (sin publicar)</a></p>` : ""}</section>${tarjetas}<div class="mensaje">La aprobación técnica de archivos no activa ni programa publicaciones. La activación se gestiona por separado.</div>`);
       });
     }
     if (request.method === "POST") {

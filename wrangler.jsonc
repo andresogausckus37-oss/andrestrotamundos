@@ -67,9 +67,18 @@
       "/compartir-facebook/*"
     ]
   },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ACCESO_CLIENTES_DURABLE", "class_name": "AccesoClientesDurable" }
+    ]
+  },
+  "migrations": [
+    { "tag": "acceso-clientes-v1", "new_sqlite_classes": ["AccesoClientesDurable"] }
+  ],
   "triggers": {
     "crons": [
       "*/5 * * * *"
     ]
   }
 }
+

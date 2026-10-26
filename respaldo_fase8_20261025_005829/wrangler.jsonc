@@ -1,0 +1,75 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "andrestrotamundos",
+  "main": "worker.js",
+  "keep_vars": true,
+  "vars": {
+    "FACEBOOK_PAGE_ID": "1312632228596581"
+  },
+  "images": {
+    "binding": "IMAGES"
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "compatibility_date": "2026-10-09",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PRODUCTOS_R2",
+      "bucket_name": "andrestrotamundos-productos"
+    },
+    {
+      "binding": "SERVICIOS_COMPROBANTES_R2",
+      "bucket_name": "andrestrotamundos-comprobantes"
+    },
+    {
+      "binding": "SERVICIOS_CONTENIDOS_R2",
+      "bucket_name": "andrestrotamundos-contenidos"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "SERVICIO_LIMITE_PEDIDOS",
+      "namespace_id": "2718101",
+      "simple": {
+        "limit": 6,
+        "period": 60
+      }
+    },
+    {
+      "name": "SERVICIO_LIMITE_CONSULTAS",
+      "namespace_id": "2718102",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "SERVICIO_LIMITE_COMPROBANTES",
+      "namespace_id": "2718103",
+      "simple": {
+        "limit": 6,
+        "period": 60
+      }
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/tienda/*",
+      "/compartir/*",
+      "/compartir-facebook/*"
+    ]
+  },
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
+  }
+}

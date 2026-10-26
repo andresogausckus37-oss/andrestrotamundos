@@ -9,6 +9,7 @@ const COLA = 'calendarios_clientes_activos';
 const MEDIA = '/api/servicios/publicaciones/media/';
 const VERSION = 'v26.0';
 const ID = /^SER-[a-f0-9-]{36}$/i;
+const ID_SEMANA_PAGADA = /^renovacion-real:SER-[a-f0-9-]{36}(?::(?:[3-9]|[1-9][0-9]{1,2}))?$/i;
 const CI = /^contenido-[1-4]$/;
 const MEDIOS = new Set(['image/jpeg','image/png','image/webp','video/mp4']);
 const HORA = 3600000;
@@ -164,7 +165,7 @@ export async function activarSemanaDesdeAdmin(db, env, pedidoId, revision) {
 export async function servirMedioCliente(request,env){
   const u=new URL(request.url);
   if(!['GET','HEAD'].includes(request.method)||u.origin!==baseMedia(env))return json({ok:false},403);
-  const match=/^\/api\/servicios\/publicaciones\/media\/(SER-[a-f0-9-]{36})\/(contenido-[1-4])\/(\d)$/.exec(u.pathname);
+  const match=/^\/api\/servicios\/publicaciones\/media\/((?:renovacion-real:)?SER-[a-f0-9-]{36}(?::(?:[3-9]|[1-9][0-9]{1,2}))?)\/(contenido-[1-4])\/(\d)$/.exec(u.pathname);
   if(!match)return json({ok:false},404);
   const [,pedidoId,contenidoId,numero]=match;const posicion=Number(numero);
   const vence=u.searchParams.get('v')||'';const sig=u.searchParams.get('s')||'';
@@ -177,22 +178,33 @@ export async function servirMedioCliente(request,env){
     const plan=await db.collection(COLA).findOne({_id:pedidoId,estado:'activa',publicacionHabilitada:true,
       eventos:{$elemMatch:{contenidoId,estado:{$in:['enviando_resultado_incierto','contenedor_pendiente','consultando_contenedor','publicacion_iniciada_resultado_incierto','video_confirmacion_pendiente']}}}});
     if(!plan)return json({ok:false},404);
-    const a=await db.collection('archivos_servicios').findOne({pedidoId,contenidoId,posicion,estado:'subido',revision:'aprobado'});
+    const a=plan.tipoSemana==='pagada'
+      ? await db.collection('medios_renovaciones_reales').findOne({renovacionId:pedidoId,contenidoId,posicion,revision:'aprobado'})
+      : await db.collection('archivos_servicios').findOne({pedidoId,contenidoId,posicion,estado:'subido',revision:'aprobado'});
     if(!a||!MEDIOS.has(a.tipo)||!a.r2Key)return json({ok:false},404);
+    // Para semanas pagadas con Instagram, servir el JPEG generado, no el
+    // PNG/WebP original. Facebook puede usar la misma imagen JPEG.
+    const requiereJPEG=plan.tipoSemana==='pagada'&&plan.redes?.includes('instagram')&&['image/png','image/webp'].includes(a.tipo);
+    const medio=requiereJPEG
+      ? (a.publicacionTipo==='image/jpeg'&&a.publicacionR2Key&&a.publicacionTamano>0
+          ? {...a,r2Key:a.publicacionR2Key,tipo:'image/jpeg',tamano:a.publicacionTamano}
+          : null)
+      : a;
+    if(!medio)return json({ok:false,error:'JPEG de publicación no disponible.'},404);
     const bucket=env?.SERVICIOS_CONTENIDOS_R2;if(!bucket?.get)return json({ok:false},503);
-    const h={'Content-Type':a.tipo,'Content-Disposition':'inline','Cache-Control':'private,max-age=60',
+    const h={'Content-Type':medio.tipo,'Content-Disposition':'inline','Cache-Control':'private,max-age=60',
       'X-Content-Type-Options':'nosniff','Accept-Ranges':'bytes','Content-Security-Policy':"default-src 'none'"};
     const rango=request.headers.get('range');let seleccion;
     if(rango){const m=/^bytes=(\d+)-(\d*)$/.exec(rango);
-      if(!m)return new Response(null,{status:416,headers:{'Content-Range':`bytes */${a.tamano}`}});
-      const ini=Number(m[1]),fin=m[2]?Number(m[2]):a.tamano-1;
-      if(!Number.isSafeInteger(ini)||!Number.isSafeInteger(fin)||ini>fin||fin>=a.tamano)
-        return new Response(null,{status:416,headers:{'Content-Range':`bytes */${a.tamano}`}});
-      seleccion={offset:ini,length:fin-ini+1};h['Content-Range']=`bytes ${ini}-${fin}/${a.tamano}`;
+      if(!m)return new Response(null,{status:416,headers:{'Content-Range':`bytes */${medio.tamano}`}});
+      const ini=Number(m[1]),fin=m[2]?Number(m[2]):medio.tamano-1;
+      if(!Number.isSafeInteger(ini)||!Number.isSafeInteger(fin)||ini>fin||fin>=medio.tamano)
+        return new Response(null,{status:416,headers:{'Content-Range':`bytes */${medio.tamano}`}});
+      seleccion={offset:ini,length:fin-ini+1};h['Content-Range']=`bytes ${ini}-${fin}/${medio.tamano}`;
     }
-    const archivo=await bucket.get(a.r2Key,seleccion?{range:seleccion}:undefined);
+    const archivo=await bucket.get(medio.r2Key,seleccion?{range:seleccion}:undefined);
     if(!archivo)return json({ok:false},404);
-    h['Content-Length']=String(seleccion?seleccion.length:a.tamano);
+    h['Content-Length']=String(seleccion?seleccion.length:medio.tamano);
     return new Response(request.method==='HEAD'?null:archivo.body,{status:seleccion?206:200,headers:h});
   });
 }
@@ -308,11 +320,22 @@ async function publicarFacebook(db,plan,e,p,c,token,archivos,env){
   await actualizar(db,plan,e,'publicada',{metaId:mediaId,publicadaEn:new Date(),enlace:await enlacePublicado(mediaId,'facebook',token)});
 }
 async function procesarEvento(db,plan,e,env){
-  const pedido=await db.collection('pedidos_servicios').findOne({pedidoId:plan._id,tipo:'publicaciones',estadoServicio:'activo',publicacionHabilitada:true});
+  const pagada=plan.tipoSemana==='pagada';
+  const pedidoId=pagada?plan.pedidoId:plan._id;
+  const pedido=await db.collection('pedidos_servicios').findOne(pagada
+    ? {pedidoId,tipo:'publicaciones',clienteUsuarioId:plan.clienteUsuarioId}
+    : {pedidoId,tipo:'publicaciones',estadoServicio:'activo',publicacionHabilitada:true});
   if(!pedido||Date.now()>new Date(plan.fin).getTime())return;
-  const p=pedido.publicaciones?.find(p=>p.id===e.contenidoId);
-  const c=await db.collection('conexiones_meta_pedidos').findOne({pedidoId:plan._id,plataforma:e.red,estado:'conectada'});
-  const archivos=await db.collection('archivos_servicios').find({pedidoId:plan._id,contenidoId:e.contenidoId,estado:'subido',revision:'aprobado'}).sort({posicion:1}).toArray();
+  if(pagada){
+    const renovacion=await db.collection('renovaciones_transferencia_reales').findOne({_id:plan._id,pedidoId,
+      clienteUsuarioId:plan.clienteUsuarioId,pagoConfirmado:true,configuracionEstado:'programada'});
+    if(!renovacion)return;
+  }
+  const p=(pagada?plan.publicaciones:pedido.publicaciones)?.find(p=>p.id===e.contenidoId);
+  const c=await db.collection('conexiones_meta_pedidos').findOne({pedidoId,plataforma:e.red,estado:'conectada'});
+  const archivos=pagada
+    ? await db.collection('medios_renovaciones_reales').find({renovacionId:plan._id,contenidoId:e.contenidoId,revision:'aprobado'}).sort({posicion:1}).toArray()
+    : await db.collection('archivos_servicios').find({pedidoId,contenidoId:e.contenidoId,estado:'subido',revision:'aprobado'}).sort({posicion:1}).toArray();
   if(!p||!c||!archivos.length||!archivos.every(a=>MEDIOS.has(a.tipo))) {
     await actualizar(db,plan,e,'atencion_manual',{motivo:'REQUISITOS_CAMBIARON'});return;
   }
@@ -361,9 +384,42 @@ export async function ejecutarCronClientes(env){
       .project({_id:1}).limit(30).toArray();
     for(const p of vencidas){
       await db.collection(COLA).updateOne({_id:p._id,estado:'activa'},{$set:{estado:'finalizada',publicacionHabilitada:false,finalizadaEn:ahora}});
-      await db.collection('pedidos_servicios').updateOne({pedidoId:p._id,estadoServicio:'activo'},
-        {$set:{estadoServicio:'finalizado','prueba.estado':'finalizada',publicacionHabilitada:false,actualizadoEn:ahora}});
+      const planVencido=await db.collection(COLA).findOne({_id:p._id},{projection:{tipoSemana:1}});
+      if(planVencido?.tipoSemana==='pagada'){
+        await db.collection('renovaciones_transferencia_reales').updateOne({_id:p._id,configuracionEstado:'programada'},
+          {$set:{estadoSemana:'finalizada',finalizadaEn:ahora}});
+      }else{
+        await db.collection('pedidos_servicios').updateOne({pedidoId:p._id,estadoServicio:'activo'},
+          {$set:{estadoServicio:'finalizado','prueba.estado':'finalizada',publicacionHabilitada:false,actualizadoEn:ahora}});
+      }
     }
-    return {ok:true,procesados,pruebasFinalizadas:vencidas.length};
+    // Recuperación de enlaces públicos: consulta Meta sin crear contenido.
+    // Máximo una consulta cada ejecución, y una vez por hora por evento.
+    const sinEnlace=await db.collection(COLA).find({estado:{$in:['activa','finalizada']},
+      eventos:{$elemMatch:{red:'instagram',estado:'publicada',enlace:null,metaId:{$exists:true}}}})
+      .project({_id:1,pedidoId:1,eventos:1}).limit(8).toArray();
+    let consultado=false;
+    for(const plan of sinEnlace){
+      if(consultado)break;
+      for(const [indice,e] of (plan.eventos||[]).entries()){
+        if(consultado)break;
+        if(e.red!=='instagram'||e.estado!=='publicada'||e.enlace||!/^[0-9]{5,30}$/.test(String(e.metaId||'')))continue;
+        if(Date.now()-new Date(e.enlaceConsultaEn||0).getTime()<HORA)continue;
+        const claimed=await db.collection(COLA).updateOne({_id:plan._id,
+          [`eventos.${indice}.metaId`]:e.metaId,[`eventos.${indice}.enlace`]:null},
+          {$set:{[`eventos.${indice}.enlaceConsultaEn`]:ahora}});
+        if(!claimed.matchedCount)continue;
+        consultado=true;
+        try{
+          const conn=await db.collection('conexiones_meta_pedidos').findOne({pedidoId:plan.pedidoId||plan._id,
+            plataforma:'instagram',estado:'conectada'});
+          if(!conn)break;
+          const enlace=await enlacePublicado(e.metaId,'instagram',descifrar(conn,env));
+          if(enlace)await db.collection(COLA).updateOne({_id:plan._id,[`eventos.${indice}.metaId`]:e.metaId},
+            {$set:{[`eventos.${indice}.enlace`]:enlace}});
+        }catch(error){console.warn('Recuperación permalink IG:',error?.name||'Error');}
+      }
+    }
+    return {ok:true,procesados,pruebasFinalizadas:vencidas.filter(p=>!String(p._id).startsWith('renovacion-real:')).length};
   });
 }

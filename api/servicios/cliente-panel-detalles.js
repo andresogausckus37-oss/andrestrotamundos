@@ -50,10 +50,11 @@ export async function ejecutarDetallesPanel(request,env) {
   if (request.method !== (desconectar?'POST':'GET')) return respuesta({ok:false,error:'Método no permitido.'},405);
   if (desconectar && (request.headers.get('origin')!==url.origin || request.headers.get('x-comunidad-panel')!=='1'))
     return respuesta({ok:false,error:'Origen no autorizado.'},403);
-  const usuario=await obtenerClienteRegistrado(request,env).catch(()=>null);
-  if (!usuario?.id) return respuesta({ok:false,error:'Iniciá sesión con tu correo verificado.'},401);
   try {
     return await conDB(env,async db => {
+      // FASE7_UNA_CONEXION_DB_20261024: autenticar en el mismo cliente MongoDB.
+      const usuario = await obtenerClienteRegistrado(request, env, db);
+      if (!usuario?.id) return respuesta({ok:false,error:'Iniciá sesión con tu correo verificado.'},401);
       const pedidos=db.collection('pedidos_servicios');
       if (desconectar) {
         if (Number(request.headers.get('content-length')||0)>2048) return respuesta({ok:false,error:'Solicitud demasiado grande.'},413);
@@ -87,6 +88,33 @@ export async function ejecutarDetallesPanel(request,env) {
         .find({_id:{$in:ids},estado:{$in:['activa','finalizada']}})
         .project({_id:1,eventos:1}).toArray():[];
       const programacionesPorId=new Map(programaciones.map(p=>[p._id,p]));
+      // Semanas pagadas de ESTA cuenta y sus eventos ya programados. No se devuelven R2 ni tokens.
+      const renovaciones=ids.length?await db.collection('renovaciones_transferencia_reales').find({
+        pedidoId:{$in:ids},clienteUsuarioId:usuario.id,pagoConfirmado:true,configuracionEstado:'programada'
+      }).sort({numeroSemana:1,creadoEn:1}).limit(80).toArray():[];
+      const idsSemanas=renovaciones.map(r=>r._id);
+      const planesPagados=idsSemanas.length?await db.collection('calendarios_clientes_activos')
+        .find({_id:{$in:idsSemanas},tipoSemana:'pagada',estado:{$in:['activa','finalizada']}})
+        .project({_id:1,pedidoId:1,eventos:1,inicio:1,fin:1,estado:1,zonaHoraria:1}).toArray():[];
+      const planesPorSemana=new Map(planesPagados.map(p=>[p._id,p]));
+      const semanasPagadas=Object.fromEntries(ids.map(id=>[id,[]]));
+      for(const r of renovaciones){
+        const plan=planesPorSemana.get(r._id);if(!plan||plan.pedidoId!==r.pedidoId)continue;
+        const eventos=Array.isArray(plan.eventos)?plan.eventos:[];
+        const contenidos=(r.configuracion?.publicaciones||[]).slice(0,4).map(c=>{
+          const mini=miniContenido(c);
+          const porRed=eventos.filter(e=>e.contenidoId===c.id);
+          mini.fechaHoraDefinitiva=porRed[0]?.fechaHoraUTC||null;
+          mini.estadoPorRed=Object.fromEntries(porRed.map(e=>[e.red,e.estado==='publicada'?'publicado':e.estado==='atencion_manual'?'error':'programado']));
+          mini.urlsPublicadas=Object.fromEntries(porRed.map(e=>[e.red,enlacePublicadoSeguro(e.enlace)]).filter(([,url])=>url));
+          return mini;
+        });
+        semanasPagadas[r.pedidoId].push({id:r._id,numeroSemana:r.numeroSemana||2,
+          redes:Array.isArray(r.redes)?r.redes.filter(x=>['instagram','facebook'].includes(x)):[],
+          zonaHoraria:plan.zonaHoraria||'',inicio:plan.inicio,fin:plan.fin,
+          estado:plan.estado,programadas:eventos.length,realizadas:eventos.filter(e=>e.estado==='publicada').length,
+          total:4*(r.redes?.length||0),contenidos});
+      }
       const ultimo=documentos[0];
       const perfil = {
         nombreApellido:texto(cuenta?.perfil?.nombreApellido||cuenta?.perfil?.nombre||cuenta?.nombreApellido||cuenta?.nombreCompleto||cuenta?.nombre,150),
@@ -114,7 +142,7 @@ export async function ejecutarDetallesPanel(request,env) {
             return minimo;
           }):[]}
       ]));
-      return respuesta({ok:true,perfil,detalles});
+      return respuesta({ok:true,perfil,detalles,semanasPagadas});
     });
   } catch { return respuesta({ok:false,error:'No se pudo consultar la información del panel.'},503); }
 }

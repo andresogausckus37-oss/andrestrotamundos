@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 // Diseño del panel de cliente. Las rutas, los contratos de API y las autorizaciones
-// se conservan: los ensayos, borradores y reservas quedan fuera de esta interfaz.
+// Los pagos reales se gestionan por separado del cron y de la prueba gratuita.
 const LOGOS = {
   instagram: "https://i.postimg.cc/1tGRTnck/3840px-Instagram-logo-2022-svg.png",
   facebook: "https://i.postimg.cc/rshTXS0k/Logo-de-Facebook.png",
@@ -167,8 +167,9 @@ function VistaArchivoLocal({ archivo, tipo }) {
     : <img className="h-full w-full object-contain" src={url} alt={archivo.name} />;
 }
 
-function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
-  const [redes, setRedes] = useState(["facebook", "instagram"]);
+function EditorPrimeraSemana({ perfil, email, alFinalizar, pedidoRenovacion = null }) {
+  const modoRenovacion = Boolean(pedidoRenovacion?.id);
+  const [redes, setRedes] = useState(() => modoRenovacion ? pedidoRenovacion.redes : ["facebook", "instagram"]);
   const [paisZona, setPaisZona] = useState(() => ZONAS_DISPONIBLES.some(x => x.pais === perfil?.pais) ? perfil.pais : "Argentina");
   const [zonaHoraria, setZonaHoraria] = useState(() => {
     const pais = ZONAS_DISPONIBLES.find(x => x.pais === perfil?.pais);
@@ -186,14 +187,17 @@ function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
   const [subida, setSubida] = useState(null);
   const [errorEditor, setErrorEditor] = useState("");
   const envioEnCurso = useRef(false);
+  // Evita volver a subir archivos ya confirmados durante un reintento de Semana 2.
+  const subidosSemana2 = useRef(new Set());
   useEffect(() => {
+    if (modoRenovacion) { setHabilitada(true); setConsultando(false); return; }
     let activo = true;
     fetch("/api/servicios/publicaciones/plan", { cache: "no-store", credentials: "same-origin" })
       .then(r => r.json()).then(r => { if (activo) setHabilitada(r.ok === true && r.pruebasDisponibles === true); })
       .catch(() => { if (activo) setHabilitada(false); })
       .finally(() => { if (activo) setConsultando(false); });
     return () => { activo = false; };
-  }, []);
+  }, [modoRenovacion]);
   const item = contenidos[seleccionado];
   const redPrevia = redes.includes(redVista) ? redVista : redes[0];
   const nombre = perfil?.emprendimiento?.trim() || "";
@@ -217,8 +221,8 @@ function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
       (esReel
         ? archivo.type !== "video/mp4" || archivo.size > 150 * 1024 * 1024
         : !["image/jpeg", "image/png", "image/webp"].includes(archivo.type) || archivo.size > 20 * 1024 * 1024));
-    if (invalidos) {
-      setErrorEditor(esReel ? "Seleccioná videos MP4 de hasta 150 MB." : "Seleccioná imágenes JPG, PNG o WebP de hasta 20 MB.");
+    if (invalidos || (modoRenovacion && nuevos.some(a => a.size > 25 * 1024 * 1024))) {
+      setErrorEditor(modoRenovacion ? "En la semana pagada, cada archivo debe pesar 25 MB como máximo." : esReel ? "Seleccioná videos MP4 de hasta 150 MB." : "Seleccioná imágenes JPG, PNG o WebP de hasta 20 MB.");
       return;
     }
     if (esCarrusel) {
@@ -242,7 +246,7 @@ function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
     setErrorEditor("");
   };
   const alternarRed = red => {
-    if (pedidoCreado || enviando) return;
+    if (pedidoCreado || enviando || modoRenovacion) return;
     setRedes(actual => actual.includes(red)
       ? (actual.length === 1 ? actual : actual.filter(x => x !== red))
       : ["instagram", "facebook"].filter(x => x === red || actual.includes(x)));
@@ -262,34 +266,120 @@ function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
     envioEnCurso.current = true;
     setEnviando(true);
     setErrorEditor("");
+    setSubida(null);
+    let id = pedidoCreado;
     try {
-      let id = pedidoCreado;
-      if (!id) {
-        const publicaciones = contenidos.map(c => ({
-          id: c.id, tipo: c.tipo, formato: c.formato, dia: c.dia, hora: c.hora,
-          descripcion: c.descripcion, ctaInstagram: c.ctaInstagram, ctaFacebook: c.ctaFacebook,
-          urlFacebook: c.urlFacebook, hashtags: c.hashtags,
-          archivosSeleccionados: c.archivos.map(a => ({ nombre: a.name, tipo: a.type, tamano: a.size })),
-        }));
-        const respuesta = await fetch("/api/servicios/publicaciones/prueba", {
-          method: "POST", credentials: "same-origin", cache: "no-store",
-          headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
-          body: JSON.stringify({ planId: "comunidad-semanal", moneda: "ARS", redes,
-            zonaHoraria, negocio: { nombre, contacto: perfil.nombreApellido, email,
-              whatsapp: perfil.whatsapp, url: perfil.web || "", rubro: "", publico: "", tono: "cercano" },
-            publicaciones }),
-        });
-        const datos = await respuesta.json().catch(() => ({}));
-        if (!respuesta.ok || !datos.ok || !/^SER-[a-f0-9-]{36}$/i.test(datos.pedidoId || "")) {
-          throw new Error(datos.error || "No se pudo registrar la semana gratuita.");
+      const publicaciones = contenidos.map(c => ({
+        id: c.id, tipo: c.tipo, formato: c.formato, dia: c.dia, hora: c.hora,
+        descripcion: c.descripcion, ctaInstagram: c.ctaInstagram, ctaFacebook: c.ctaFacebook,
+        urlFacebook: c.urlFacebook, hashtags: c.hashtags,
+        archivosSeleccionados: c.archivos.map(a => ({ nombre: a.name, tipo: a.type, tamano: a.size })),
+      }));
+      if (modoRenovacion) {
+        if (!id) {
+          const res = await fetch("/api/servicios/publicaciones/renovacion-contenidos/configurar", {
+            method: "POST", credentials: "same-origin", cache: "no-store",
+            headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
+            body: JSON.stringify({ id: pedidoRenovacion.id, zonaHoraria, publicaciones }),
+          });
+          const info = await res.json().catch(() => ({}));
+          if (!res.ok || info.ok !== true || info.estado !== "en_preparacion") throw new Error(info.error || "No se pudo guardar la semana 2.");
+          id = pedidoRenovacion.id;
+          setPedidoCreado(id);
         }
-        id = datos.pedidoId;
-        setPedidoCreado(id);
+        // Tres cargas simultáneas como máximo: reduce las esperas de red/MongoDB
+        // sin abrir decenas de conexiones ni saturar un celular.
+        const archivos = contenidos.flatMap(c => c.archivos.map((archivo, pos) => ({
+          contenido: c.id, pos, archivo,
+          clave: `${id}:${c.id}:${pos}:${archivo.name}:${archivo.size}:${archivo.lastModified}`,
+        })));
+        const pendientes = archivos.filter(a => !subidosSemana2.current.has(a.clave));
+        let hechos = archivos.length - pendientes.length;
+        let siguiente = 0;
+        let primerError = null;
+        const subirSiguiente = async () => {
+          while (!primerError) {
+            const a = pendientes[siguiente++];
+            if (!a) return;
+            try {
+              const ruta = `/api/servicios/publicaciones/renovacion-contenidos/medio?id=${encodeURIComponent(id)}&contenido=${encodeURIComponent(a.contenido)}&pos=${a.pos}`;
+              const res = await fetch(ruta, {
+                method: "POST", credentials: "same-origin", cache: "no-store",
+                headers: { "Content-Type": a.archivo.type, "X-Comunidad-Panel": "1" },
+                body: a.archivo,
+              });
+              const info = await res.json().catch(() => ({}));
+              if (!res.ok || info.ok !== true || info.contenido !== a.contenido || info.pos !== a.pos) {
+                throw new Error(info.error || `No se pudo subir ${a.archivo.name}.`);
+              }
+              subidosSemana2.current.add(a.clave);
+              hechos++;
+              setSubida({ archivo: `${hechos} de ${archivos.length} archivos`,
+                porcentaje: Math.round(hechos / archivos.length * 100) });
+            } catch (error) {
+              // Las cargas ya iniciadas terminan; no se lanzan otras si falla una.
+              primerError = primerError || error;
+            }
+          }
+        };
+        await Promise.all(Array.from({ length: Math.min(2, pendientes.length) }, () => subirSiguiente()));
+        if (primerError) throw primerError;
+        const res = await fetch("/api/servicios/publicaciones/renovacion-contenidos/enviar", {
+          method:"POST",credentials:"same-origin",cache:"no-store",
+          headers:{"Content-Type":"application/json","X-Comunidad-Panel":"1"},
+          body:JSON.stringify({id}),
+        });
+        const info = await res.json().catch(() => ({}));
+        if (!res.ok || info.ok !== true || info.estado !== "en_revision") throw new Error(info.error || "No se pudo enviar la semana.");
+      } else {
+        if (!id) {
+          const respuesta = await fetch("/api/servicios/publicaciones/prueba", {
+            method: "POST", credentials: "same-origin", cache: "no-store",
+            headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
+            body: JSON.stringify({ planId: "comunidad-semanal", moneda: "ARS", redes,
+              zonaHoraria, negocio: { nombre, contacto: perfil.nombreApellido, email,
+                whatsapp: perfil.whatsapp, url: perfil.web || "", rubro: "", publico: "", tono: "cercano" },
+              publicaciones }),
+          });
+          const datos = await respuesta.json().catch(() => ({}));
+          if (!respuesta.ok || !datos.ok || !/^SER-[a-f0-9-]{36}$/i.test(datos.pedidoId || "")) {
+            throw new Error(datos.error || "No se pudo registrar la semana gratuita.");
+          }
+          id = datos.pedidoId;
+          setPedidoCreado(id);
+        }
+        await subirArchivosSemana(id, contenidos, setSubida);
       }
-      await subirArchivosSemana(id, contenidos, setSubida);
       alFinalizar();
     } catch (error) {
-      setErrorEditor(`${error.message || "No se pudieron subir los archivos."} ${pedidoCreado ? "Podés reintentar sin crear otro pedido." : "Si el pedido fue creado, podés continuar desde el panel."}`);
+      setSubida(null);
+      setErrorEditor(`${error.message || "No se pudieron subir los archivos."} ${id ? "Podés reintentar sobre el mismo pedido." : "Revisá el panel antes de crear otro pedido."}`);
+    } finally {
+      envioEnCurso.current = false;
+      setEnviando(false);
+    }
+  }
+
+  async function finalizarEnvioAnterior() {
+    if (!modoRenovacion || !pedidoRenovacion?.id || envioEnCurso.current) return;
+    envioEnCurso.current = true;
+    setEnviando(true);
+    setErrorEditor("");
+    try {
+      // Solo completa una renovación real ya existente: no crea otro pedido,
+      // no cambia sus horarios y no vuelve a subir archivos a R2.
+      const respuesta = await fetch("/api/servicios/publicaciones/renovacion-contenidos/enviar", {
+        method: "POST", credentials: "same-origin", cache: "no-store",
+        headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
+        body: JSON.stringify({ id: pedidoRenovacion.id }),
+      });
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok || resultado.ok !== true || resultado.estado !== "en_revision") {
+        throw new Error(resultado.error || "No se pudo finalizar el envío anterior. Revisá si faltan archivos.");
+      }
+      alFinalizar();
+    } catch (error) {
+      setErrorEditor(error.message || "No se pudo finalizar el envío anterior.");
     } finally {
       envioEnCurso.current = false;
       setEnviando(false);
@@ -320,15 +410,15 @@ function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
 
   return <form onSubmit={programar} className="space-y-4 font-normal">
     <div className={`${CARD} p-4 sm:p-5`}>
-      <h2 className="text-sm font-medium">Programá tu primera semana</h2>
-      <p className="mt-1 text-xs leading-5 text-slate-500">Prepará tu contenido semanal y envialo para que lo revisemos y publiquemos en tus cuentas.</p>
+      <h2 className="text-sm font-medium">{modoRenovacion ? `Programar nueva semana · Semana ${pedidoRenovacion.numeroSemana || 2}` : "Programá tu primera semana"}</h2>
+      <p className="mt-1 text-xs leading-5 text-slate-500">{modoRenovacion ? "Configurá los cuatro contenidos de tu semana pagada. Se enviarán a revisión administrativa antes de publicarse." : "Prepará tu contenido semanal y envialo para que lo revisemos y publiquemos en tus cuentas."}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
           <p className="mb-2 text-xs font-medium">Facebook e Instagram</p>
           <div className="grid grid-cols-2 gap-2" role="group" aria-label="Redes para la primera semana">
             {["instagram", "facebook"].map(red => {
               const activa = redes.includes(red);
-              return <button type="button" key={red} aria-pressed={activa} disabled={sinEdicion}
+              return <button type="button" key={red} aria-pressed={activa} disabled={sinEdicion || modoRenovacion}
                 onClick={() => alternarRed(red)}
                 className={`flex min-h-9 items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition ${activa ? "border-orange-500 bg-orange-50 text-orange-800" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}>
                 <LogoRed red={red} size={19} />{redLabel(red)} {activa && <Check size={13} />}
@@ -401,12 +491,17 @@ function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
               <label className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-white px-3 py-3 text-center transition ${sinEdicion ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-orange-500"}`}>
                 <CloudUpload size={19} className="shrink-0 text-orange-700" />
                 <span className="text-xs font-medium">{item.archivos.length ? "Agregar o cambiar archivos" : "Elegir archivos"}</span>
-                <span className="hidden text-xs text-slate-500 sm:inline">{item.tipo === "reel" ? "MP4 · 150 MB" : "JPG, PNG, WebP · 20 MB"}</span>
+                <span className="hidden text-xs text-slate-500 sm:inline">{modoRenovacion ? "Hasta 25 MB por archivo" : item.tipo === "reel" ? "MP4 · 150 MB" : "JPG, PNG, WebP · 20 MB"}</span>
                 <input type="file" className="sr-only" disabled={sinEdicion}
                   accept={item.tipo === "reel" ? "video/mp4,.mp4" : "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"}
                   multiple={esCarrusel} onChange={seleccionarArchivos} />
               </label>
               <p className="mt-2 text-[11px] text-slate-500">{esCarrusel ? "De 2 a 10 imágenes" : item.tipo === "reel" ? "Un video MP4" : "Una imagen"}.</p>
+              {modoRenovacion && redes.includes("instagram") && item.tipo !== "reel" && (
+                <p className="mt-1 text-[11px] text-slate-600">
+                  Admitimos JPG, PNG y WebP. Durante la revisión, preparamos una copia JPEG antes de programar Instagram.
+                </p>
+              )}
               {item.archivos.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">
                 {item.archivos.map((archivo, indice) => <span key={`${item.id}-${indice}-${archivo.name}`} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1 text-xs">
                   <span className="max-w-36 truncate" title={archivo.name}>{archivo.name}</span>
@@ -512,19 +607,275 @@ function EditorPrimeraSemana({ perfil, email, alFinalizar }) {
         {!datosCompletos && <p className="text-amber-700">Revisá tus datos personales y el nombre del emprendimiento en el registro.</p>}
         {subida && <p role="status" className="text-slate-600">Subiendo {subida.archivo} · {subida.porcentaje}%</p>}
         <button type="submit" className={BTN_PRIMARIO} disabled={consultando || !habilitada || !datosCompletos || enviando || !redes.length}>
-          {enviando ? "Guardando y subiendo archivos..." : pedidoCreado ? "Reintentar subida de archivos" : "Programar semana gratuita"}
+          {enviando ? "Guardando y subiendo archivos..." : pedidoCreado ? "Reintentar subida de archivos" : modoRenovacion ? "Enviar semana pagada para revisión" : "Programar semana gratuita"}
         </button>
-        <p className="text-[11px] text-slate-500">El pedido queda pendiente de revisión. Los 7 días de prueba comienzan luego de la aprobación.</p>
+        {modoRenovacion && (pedidoCreado || pedidoRenovacion?.configuracionEstado === "en_preparacion") &&
+          <button type="button" className={BTN_SECUNDARIO} disabled={enviando}
+            onClick={finalizarEnvioAnterior}>
+            Finalizar envío anterior (sin volver a subir)
+          </button>}
+        <p className="text-[11px] text-slate-500">{modoRenovacion
+          ? "Si tus archivos ya quedaron cargados, podés finalizar el envío anterior sin seleccionarlos otra vez."
+          : "El pedido queda pendiente de revisión. Los 7 días de prueba comienzan luego de la aprobación."}</p>
       </div>
     </details>
   </form>;
 
 }
 
+function RenovacionPaypalReal({pedidoId,seleccion,alActualizar}) {
+  const [info,setInfo]=useState(null);
+  const [ocupado,setOcupado]=useState(false);
+  const [error,setError]=useState("");
+  const [mensaje,setMensaje]=useState("");
+  const API="/api/servicios/publicaciones/renovacion-paypal";
+  const consultar=useCallback(async()=>{
+    const r=await fetch(`${API}?pedidoId=${encodeURIComponent(pedidoId)}`,{credentials:"same-origin",cache:"no-store"});
+    const j=await r.json().catch(()=>null);
+    if(!r.ok||j?.ok!==true)throw Error(j?.error||`No se pudo consultar PayPal (HTTP ${r.status}).`);
+    setInfo(j);return j;
+  },[pedidoId]);
+  useEffect(()=>{let activo=true;consultar().catch(e=>{if(activo)setError(e.message)});return()=>{activo=false;};},[consultar]);
+  const crear=async()=>{
+    setOcupado(true);setError("");setMensaje("");
+    try {
+      const redes=seleccion==="ambas"?["facebook","instagram"]:[seleccion];
+      const r=await fetch(`${API}/crear`,{method:"POST",credentials:"same-origin",cache:"no-store",
+        headers:{"Content-Type":"application/json","X-Comunidad-Panel":"1"},body:JSON.stringify({pedidoId,redes})});
+      const j=await r.json().catch(()=>null);
+      if(!r.ok||!j?.ok)throw Error(j?.error||`Error HTTP ${r.status} al preparar PayPal.`);
+      if(j.pagado){await consultar();setMensaje("Esta semana ya tiene el pago confirmado.");return;}
+      if(typeof j.url!=="string")throw Error("No se recibió la página de PayPal.");
+      // PayPal recibe al usuario directamente; no se crean ventanas emergentes.
+      window.location.assign(j.url);
+    }catch(e){setError(e.message||"PayPal no está disponible.");}
+    finally{setOcupado(false);}
+  };
+  const verificar=async()=>{
+    if(!info?.pedido?.id)return;
+    setOcupado(true);setError("");setMensaje("");
+    try{
+      const r=await fetch(`${API}/capturar`,{method:"POST",credentials:"same-origin",cache:"no-store",
+        headers:{"Content-Type":"application/json","X-Comunidad-Panel":"1"},
+        body:JSON.stringify({pedidoId,semanaId:info.pedido.id})});
+      const j=await r.json().catch(()=>null);
+      if(!r.ok||!j?.ok)throw Error(j?.error||`PayPal aún no confirmó el pago (HTTP ${r.status}).`);
+      setMensaje("Pago confirmado. La activación administrativa de la semana continúa por separado.");
+      alActualizar?.(j.pedido||null);await consultar();
+    }catch(e){setError(e.message||"No se pudo verificar el pago.");}
+    finally{setOcupado(false);}
+  };
+  const pedido=info?.pedido,precio=seleccion==="ambas"?"15.00":"10.00";
+  const finalizada=pedido&&(pedido.configuracionEstado==="programada"||pedido.estadoSemana==="finalizada");
+  const pendiente=pedido&&!finalizada;
+  const otrasRedes=pendiente&&JSON.stringify([...(pedido.redes||[])].sort())!==JSON.stringify((seleccion==="ambas"?["facebook","instagram"]:[seleccion]).sort());
+  return <div className="space-y-3 rounded-md border border-slate-200 bg-white p-3 text-xs">
+    <p className="font-medium text-slate-900">PayPal · semana adicional de 7 días</p>
+    <p className="text-slate-600">Importe seleccionado: <strong>USD {precio}</strong>. El importe definitivo se verifica en el servidor antes de enviar a PayPal.</p>
+    {info?.entorno==="sandbox"&&<p className="text-amber-700">Entorno de prueba Sandbox: no se cobran fondos reales.</p>}
+    {info&&!info.habilitada&&<p className="text-amber-700">{info.motivo||"PayPal todavía no está habilitado."}</p>}
+    {info?.bloqueada&&<p className="text-amber-700">{info.bloqueada}</p>}
+    {pedido&&<div className="rounded-md bg-slate-50 p-3 text-slate-700">
+      <p>Semana {pedido.numeroSemana} · Estado: <strong>{pedido.estado}</strong></p>
+      <p className="mt-1">Redes reservadas: {(pedido.redes||[]).map(redLabel).join(" · ")}</p>
+      <p className="mt-1">Importe reservado: <strong>USD {Number(pedido.importe).toFixed(2)}</strong></p>
+      {pedido.pagoConfirmado&&<p className="mt-1 text-emerald-700">Pago confirmado. Pendiente de la preparación o programación administrativa.</p>}
+    </div>}
+    {otrasRedes&&<p className="text-amber-700">La semana pendiente tiene otras redes seleccionadas. Terminá ese pago antes de cambiar las redes.</p>}
+    {info?.habilitada&&!info.bloqueada&&(!pendiente||(!pedido?.pagoConfirmado&&!otrasRedes))&&
+      <button type="button" disabled={ocupado} className={BTN_PRIMARIO} onClick={crear}>
+        {ocupado?"Preparando PayPal...":pendiente?"Continuar pago pendiente":finalizada?`Solicitar Semana ${(pedido.numeroSemana||2)+1} con PayPal`:"Pagar con PayPal"}
+      </button>}
+    {info?.habilitada&&pendiente&&!pedido.pagoConfirmado&&<button type="button" disabled={ocupado} className={BTN_SECUNDARIO} onClick={verificar}>
+      {ocupado?"Verificando...":"Verificar si el pago se completó"}
+    </button>}
+    {error&&<p role="alert" className="text-red-700">{error}</p>}
+    {mensaje&&<p role="status" className="text-emerald-700">{mensaje}</p>}
+  </div>;
+}
+
+function RetornoPaypalRenovacion({alActualizar}) {
+  const [resultado,setResultado]=useState("");
+  const [error,setError]=useState("");
+  const ejecutado=useRef(false);
+  useEffect(()=>{
+    if(ejecutado.current)return;
+    const url=new URL(window.location.href),modo=url.searchParams.get("paypal");
+    const pedidoId=url.searchParams.get("pedidoId"),semanaId=url.searchParams.get("semanaId");
+    if(!["retorno","cancelado"].includes(modo)||!VALIDAR_PEDIDO.test(pedidoId||"")||!/^renovacion-real:SER-[a-f0-9-]{36}(?::(?:[3-9]|[1-9][0-9]{1,2}))?$/i.test(semanaId||""))return;
+    ejecutado.current=true;
+    // No conservar tokens de PayPal ni identificadores de pago en la barra de direcciones.
+    url.searchParams.delete("paypal");url.searchParams.delete("pedidoId");url.searchParams.delete("semanaId");url.searchParams.delete("token");url.searchParams.delete("PayerID");
+    window.history.replaceState(window.history.state,"",url.pathname+(url.search||"")+url.hash);
+    if(modo==="cancelado"){setResultado("Cancelaste la autorización en PayPal. No se registró ningún cobro nuevo.");return;}
+    (async()=>{
+      try{
+        const r=await fetch("/api/servicios/publicaciones/renovacion-paypal/capturar",{
+          method:"POST",credentials:"same-origin",cache:"no-store",headers:{"Content-Type":"application/json","X-Comunidad-Panel":"1"},
+          body:JSON.stringify({pedidoId,semanaId})});
+        const j=await r.json().catch(()=>null);
+        if(!r.ok||!j?.ok)throw Error(j?.error||`No se pudo verificar el pago (HTTP ${r.status}).`);
+        alActualizar?.(j.pedido||null);
+        setResultado("PayPal confirmó el pago. La semana sigue pendiente de activación y revisión de contenidos.");
+      }catch(e){setError(`${e.message} Si el cargo figura en PayPal, no repitas el pago: abrí la opción PayPal y utilizá «Verificar si el pago se completó».`);}
+    })();
+  },[alActualizar]);
+  if(!resultado&&!error)return null;
+  return <div className={`mb-4 rounded-md border p-3 text-sm ${error?"border-red-200 bg-red-50 text-red-800":"border-green-200 bg-green-50 text-green-800"}`} role="status">{error||resultado}</div>;
+}
+
+function RenovacionTransferenciaReal({ pedidoId, seleccion, alActualizar }) {
+  const [datosRenovacion, setDatosRenovacion] = useState(null);
+  const [archivoRenovacion, setArchivoRenovacion] = useState(null);
+  const [ocupadoRenovacion, setOcupadoRenovacion] = useState(false);
+  const [errorRenovacion, setErrorRenovacion] = useState("");
+  const [mensajeRenovacion, setMensajeRenovacion] = useState("");
+  const [avisoRecibido, setAvisoRecibido] = useState(false);
+  const API_RENOVACION = "/api/servicios/publicaciones/renovacion-transferencia";
+  const consultar = useCallback(async () => {
+    const respuesta = await fetch(`${API_RENOVACION}?pedidoId=${encodeURIComponent(pedidoId)}`, {
+      credentials: "same-origin", cache: "no-store",
+    });
+    const tipo = respuesta.headers.get("content-type") || "";
+    if (!tipo.includes("application/json")) throw new Error(`No se pudo consultar el cobro (HTTP ${respuesta.status}).`);
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.ok) throw new Error(resultado.error || "No se pudo consultar la renovación.");
+    setDatosRenovacion(resultado);
+    alActualizar?.(resultado.pedido || null);
+    return resultado;
+  }, [pedidoId]);
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      try {
+        const respuesta = await fetch(`${API_RENOVACION}?pedidoId=${encodeURIComponent(pedidoId)}`, {
+          credentials: "same-origin", cache: "no-store",
+        });
+        const tipo = respuesta.headers.get("content-type") || "";
+        if (!tipo.includes("application/json")) throw new Error(`La API devolvió HTML (HTTP ${respuesta.status}).`);
+        const resultado = await respuesta.json();
+        if (!respuesta.ok || !resultado.ok) throw new Error(resultado.error || "No se pudo consultar el pago.");
+        if (activo) setDatosRenovacion(resultado);
+      } catch (err) { if (activo) setErrorRenovacion(err.message || "No se pudo consultar el pago."); }
+    })();
+    return () => { activo = false; };
+  }, [pedidoId]);
+  const crear = async () => {
+    setOcupadoRenovacion(true); setErrorRenovacion(""); setMensajeRenovacion("");
+    const redes = seleccion === "ambas" ? ["facebook", "instagram"] : [seleccion];
+    try {
+      const respuesta = await fetch(`${API_RENOVACION}/crear`, {
+        method: "POST", credentials: "same-origin", cache: "no-store",
+        headers: { "Content-Type": "application/json", "X-Comunidad-Panel": "1" },
+        body: JSON.stringify({ pedidoId, redes }),
+      });
+      const tipo = respuesta.headers.get("content-type") || "";
+      if (!tipo.includes("application/json")) throw new Error(`El servidor devolvió una página (HTTP ${respuesta.status}).`);
+      const json = await respuesta.json();
+      if (!respuesta.ok || !json.ok) throw new Error(json.error || "No se pudo preparar la renovación.");
+      await consultar();
+    } catch (err) { setErrorRenovacion(err.message || "No se pudo preparar la renovación."); }
+    finally { setOcupadoRenovacion(false); }
+  };
+  const subir = async () => {
+    if (!archivoRenovacion || !datosRenovacion?.pedido) return;
+    if (!["image/jpeg", "image/png", "application/pdf"].includes(archivoRenovacion.type) ||
+        archivoRenovacion.size > 8 * 1024 * 1024 || archivoRenovacion.size < 100) {
+      setErrorRenovacion("Seleccioná un comprobante JPG, PNG o PDF de hasta 8 MB."); return;
+    }
+    setOcupadoRenovacion(true); setErrorRenovacion(""); setMensajeRenovacion("");
+    try {
+      const respuesta = await fetch(`${API_RENOVACION}/comprobante?pedidoId=${encodeURIComponent(pedidoId)}`, {
+        method: "POST", credentials: "same-origin", cache: "no-store",
+        headers: { "Content-Type": archivoRenovacion.type, "X-Comunidad-Panel": "1" },
+        body: archivoRenovacion,
+      });
+      const tipo = respuesta.headers.get("content-type") || "";
+      if (!tipo.includes("application/json")) throw new Error(`El servidor devolvió una página (HTTP ${respuesta.status}). Revisá los registros de Cloudflare.`);
+      const json = await respuesta.json();
+      if (!respuesta.ok || !json.ok) throw new Error(json.error || `No se pudo enviar el comprobante (HTTP ${respuesta.status}).`);
+      setArchivoRenovacion(null);
+      await consultar();
+      setMensajeRenovacion("Comprobante recibido. Estamos verificando tu transferencia y te avisaremos por correo cuando se apruebe.");
+      setAvisoRecibido(true);
+    } catch (err) { setErrorRenovacion(err.message || "No pudimos subir el comprobante."); }
+    finally { setOcupadoRenovacion(false); }
+  };
+  const copiar = async dato => {
+    try { await navigator.clipboard.writeText(dato); setMensajeRenovacion("Dato copiado."); }
+    catch { setErrorRenovacion("Seleccioná el dato y copialo manualmente."); }
+  };
+  const pedido = datosRenovacion?.pedido;
+  if(pedido?.metodoPago==='paypal')return <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">La semana actual se solicitó por PayPal. Para continuar el pago, seleccioná PayPal en el formulario.</p>;
+  const estados = {
+    pendiente_comprobante: "Esperando comprobante", en_revision: "Comprobante en revisión",
+    aprobado: "Pago aprobado", rechazado: "Comprobante rechazado · podés enviar uno nuevo",
+  };
+  return <div className="space-y-3 rounded-md border border-slate-200 bg-white p-3 text-xs">
+    {avisoRecibido && <div role="dialog" aria-modal="true" aria-label="Comprobante recibido" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <div className="w-full max-w-md space-y-4 rounded-md bg-white p-5 text-slate-800 shadow-xl">
+        <p className="text-sm font-medium">Comprobante recibido</p>
+        <p className="text-xs leading-6">Recibimos tu comprobante y estamos verificando la transferencia. Cuando aprobemos el pago, te enviaremos un correo de confirmación.</p>
+        <p className="text-xs text-slate-600">La semana adicional no empieza hasta que su programación sea confirmada.</p>
+        <button type="button" className={BTN_PRIMARIO} onClick={() => setAvisoRecibido(false)}>Entendido</button>
+      </div>
+    </div>}
+    <p className="font-medium text-slate-900">Transferencia bancaria · semana adicional de 7 días</p>
+    <p className="text-slate-600">Importe: <strong>{pedido ? `$${pedido.importe.toLocaleString("es-AR")}` : seleccion === "ambas" ? "$15.000" : "$10.000"} ARS</strong>. El pago se acredita únicamente después de verificar la transferencia.</p>
+    {datosRenovacion === null && !errorRenovacion && <p className="text-slate-500">Consultando disponibilidad...</p>}
+    {datosRenovacion && !datosRenovacion.habilitada &&
+      <p role="status" className="text-amber-700">{datosRenovacion.motivo || "Los pagos reales todavía no están habilitados."}</p>}
+    {datosRenovacion?.habilitada && !pedido &&
+      <button type="button" disabled={ocupadoRenovacion} className={BTN_PRIMARIO} onClick={crear}>
+        {ocupadoRenovacion ? "Preparando pedido..." : "Continuar con transferencia"}
+      </button>}
+    {pedido?.configuracionEstado === "programada" && datosRenovacion?.habilitada &&
+      <button type="button" disabled={ocupadoRenovacion} className={BTN_PRIMARIO} onClick={crear}>
+        {ocupadoRenovacion ? "Preparando renovación..." : `Solicitar Semana ${(pedido.numeroSemana || 2) + 1}`}
+      </button>}
+    {pedido && <div className="space-y-3">
+      <div className="rounded-md bg-slate-50 px-3 py-2 text-slate-700">
+        <p>Estado: <strong>{estados[pedido.estado] || pedido.estado}</strong></p>
+        <p className="mt-1">Redes: {(pedido.redes || []).map(redLabel).join(" · ")}</p>
+        <p className="mt-1">Importe reservado: <strong>${pedido.importe.toLocaleString("es-AR")} ARS</strong></p>
+      </div>
+      {["pendiente_comprobante", "rechazado"].includes(pedido.estado) && datosRenovacion?.habilitada && <>
+        <details open className="rounded-md border border-slate-200 p-3">
+          <summary className="cursor-pointer font-medium">Entidad bancaria y datos de pago <ChevronDown size={13} className="ml-1 inline"/></summary>
+          <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+            <CampoInfo etiqueta="Entidad bancaria" valor={datosRenovacion.cuenta?.entidad || "—"}/>
+            <CampoInfo etiqueta="Titular" valor={datosRenovacion.cuenta?.titular || "—"}/>
+            {[["CBU / CVU", datosRenovacion.cuenta?.cbuCvu], ["Alias", datosRenovacion.cuenta?.alias]].map(([etiqueta, valor]) =>
+              <div key={etiqueta} className="flex flex-wrap items-end justify-between gap-2">
+                <CampoInfo etiqueta={etiqueta} valor={valor || "—"}/>
+                <button type="button" className={BTN_SECUNDARIO} onClick={() => copiar(valor || "")}>Copiar</button>
+              </div>)}
+          </div>
+        </details>
+        <p className="text-slate-600">Transferí exactamente <strong>${pedido.importe.toLocaleString("es-AR")} ARS</strong> y después adjuntá tu comprobante.</p>
+        <label className="block font-medium">Comprobante de transferencia (JPG, PNG o PDF, máximo 8 MB)
+          <input type="file" accept="image/jpeg,image/png,application/pdf"
+            className="mt-2 block w-full rounded-md border border-dashed border-slate-200 p-3 text-xs"
+            onChange={e => setArchivoRenovacion(e.target.files?.[0] || null)}/>
+        </label>
+        <button type="button" className={BTN_PRIMARIO} disabled={!archivoRenovacion || ocupadoRenovacion} onClick={subir}>
+          {ocupadoRenovacion ? "Enviando comprobante..." : "Ya pagué · enviar comprobante"}
+        </button>
+      </>}
+      {pedido.estado === "en_revision" && <p className="text-slate-600">Estamos verificando el comprobante. No hace falta enviarlo otra vez.</p>}
+      {pedido.estado === "aprobado" && <p className="text-emerald-800">Pago aprobado. La programación de los contenidos de la semana adicional requiere una aprobación independiente; no comienza automáticamente por el pago.</p>}
+    </div>}
+    {mensajeRenovacion && <p role="status" className="text-emerald-700">{mensajeRenovacion}</p>}
+    {errorRenovacion && <p role="alert" className="text-red-700">{errorRenovacion}</p>}
+    <p className="text-[11px] leading-5 text-slate-500">Tu comprobante se guarda de forma privada. PayPal todavía no está disponible para cobros reales.</p>
+  </div>;
+}
+
 export default function PanelClientePublicaciones() {
   const [datos, setDatos] = useState(null);
   const [configurando, setConfigurando] = useState(false);
-  const [detallesPanel, setDetallesPanel] = useState({perfil:null,detalles:{}});
+  const [configurandoSemana2, setConfigurandoSemana2] = useState(false);
+  const [detallesPanel, setDetallesPanel] = useState({perfil:null,detalles:{},semanasPagadas:{}});
   const intentoVinculacion = useRef(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -535,21 +886,41 @@ export default function PanelClientePublicaciones() {
   const [accionInstagram, setAccionInstagram] = useState("");
   const [accionFacebook, setAccionFacebook] = useState("");
   const [solicitudes, setSolicitudes] = useState({});
+  const solicitudesEnCurso = useRef(new Set());
+  const [consultandoSolicitud, setConsultandoSolicitud] = useState({});
   const [confirmacionesSolicitud, setConfirmacionesSolicitud] = useState({});
   const [gestionandoSolicitud, setGestionandoSolicitud] = useState("");
   const [erroresSolicitud, setErroresSolicitud] = useState({});
   const [planSemanal, setPlanSemanal] = useState({});
   const [medioSemanal, setMedioSemanal] = useState({});
   const [archivosAbiertos, setArchivosAbiertos] = useState({});
+  const [renovacionReal, setRenovacionReal] = useState(null);
+
 
   const cargarPanel = useCallback(async () => {
     setCargando(true);
     setError("");
     try {
       const respuesta = await fetch(API, { credentials: "same-origin", cache: "no-store" });
+      const tipoPanel = respuesta.headers.get("content-type") || "";
+      if (!tipoPanel.includes("application/json")) {
+        throw new Error(`La API del panel devolvió HTML en vez de JSON (HTTP ${respuesta.status}). Revisá la ruta /api/servicios/clientes/panel y el despliegue del Worker.`);
+      }
       let json = await respuesta.json();
-      if (!respuesta.ok || !json.ok) throw new Error(json.error || "No se pudo consultar el panel.");
-      if (!json.autenticado) { setDatos(json); setConfigurando(false); return; }
+      // Solo un 401 confirmado por la API indica que hay que iniciar sesión.
+      if (respuesta.status === 401) {
+        setDatos({ autenticado: false }); setConfigurando(false);
+        setDetallesPanel({ perfil: null, detalles: {} });
+        setInstagramPorPedido({}); setRenovacionReal(null);
+        return;
+      }
+      if (!respuesta.ok || !json.ok) throw new Error(json.error || `No se pudo consultar el panel (HTTP ${respuesta.status}).`);
+      if (!json.autenticado) {
+        setDatos(json); setConfigurando(false);
+        setDetallesPanel({ perfil: null, detalles: {} });
+        setInstagramPorPedido({}); setRenovacionReal(null);
+        return;
+      }
       // Si el pedido acaba de crearse en este navegador, vincularlo en silencio
       // mediante la clave privada guardada en esta pestaña. El servidor exige
       // sesión verificada y valida el token; nunca confiamos solo en el código.
@@ -583,48 +954,75 @@ export default function PanelClientePublicaciones() {
       }
       setDatos(json);
       try {
+        const pidReal=json.pedidos?.[0]?.pedidoId;
+        if(pidReal){
+          const pago=await fetch(`/api/servicios/publicaciones/renovacion-transferencia?pedidoId=${encodeURIComponent(pidReal)}`,
+            {credentials:"same-origin",cache:"no-store"});
+          const j=await pago.json().catch(()=>null);
+          if(pago.ok&&j?.ok)setRenovacionReal(j.pedido||null);
+        } else setRenovacionReal(null);
+      } catch { /* La consulta adicional no debe bloquear el panel. */ }
+      try {
         const detalleRespuesta = await fetch(`${API}/detalles`,{credentials:"same-origin",cache:"no-store"});
         const detalle = await detalleRespuesta.json();
-        if (detalleRespuesta.ok && detalle.ok) setDetallesPanel({perfil:detalle.perfil||null,detalles:detalle.detalles||{}});
+        if (detalleRespuesta.ok && detalle?.ok) { // FASE4_V2_CONEXIONES_DESDE_DETALLES
+          const conexiones = Object.fromEntries(
+            Object.entries(detalle.detalles || {})
+              .filter(([, item]) => item?.cuentas?.instagram)
+              .map(([pedidoId, item]) => [pedidoId, item.cuentas.instagram])
+          );
+          setInstagramPorPedido(conexiones);
+          setInstagramError("");
+        }
+        if (detalleRespuesta.ok && detalle.ok) setDetallesPanel({perfil:detalle.perfil||null,detalles:detalle.detalles||{},semanasPagadas:detalle.semanasPagadas||{}});
       } catch { /* El resumen del panel sigue disponible. */ }
-      try {
-        const respuestaIg = await fetch(`${API_INSTAGRAM}/estado`, { credentials: "same-origin", cache: "no-store" });
-        const info = await respuestaIg.json();
-        if (!respuestaIg.ok || !info.ok) throw new Error(info.error || "No se pudo consultar Instagram.");
-        setInstagramPorPedido(Object.fromEntries((info.conexiones || []).map(c => [c.pedidoId, c])));
-        setInstagramError("");
-      } catch (e) {
-        setInstagramPorPedido({});
-        setInstagramError(e.message || "No se pudo consultar Instagram.");
-      }
     } catch (e) {
-      setDatos(null);
-      setError(e.message || "No se pudo cargar el panel.");
+      // No borrar la sesión visual ni los pedidos por un error 503 / de red.
+      setError(`${e.message || "No se pudo cargar el panel."} Es un error de consulta, no un cierre de sesión. Los datos visibles pueden estar desactualizados. Probá «Actualizar».`);
     } finally { setCargando(false); }
   }, []);
   useEffect(() => { cargarPanel(); }, [cargarPanel]);
-
-  // Conserva la consulta original y la autorización en servidor, sin exponer
-  // claves privadas de pedidos ni tokens de Meta en el navegador.
+  const cargarRenovacionReal = useCallback(async pedidoId => {
+    const r = await fetch(`/api/servicios/publicaciones/renovacion-transferencia?pedidoId=${encodeURIComponent(pedidoId)}`,
+      {credentials:"same-origin",cache:"no-store"});
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok || j.ok!==true)throw new Error(j.error||"No se pudo consultar la renovación.");
+    setRenovacionReal(j.pedido || null);
+    return j.pedido || null;
+  },[]);
   useEffect(() => {
-    if (!datos?.autenticado || !Array.isArray(datos.pedidos)) return;
-    let cancelado = false;
-    const ids = datos.pedidos.filter(p => p.modalidad === "prueba_gratuita").map(p => p.pedidoId).slice(0, 15);
-    Promise.all(ids.map(async pedidoId => {
-      try {
-        const respuesta = await fetch(`/api/servicios/publicaciones/solicitud/estado?pedidoId=${encodeURIComponent(pedidoId)}`,
-          { credentials: "same-origin", cache: "no-store" });
-        const info = await respuesta.json();
-        if (!respuesta.ok || info.ok !== true) throw new Error(info.error || "No disponible");
-        return [pedidoId, info, ""];
-      } catch (e) { return [pedidoId, null, e.message || "No disponible"]; }
-    })).then(resultados => {
-      if (cancelado) return;
-      setSolicitudes(Object.fromEntries(resultados.filter(x => x[1]).map(x => [x[0], x[1]])));
-      setErroresSolicitud(Object.fromEntries(resultados.filter(x => x[2]).map(x => [x[0], x[2]])));
-    });
-    return () => { cancelado = true; };
-  }, [datos]);
+    if(window.location.hash==="#programar-semana-2" && renovacionReal?.estado==="activada" &&
+       !["en_revision","aprobada","programada"].includes(renovacionReal.configuracionEstado)){
+      setConfigurandoSemana2(true);
+      requestAnimationFrame(()=>document.getElementById("programar-semana-2")?.scrollIntoView({behavior:"smooth",block:"center"}));
+    }
+  },[renovacionReal?.estado,renovacionReal?.configuracionEstado]);
+
+  // FASE6_AUTORIZACION_DEMANDA_20261024: la verificación profunda de archivos,
+  // conexiones y consentimiento se ejecuta solo cuando se abre el contenido.
+  // La confirmación POST mantiene todas las verificaciones en el servidor.
+  const consultarSolicitud = useCallback(async pedidoId => {
+    if (solicitudesEnCurso.current.has(pedidoId)) return;
+    solicitudesEnCurso.current.add(pedidoId);
+    setConsultandoSolicitud(prev => ({ ...prev, [pedidoId]: true }));
+    setErroresSolicitud(prev => ({ ...prev, [pedidoId]: "" }));
+    try {
+      const respuesta = await fetch(`/api/servicios/publicaciones/solicitud/estado?pedidoId=${encodeURIComponent(pedidoId)}`,
+        { credentials: "same-origin", cache: "no-store" });
+      const tipo = respuesta.headers.get("content-type") || "";
+      if (!tipo.includes("application/json")) {
+        throw new Error(`No se pudo comprobar la autorización (HTTP ${respuesta.status}). Probá nuevamente.`);
+      }
+      const info = await respuesta.json();
+      if (!respuesta.ok || info.ok !== true) throw new Error(info.error || "No se pudo comprobar la autorización.");
+      setSolicitudes(prev => ({ ...prev, [pedidoId]: info }));
+    } catch (e) {
+      setErroresSolicitud(prev => ({ ...prev, [pedidoId]: e?.message || "No se pudo comprobar la autorización." }));
+    } finally {
+      solicitudesEnCurso.current.delete(pedidoId);
+      setConsultandoSolicitud(prev => ({ ...prev, [pedidoId]: false }));
+    }
+  }, []);
 
   const registrarSolicitud = async pedidoId => {
     const s = solicitudes[pedidoId];
@@ -725,6 +1123,16 @@ export default function PanelClientePublicaciones() {
       const info = await respuesta.json();
       if (!respuesta.ok || !info.ok) throw new Error(info.error || "No se pudo desconectar Instagram.");
       setInstagramPorPedido(actual => { const copia = { ...actual }; delete copia[pedidoId]; return copia; });
+      // FASE5_CPU_IG_20261024: actualizar también la copia del estado en /panel/detalles.
+      // Era la fuente prioritaria del botón y quedaba desactualizada hasta refrescar.
+      setDetallesPanel(actual => {
+        const item = actual.detalles?.[pedidoId];
+        if (!item) return actual;
+        return { ...actual, detalles: {
+          ...actual.detalles,
+          [pedidoId]: { ...item, cuentas: { ...(item.cuentas || {}), instagram: null } },
+        } };
+      });
       setMensaje("Instagram quedó desconectado de este pedido.");
     } catch (e) { setError(e.message || "No se pudo desconectar Instagram."); }
     finally { setAccionInstagram(""); }
@@ -752,9 +1160,17 @@ function fechaLocal(valor, zonaHoraria) {
   catch { return new Intl.DateTimeFormat("es-AR", {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(d); }
 }
 function enlacePublicado(contenido, red) {
-  const valor = contenido?.urlsPublicadas?.[red] || contenido?.enlaces?.[red] || contenido?.[`${red}UrlPublicada`] || contenido?.urlPublicacion;
+  // Cada red utiliza exclusivamente su enlace confirmado: un enlace general
+  // puede corresponder a Instagram y no debe mostrarse como Facebook.
+  const valor = contenido?.urlsPublicadas?.[red] || contenido?.enlaces?.[red] || contenido?.[`${red}UrlPublicada`];
   if (typeof valor !== "string") return "";
-  try {const u = new URL(valor);return u.protocol === "https:" ? u.toString() : "";} catch {return "";}
+  try {
+    const u = new URL(valor);
+    const dominios = red === "instagram"
+      ? ["instagram.com", "www.instagram.com"]
+      : ["facebook.com", "www.facebook.com", "m.facebook.com"];
+    return u.protocol === "https:" && dominios.includes(u.hostname) ? u.toString() : "";
+  } catch { return ""; }
 }
 function urlWebSegura(valor) {
   if (typeof valor !== "string" || !valor.trim()) return "";
@@ -762,6 +1178,12 @@ function urlWebSegura(valor) {
     const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(valor) ? valor : `https://${valor}`);
     return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.toString() : "";
   } catch { return ""; }
+}
+function horaLocalEn12Horas(hora) {
+  const partes = /^(\d{2}):([0-5]\d)$/.exec(hora || "");
+  if (!partes) return "Hora por confirmar";
+  const h = Number(partes[1]);
+  return `${h % 12 || 12}:${partes[2]} ${h < 12 ? "a. m." : "p. m."}`;
 }
 function nombreTipo(tipo) { return tipo === "reel" ? "Reel" : tipo === "carrusel" ? "Carrusel" : "Imagen"; }
 function fechaContenido(c, zona) {
@@ -797,6 +1219,7 @@ function infoPersonal(datos, pedido) {
   const pedidoPrincipal = pedidos[0];
   const personal = infoPersonal({...datos,perfil:detallesPanel.perfil||datos?.perfil||datos?.usuario?.perfil}, pedidoPrincipal);
   return <main className="min-h-[76vh] bg-[#f6f7f9] px-3 py-7 text-slate-800 sm:px-6 sm:py-9" style={{fontFamily: "Montserrat, system-ui, sans-serif",fontWeight:400}}>
+    <RetornoPaypalRenovacion alActualizar={setRenovacionReal}/>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" />
     <div className="mx-auto max-w-5xl space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -815,7 +1238,7 @@ function infoPersonal(datos, pedido) {
       {cargando && <div className={`${CARD} p-5 text-xs text-slate-500`}>Cargando tu panel...</div>}
       {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">{error}</div>}
       {mensaje && <div role="status" className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">{mensaje}</div>}
-      {!cargando && (!datos || !datos.autenticado) && <section className={`${CARD} p-5`}>
+      {!cargando && !error && (!datos || !datos.autenticado) && <section className={`${CARD} p-5`}>
         <h2 className="text-sm font-medium">Accedé a tu cuenta</h2>
         <p className="mt-1 text-xs leading-5 text-slate-500">Para ingresar a tu panel, solicitá un nuevo código de seis dígitos desde Iniciar sesión.</p>
         <Link to={`${BASE}?acceso=ingreso`} className={`${BTN_PRIMARIO} mt-3`}>Iniciar sesión <ArrowRight size={13}/></Link>
@@ -836,6 +1259,8 @@ function infoPersonal(datos, pedido) {
             {urlWebSegura(personal.web) && <CampoInfo etiqueta="Web o enlace principal" valor={<a className="text-orange-700 underline underline-offset-2" href={urlWebSegura(personal.web)} rel="noopener noreferrer" target="_blank">{personal.web}</a>}/>}
           </div>
         </section>
+
+
 
         {pedidos.length === 0 ? <>
           <section className={`${CARD} space-y-3 p-4`}>
@@ -859,6 +1284,7 @@ function infoPersonal(datos, pedido) {
           const redes = Array.isArray(p.redes) ? p.redes : [];
           const contenidos = Array.isArray(p.contenidos) ? p.contenidos : [];
           const detalle = detallesPanel.detalles?.[p.pedidoId];
+          const semanasPagadas = detallesPanel.semanasPagadas?.[p.pedidoId] || [];
           const ig = detalle?.cuentas?.instagram || instagramPorPedido[p.pedidoId];
           const facebook = detalle?.cuentas?.facebook !== undefined ? detalle.cuentas.facebook : p.facebook;
           const contenidosVistos = detalle?.contenidos?.length ? contenidos.map(c=>({...c,...(detalle.contenidos.find(v=>v.id===c.id)||{})})) : contenidos;
@@ -888,7 +1314,7 @@ function infoPersonal(datos, pedido) {
                     {conectada ? <><p className="max-w-xs truncate text-xs text-slate-600">{red === "facebook" ? conexion.nombre || "Página conectada" : `@${conexion.usuario}`}</p>
                       {conexion.pageId && <p className="text-[11px] text-slate-500">ID: {conexion.pageId}</p>}
                       <p className="text-[11px] text-slate-500">Estado: conectada</p></>
-                      : <p className="text-[11px] text-slate-500">Sin conectar</p>}
+                      : <p className="text-[11px] text-slate-500">{red === "instagram" && instagramError ? "Estado de conexión no disponible" : "Sin conectar"}</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -896,18 +1322,23 @@ function infoPersonal(datos, pedido) {
                       onClick={() => red === "facebook" ? conectarFacebook(p.pedidoId) : conectarInstagram(p.pedidoId)}>
                       {((red === "facebook" && accionFacebook === p.pedidoId) || (red === "instagram" && accionInstagram === p.pedidoId)) ? "Conectando..." : "Conectar"}
                     </button>}
-                    {conectada && p.estadoServicio === "sin_activar" && <button type="button" className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
-                      disabled={Boolean(accionInstagram || accionFacebook)} onClick={() => red==="facebook" ? desconectarFacebook(p.pedidoId) : desconectarInstagram(p.pedidoId)}>Desconectar</button>}
+                    {conectada && <button type="button"
+                      className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={p.estadoServicio !== "sin_activar" || Boolean(accionInstagram || accionFacebook)}
+                      title={p.estadoServicio === "sin_activar" ? "Desconectar cuenta" : "No podés desconectar mientras haya una semana activa o publicaciones pendientes."}
+                      onClick={() => red === "facebook" ? desconectarFacebook(p.pedidoId) : desconectarInstagram(p.pedidoId)}>
+                      Desconectar
+                    </button>}
                   </div>
                 </div>;
               }) : <p className="text-xs text-slate-500">Todavía no hay redes elegidas para este pedido.</p>}
-              {instagramError && redes.includes("instagram") && <p className="mt-2 text-[11px] text-amber-700">Estado de Instagram temporalmente no disponible.</p>}
+              {instagramError && redes.includes("instagram") && <p className="mt-2 text-[11px] text-amber-700">Estado de Instagram temporalmente no disponible: {instagramError}</p>}
             </section>
 
             <section className={`${CARD} overflow-hidden`} aria-label="Resumen de prueba gratuita">
               <div className="border-b border-orange-100 bg-orange-50/70 px-4 py-3 sm:px-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-sm font-medium">{p.modalidad === "prueba_gratuita" ? "Resumen de prueba gratuita" : "Resumen de tu plan"}</h2>
+                  <div><h2 className="text-sm font-medium">{p.modalidad === "prueba_gratuita" ? "Semana 1" : "Resumen de tu plan"}</h2><p className="mt-0.5 text-[11px] text-slate-500">{p.modalidad === "prueba_gratuita" ? "Prueba gratuita" : "Plan contratado"}</p></div>
                   <Etiqueta valor={p.estadoServicio}/>
                 </div>
               </div>
@@ -923,14 +1354,22 @@ function infoPersonal(datos, pedido) {
               {p.modalidad === "prueba_gratuita" && <p className="border-t border-slate-100 px-4 py-3 text-xs leading-5 text-slate-600 sm:px-5">Te notificaremos por correo cuando tu prueba gratuita esté por finalizar.</p>}
             </section>
 
-            <section className={`${CARD} p-4 sm:p-5`} aria-label="Contenido programado">
-              <div className="mb-4"><h2 className="text-sm font-medium">Contenido programado</h2>
+            <details className={`${CARD} group`} aria-label="Contenido programado"
+              onToggle={e => {
+                if (!e.currentTarget.open || p.modalidad !== "prueba_gratuita" ||
+                    p.estadoServicio !== "sin_activar" || solicitudes[p.pedidoId] ||
+                    erroresSolicitud[p.pedidoId]) return;
+                consultarSolicitud(p.pedidoId);
+              }}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden sm:px-5">
+                <div><h2 className="text-sm font-medium">Contenido programado</h2>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
                   {programacionConfirmada
                     ? "Este contenido ya está programado para publicarse con la configuración que definiste."
                     : "La publicación comenzará después de la revisión y la activación de tu semana."}
-                </p>
-              </div>
+                </p></div><ChevronDown size={15} className="shrink-0 text-slate-500 transition group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-slate-100 p-4 sm:p-5">
               {redes.map(red => <div key={red} className="mb-4 last:mb-0">
                 <div className="mb-2 flex items-center gap-2 border-b border-slate-100 pb-2"><LogoRed red={red} size={18}/><h3 className="text-xs font-medium">{redLabel(red)}</h3></div>
                 <div className="space-y-1">{contenidosVistos.length ? contenidosVistos.map((c, i) => {
@@ -948,11 +1387,31 @@ function infoPersonal(datos, pedido) {
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
                       <Etiqueta valor={estadoPorRed} texto={estadoVisible}/>
-                      {url && <a href={url} target="_blank" rel="noopener noreferrer" className={`${BTN_SECUNDARIO} text-[11px]`}>Ver publicación <ExternalLink size={12}/></a>}
+                      {red === "instagram" && estadoPorRed === "publicado" && !url &&
+                        <span className="text-[11px] text-slate-500">Enlace pendiente</span>}
+                      {url && <>
+                        <a href={url} target="_blank" rel="noopener noreferrer"
+                          className={`${BTN_SECUNDARIO} text-[11px]`}>Ver publicación <ExternalLink size={12}/></a>
+                        {red === "instagram" && <button type="button" className={`${BTN_SECUNDARIO} text-[11px]`}
+                          onClick={() => navigator.clipboard.writeText(url)
+                            .then(() => setMensaje("Enlace de Instagram copiado. Abrilo en la app si el navegador no lo muestra."))
+                            .catch(() => setError("No se pudo copiar el enlace. Abrí la publicación desde Instagram."))}>
+                          Copiar enlace
+                        </button>}
+                      </>}
                     </div>
                   </div>;
                 }) : <p className="py-2 text-xs text-slate-500">Todavía no hay contenidos cargados.</p>}</div>
               </div>)}
+              {p.modalidad === "prueba_gratuita" && p.estadoServicio === "sin_activar" && (
+                <div className="mt-4 border-t border-slate-100 pt-3">
+                  <button type="button" className={BTN_SECUNDARIO}
+                    disabled={Boolean(consultandoSolicitud[p.pedidoId]) || Boolean(gestionandoSolicitud)}
+                    onClick={() => consultarSolicitud(p.pedidoId)}>
+                    {consultandoSolicitud[p.pedidoId] ? "Comprobando requisitos..." : "Actualizar requisitos de publicación"}
+                  </button>
+                </div>
+              )}
               {/* La autorización sigue siendo explícita cuando el servidor la exige.
                   No se muestra otro paso mientras el pedido está en revisión. */}
               {p.modalidad === "prueba_gratuita" && solicitud?.listaParaSolicitud && (!solicitud?.vigente || solicitud?.requiereNuevaConfirmacion) && (
@@ -986,26 +1445,114 @@ function infoPersonal(datos, pedido) {
                   {archivosAbiertos[p.pedidoId] && <ArchivosPedido pedido={{ id: p.pedidoId }}/>}
                 </details>
               )}
-            </section>
+              </div>
+            </details>
+
+            {semanasPagadas.map(semana => {
+              const finalizada = semana.estado === "finalizada";
+              const futura = semana.inicio && new Date(semana.inicio).getTime() > Date.now();
+              return <div key={semana.id} className="space-y-3">
+                <section className={`${CARD} overflow-hidden`} aria-label={`Semana ${semana.numeroSemana}`}>
+                  <div className="flex items-center justify-between gap-3 border-b border-orange-100 bg-orange-50/70 px-4 py-3 sm:px-5">
+                    <div><h2 className="text-sm font-medium">Semana {semana.numeroSemana}</h2><p className="mt-0.5 text-[11px] text-slate-500">Semana pagada</p></div>
+                    <Etiqueta valor={finalizada ? "finalizado" : futura ? "programado" : "activo"} texto={finalizada ? "Finalizada" : futura ? "Programada" : "Activo"}/>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 p-4 text-xs sm:p-5">
+                    <CampoInfo etiqueta="Redes elegidas" valor={semana.redes.map(redLabel).join(" · ")}/>
+                    <CampoInfo etiqueta="Estado" valor={finalizada ? "Finalizada" : futura ? "Próxima" : "En curso"}/>
+                    <CampoInfo etiqueta="Publicaciones programadas" valor={`${semana.programadas}/${semana.total}`}/>
+                    <CampoInfo etiqueta="Publicaciones realizadas" valor={`${semana.realizadas}/${semana.total}`}/>
+                    <CampoInfo etiqueta="Desde" valor={fechaLocal(semana.inicio,semana.zonaHoraria)}/>
+                    <CampoInfo etiqueta="Hasta" valor={fechaLocal(semana.fin,semana.zonaHoraria)}/>
+                  </div>
+                  <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 sm:px-5">Podés consultar el avance de tu semana contratada desde este panel.</p>
+                </section>
+                <details className={`${CARD} group`} aria-label={`Contenido programado de Semana ${semana.numeroSemana}`}>
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden sm:px-5">Contenido programado · Semana {semana.numeroSemana} <ChevronDown size={13} className="group-open:rotate-180"/></summary>
+                  <div className="space-y-4 border-t border-slate-100 p-4 sm:p-5">
+                    {semana.redes.map(red => <div key={red}>
+                      <div className="mb-2 flex items-center gap-2"><LogoRed red={red} size={17}/><h3 className="text-xs font-medium">{redLabel(red)}</h3></div>
+                      {semana.contenidos.map((c,i) => {
+                        const enlace=enlacePublicado(c,red);
+                        const estadoRed=c.estadoPorRed?.[red]||"programado";
+                        return <div key={`${red}-${c.id||i}`} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 py-3 text-xs">
+                          <div><p className="font-medium">Contenido {i+1} · {nombreTipo(c.tipo)}</p>
+                            <p className="text-[11px] text-slate-500">{fechaContenido(c,semana.zonaHoraria)} · hora local</p></div>
+                          <div className="flex flex-wrap items-center gap-2"><Etiqueta valor={estadoRed}/>
+                            {estadoRed === "publicado" && enlace && <a href={enlace} target="_blank" rel="noopener noreferrer" className={`${BTN_SECUNDARIO} text-[11px]`}>Ver publicación <ExternalLink size={12}/></a>}
+                            {estadoRed === "publicado" && red === "instagram" && !enlace && <span className="text-[11px] text-slate-500">Enlace pendiente</span>}
+                          </div>
+                        </div>;
+                      })}
+                    </div>)}
+                  </div>
+                </details>
+              </div>;
+            })}
+
+            {p.pedidoId === pedidoPrincipal?.pedidoId && renovacionReal && ["en_revision","aprobado"].includes(renovacionReal.estado) && (
+              <section className={`${CARD} space-y-2 p-4 sm:p-5`} aria-label="Renovación bancaria pendiente">
+                <h2 className="text-sm font-medium">Renovación bancaria</h2>
+                <p className="text-xs text-slate-600">Pedido: <span className="break-all">{renovacionReal.pedidoId}</span></p>
+                <Etiqueta valor="verificando" texto={renovacionReal.estado === "en_revision" ? "Pendiente" : "Pago aprobado · pendiente de activación"}/>
+              </section>
+            )}
+            {p.pedidoId === pedidoPrincipal?.pedidoId && renovacionReal?.estado === "activada" && renovacionReal.configuracionEstado !== "programada" && (
+              <section className={`${CARD} space-y-3 p-4 sm:p-5`} aria-label="Semana pagada">
+                <h2 className="text-sm font-medium">Semana {renovacionReal.numeroSemana || 2} · pagada</h2>
+                {renovacionReal.configuracionEstado === "programada" ?
+                  <p role="status" className="text-xs text-emerald-700">Contenidos aprobados y programados. Consultá los detalles de la semana debajo de Semana 1.</p> :
+                renovacionReal.configuracionEstado === "en_revision" ?
+                  <p role="status" className="text-xs text-slate-700">Recibimos los cuatro contenidos. Están pendientes de revisión administrativa; todavía no están programados.</p> :
+                  <button type="button" id="programar-semana-2" className={BTN_PRIMARIO}
+                    onClick={() => setConfigurandoSemana2(v=>!v)}>
+                    {configurandoSemana2 ? "Cerrar editor" : renovacionReal.configuracionEstado === "en_preparacion" ? "Continuar preparación" : "Programar nueva semana"} <ChevronDown size={13}/>
+                  </button>}
+                {configurandoSemana2 && !["en_revision","aprobada","programada"].includes(renovacionReal.configuracionEstado) &&
+                  <EditorPrimeraSemana key={renovacionReal.id}
+                    perfil={{...datos.perfil,...detallesPanel.perfil, nombreApellido:personal.nombre, emprendimiento:personal.emprendimiento, whatsapp:personal.whatsapp}}
+                    email={datos.email} pedidoRenovacion={renovacionReal}
+                    alFinalizar={() => {
+                      setConfigurandoSemana2(false);
+                      setRenovacionReal(prev => prev && ({...prev,configuracionEstado:"en_revision"}));
+                      setMensaje("La semana pagada fue enviada a revisión administrativa.");
+                      cargarRenovacionReal(p.pedidoId).catch(() => {});
+                    }}/>
+                }
+                {renovacionReal.configuracionEstado === "en_revision" && Array.isArray(renovacionReal.resumenContenidos) &&
+                  <details className="rounded-md border border-slate-200 p-3">
+                    <summary className="cursor-pointer text-xs font-medium">Ver contenidos de la semana <ChevronDown size={13} className="inline"/></summary>
+                    <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                      {renovacionReal.resumenContenidos.map(c=><p key={c.numero} className="text-xs">Contenido {c.numero} · {nombreTipo(c.tipo)} · {c.dia} {horaLocalEn12Horas(c.hora)}</p>)}
+                    </div>
+                  </details>}
+              </section>
+            )}
 
             <details className={`${CARD} group p-4 sm:p-5`}>
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium [&::-webkit-details-marker]:hidden">Configurar otra semana <ChevronDown size={13} className="group-open:rotate-180"/></summary>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium [&::-webkit-details-marker]:hidden">Configurar otra semana <ChevronDown size={13} className="group-open:rotate-180"/></summary>
               <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
-                <p className="text-xs text-slate-500">Elegí en cuantas redes queres publicar</p>
+                <p className="text-xs text-slate-500">Elegí en cuáles de tus redes vinculadas querés publicar</p>
                 <div className="grid gap-2 sm:grid-cols-3">
-                  {[{nombre:"Facebook",red:"facebook",precio:"$10.000 · USD 10"},{nombre:"Instagram",red:"instagram",precio:"$10.000 · USD 10"},{nombre:"Ambas",red:"ambas",precio:"$15.000 · USD 15",descuento:"25% de ahorro"}].map(op=><button type="button" key={op.red} onClick={()=>setPlanSemanal(v=>({...v,[p.pedidoId]:op.red}))}
-                    className={`rounded-md border p-3 text-left ${planSemanal[p.pedidoId]===op.red?"border-orange-500 bg-orange-50":"border-slate-200 bg-slate-50"}`}>
+                  {[{nombre:"Facebook",red:"facebook",precio:"$10.000 · USD 10"},{nombre:"Instagram",red:"instagram",precio:"$10.000 · USD 10"},{nombre:"Ambas",red:"ambas",precio:"$15.000 · USD 15",descuento:"25% de ahorro"}].map(op=><button type="button" key={op.red}
+                    disabled={op.red==="ambas" ? !(redes.includes("instagram")&&redes.includes("facebook")) : !redes.includes(op.red)}
+                    title={op.red==="ambas" ? "Necesitás tener ambas redes vinculadas" : "Red no incluida en el pedido inicial"}
+                    onClick={()=>setPlanSemanal(v=>({...v,[p.pedidoId]:op.red}))}
+                    className={`rounded-md border p-3 text-left disabled:cursor-not-allowed disabled:opacity-40 ${planSemanal[p.pedidoId]===op.red?"border-orange-500 bg-orange-50":"border-slate-200 bg-slate-50"}`}>
                     <p className="text-xs font-medium">{op.nombre}</p><p className="mt-1 text-[11px] text-slate-500">{op.red==="ambas"?"Hasta 8 publicaciones":"Hasta 4 publicaciones"}</p>
                     <p className="mt-1 text-xs font-medium">{op.precio}</p>{op.descuento && <p className="text-[11px] text-emerald-700">{op.descuento}</p>}
                   </button>)}
                 </div>
                 {planSemanal[p.pedidoId] && <div className="space-y-2 border-t border-slate-100 pt-3">
-                  <p className="text-xs font-medium">Elegí como abonar</p>
+                  <p className="text-sm font-medium">Elegí como abonar</p>
                   <div className="flex flex-wrap gap-2"><button type="button" className={medioSemanal[p.pedidoId]==="transferencia"?BTN_PRIMARIO:BTN_SECUNDARIO}
                     onClick={()=>setMedioSemanal(v=>({...v,[p.pedidoId]:"transferencia"}))}>Transferencia bancaria</button>
                     <button type="button" className={medioSemanal[p.pedidoId]==="paypal"?BTN_PRIMARIO:BTN_SECUNDARIO}
                     onClick={()=>setMedioSemanal(v=>({...v,[p.pedidoId]:"paypal"}))}>PayPal</button></div>
-                  {medioSemanal[p.pedidoId] && <p className="text-xs text-slate-500">Este medio de pago todavía no está habilitado para nuevas semanas. No se registró ningún cobro.</p>}
+                  {medioSemanal[p.pedidoId]==="paypal" &&
+                    <RenovacionPaypalReal pedidoId={p.pedidoId} seleccion={planSemanal[p.pedidoId]} alActualizar={setRenovacionReal}/>}
+                  {medioSemanal[p.pedidoId]==="transferencia" &&
+                    <RenovacionTransferenciaReal pedidoId={p.pedidoId} seleccion={planSemanal[p.pedidoId]} alActualizar={setRenovacionReal}/>}
                 </div>}
               </div>
             </details>

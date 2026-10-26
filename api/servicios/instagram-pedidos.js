@@ -193,23 +193,28 @@ async function iniciar(request, env, url) {
   if (!cfg) return responder({ ok: false, error: "Instagram no está configurado en el Worker." }, 503);
   try {
     const usuario = await usuarioParaSolicitud(request, env);
-    const permitido = await conDB(env, async db => {
-      const pedido = await db.collection(PEDIDOS).findOne({ pedidoId: datos.pedidoId, tipo: "publicaciones" });
-      if (!accesoPedido(request, pedido, usuario)) return "sin_acceso";
-      return ordenAdmisible(pedido) ? "ok" : "no_habilitado";
-    });
-    if (permitido === "sin_acceso") return responder({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
-    if (permitido !== "ok") return responder({ ok: false, error: "El pedido no admite conectar Instagram en este estado." }, 409);
-
     const state = crypto.randomBytes(32).toString("hex");
     const ahora = new Date();
-    await conDB(env, async db => {
-      await db.collection(INTENTOS).createIndex({ expiraEn: 1 }, { expireAfterSeconds: 0, name: "oauth_instagram_expira_ttl" });
+    // FASE5_CPU_IG_20261024: un solo cliente Mongo para validar y crear el intento OAuth.
+    const permitido = await conDB(env, async db => {
+      const pedido = await db.collection(PEDIDOS).findOne(
+        { pedidoId: datos.pedidoId, tipo: "publicaciones" },
+        { projection: { tipo: 1, clienteUsuarioId: 1, tokenAccesoHash: 1,
+          redes: 1, estado: 1, estadoServicio: 1, modalidadContratacion: 1,
+          metodoPago: 1, estadoPago: 1, prueba: 1, pagadoEn: 1 } },
+      );
+      if (!accesoPedido(request, pedido, usuario)) return "sin_acceso";
+      if (!ordenAdmisible(pedido)) return "no_habilitado";
+      // El TTL oauth_instagram_expira_ttl se crea una sola vez, fuera del camino
+      // crítico. Se conserva expiraEn para validar también sin depender del TTL.
       await db.collection(INTENTOS).insertOne({
         _id: hash(state), pedidoId: datos.pedidoId, origen: url.origin,
         creadoEn: ahora, expiraEn: new Date(ahora.getTime() + EXPIRACION_MS),
       });
+      return "ok";
     });
+    if (permitido === "sin_acceso") return responder({ ok: false, error: "Pedido no encontrado o acceso no autorizado." }, 404);
+    if (permitido !== "ok") return responder({ ok: false, error: "El pedido no admite conectar Instagram en este estado." }, 409);
     const destino = new URL(`https://www.facebook.com/${VERSION_META}/dialog/oauth`);
     destino.searchParams.set("client_id", cfg.appId);
     destino.searchParams.set("redirect_uri", `${url.origin}${CALLBACK}`);

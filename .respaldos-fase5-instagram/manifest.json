@@ -1,0 +1,14 @@
+{
+  "api/servicios/instagram-pedidos.js": {
+    "antes": "96721d12d07eb00773bc0430567cb5e9d5f5436328b8d1dc81b5db8d7b3ab92c",
+    "despues": "31626a4803f24eb5f8403d04fc7966b0be2d3fbbd301f453e33d2dc40f7e1d44"
+  },
+  "src/paginas/servicios/PanelClientePublicaciones.jsx": {
+    "antes": "d7ced4bc0842fbdd4b5bfddec12f4fcb69829a9da1199a2396396b7930274da8",
+    "despues": "5fa70a9f4477b6a5ba3ba76f6825b577f88c41775ba50252f8c7ae615d492c86"
+  },
+  "worker.js": {
+    "antes": "dcee72c61e60eab4557f2f426353216a9850e898a2a56c0feb4745c42eb1a4be",
+    "despues": "d3a6703fd22857a8fc50e7ebc4485b9bc67b0d8a405bf92214c9f686635406a2"
+  }
+}

@@ -96,7 +96,8 @@ async function jsonPequeno(request) {
   } catch { return null; }
 }
 
-async function conDB(env, callback) {
+async function conDB(env, callback, dbExistente = null) {
+  if (dbExistente) return callback(dbExistente);
   const { MongoClient } = await import("mongodb");
   const mongo = new MongoClient(env.MONGODB_URI);
   try {
@@ -167,11 +168,20 @@ async function consumirCupo(db, nombre, maximo, ahora) {
   const ventana = Math.floor(ahora / HORA_MS);
   const _id = `${nombre}:${ventana}`;
   const coleccion = db.collection("clientes_limites");
-  await coleccion.updateOne({ _id }, {
+  // Fase 1 CPU: sumar y leer el contador de forma atomica en una sola consulta.
+  // Los limites, su ventana y la fecha de limpieza permanecen sin cambios.
+  const resultado = await coleccion.findOneAndUpdate({ _id }, {
     $inc: { solicitudes: 1 },
     $setOnInsert: { eliminarEn: new Date((ventana + 2) * HORA_MS) },
-  }, { upsert: true });
-  const actual = await coleccion.findOne({ _id }, { projection: { solicitudes: 1 } });
+  }, {
+    upsert: true,
+    returnDocument: "after",
+    includeResultMetadata: false,
+    projection: { solicitudes: 1 },
+  });
+  // Compatible tanto con drivers que devuelven el documento directamente
+  // como con versiones antiguas que usan el contenedor { value }.
+  const actual = resultado?.value ?? resultado;
   return (actual?.solicitudes ?? maximo + 1) <= maximo;
 }
 
@@ -192,7 +202,7 @@ async function enviarCorreo(correo, codigo, config) {
   return respuesta.ok;
 }
 
-async function solicitar(request, env, config, ipHash) {
+async function solicitar(request, env, config, ipHash, dbExistente = null) {
   const datos = await jsonPequeno(request);
   const email = normalizarCorreo(datos?.email);
   if (!email) return responder({ ok: false, error: "Ingresá un correo válido." }, 400);
@@ -207,16 +217,18 @@ async function solicitar(request, env, config, ipHash) {
   const ahora = Date.now();
   try {
     return await conDB(env, async (db) => {
-      await indicesAcceso(db);
-      if (!await consumirCupo(db, `solicitar:ip:${ipHash}`, 12, ahora) ||
-          !await consumirCupo(db, `solicitar:correo:${emailHash}`, 4, ahora)) {
-        return responder({ ok: false, error: "Esperá antes de solicitar otro código." }, 429);
-      }
-
+      // Un pedido durante la espera de 60 segundos no debe consumir otro cupo horario.
       const codigos = db.collection("clientes_codigos");
       const anterior = await codigos.findOne({ _id: emailHash });
       if (anterior?.ultimoEnvio && ahora - new Date(anterior.ultimoEnvio).getTime() < ESPERA_ENVIO_MS) {
         return responder({ ok: false, error: "Esperá un minuto antes de pedir un nuevo código." }, 429);
+      }
+
+      // Se mantienen los cupos de 12 por IP/hora y 4 por correo/hora.
+      // Los índices TTL ya fueron creados; no repetir createIndex en cada OTP.
+      if (!await consumirCupo(db, `solicitar:ip:${ipHash}`, 12, ahora) ||
+          !await consumirCupo(db, `solicitar:correo:${emailHash}`, 4, ahora)) {
+        return responder({ ok: false, error: "Esperá antes de solicitar otro código." }, 429);
       }
       const codigo = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
       const codigoHash = hmacCodigo(config.otpSecret, emailHash, codigo);
@@ -245,13 +257,13 @@ async function solicitar(request, env, config, ipHash) {
         return responder({ ok: false, error: "No se pudo enviar el correo. Intentá más tarde." }, 502);
       }
       return responder({ ok: true, mensaje: "Si el correo puede recibir mensajes, llegará un código de seis dígitos." });
-    });
+    }, dbExistente);
   } catch {
     return responder({ ok: false, error: "No se pudo iniciar el acceso en este momento." }, 503);
   }
 }
 
-async function verificar(request, env, config, ipHash) {
+async function verificar(request, env, config, ipHash, dbExistente = null) {
   const datos = await jsonPequeno(request);
   const email = normalizarCorreo(datos?.email);
   const codigo = typeof datos?.codigo === "string" ? datos.codigo : "";
@@ -305,8 +317,13 @@ async function verificar(request, env, config, ipHash) {
       });
       const cookie = `${COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${VIDA_SESION_S}`;
       return responder({ ok: true, registrado: true, correo: email }, 200, cookie);
+    }, dbExistente);
+  } catch (error) {
+    // Solo diagnóstico técnico: nunca registrar códigos OTP, correos ni secretos.
+    console.warn("Acceso clientes: verificación fallida", {
+      tipo: String(error?.name || "Error").slice(0, 80),
+      codigo: Number.isInteger(error?.code) ? error.code : null,
     });
-  } catch {
     return responder({ ok: false, error: "No se pudo completar el acceso. Intentá nuevamente." }, 503);
   }
 }
@@ -318,7 +335,7 @@ function tokenSesion(request) {
   return /^[a-f0-9]{64}$/.test(token) ? token : null;
 }
 
-async function consultarSesion(request, env, config) {
+async function consultarSesion(request, env, config, dbExistente = null) {
   const token = tokenSesion(request);
   if (!token) return responder({ ok: true, autenticado: false });
   try {
@@ -336,24 +353,24 @@ async function consultarSesion(request, env, config) {
           nombre: cuenta.perfil.nombre || "", emprendimiento: cuenta.perfil.emprendimiento || "",
           whatsapp: cuenta.perfil.whatsapp || "", pais: cuenta.perfil.pais || "", web: cuenta.perfil.web || "",
         } : null });
-    });
+    }, dbExistente);
   } catch { return responder({ ok: false, error: "No se pudo consultar la sesión." }, 503); }
 }
 
-async function cerrarSesion(request, env, config) {
+async function cerrarSesion(request, env, config, dbExistente = null) {
   const token = tokenSesion(request);
   try {
     if (token) {
       await conDB(env, async (db) => {
         const _id = crypto.createHmac("sha256", config.sessionSecret).update(token).digest("hex");
         await db.collection("clientes_sesiones").deleteOne({ _id });
-      });
+      }, dbExistente);
     }
     return responder({ ok: true }, 200, `${COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`);
   } catch { return responder({ ok: false, error: "No se pudo cerrar la sesión." }, 503); }
 }
 
-export async function ejecutarAccesoClientes(request, env) {
+export async function ejecutarAccesoClientes(request, env, dbExistente = null, ipVerificada = null) {
   const ruta = new URL(request.url).pathname;
   const accion = ruta.startsWith(RUTA) ? ruta.slice(RUTA.length) : "";
   const permitido = { solicitar: "POST", verificar: "POST", sesion: "GET", salir: "POST" };
@@ -366,13 +383,15 @@ export async function ejecutarAccesoClientes(request, env) {
   }
   const config = configuracion(env);
   if (!config) return responder({ ok: false, error: "Acceso por correo todavía no configurado." }, 503);
-  if (accion === "sesion") return consultarSesion(request, env, config);
-  if (accion === "salir") return cerrarSesion(request, env, config);
-  const ip = request.headers.get("CF-Connecting-IP")?.trim();
+  if (accion === "sesion") return consultarSesion(request, env, config, dbExistente);
+  if (accion === "salir") return cerrarSesion(request, env, config, dbExistente);
+  // En el Durable Object la IP ya fue verificada por el Worker de entrada.
+  // El valor adicional no se acepta directamente de Internet.
+  const ip = ipVerificada || request.headers.get("CF-Connecting-IP")?.trim();
   if (!ip) return responder({ ok: false, error: "No se pudo validar el origen de la solicitud." }, 403);
   const ipHash = hash(ip);
-  if (accion === "solicitar") return solicitar(request, env, config, ipHash);
-  return verificar(request, env, config, ipHash);
+  if (accion === "solicitar") return solicitar(request, env, config, ipHash, dbExistente);
+  return verificar(request, env, config, ipHash, dbExistente);
 }
 
 // Panel de clientes registrados. No cambia los permisos de los enlaces privados
@@ -545,8 +564,13 @@ export async function ejecutarPanelClientes(request, env) {
 
 // Solo identidad autenticada por OTP. Los invitados no se vinculan a cuentas
 // por coincidencia con un correo no verificado.
-export async function obtenerClienteRegistrado(request, env) {
+// FASE7_UNA_CONEXION_DB_20261024: las rutas que ya abrieron MongoDB pueden
+// autenticar dentro de esa conexion; no se reutilizan clientes entre requests.
+export async function obtenerClienteRegistrado(request, env, dbExistente = null) {
   const config = configuracion(env);
   if (!config || !tokenSesion(request)) return null;
-  return conDB(env, db => usuarioAutenticadoPanel(db, request, config));
+  return dbExistente
+    ? usuarioAutenticadoPanel(dbExistente, request, config)
+    : conDB(env, db => usuarioAutenticadoPanel(db, request, config));
 }
+

@@ -1,0 +1,10 @@
+{
+  "src/paginas/servicios/PanelClientePublicaciones.jsx": {
+    "antes": "5fa70a9f4477b6a5ba3ba76f6825b577f88c41775ba50252f8c7ae615d492c86",
+    "despues": "209f4aee16ad30f3a4e91b9ad69d426781b907ba0be28e79da56158b3a3e05c9"
+  },
+  "worker.js": {
+    "antes": "d3a6703fd22857a8fc50e7ebc4485b9bc67b0d8a405bf92214c9f686635406a2",
+    "despues": "b7f01510a9cd3f61f5f8d95e0118a2ff3484090ce10e8cd6e63f4338422d1852"
+  }
+}

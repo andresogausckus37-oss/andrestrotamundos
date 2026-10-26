@@ -1,0 +1,216 @@
+// Renovación real por transferencia: solicitud, comprobante privado y aprobación manual.
+// No utiliza renovaciones_transferencia_ensayo ni activa publicaciones o cron.
+import crypto from 'node:crypto';
+import { obtenerClienteRegistrado } from './clientes-acceso.js';
+
+const BASE = '/api/servicios/publicaciones/renovacion-transferencia';
+const ADMIN = '/api/admin/servicios/publicaciones/renovaciones-transferencia';
+const DB = 'andres_imprimibles';
+const COLECCION = 'renovaciones_transferencia_reales';
+const ORIGEN = 'https://andreshousesitter.com';
+const PEDIDO = /^SER-[a-f0-9-]{36}$/i;
+const MAX = 8 * 1024 * 1024;
+const VERSION = 'renovacion-real-v1';
+const RENOVACION_ID=/^renovacion-real:SER-[a-f0-9-]{36}(?::(?:[3-9]|[1-9][0-9]{1,2}))?$/i;
+const resp = (obj, status=200) => Response.json(obj, {status, headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+const activo = env => String(env?.SERVICIO_RENOVACIONES_REALES_HABILITADAS || '').toLowerCase() === 'true' &&
+  String(env?.SERVICIO_TRANSFERENCIAS_HABILITADAS || '').toLowerCase() === 'true';
+function cuenta(env) {
+  const titular = String(env?.SERVICIO_TRANSFERENCIA_TITULAR || '').trim();
+  const entidad = String(env?.SERVICIO_TRANSFERENCIA_ENTIDAD || '').trim();
+  const alias = String(env?.SERVICIO_TRANSFERENCIA_ALIAS || '').trim();
+  const cbuCvu = String(env?.SERVICIO_TRANSFERENCIA_CBU_CVU || '').replace(/\s/g, '');
+  return titular && titular.length <= 120 && entidad && entidad.length <= 80 &&
+    /^[\w.-]{6,60}$/.test(alias) && /^\d{22}$/.test(cbuCvu) ? {titular,entidad,alias,cbuCvu} : null;
+}
+async function conDB(env, callback) {
+  const {MongoClient} = await import('mongodb');
+  const cliente = new MongoClient(env.MONGODB_URI);
+  try { await cliente.connect(); return await callback(cliente.db(DB)); }
+  finally { await cliente.close().catch(()=>{}); }
+}
+async function jsonLimitado(request) {
+  if (!/^application\/json(?:;|$)/i.test(request.headers.get('content-type')||'')) return null;
+  if (Number(request.headers.get('content-length')||0) > 2048) return null;
+  const datos = await request.text();
+  if (datos.length > 2048) return null;
+  try { const j = JSON.parse(datos); return j && typeof j === 'object' && !Array.isArray(j) ? j : null; }
+  catch { return null; }
+}
+function redesValidas(redes) {
+  return Array.isArray(redes) && [1,2].includes(redes.length) &&
+    redes.every(red => red==='facebook'||red==='instagram') && new Set(redes).size===redes.length;
+}
+function resumen(p) {
+  return p ? {id:p._id,pedidoId:p.pedidoId,redes:p.redes,importe:p.importe,moneda:'ARS',
+    estado:p.estado,configuracionEstado:p.configuracionEstado||'sin_configurar',
+    resumenContenidos:(p.configuracion?.publicaciones||[]).map((c,i)=>({numero:i+1,tipo:c.tipo,dia:c.diaPreferido,hora:c.horaLocalPreferida})),
+    comprobanteRecibido:Boolean(p.comprobante),aprobadoEn:p.aprobadoEn||null,
+    numeroSemana:p.numeroSemana||2,estadoSemana:p.estadoSemana||null,
+    inicio:p.inicio||null,fin:p.fin||null,
+    creadoEn:p.creadoEn||null} : null;
+}
+function bucket(env) { const b=env?.SERVICIOS_COMPROBANTES_R2; return b?.put && b?.get ? b : null; }
+function mime(bytes) {
+  if(bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return {tipo:'image/jpeg',ext:'jpg'};
+  if([137,80,78,71,13,10,26,10].every((b,i)=>bytes[i]===b))return {tipo:'image/png',ext:'png'};
+  if([37,80,68,70,45].every((b,i)=>bytes[i]===b))return {tipo:'application/pdf',ext:'pdf'};
+  return null;
+}
+async function archivoLimitado(request) {
+  if(Number(request.headers.get('content-length')||0)>MAX || !request.body)return null;
+  const lector=request.body.getReader(), partes=[]; let total=0;
+  while(true){const {done,value}=await lector.read(); if(done)break; total+=value.byteLength;
+    if(total>MAX){await lector.cancel();return null;} partes.push(value);}
+  if(total<100)return null;
+  const bytes=new Uint8Array(total); let i=0;
+  for(const p of partes){bytes.set(p,i);i+=p.byteLength;}
+  return bytes;
+}
+const origenCorrecto = request => request.headers.get('origin')===new URL(request.url).origin;
+async function buscarPedidoPadre(db, usuario, pedidoId) {
+  return db.collection('pedidos_servicios').findOne({pedidoId,tipo:'publicaciones',clienteUsuarioId:usuario.id,
+    modalidadContratacion:'prueba_gratuita'}, {projection:{_id:1,pedidoId:1,clienteUsuarioId:1,redes:1}});
+}
+export async function ejecutarRenovacionTransferencia(request,env){
+  const url=new URL(request.url),ruta=url.pathname;
+  if(![BASE,BASE+'/crear',BASE+'/comprobante'].includes(ruta))return resp({ok:false,error:'Ruta no encontrada.'},404);
+  if(request.method!==(ruta===BASE?'GET':'POST'))return resp({ok:false,error:'Método no permitido.'},405);
+  if(request.method==='POST'&&!origenCorrecto(request))return resp({ok:false,error:'Origen no autorizado.'},403);
+  if(!env?.MONGODB_URI)return resp({ok:false,error:'Servicio temporalmente no disponible.'},503);
+  const habilitada=activo(env) && Boolean(cuenta(env)) && Boolean(bucket(env));
+  let datos=null;
+  if(ruta===BASE+'/crear') datos=await jsonLimitado(request);
+  const pedidoId=ruta===BASE+'/crear'?datos?.pedidoId:url.searchParams.get('pedidoId');
+  try {
+    return await conDB(env,async db=>{
+      // FASE7_UNA_CONEXION_DB_20261024: verificar sesion y pedido con una conexion.
+      const usuario=await obtenerClienteRegistrado(request,env,db);
+      if(!usuario)return resp({ok:false,error:'Iniciá sesión para administrar tus renovaciones.'},401);
+      if(!PEDIDO.test(pedidoId||''))return resp({ok:false,error:'Pedido inválido.'},400);
+      const padre=await buscarPedidoPadre(db,usuario,pedidoId);
+      if(!padre)return resp({ok:false,error:'El pedido no pertenece a tu cuenta.'},404);
+      const tabla=db.collection(COLECCION);
+      // Semana 2 histórica: el ID original no cambia. Semanas siguientes: :3, :4, etc.
+      const existentes=await tabla.find({pedidoId,clienteUsuarioId:usuario.id,version:VERSION})
+        .sort({numeroSemana:-1,creadoEn:-1}).limit(1).toArray();
+      const existente=existentes[0]||null;
+      if(ruta===BASE)return resp({ok:true,habilitada,cuenta:habilitada?cuenta(env):null,
+        pedido:resumen(existente),motivo:habilitada?'': 'Transferencias reales todavía no habilitadas.'});
+      if(!habilitada)return resp({ok:false,error:'El cobro real no está habilitado o faltan los datos bancarios y R2.'},503);
+      if(ruta===BASE+'/crear'){
+        if(!redesValidas(datos?.redes))return resp({ok:false,error:'Elegí una o ambas redes.'},400);
+        const redes=[...datos.redes].sort(),importe=redes.length===2?15000:10000;
+        // No cobrar por una red sin conexión disponible desde el pedido original.
+        // Ampliar redes requiere primero un flujo de vinculación autorizado.
+        if(redes.some(red=>!padre.redes?.includes(red)))return resp({ok:false,
+          error:'Para agregar una red nueva, primero debe vincularse con ayuda de Administración. No se creó ningún cobro.'},409);
+        if(existente && existente.configuracionEstado!=='programada' && existente.estadoSemana!=='finalizada'){
+          if(JSON.stringify(existente.redes)!==JSON.stringify(redes))return resp({ok:false,error:'Terminá la renovación actual antes de cambiar las redes de la siguiente semana.'},409);
+          return resp({ok:true,pedido:resumen(existente)});
+        }
+        const numeroSemana=existente?Math.max(3,(existente.numeroSemana||2)+1):2;
+        if(numeroSemana>999)return resp({ok:false,error:'Contactá con Administración para continuar.'},409);
+        const id=numeroSemana===2?`renovacion-real:${pedidoId}`:`renovacion-real:${pedidoId}:${numeroSemana}`;
+        const ahora=new Date();
+        const registro={_id:id,numeroSemana,version:VERSION,pedidoId,clienteUsuarioId:usuario.id,email:usuario.email,
+          redes,importe,moneda:'ARS',estado:'pendiente_comprobante',pagoConfirmado:false,
+          comprobante:null,creadoEn:ahora,actualizadoEn:ahora};
+        try {await tabla.insertOne(registro);}
+        catch(e){if(e?.code!==11000)throw e; const previo=await tabla.findOne({_id:id,clienteUsuarioId:usuario.id});
+          if(!previo || JSON.stringify(previo.redes)!==JSON.stringify(redes))return resp({ok:false,error:'Ya existe otra renovación.'},409);
+          return resp({ok:true,pedido:resumen(previo)});}
+        return resp({ok:true,pedido:resumen(registro)},201);
+      }
+      if(!existente)return resp({ok:false,error:'Primero creá el pedido de renovación.'},404);
+      if(!['pendiente_comprobante','rechazado'].includes(existente.estado))
+        return resp({ok:false,error:'Este comprobante ya está en revisión o aprobado.'},409);
+      const tipoDeclarado=(request.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+      if(!['image/jpeg','image/png','application/pdf'].includes(tipoDeclarado))
+        return resp({ok:false,error:'Adjuntá JPG, PNG o PDF.'},415);
+      const bytes=await archivoLimitado(request), tipo=bytes&&mime(bytes);
+      if(!tipo || tipo.tipo!==tipoDeclarado)return resp({ok:false,error:'Archivo inválido, de formato diferente o mayor a 8 MB.'},415);
+      const ahora=new Date(),r2Key=`comprobantes/publicaciones/renovaciones-reales/${pedidoId}/${crypto.randomUUID()}.${tipo.ext}`;
+      await bucket(env).put(r2Key,bytes,{httpMetadata:{contentType:tipo.tipo}});
+      try {
+        const guardado=await tabla.updateOne({_id:existente._id,clienteUsuarioId:usuario.id,estado:existente.estado,pagoConfirmado:false},
+          {$set:{estado:'en_revision',comprobante:{r2Key,tipo:tipo.tipo,tamano:bytes.byteLength,subidoEn:ahora},actualizadoEn:ahora}});
+        if(guardado.modifiedCount!==1){await bucket(env).delete(r2Key).catch(()=>{});
+          return resp({ok:false,error:'La renovación cambió de estado; actualizá el panel.'},409);}
+      }catch(error){await bucket(env).delete(r2Key).catch(()=>{});throw error;}
+      return resp({ok:true,estado:'en_revision',mensaje:'Comprobante recibido. Administración verificará la transferencia.'},201);
+    });
+  }catch(error){console.error('Renovación bancaria real:',error?.name||'Error',error?.code||'');
+    return resp({ok:false,error:'No pudimos completar la renovación. Consultá su estado antes de reintentar.'},503);}
+}
+
+function htmlEscape(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function pagina(contenido,status=200){return new Response(`<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Renovaciones bancarias</title><style>body{font-family:system-ui;margin:24px auto;max-width:840px;padding:0 14px;color:#222;background:#f8fafc}section{background:white;border:1px solid #ddd;border-radius:8px;padding:16px;margin:12px 0}button{background:#df6519;color:white;border:0;border-radius:6px;padding:9px 14px}a{color:#b45309}small{color:#666}form{display:inline-block;margin:8px}</style><h1>Renovaciones bancarias reales</h1><p>Verificá el dinero recibido en tu banco antes de aprobar. El comprobante por sí solo no confirma el pago.</p>${contenido}</html>`,{status,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"}});}
+function firma(env,id,accion,vence){return crypto.createHmac('sha256',String(env.ADMIN_PASSWORD||'')).update(`${VERSION}:${id}:${accion}:${vence}`).digest('hex');}
+function tokenValido(env,id,accion,vence,token){
+  if(!Number.isSafeInteger(+vence) || +vence<Date.now() || +vence>Date.now()+15*60*1000)return false;
+  const a=Buffer.from(firma(env,id,accion,vence),'hex'),b=Buffer.from(String(token||''),'hex');
+  return a.length===b.length && crypto.timingSafeEqual(a,b);
+}
+async function correoAprobado(env,doc){
+  if(!env.RESEND_API_KEY||!env.SERVICIO_CLIENTES_CORREO_DESDE)return false;
+  const mensaje=`Tu transferencia bancaria para una semana adicional fue aprobada.\n\nPlan: ${doc.redes.join(' e ')}.\nImporte: $${doc.importe.toLocaleString('es-AR')} ARS.\n\nIngresá a tu panel para consultar la siguiente etapa: ${ORIGEN}/servicios/publicacion-automatica/mi-panel\n\nLa programación se confirma por separado, después de revisar los contenidos.\n\nSaludos,\nEl equipo de Redes en Piloto`;
+  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:env.SERVICIO_CLIENTES_CORREO_DESDE,to:[doc.email],subject:'Pago aprobado · Redes en Piloto',text:mensaje})});
+  return r.ok;
+}
+export async function ejecutarAdminRenovacionesTransferencia(request,env,adminAutorizado){
+  if(!adminAutorizado)return resp({ok:false,error:'No autorizado.'},401);
+  const url=new URL(request.url);
+  if(!['GET','POST'].includes(request.method))return resp({ok:false,error:'Método no permitido.'},405);
+  if(request.method==='POST'&&!origenCorrecto(request))return pagina('<section>Origen no autorizado.</section>',403);
+  if(!env?.MONGODB_URI)return pagina('<section>MongoDB no disponible.</section>',503);
+  try {
+    return await conDB(env,async db=>{
+      const tabla=db.collection(COLECCION), id=url.searchParams.get('id');
+      if(request.method==='GET'&&url.searchParams.get('archivo')==='1'){
+        if(!RENOVACION_ID.test(id||''))return pagina('<section>ID no válido.</section>',400);
+        const doc=await tabla.findOne({_id:id});
+        if(!doc?.comprobante?.r2Key)return pagina('<section>Sin comprobante.</section>',404);
+        const obj=await bucket(env)?.get(doc.comprobante.r2Key);
+        if(!obj)return pagina('<section>No se encontró el archivo privado.</section>',404);
+        return new Response(obj.body,{headers:{'Content-Type':doc.comprobante.tipo,'Content-Disposition':'inline; filename="comprobante-renovacion"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox"}});
+      }
+      if(request.method==='POST'){
+        if(Number(request.headers.get('content-length')||0)>4096)return pagina('<section>Formulario inválido.</section>',413);
+        const form=await request.formData(),accion=String(form.get('accion')||''),idForm=String(form.get('id')||'');
+        const vence=String(form.get('vence')||''),csrf=String(form.get('csrf')||'');
+        if(!['aprobar','rechazar','activar'].includes(accion)||!RENOVACION_ID.test(idForm)||
+           !tokenValido(env,idForm,accion,vence,csrf))return pagina('<section>Formulario vencido o inválido. Recargá la página.</section>',403);
+        if(accion==='activar'){
+          const listo=await tabla.findOne({_id:idForm,estado:'aprobado',pagoConfirmado:true});
+          if(!listo?.comprobante)return pagina('<section>Primero aprobá y confirmá el pago.</section>',409);
+          const r=await tabla.updateOne({_id:idForm,estado:'aprobado',pagoConfirmado:true},
+            {$set:{estado:'activada',activadaEn:new Date(),configuracionEstado:'sin_configurar',actualizadoEn:new Date()}});
+          if(r.modifiedCount!==1)return pagina('<section>La renovación ya cambió de estado. Actualizá la página.</section>',409);
+          return Response.redirect(`${url.origin}${ADMIN}?resultado=activada`,303);
+        }
+        const doc=await tabla.findOne({_id:idForm,estado:'en_revision',pagoConfirmado:false});
+        if(!doc?.comprobante)return pagina('<section>Pedido no encontrado o ya tratado.</section>',409);
+        const ahora=new Date();
+        const cambios=accion==='aprobar'?{estado:'aprobado',pagoConfirmado:true,aprobadoEn:ahora,actualizadoEn:ahora}:
+          {estado:'rechazado',pagoConfirmado:false,actualizadoEn:ahora};
+        const r=await tabla.updateOne({_id:idForm,estado:'en_revision',pagoConfirmado:false},{$set:cambios});
+        if(r.modifiedCount!==1)return pagina('<section>Este pedido cambió de estado.</section>',409);
+        if(accion==='aprobar'){
+          let enviado=false;
+          try {enviado=await correoAprobado(env,doc);}catch(e){console.error('Correo renovación:',e?.name||'Error');}
+          await tabla.updateOne({_id:idForm},{$set:{correoAprobacionEstado:enviado?'enviado':'pendiente'}});
+        }
+        return Response.redirect(`${url.origin}${ADMIN}?resultado=${accion==='aprobar'?'aprobado':'rechazado'}`,303);
+      }
+      const documentos=await tabla.find({version:VERSION}).sort({creadoEn:-1}).limit(100).toArray();
+      const vence=Date.now()+10*60*1000;
+      const bloques=documentos.map(doc=>{
+        const archivo=doc.comprobante?`<p><a target="_blank" rel="noopener noreferrer" href="${ADMIN}?archivo=1&id=${encodeURIComponent(doc._id)}">Ver comprobante</a></p>`:'<p>Comprobante pendiente</p>';
+        const form=accion=>`<form method="post" action="${ADMIN}"><input type="hidden" name="id" value="${htmlEscape(doc._id)}"><input type="hidden" name="accion" value="${accion}"><input type="hidden" name="vence" value="${vence}"><input type="hidden" name="csrf" value="${firma(env,doc._id,accion,vence)}"><button type="submit">${accion==='aprobar'?'Confirmar transferencia recibida':accion==='activar'?'Activar semana':'Rechazar comprobante'}</button></form>`;
+        return `<section><h2>Semana ${Number(doc.numeroSemana)||2} · ${htmlEscape(doc.email)}</h2><p>Pedido: ${htmlEscape(doc.pedidoId)}</p><p>Redes: ${htmlEscape(doc.redes.join(', '))} · <strong>$${doc.importe.toLocaleString('es-AR')} ARS</strong></p><p>Estado: <strong>${htmlEscape(doc.estado)}</strong></p>${archivo}${doc.estado==='en_revision'?form('aprobar')+form('rechazar'):doc.estado==='aprobado'?form('activar'):''}<small>Correo de aprobación: ${htmlEscape(doc.correoAprobacionEstado||'sin procesar')}</small></section>`;
+      });
+      return pagina(`${url.searchParams.get('resultado')?`<p>${htmlEscape(url.searchParams.get('resultado'))}</p>`:''}${bloques.join('')||'<section>Todavía no hay solicitudes reales.</section>'}`);
+    });
+  }catch(error){console.error('Admin renovaciones:',error?.name||'Error',error?.code||'');return pagina('<section>Error al consultar renovaciones.</section>',503);}
+}

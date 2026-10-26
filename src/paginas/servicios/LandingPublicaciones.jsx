@@ -285,8 +285,14 @@ export default function LandingPublicaciones() {
         body: JSON.stringify({ email: correo, modo: modoAcceso,
           ...(modoAcceso === "registro" ? { perfil: perfilRegistro(), turnstileToken } : {}) }),
       });
+      const tipoRespuesta = respuesta.headers.get("content-type") || "";
+      if (!tipoRespuesta.includes("application/json")) {
+        throw new Error(`La API de acceso devolvió una página en lugar de JSON (HTTP ${respuesta.status}). Revisá la conexión con el servidor.`);
+      }
       const datos = await respuesta.json().catch(() => ({}));
-      if (!respuesta.ok || datos.ok !== true) throw new Error("No fue posible enviar el código. Intentá nuevamente más tarde.");
+      if (!respuesta.ok || datos.ok !== true) {
+        throw new Error(datos.error || `No fue posible enviar el código (HTTP ${respuesta.status}).`);
+      }
       setEmail(correo);
       setPasoRegistro("codigo");
       setCodigo("");
@@ -313,8 +319,14 @@ export default function LandingPublicaciones() {
         body: JSON.stringify({ email, codigo, modo: modoAcceso,
           ...(modoAcceso === "registro" ? { perfil: perfilRegistro() } : {}) }),
       });
+      const tipo = respuesta.headers.get("content-type") || "";
+      if (!tipo.includes("application/json")) {
+        throw new Error(`El servidor devolvió una página en lugar de JSON al verificar el código (HTTP ${respuesta.status}).`);
+      }
       const datos = await respuesta.json().catch(() => ({}));
-      if (!respuesta.ok || datos.ok !== true) throw new Error("El código no pudo verificarse. Revisalo e intentá nuevamente.");
+      if (!respuesta.ok || datos.ok !== true) {
+        throw new Error(datos.error || `No se pudo verificar el código (HTTP ${respuesta.status}).`);
+      }
       setModalRegistro(false);
       navigate(RUTA_PANEL);
     } catch (error) {
@@ -369,7 +381,7 @@ export default function LandingPublicaciones() {
                 Automatizá tus redes sociales y hacé crecer tu negocio
               </h1>
               <div className="mt-6 max-w-2xl space-y-4 text-sm font-normal leading-7 text-slate-600 sm:text-[15px]">
-                <p>¿Querés mantener tus redes sociales activas sin estar pendiente de cada publicación? Nuestro sistema automatiza tu contenido de Facebook e Instagram para que ahorres tiempo y te concentres en hacer crecer tu negocio.</p>
+                <p>¿Querés mantener tus redes sociales activas sin estar pendiente de cada publicación? Nuestra herramienta interactiva automatiza y programa tu contenido de Facebook e Instagram para que ahorres tiempo y te concentres en hacer crecer tu negocio. En solo 20 minutos podes configurar y programar tu contenido de toda la semana, de manera fácil y rápida.</p>
                 <p>Subí tus contenidos, elegí las redes sociales, el formato, los textos, hashtags, enlaces, días y horarios. ¡Nosotros nos encargamos del resto!</p>
                 <p>Ganás tiempo, mantenés tu presencia digital y generás más oportunidades para atraer clientes, llevar tráfico a tu web y potenciar tus ventas.</p>
               </div>
@@ -386,10 +398,10 @@ export default function LandingPublicaciones() {
                 <span className="text-xs font-normal text-slate-500">Facebook + Instagram</span>
               </div>
               <p className="text-3xl font-medium tracking-tight text-slate-950">Probá <span className="text-orange-700">7 días gratis</span></p>
-              <p className="mt-3 text-sm leading-6 text-slate-600">Subí hasta 4 contenidos en cada red dejá que nuestro sistema los publique automáticamente en los días y horarios que elijas.</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">Subí hasta 4 contenidos en cada red y dejá que nuestra herramienta los publique automáticamente en los días y horarios que elijas.</p>
               <div className="my-5 border-t border-slate-100" />
               <p className="text-sm font-medium text-slate-900">¿Querés ver cómo funciona antes de registrarte?</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Probá nuestro editor con vista previa y descubrí cómo se verán tus publicaciones en Facebook e Instagram.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Probá nuestro editor interactivo con vista previa y descubrí cómo se verán tus publicaciones en Facebook e Instagram.</p>
               <a href="#demo" className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-orange-700 hover:text-orange-800">
                 Probar el editor <ArrowRight size={16} />
               </a>
@@ -483,7 +495,7 @@ export default function LandingPublicaciones() {
                 </div>
                 <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
                   <Campo etiqueta="Nombre del emprendimiento">
-                    <input className={`${CAMPO} h-9`} maxLength={120} value={negocio} onChange={(e) => setNegocio(e.target.value)} placeholder="Ej.: Mi emprendimiento" />
+                    <input className={`${CAMPO} h-9`} maxLength={120} value={negocio} onChange={(e) => setNegocio(e.target.value)} placeholder="ej: Redes en Piloto" />
                   </Campo>
                   <Campo etiqueta="Copy o texto de la publicación">
                     <textarea className={CAMPO} rows={2} maxLength={1500} value={contenido.copy}
@@ -495,9 +507,9 @@ export default function LandingPublicaciones() {
                       {redes.includes("instagram") && <Campo etiqueta="CTA para Instagram"><input className={`${CAMPO} h-9`} maxLength={100} value={contenido.ctaInstagram} onChange={(e) => actualizarContenido({ ctaInstagram: e.target.value })} placeholder="Enlace en nuestra bio" /></Campo>}
                       {redes.includes("facebook") && <>
                         <Campo etiqueta="CTA para Facebook"><input className={`${CAMPO} h-9`} maxLength={100} value={contenido.ctaFacebook} onChange={(e) => actualizarContenido({ ctaFacebook: e.target.value })} placeholder="Visitá nuestra tienda" /></Campo>
-                        <Campo etiqueta="URL para Facebook"><input className={`${CAMPO} h-9`} maxLength={500} value={contenido.urlFacebook} onChange={(e) => actualizarContenido({ urlFacebook: e.target.value })} placeholder="https://..." /></Campo>
+                        <Campo etiqueta="URL para Facebook"><input className={`${CAMPO} h-9`} maxLength={500} value={contenido.urlFacebook} onChange={(e) => actualizarContenido({ urlFacebook: e.target.value })} placeholder="ej: www.minegocio.com.ar" /></Campo>
                       </>}
-                      <Campo etiqueta="Hashtags"><input className={`${CAMPO} h-9`} maxLength={240} value={contenido.hashtags} onChange={(e) => actualizarContenido({ hashtags: e.target.value })} placeholder="#MiNegocio #Novedades" /></Campo>
+                      <Campo etiqueta="Hashtags"><input className={`${CAMPO} h-9`} maxLength={240} value={contenido.hashtags} onChange={(e) => actualizarContenido({ hashtags: e.target.value })} placeholder="ej: #redesenpiloto #minegocio #novedades" /></Campo>
                     </div>
                   </details>
                 </div>

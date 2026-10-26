@@ -1,0 +1,21 @@
+{
+  "fecha": "2026-10-25 15:12:15",
+  "archivos": {
+    "worker.js": {
+      "old_sha": "7cbeef5562ee98df9f513059d0bb15f1fea8ec51d2153fcbdc9e47ce74404b72",
+      "new_sha": "01457bd1285c1b78fdadc95a3fbd33f2a8ca6e7ad38150780cc3cc0fc81d8ac8"
+    },
+    "src/paginas/servicios/PanelClientePublicaciones.jsx": {
+      "old_sha": "4d6a3d7c99f8ee926304ec17e436d965d9dec7cddf4c5e3e45e640f474500ab3",
+      "new_sha": "bc2a0786bb4dab92d4d67493f3bf5aea640b6028c7cf3788091936663227b250"
+    },
+    "api/servicios/renovacion-transferencia.js": {
+      "old_sha": "d1e12aef8b8cb0b2cef4a44f8582f3d69393db6ee67d746554b3f6c633a54e8b",
+      "new_sha": "7603d99db0afd55972f454deace144848d154848421c302f9de1c53e66e7a902"
+    },
+    "api/servicios/renovacion-paypal.js": {
+      "old_sha": null,
+      "new_sha": "d397051fd990e4059c4c58044f891f7ddcba711644c50bf4b1bcac5148366155"
+    }
+  }
+}

@@ -10,6 +10,8 @@ const CABECERAS_PANEL = { "X-Comunidad-Panel": "1" };
 
 // Sube los archivos reales al bucket privado después de crear la semana.
 // Si una subida falla, la semana sigue guardada y el cliente puede reintentar desde el panel.
+// Semana 1: reanuda desde los archivos CONFIRMADOS en MongoDB/R2.
+// Dos archivos simultáneos como máximo. Nunca crea un segundo pedido.
 export async function subirArchivosSemana(pedidoId, contenidos, progreso = () => {}) {
   const solicitar = async (ruta, datos) => leer(await fetch(`${API}/${ruta}`, {
     method: "POST", credentials: "same-origin", cache: "no-store",
@@ -18,40 +20,129 @@ export async function subirArchivosSemana(pedidoId, contenidos, progreso = () =>
   }));
   const archivos = contenidos.flatMap(contenido =>
     contenido.archivos.map((archivo, posicion) => ({ contenido, archivo, posicion })));
-  let terminados = 0;
-  for (const { contenido, archivo, posicion } of archivos) {
+  if (!archivos.length) throw new Error("No hay archivos para enviar.");
+
+  // Ante una subida parcial o una respuesta perdida, los archivos ya confirmados
+  // se omiten. La coincidencia incluye posición, nombre, MIME y tamaño.
+  const estado = await leer(await fetch(`${API}/estado?pedidoId=${encodeURIComponent(pedidoId)}`, {
+    method: "GET", credentials: "same-origin", cache: "no-store", headers: CABECERAS_PANEL,
+  }));
+  if (!Array.isArray(estado.archivos)) throw new Error("No se pudo consultar qué archivos recibió el servidor.");
+  const pendientes = [];
+  const completos = new Set();
+  let bytesConfirmados = 0;
+  const bytesTotales = archivos.reduce((sum, item) => sum + item.archivo.size, 0);
+  for (const item of archivos) {
+    const previo = estado.archivos.find(a => a.contenidoId === item.contenido.id && a.posicion === item.posicion);
+    if (previo) {
+      if (previo.nombre !== item.archivo.name || previo.tipo !== item.archivo.type ||
+          Number(previo.tamano) !== item.archivo.size || previo.revision === "rechazado") {
+        throw new Error(`El contenido ${item.contenido.id.replace("contenido-", "")} ya tiene otro archivo o una corrección pendiente. Revisalo desde el panel antes de reintentar.`);
+      }
+      completos.add(`${item.contenido.id}:${item.posicion}`);
+      bytesConfirmados += item.archivo.size;
+    } else pendientes.push(item);
+  }
+
+  let terminados = completos.size;
+  let siguiente = 0;
+  let primerError = null;
+  const confirmadosParciales = new Map();
+  const informar = nombre => {
+    const parcial = [...confirmadosParciales.values()].reduce((a, b) => a + b, 0);
+    progreso({ archivo: `${nombre} · ${terminados} de ${archivos.length} completos`,
+      completado: terminados, total: archivos.length,
+      porcentaje: Math.min(100, Math.round((bytesConfirmados + parcial) / bytesTotales * 100)) });
+  };
+  informar("Comprobando archivos");
+
+  async function enviarUno(item) {
+    const { contenido, archivo, posicion } = item;
     comprobarArchivo(archivo, contenido.tipo);
-    const sesion = await solicitar("iniciar", {
-      pedidoId, contenidoId: contenido.id, posicion,
-      nombre: archivo.name, tipo: archivo.type, tamano: archivo.size,
-    });
+    const clave = `${contenido.id}:${posicion}`;
+    let sesion;
     try {
-      if (sesion.tamanoParte !== TAMANO_PARTE) throw new Error("Tamaño de bloques no admitido.");
+      // El agrupamiento acotado del limitador coincide con esta posición real.
+      sesion = await solicitar(`iniciar?contenido=${encodeURIComponent(contenido.id)}&pos=${posicion}`, {
+        pedidoId, contenidoId: contenido.id, posicion,
+        nombre: archivo.name, tipo: archivo.type, tamano: archivo.size,
+      });
+      if (sesion.tamanoParte !== TAMANO_PARTE) throw new Error("Tamaño de bloques incompatible.");
       for (let numero = 1; numero <= sesion.totalPartes; numero++) {
         const inicio = (numero - 1) * TAMANO_PARTE;
-        const parte = archivo.slice(inicio, Math.min(inicio + TAMANO_PARTE, archivo.size));
-        await leer(await fetch(`${API}/parte?pedidoId=${encodeURIComponent(pedidoId)}&cargaId=${encodeURIComponent(sesion.cargaId)}&numero=${numero}`, {
+        const fin = Math.min(inicio + TAMANO_PARTE, archivo.size);
+        const parte = archivo.slice(inicio, fin);
+        await leer(await parteConReintento(`${API}/parte?pedidoId=${encodeURIComponent(pedidoId)}&cargaId=${encodeURIComponent(sesion.cargaId)}&numero=${numero}`, {
           method: "PUT", credentials: "same-origin", cache: "no-store",
-          headers: { ...CABECERAS_PANEL, "Content-Type": "application/octet-stream" },
-          body: parte,
+          headers: { ...CABECERAS_PANEL, "Content-Type": "application/octet-stream" }, body: parte,
         }));
-        progreso({ archivo: archivo.name, completado: terminados, total: archivos.length,
-          porcentaje: Math.round((terminados + numero / sesion.totalPartes) / archivos.length * 100) });
+        confirmadosParciales.set(clave, fin);
+        informar(archivo.name);
       }
       await solicitar("finalizar", { pedidoId, cargaId: sesion.cargaId });
+      confirmadosParciales.delete(clave);
+      completos.add(clave);
+      bytesConfirmados += archivo.size;
       terminados++;
-    } catch (error) {
-      await solicitar("cancelar", { pedidoId, cargaId: sesion.cargaId }).catch(() => {});
-      throw error;
+      informar(archivo.name);
+    } catch (e) {
+      confirmadosParciales.delete(clave);
+      // Solo cancela sesiones que se iniciaron; no elimina archivos ya guardados.
+      if (sesion?.cargaId) {
+        await solicitar("cancelar", { pedidoId, cargaId: sesion.cargaId }).catch(() => {});
+      }
+      throw new Error(`${archivo.name}: ${e.message || "No se pudo completar la subida."}`);
     }
   }
+
+  async function tarea() {
+    while (!primerError) {
+      const item = pendientes[siguiente++];
+      if (!item) return;
+      try { await enviarUno(item); }
+      catch (e) { primerError = primerError || e; }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(2, pendientes.length) }, () => tarea()));
+  if (primerError) throw primerError;
+  informar("Archivos confirmados");
   return { completados: terminados };
 }
 
+// DIAGNOSTICO_SUBIDA_503_V1: conservar el código de etapa seguro que devuelve la API.
 async function leer(respuesta) {
-  const data = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok || data.ok !== true) throw new Error(data.error || "No se pudo completar la operación.");
-  return data;
+  const tipo = respuesta.headers.get("content-type") || "";
+  let data = {};
+  if (tipo.includes("application/json")) data = await respuesta.json().catch(() => ({}));
+  if (respuesta.ok && data.ok === true) return data;
+  const codigo = typeof data.codigo === "string" && /^ARCHIVOS_[A-Z_]+$/.test(data.codigo)
+    ? ` · ${data.codigo}` : (tipo.includes("text/html") ? " · respuesta HTML" : "");
+  if (respuesta.status === 429) throw new Error(`Límite temporal de solicitudes (HTTP 429). Reintentá en un minuto${codigo}.`);
+  if ([502, 503, 504, 520, 522, 524].includes(respuesta.status)) {
+    const detalle = typeof data.error === "string" && data.error.length < 250 ? `${data.error} ` : "";
+    throw new Error(`${detalle}Error HTTP ${respuesta.status}${codigo}. Podés reintentar en el mismo pedido; los archivos completos se conservan.`);
+  }
+  throw new Error((typeof data.error === "string" ? data.error : "El servidor no confirmó la operación") + ` (HTTP ${respuesta.status || "sin respuesta"}${codigo}).`);
+}
+
+// Se repite solamente PUT /parte, que admite reenviar los mismos bytes y número.
+// No se repite /finalizar automáticamente: su resultado podría ser incierto.
+async function parteConReintento(url, opciones) {
+  for (let intento = 0; intento < 3; intento++) {
+    let respuesta;
+    try { respuesta = await fetch(url, opciones); }
+    catch (error) {
+      if (intento === 2) throw new Error("Falló la conexión mientras se enviaba una parte. Reintentá desde el panel.");
+      await new Promise(resolve => setTimeout(resolve, 1200 * (intento + 1)));
+      continue;
+    }
+    if ([502, 503, 504].includes(respuesta.status) && intento < 2) {
+      await respuesta.body?.cancel().catch(() => {});
+      await new Promise(resolve => setTimeout(resolve, 1200 * (intento + 1)));
+      continue;
+    }
+    return respuesta;
+  }
 }
 function acepta(tipo) { return tipo === "reel" ? ".mp4,video/mp4" : ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"; }
 function maximo(tipo) { return tipo === "reel" ? 1 : tipo === "carrusel" ? 10 : 1; }
@@ -130,7 +221,7 @@ export default function ArchivosPedido({ pedido }) {
           for(let numero=1;numero<=total;numero++) {
             if(cancelado.current) throw new Error("Carga interrumpida.");
             const parte = archivo.slice((numero-1)*TAMANO_PARTE,Math.min(numero*TAMANO_PARTE,archivo.size));
-            await leer(await fetch(`${API}/parte?pedidoId=${encodeURIComponent(id)}&cargaId=${encodeURIComponent(sesion.cargaId)}&numero=${numero}`, {
+            await leer(await parteConReintento(`${API}/parte?pedidoId=${encodeURIComponent(id)}&cargaId=${encodeURIComponent(sesion.cargaId)}&numero=${numero}`, {
               method:"PUT",credentials:"same-origin",headers:{...headers,"Content-Type":"application/octet-stream"},body:parte,cache:"no-store",
             }));
             setProgreso(Math.round(numero/total*100));

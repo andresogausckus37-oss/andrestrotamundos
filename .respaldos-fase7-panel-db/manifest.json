@@ -1,0 +1,14 @@
+{
+  "api/servicios/clientes-acceso.js": {
+    "antes": "74e873b5bdeaaa735ca198e83c406e0a305c81b66a7d4817037d287638f94628",
+    "despues": "62ec891c3fc41107e886a7d881a002c87f59e564d84338043a837444bf91f980"
+  },
+  "api/servicios/cliente-panel-detalles.js": {
+    "antes": "59d6569fe12af35ef53ae05bf79ad65c5433a3673929555b9cd9d63f489041a6",
+    "despues": "b8bb1dbd683bdf736da4a8c8b29b63ee4861ac157487a246b940cd7f4e78a215"
+  },
+  "api/servicios/renovacion-transferencia.js": {
+    "antes": "9a644255f441111fa05594a93933374fb4d92399d48e3f478c1dd2b62dda0416",
+    "despues": "d1e12aef8b8cb0b2cef4a44f8582f3d69393db6ee67d746554b3f6c633a54e8b"
+  }
+}

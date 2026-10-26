@@ -18,9 +18,46 @@ function escapar(valor) {
 }
 function pagina(titulo, contenido, status = 200) {
   return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapar(titulo)}</title><style>
-  *{box-sizing:border-box}body{margin:0;background:#f7f8fa;color:#202938;font:14px system-ui,sans-serif;font-weight:400}main{max-width:920px;margin:32px auto;padding:0 16px}h1{font-size:24px;font-weight:500}h2{font-size:16px;font-weight:500;margin:0 0 12px}h3{font-size:14px;font-weight:500}p{line-height:1.6}section{padding:18px;margin:16px 0;background:#fff;border:1px solid #e2e8f0;border-radius:6px}a{color:#b45309}input,button{font:inherit;padding:8px 12px;border:1px solid #cbd5e1;border-radius:6px}input{max-width:100%;width:340px}button{background:#c2410c;color:white;border-color:#c2410c;cursor:pointer;font-weight:500}button:disabled{background:#e2e8f0;color:#64748b;border-color:#e2e8f0;cursor:not-allowed}small,.muted{color:#64748b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.estado{padding:7px 10px;background:#f1f5f9;border-radius:6px;margin:6px 0}.bien{color:#166534}.mal{color:#b91c1c}.linea{border-bottom:1px solid #edf2f7;padding:10px 0}code{overflow-wrap:anywhere}form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  </style></head><body><main><p><a href="/admin">Administración</a> · Comunidad Semanal</p><h1>${escapar(titulo)}</h1>${contenido}</main></body></html>`, {
-    status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" },
+  :root{color-scheme:light}*{box-sizing:border-box}
+  body{margin:0;background:#f8fafb;color:#26303c;font:400 14px/1.6 Montserrat,system-ui,-apple-system,sans-serif}
+  main{max-width:1020px;margin:0 auto;padding:36px 22px 70px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:32px;color:#737f8c;font-size:12px}
+  .topbar a{color:#526171;text-decoration:none}.topbar a:hover{text-decoration:underline}
+  .encabezado{margin-bottom:26px}.encabezado p{margin:8px 0 0;color:#697586;font-size:13px}
+  h1{font-size:clamp(21px,3vw,27px);line-height:1.3;letter-spacing:-.035em;font-weight:500;margin:0}
+  h2{font-size:16px;font-weight:500;line-height:1.4;margin:0 0 16px}
+  h3{font-size:14px;font-weight:500;margin:0}p{line-height:1.65;margin:8px 0}
+  section{padding:24px 26px;margin:18px 0;background:#fff;border:1px solid #e9edf1;border-radius:10px}
+  a{color:#526779;text-decoration:none}a:hover{text-decoration:underline}
+  input,button{font:inherit;padding:10px 13px;border:1px solid #dce3e9;border-radius:7px}
+  input{max-width:100%;width:340px;background:#fff;color:#26303c;min-height:40px}
+  input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #8d9eae;outline-offset:2px}
+  button{background:#3d5263;color:#fff;border-color:#3d5263;cursor:pointer;font-weight:500;min-height:40px;transition:background .2s}
+  button:hover{background:#283b4a}button:disabled{background:#eff2f5;color:#84919f;border-color:#eff2f5;cursor:not-allowed}
+  small,.muted{color:#778391;font-size:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px}
+  .dato{background:#fafbfc;border:1px solid #f0f2f4;border-radius:8px;padding:14px 16px;min-width:0}
+  .dato small{display:block;margin-bottom:5px}.dato strong{font-weight:500;overflow-wrap:anywhere}
+  .estado{display:flex;align-items:flex-start;gap:10px;padding:10px 0;margin:0;border-bottom:1px solid #f0f2f4;background:none}
+  .estado:last-of-type{border-bottom:0}.estado span:first-child{flex-shrink:0;font-weight:500}
+  .bien{color:#3c7460}.mal{color:#9b5555}.linea{border-bottom:1px solid #f0f2f4;padding:14px 0}.linea:last-child{border-bottom:0}
+  .pedido-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:15px 0;border-bottom:1px solid #f0f2f4}
+  .pedido-row:last-child{border-bottom:0}.pedido-info{min-width:0;display:grid;gap:3px}
+  .pedido-info a{font-weight:500;overflow-wrap:anywhere}.pedido-info small{color:#7b8793}
+  .chip{display:inline-flex;align-items:center;border:1px solid #e8ecf0;background:#f7f9fa;border-radius:50px;padding:3px 9px;font-size:11px;color:#617180;font-weight:500}
+  .evento{display:grid;grid-template-columns:minmax(120px,1.1fr) minmax(105px,.8fr) minmax(210px,1.35fr);gap:16px;align-items:center;padding:13px 0;border-bottom:1px solid #f0f2f4}
+  .evento:last-child{border-bottom:0}.evento strong{font-weight:500}.evento small{display:block}
+  .accion-panel{padding-top:24px}.accion-panel form{margin-top:15px}
+  .form-buscar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px}
+  .acciones-link{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .enlace-suave{display:inline-block;border:1px solid #e3e8ed;border-radius:7px;padding:8px 12px;color:#445b6b;font-size:12px;font-weight:500}
+  .ayuda{font-size:12px;color:#788594;margin-top:14px}
+  .lista-fallos{padding-left:19px;margin:12px 0 0}.lista-fallos li{margin:6px 0}
+  code{overflow-wrap:anywhere;font-size:12px}form{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  @media(max-width:640px){main{padding:24px 14px 45px}.topbar{margin-bottom:24px}section{padding:18px 16px;margin:14px 0}.evento{grid-template-columns:1fr;gap:3px;padding:14px 0}.form-buscar input{width:100%}.form-buscar button{width:100%}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:390px){.grid{grid-template-columns:1fr}}
+  </style></head><body><main><div class="topbar"><a href="/admin">← Administración</a><span>Publicaciones automáticas · Gestión de semanas</span></div><header class="encabezado"><h1>${escapar(titulo)}</h1><p>Consultá los pedidos, verificá sus requisitos y administrá su programación.</p></header>${contenido}</main></body></html>`, {
+    status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" },
   });
 }
 function firma(env, pedidoId, revision, marca) {
@@ -70,13 +107,29 @@ function fechaLocal(item, zona) {
 export async function ejecutarAdminProgramacion(request, env, autorizado) {
   if (!autorizado) return pagina("Acceso restringido", "<p>Iniciá sesión en Administración.</p>", 401);
   const url = new URL(request.url);
+  if (url.searchParams.has('semanaId')) {
+    const { ejecutarAdminSemanaPagada } = await import('./admin-semanas-pagadas.js');
+    return ejecutarAdminSemanaPagada(request,env,autorizado,'programacion');
+  }
   if (url.pathname !== RUTA) return pagina("No encontrada", "<p>Ruta incorrecta.</p>", 404);
   if (!["GET", "POST"].includes(request.method)) return pagina("Método no permitido", "", 405);
   if (!env?.MONGODB_URI || !env?.ADMIN_PASSWORD) return pagina("Configuración pendiente", "<p>Administración no está configurada.</p>", 503);
   if (request.method === "POST") {
     const origin = request.headers.get("origin");
     const fetchSite = request.headers.get("sec-fetch-site");
-    if (origin !== url.origin || (fetchSite && fetchSite !== "same-origin")) return pagina("Origen inválido", "", 403);
+    const referer = request.headers.get("referer");
+
+    // Algunos navegadores omiten Origin (o envían "null") en formularios
+    // HTML. Aceptamos esos casos solo con señales verificables de mismo
+    // origen. El token CSRF firmado se valida después, antes de escribir.
+    if (fetchSite && fetchSite !== "same-origin") return pagina("Origen inválido", "", 403);
+    if (origin && origin !== "null" && origin !== url.origin) return pagina("Origen inválido", "", 403);
+    if (!origin || origin === "null") {
+      let refererValido = false;
+      try { refererValido = Boolean(referer && new URL(referer).origin === url.origin); }
+      catch { /* Referer ausente o malformado. */ }
+      if (fetchSite !== "same-origin" && !refererValido) return pagina("Origen inválido", "", 403);
+    }
   }
   try {
     let datos = null;
@@ -93,8 +146,11 @@ export async function ejecutarAdminProgramacion(request, env, autorizado) {
       return await conDB(env, async db => {
         const pedidos = await db.collection("pedidos_servicios").find({ tipo: "publicaciones", modalidadContratacion: "prueba_gratuita" })
           .sort({ creadoEn: -1 }).limit(30).project({ _id: 0, pedidoId: 1, estadoContenidos: 1, creadoEn: 1, negocio: 1 }).toArray();
-        const filas = pedidos.map(p => `<div class="linea"><a href="${RUTA}?pedidoId=${encodeURIComponent(p.pedidoId)}">${escapar(p.pedidoId)}</a> · ${escapar(p.negocio?.nombre || "Emprendimiento")} · ${escapar(p.estadoContenidos || "Pendiente")}</div>`).join("");
-        return pagina("Aprobar y programar semana", `<section><h2>Pedidos gratuitos</h2><form method="get"><input name="pedidoId" placeholder="SER-..." required><button type="submit">Buscar</button></form>${filas || "<p>No hay pedidos todavía.</p>"}</section>`);
+        const filas = pedidos.map(p => `<div class="pedido-row"><div class="pedido-info"><a href="${RUTA}?pedidoId=${encodeURIComponent(p.pedidoId)}">${escapar(p.negocio?.nombre || "Emprendimiento")}</a><small>${escapar(p.pedidoId)}</small></div><span class="chip">${escapar((p.estadoContenidos || "Pendiente").replaceAll("_", " "))}</span></div>`).join("");
+        const { listarRenovacionesPendientes } = await import('./admin-semanas-pagadas.js');
+        const pagadas = await listarRenovacionesPendientes(db);
+        const filasPagadas=pagadas.map(x=>`<div class="pedido-row"><div class="pedido-info"><a href="${RUTA}?semanaId=${encodeURIComponent(x._id)}">Semana ${Number(x.numeroSemana)||2} · ${escapar(x.email||'Cliente')}</a><small>${escapar(x.pedidoId)}</small></div><span class="chip">${escapar(x.configuracionEstado)}</span></div>`).join('');
+        return pagina("Aprobar y programar semana", `<section><h2>Semanas pagadas reales</h2>${filasPagadas||'<p class="muted">Sin semanas pagadas pendientes.</p>'}</section><section><h2>Pedidos de prueba gratuita</h2><p class="muted">Buscá un pedido o elegí uno de los más recientes.</p><form class="form-buscar" method="get"><input name="pedidoId" aria-label="ID del pedido" placeholder="ID del pedido · SER-..." required><button type="submit">Buscar pedido</button></form>${filas || '<p class="muted">Todavía no hay pedidos para revisar.</p>'}</section>`);
       });
     }
     if (!ID.test(pedidoId)) return pagina("Pedido inválido", "<p>Revisá el identificador.</p>", 400);
@@ -104,7 +160,7 @@ export async function ejecutarAdminProgramacion(request, env, autorizado) {
       if (pedido.modalidadContratacion !== "prueba_gratuita") return pagina("Modalidad pendiente", "<p>Las semanas pagas necesitan una validación de pago y activación específica.</p>", 409);
       if (pedido.estadoServicio === 'activo') {
         const programacion = await db.collection('calendarios_clientes_activos').findOne({_id:pedidoId});
-        const filas = (programacion?.eventos||[]).map(e => `<div class="linea">${escapar(e.contenidoId)} · ${escapar(e.red)} · ${escapar(e.estado)} · ${escapar(fechaLocal(e, pedido.zonaHoraria))}${e.enlace ? ` · <a href="${escapar(e.enlace)}" target="_blank" rel="noopener noreferrer">Ver publicación</a>` : ''}</div>`).join('');
+        const filas = (programacion?.eventos||[]).map(e => `<div class="evento"><strong>${escapar(e.contenidoId.replace("contenido-", "Contenido "))}</strong><span class="chip">${escapar(e.red)} · ${escapar(e.estado.replaceAll("_", " "))}</span><span>${escapar(fechaLocal(e, pedido.zonaHoraria))}${e.enlace ? ` · <a href="${escapar(e.enlace)}" target="_blank" rel="noopener noreferrer">Ver publicación ↗</a>` : ''}</span></div>`).join('');
         const recuperar = programacion?.estado === 'preparando' && programacion?.revision;
         if (recuperar && request.method === 'POST' && datos.get('accion') === 'recuperar_activacion') {
           if (!tokenValido(env,pedidoId,programacion.revision,datos.get('csrf')))
@@ -120,7 +176,7 @@ export async function ejecutarAdminProgramacion(request, env, autorizado) {
           <input type="hidden" name="accion" value="recuperar_activacion">
           <input type="hidden" name="csrf" value="${token(env,pedidoId,programacion.revision)}">
           <button type="submit">Finalizar activación pendiente</button></form>` : '';
-        return pagina('Semana activada', `<section><h2>Pedido ${escapar(pedidoId)}</h2><p class="${recuperar?'mal':'bien'}">${escapar(mensaje)}</p><p>${escapar(pedido.zonaHoraria||'')}</p>${filas}${form}</section><p><a href="${RUTA}">Volver a los pedidos</a></p>`);
+        return pagina('Semana activada', `<section><h2>Resumen de la semana</h2><div class="grid"><div class="dato"><small>Pedido</small><strong>${escapar(pedidoId)}</strong></div><div class="dato"><small>Zona horaria</small><strong>${escapar(pedido.zonaHoraria||'—')}</strong></div><div class="dato"><small>Estado</small><strong class="${recuperar?'mal':'bien'}">${escapar(programacion?.estado || '—')}</strong></div></div><p class="ayuda ${recuperar?'mal':'bien'}">${escapar(mensaje)}</p></section><section><h2>Publicaciones de la semana</h2>${filas || '<p class="muted">Todavía no hay eventos registrados.</p>'}${form}</section><div class="acciones-link"><a class="enlace-suave" href="${RUTA}">← Volver a los pedidos</a><a class="enlace-suave" href="/api/admin/servicios/publicaciones/archivos?pedidoId=${encodeURIComponent(pedidoId)}">Revisar contenidos</a></div>`);
       }
       const validacion = await verificar(db, pedido);
       const aprobaciones = db.collection(APROBACIONES);
@@ -144,7 +200,7 @@ export async function ejecutarAdminProgramacion(request, env, autorizado) {
         }, $setOnInsert: { creadoEn: ahora } }, { upsert: true });
         existente = await aprobaciones.findOne({ _id: pedidoId });
       }
-      const condicion = (etiqueta, ok) => `<div class="estado ${ok ? "bien" : "mal"}">${ok ? "✓" : "Pendiente"} · ${escapar(etiqueta)}</div>`;
+      const condicion = (etiqueta, ok) => `<div class="estado ${ok ? "bien" : "mal"}"><span>${ok ? "✓" : "○"}</span><span>${escapar(etiqueta)}${ok ? "" : " · Pendiente"}</span></div>`;
       const condiciones = [
         condicion("Cuatro contenidos y archivos revisados técnicamente", validacion.evaluacion.aprobados),
         condicion("Todas las cuentas seleccionadas conectadas", !validacion.evaluacion.motivos.some(x => /conect|página/i.test(x))),
@@ -153,23 +209,23 @@ export async function ejecutarAdminProgramacion(request, env, autorizado) {
       ].join("");
       const fallos = [...validacion.evaluacion.motivos, ...validacion.calendario.advertencias]
         .map(x => `<li>${escapar(x)}</li>`).join("");
-      const filas = validacion.calendario.eventos.map(e => `<div class="linea">Contenido ${escapar(e.numeroContenido)} · ${escapar(e.tipo)} · ${escapar(e.red)} · ${escapar(fechaLocal(e, pedido.zonaHoraria))}</div>`).join("");
+      const filas = validacion.calendario.eventos.map(e => `<div class="evento"><strong>Contenido ${escapar(e.numeroContenido)}</strong><span class="chip">${escapar(e.tipo)} · ${escapar(e.red)}</span><span>${escapar(fechaLocal(e, pedido.zonaHoraria))}</span></div>`).join("");
       const vigente = existente?.revision === validacion.evaluacion.revision &&
         existente?.estado === "aprobacion_administrativa_pendiente_activacion";
       const listaActivacion = vigente && validacion.listo && pedido.estadoServicio === 'sin_activar';
       return pagina("Aprobar y programar semana", `
-        <section><h2>Pedido ${escapar(pedidoId)}</h2><div class="grid"><p><small>Emprendimiento</small><br>${escapar(pedido.negocio?.nombre || "—")}</p><p><small>Redes</small><br>${escapar((pedido.redes || []).join(" · "))}</p><p><small>Zona horaria</small><br>${escapar(pedido.zonaHoraria || "—")}</p><p><small>Estado</small><br>${escapar(pedido.estadoServicio || "—")}</p></div><p><a href="/api/admin/servicios/publicaciones/archivos?pedidoId=${encodeURIComponent(pedidoId)}">Revisar archivos y solicitar correcciones</a></p></section>
-        <section><h2>Verificaciones</h2>${condiciones}${fallos ? `<ul class="mal">${fallos}</ul>` : ""}</section>
-        <section><h2>Programación propuesta</h2><p class="muted">Estas fechas son una simulación calculada desde este momento; todavía no están confirmadas ni reservadas como publicables.</p>${filas || "<p>No se pudo generar una propuesta completa.</p>"}</section>
-        <section><h2>Aprobación administrativa</h2>${vigente ? '<p class="bien">La revisión administrativa fue aprobada. La activación y publicación siguen pendientes.</p>' : ""}
-          ${validacion.listo && !vigente ? `<form method="post" action="${RUTA}"><input type="hidden" name="pedidoId" value="${escapar(pedidoId)}"><input type="hidden" name="accion" value="aprobar_revision"><input type="hidden" name="csrf" value="${token(env,pedidoId,validacion.evaluacion.revision)}"><button type="submit">Aprobar revisión administrativa</button></form>` : "<p class=\"muted\">Para aprobar, completá los requisitos pendientes.</p>"}
+        <section><h2>Resumen del pedido</h2><div class="grid"><div class="dato"><small>ID del pedido</small><strong>${escapar(pedidoId)}</strong></div><div class="dato"><small>Emprendimiento</small><strong>${escapar(pedido.negocio?.nombre || "—")}</strong></div><div class="dato"><small>Redes elegidas</small><strong>${escapar((pedido.redes || []).join(" · "))}</strong></div><div class="dato"><small>Zona horaria</small><strong>${escapar(pedido.zonaHoraria || "—")}</strong></div><div class="dato"><small>Estado del servicio</small><strong>${escapar((pedido.estadoServicio || "—").replaceAll("_", " "))}</strong></div></div><div class="acciones-link"><a class="enlace-suave" href="/api/admin/servicios/publicaciones/archivos?pedidoId=${encodeURIComponent(pedidoId)}">Revisar archivos y correcciones ↗</a><a class="enlace-suave" href="${RUTA}">Volver a los pedidos</a></div></section>
+        <section><h2>Verificaciones previas</h2>${condiciones}${fallos ? `<ul class="mal lista-fallos">${fallos}</ul>` : ""}</section>
+        <section><h2>Programación propuesta</h2><p class="muted">Horarios calculados desde este momento, según la zona horaria del cliente. Todavía no son fechas definitivas.</p>${filas || '<p class="muted">No se pudo generar una propuesta completa.</p>'}</section>
+        <section class="accion-panel"><h2>Aprobación y activación</h2>${vigente ? '<p class="bien">La revisión administrativa está aprobada. La activación es el siguiente paso.</p>' : ""}
+          ${validacion.listo && !vigente ? `<form method="post" action="${RUTA}"><input type="hidden" name="pedidoId" value="${escapar(pedidoId)}"><input type="hidden" name="accion" value="aprobar_revision"><input type="hidden" name="csrf" value="${token(env,pedidoId,validacion.evaluacion.revision)}"><button type="submit">Aprobar revisión administrativa</button></form>` : !vigente ? '<p class="muted">Completá los requisitos pendientes antes de aprobar.</p>' : ''}
           ${listaActivacion ? `<form method="post" action="${RUTA}">
             <input type="hidden" name="pedidoId" value="${escapar(pedidoId)}">
             <input type="hidden" name="accion" value="activar_semana">
             <input type="hidden" name="csrf" value="${token(env,pedidoId,validacion.evaluacion.revision)}">
             <button type="submit">Activar y programar semana</button>
-          </form>` : '<p class="muted">Primero aprobá la revisión. La programación real exige la habilitación explícita del servicio.</p>'}
-          <p class="muted"><small>Al activar, comenzarán los siete días de prueba y las publicaciones se enviarán automáticamente a las redes seleccionadas, en sus horarios.</small></p>
+          </form>` : '<p class="muted">La programación requiere la revisión aprobada y la habilitación del servicio.</p>'}
+          <p class="ayuda">La activación inicia los siete días de prueba y habilita los envíos a las redes seleccionadas, según los horarios aprobados.</p>
         </section>`);
     });
   } catch (error) {
